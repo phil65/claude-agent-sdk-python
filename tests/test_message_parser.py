@@ -2,9 +2,9 @@
 
 import pytest
 
-from claude_agent_sdk._errors import MessageParseError
-from claude_agent_sdk._internal.message_parser import parse_message
-from claude_agent_sdk.types import (
+from clawd_code_sdk._errors import MessageParseError
+from clawd_code_sdk._internal.message_parser import parse_message
+from clawd_code_sdk.types import (
     AssistantMessage,
     ResultMessage,
     SystemMessage,

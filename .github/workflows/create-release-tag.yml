@@ -57,10 +57,10 @@ jobs:
           echo ""
           echo "---"
           echo ""
-          echo "**PyPI:** https://pypi.org/project/claude-agent-sdk/VERSION/"
+          echo "**PyPI:** https://pypi.org/project/clawd-code-sdk/VERSION/"
           echo ""
           echo '```bash'
-          echo "pip install claude-agent-sdk==VERSION"
+          echo "pip install clawd-code-sdk==VERSION"
           echo '```'
         } >> release_notes.md
 

@@ -9,7 +9,7 @@ from pathlib import Path
 def update_cli_version(new_version: str) -> None:
     """Update CLI version in _cli_version.py."""
     # Update _cli_version.py
-    version_path = Path("src/claude_agent_sdk/_cli_version.py")
+    version_path = Path("src/clawd_code_sdk/_cli_version.py")
     content = version_path.read_text()
 
     content = re.sub(

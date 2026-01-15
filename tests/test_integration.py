@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, Mock, patch
 import anyio
 import pytest
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     CLINotFoundError,
     ResultMessage,
     query,
 )
-from claude_agent_sdk.types import ToolUseBlock
+from clawd_code_sdk.types import ToolUseBlock
 
 
 class TestIntegration:
@@ -27,10 +27,10 @@ class TestIntegration:
         async def _test():
             with (
                 patch(
-                    "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
                 ) as mock_transport_class,
                 patch(
-                    "claude_agent_sdk._internal.query.Query.initialize",
+                    "clawd_code_sdk._internal.query.Query.initialize",
                     new_callable=AsyncMock,
                 ),
             ):
@@ -91,10 +91,10 @@ class TestIntegration:
         async def _test():
             with (
                 patch(
-                    "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
                 ) as mock_transport_class,
                 patch(
-                    "claude_agent_sdk._internal.query.Query.initialize",
+                    "clawd_code_sdk._internal.query.Query.initialize",
                     new_callable=AsyncMock,
                 ),
             ):
@@ -183,10 +183,10 @@ class TestIntegration:
         async def _test():
             with (
                 patch(
-                    "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
                 ) as mock_transport_class,
                 patch(
-                    "claude_agent_sdk._internal.query.Query.initialize",
+                    "clawd_code_sdk._internal.query.Query.initialize",
                     new_callable=AsyncMock,
                 ),
             ):
@@ -237,10 +237,10 @@ class TestIntegration:
         async def _test():
             with (
                 patch(
-                    "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
                 ) as mock_transport_class,
                 patch(
-                    "claude_agent_sdk._internal.query.Query.initialize",
+                    "clawd_code_sdk._internal.query.Query.initialize",
                     new_callable=AsyncMock,
                 ),
             ):

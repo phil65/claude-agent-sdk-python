@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, MagicMock
 import anyio
 import pytest
 
-from claude_agent_sdk._errors import CLIJSONDecodeError
-from claude_agent_sdk._internal.transport.subprocess_cli import (
+from clawd_code_sdk._errors import CLIJSONDecodeError
+from clawd_code_sdk._internal.transport.subprocess_cli import (
     _DEFAULT_MAX_BUFFER_SIZE,
     SubprocessCLITransport,
 )
-from claude_agent_sdk.types import ClaudeAgentOptions
+from clawd_code_sdk.types import ClaudeAgentOptions
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 

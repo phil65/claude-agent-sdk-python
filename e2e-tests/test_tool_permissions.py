@@ -2,7 +2,7 @@
 
 import pytest
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     ClaudeAgentOptions,
     ClaudeSDKClient,
     PermissionResultAllow,

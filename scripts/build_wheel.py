@@ -71,7 +71,7 @@ def update_version(version: str) -> None:
 
 def get_bundled_cli_version() -> str:
     """Get the CLI version that should be bundled from _cli_version.py."""
-    version_file = Path("src/claude_agent_sdk/_cli_version.py")
+    version_file = Path("src/clawd_code_sdk/_cli_version.py")
     if not version_file.exists():
         return "latest"
 
@@ -204,8 +204,8 @@ def build_wheel() -> None:
     )
 
     # Check if we have a bundled CLI - if so, retag the wheel as platform-specific
-    bundled_cli = Path("src/claude_agent_sdk/_bundled/claude")
-    bundled_cli_exe = Path("src/claude_agent_sdk/_bundled/claude.exe")
+    bundled_cli = Path("src/clawd_code_sdk/_bundled/claude")
+    bundled_cli_exe = Path("src/clawd_code_sdk/_bundled/claude.exe")
 
     if bundled_cli.exists() or bundled_cli_exe.exists():
         # Find the built wheel
@@ -269,7 +269,7 @@ def check_package() -> None:
 
 def clean_bundled_cli() -> None:
     """Clean bundled CLI."""
-    bundled_dir = Path("src/claude_agent_sdk/_bundled")
+    bundled_dir = Path("src/clawd_code_sdk/_bundled")
     cli_files = list(bundled_dir.glob("claude*"))
 
     if cli_files:

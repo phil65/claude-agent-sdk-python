@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     ClaudeAgentOptions,
     HookContext,
     HookInput,
@@ -14,8 +14,8 @@ from claude_agent_sdk import (
     PermissionResultDeny,
     ToolPermissionContext,
 )
-from claude_agent_sdk._internal.query import Query
-from claude_agent_sdk._internal.transport import Transport
+from clawd_code_sdk._internal.query import Query
+from clawd_code_sdk._internal.transport import Transport
 
 
 class MockTransport(Transport):

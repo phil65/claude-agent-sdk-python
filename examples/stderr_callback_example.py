@@ -2,7 +2,7 @@
 
 import asyncio
 
-from claude_agent_sdk import ClaudeAgentOptions, query
+from clawd_code_sdk import ClaudeAgentOptions, query
 
 
 async def main():

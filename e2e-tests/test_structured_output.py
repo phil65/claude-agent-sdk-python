@@ -8,7 +8,7 @@ import tempfile
 
 import pytest
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     ClaudeAgentOptions,
     ResultMessage,
     query,
@@ -40,7 +40,7 @@ async def test_simple_structured_output():
     # Agent must use Glob/Bash to count files
     result_message = None
     async for message in query(
-        prompt="Count how many Python files are in src/claude_agent_sdk/ and check if there are any test files. Use tools to explore the filesystem.",
+        prompt="Count how many Python files are in src/clawd_code_sdk/ and check if there are any test files. Use tools to explore the filesystem.",
         options=options,
     ):
         if isinstance(message, ResultMessage):

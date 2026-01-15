@@ -19,7 +19,7 @@ import asyncio
 import contextlib
 import sys
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,

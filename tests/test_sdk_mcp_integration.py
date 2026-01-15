@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from mcp.types import CallToolRequest, CallToolRequestParams
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     ClaudeAgentOptions,
     create_sdk_mcp_server,
     tool,
@@ -342,8 +342,8 @@ async def test_error_handling_through_jsonrpc():
     server_config = create_sdk_mcp_server(name="error-test", tools=[fail_tool])
 
     # Import the Query class to test the JSONRPC handler
-    from claude_agent_sdk._internal.query import Query
-    from claude_agent_sdk._internal.transport import Transport
+    from clawd_code_sdk._internal.query import Query
+    from clawd_code_sdk._internal.transport import Transport
 
     # Extract the SDK MCP server instance
     sdk_mcp_servers = {"error": server_config["instance"]}

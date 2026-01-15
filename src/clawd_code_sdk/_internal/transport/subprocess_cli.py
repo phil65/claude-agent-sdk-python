@@ -327,7 +327,7 @@ class SubprocessCLITransport(Transport):
         if self._process:
             return
 
-        if not os.environ.get("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK"):
+        if not os.environ.get("CLAWD_CODE_SDK_SKIP_VERSION_CHECK"):
             await self._check_claude_version()
 
         cmd = self._build_command()
@@ -337,7 +337,7 @@ class SubprocessCLITransport(Transport):
                 **os.environ,
                 **self._options.env,  # User-provided env vars
                 "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
-                "CLAUDE_AGENT_SDK_VERSION": __version__,
+                "CLAWD_CODE_SDK_VERSION": __version__,
             }
 
             # Enable file checkpointing if requested

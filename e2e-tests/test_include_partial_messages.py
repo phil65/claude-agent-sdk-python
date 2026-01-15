@@ -9,8 +9,8 @@ from typing import List, Any
 
 import pytest
 
-from claude_agent_sdk import ClaudeSDKClient
-from claude_agent_sdk.types import (
+from clawd_code_sdk import ClaudeSDKClient
+from clawd_code_sdk.types import (
     ClaudeAgentOptions,
     StreamEvent,
     AssistantMessage,

@@ -103,7 +103,7 @@ def copy_cli_to_bundle() -> None:
     # Find project root (parent of scripts directory)
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
-    bundle_dir = project_root / "src" / "claude_agent_sdk" / "_bundled"
+    bundle_dir = project_root / "src" / "clawd_code_sdk" / "_bundled"
 
     # Ensure bundle directory exists
     bundle_dir.mkdir(parents=True, exist_ok=True)

@@ -98,7 +98,7 @@ async def query(
 
     Example - With custom transport:
         ```python
-        from claude_agent_sdk import query, Transport
+        from clawd_code_sdk import query, Transport
 
         class MyCustomTransport(Transport):
             # Implement custom transport logic

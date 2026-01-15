@@ -15,7 +15,7 @@ Usage:
 import asyncio
 from pathlib import Path
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,

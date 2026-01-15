@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import anyio
 import pytest
 
-from claude_agent_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from claude_agent_sdk.types import ClaudeAgentOptions
+from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+from clawd_code_sdk.types import ClaudeAgentOptions
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
@@ -25,7 +25,7 @@ class TestSubprocessCLITransport:
 
     def test_find_cli_not_found(self):
         """Test CLI not found error."""
-        from claude_agent_sdk._errors import CLINotFoundError
+        from clawd_code_sdk._errors import CLINotFoundError
 
         with (
             patch("shutil.which", return_value=None),
@@ -278,7 +278,7 @@ class TestSubprocessCLITransport:
 
     def test_connect_with_nonexistent_cwd(self):
         """Test that connect raises CLIConnectionError when cwd doesn't exist."""
-        from claude_agent_sdk._errors import CLIConnectionError
+        from clawd_code_sdk._errors import CLIConnectionError
 
         async def _test():
             transport = SubprocessCLITransport(
@@ -533,7 +533,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox settings (no existing settings)."""
         import json
 
-        from claude_agent_sdk import SandboxSettings
+        from clawd_code_sdk import SandboxSettings
 
         sandbox: SandboxSettings = {
             "enabled": True,
@@ -570,7 +570,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox merged into existing settings JSON."""
         import json
 
-        from claude_agent_sdk import SandboxSettings
+        from clawd_code_sdk import SandboxSettings
 
         # Existing settings as JSON string
         existing_settings = (
@@ -623,7 +623,7 @@ class TestSubprocessCLITransport:
         """Test sandbox with minimal configuration."""
         import json
 
-        from claude_agent_sdk import SandboxSettings
+        from clawd_code_sdk import SandboxSettings
 
         sandbox: SandboxSettings = {"enabled": True}
 
@@ -645,7 +645,7 @@ class TestSubprocessCLITransport:
         """Test sandbox with full network configuration."""
         import json
 
-        from claude_agent_sdk import SandboxSettings
+        from clawd_code_sdk import SandboxSettings
 
         sandbox: SandboxSettings = {
             "enabled": True,
@@ -861,7 +861,7 @@ class TestSubprocessCLITransport:
         Matching TypeScript SDK behavior, agents are always sent via the
         initialize request through stdin, regardless of prompt type.
         """
-        from claude_agent_sdk.types import AgentDefinition
+        from clawd_code_sdk.types import AgentDefinition
 
         agents = {
             "test-agent": AgentDefinition(
@@ -915,7 +915,7 @@ class TestSubprocessCLITransport:
         Since agents are sent via initialize request through stdin,
         there are no ARG_MAX or command line length limits.
         """
-        from claude_agent_sdk.types import AgentDefinition
+        from clawd_code_sdk.types import AgentDefinition
 
         # Create a large agent definition (50KB prompt)
         large_prompt = "x" * 50000

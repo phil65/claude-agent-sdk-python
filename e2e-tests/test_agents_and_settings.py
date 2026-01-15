@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from claude_agent_sdk import (
+from clawd_code_sdk import (
     AgentDefinition,
     ClaudeAgentOptions,
     ClaudeSDKClient,
@@ -79,7 +79,7 @@ async def test_agent_definition_with_query_function():
     Both ClaudeSDKClient and query() now use streaming mode internally,
     sending agents via the initialize request.
     """
-    from claude_agent_sdk import query
+    from clawd_code_sdk import query
 
     options = ClaudeAgentOptions(
         agents={
@@ -114,7 +114,7 @@ async def test_large_agents_with_query_function():
     large agents are sent via the initialize request through stdin with no
     size limits.
     """
-    from claude_agent_sdk import query
+    from clawd_code_sdk import query
 
     # Generate 20 agents with 13KB prompts each = ~260KB total
     agents = generate_large_agents(num_agents=20, prompt_size_kb=13)
