@@ -6,6 +6,7 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 import sys
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import suppress
@@ -28,6 +29,18 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MAX_BUFFER_SIZE = 1024 * 1024  # 1MB buffer limit
 MINIMUM_CLAUDE_CODE_VERSION = "2.0.0"
+
+# Platform-specific command line length limits
+# Windows cmd.exe has a limit of 8191 characters, use 8000 for safety
+# Other platforms have much higher limits
+_CMD_LENGTH_LIMIT = 8000 if platform.system() == "Windows" else 100000
+
+# Platform-specific process creation flags
+# On Windows, CREATE_NO_WINDOW prevents a visible console window from appearing
+# when spawning the CLI subprocess, which improves UX for GUI applications
+_CREATION_FLAGS = (
+    subprocess.CREATE_NO_WINDOW if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+)
 
 
 class SubprocessCLITransport(Transport):
@@ -364,6 +377,7 @@ class SubprocessCLITransport(Transport):
                 cwd=self._cwd,
                 env=process_env,
                 user=self._options.user,
+                creationflags=_CREATION_FLAGS,
             )
 
             if self._process.stdout:
@@ -583,6 +597,7 @@ class SubprocessCLITransport(Transport):
                     [self._cli_path, "-v"],
                     stdout=PIPE,
                     stderr=PIPE,
+                    creationflags=_CREATION_FLAGS,
                 )
 
                 if version_process.stdout:
