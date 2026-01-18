@@ -85,10 +85,10 @@ class InternalClient:
             for matcher in matchers:
                 # Convert HookMatcher to internal dict format
                 internal_matcher: dict[str, Any] = {
-                    "matcher": matcher.matcher if hasattr(matcher, "matcher") else None,
-                    "hooks": matcher.hooks if hasattr(matcher, "hooks") else [],
+                    "matcher": matcher.matcher,
+                    "hooks": matcher.hooks,
                 }
-                if hasattr(matcher, "timeout") and matcher.timeout is not None:
+                if matcher.timeout is not None:
                     internal_matcher["timeout"] = matcher.timeout
                 internal_hooks[event].append(internal_matcher)
         return internal_hooks
