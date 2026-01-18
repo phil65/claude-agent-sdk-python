@@ -4,6 +4,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
+from pydantic import AnyUrl
+
 from ._errors import (
     APIError,
     AuthenticationError,
@@ -312,8 +314,12 @@ def create_sdk_mcp_server(
                             EmbeddedResource(
                                 type="resource",
                                 resource=BlobResourceContents(
-                                    uri=f"document://{source.get('type', 'base64')}",
-                                    mimeType=source.get("media_type", "application/pdf"),
+                                    uri=AnyUrl(
+                                        f"document://{source.get('type', 'base64')}"
+                                    ),
+                                    mimeType=source.get(
+                                        "media_type", "application/pdf"
+                                    ),
                                     blob=source.get("data", ""),
                                 ),
                             )

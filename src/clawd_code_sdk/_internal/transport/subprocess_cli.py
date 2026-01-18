@@ -39,7 +39,9 @@ _CMD_LENGTH_LIMIT = 8000 if platform.system() == "Windows" else 100000
 # On Windows, CREATE_NO_WINDOW prevents a visible console window from appearing
 # when spawning the CLI subprocess, which improves UX for GUI applications
 _CREATION_FLAGS = (
-    subprocess.CREATE_NO_WINDOW if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+    subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+    if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW")
+    else 0
 )
 
 
