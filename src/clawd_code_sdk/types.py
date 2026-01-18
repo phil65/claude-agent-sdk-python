@@ -1,14 +1,12 @@
 """Type definitions for Claude SDK."""
 
-from __future__ import annotations
-
 import sys
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from mcp.server import Server as McpServer
@@ -37,12 +35,6 @@ SdkBeta = Literal[
 SettingSource = Literal["user", "project", "local"]
 
 
-class StrictModel(BaseModel):
-    """Base model with strict configuration - forbids extra fields."""
-
-    model_config = ConfigDict(extra="forbid")
-
-
 class SystemPromptPreset(TypedDict):
     """System prompt preset configuration."""
 
@@ -58,7 +50,8 @@ class ToolsPreset(TypedDict):
     preset: Literal["claude_code"]
 
 
-class AgentDefinition(StrictModel):
+@dataclass
+class AgentDefinition:
     """Agent definition configuration."""
 
     description: str
@@ -75,14 +68,16 @@ PermissionUpdateDestination = Literal[
 PermissionBehavior = Literal["allow", "deny", "ask"]
 
 
-class PermissionRuleValue(StrictModel):
+@dataclass
+class PermissionRuleValue:
     """Permission rule value."""
 
     tool_name: str
     rule_content: str | None = None
 
 
-class PermissionUpdate(StrictModel):
+@dataclass
+class PermissionUpdate:
     """Permission update configuration."""
 
     type: Literal[
@@ -137,7 +132,8 @@ class PermissionUpdate(StrictModel):
 
 
 # Tool callback types
-class ToolPermissionContext(StrictModel):
+@dataclass
+class ToolPermissionContext:
     """Context information for tool permission callbacks.
 
     Attributes:
@@ -154,12 +150,15 @@ class ToolPermissionContext(StrictModel):
 
     tool_use_id: str
     signal: Any | None = None  # Future: abort signal support
-    suggestions: list[PermissionUpdate] = []  # Permission suggestions from CLI
+    suggestions: list[PermissionUpdate] = field(
+        default_factory=list
+    )  # Permission suggestions from CLI
     blocked_path: str | None = None
 
 
 # Match TypeScript's PermissionResult structure
-class PermissionResultAllow(StrictModel):
+@dataclass
+class PermissionResultAllow:
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
@@ -167,7 +166,8 @@ class PermissionResultAllow(StrictModel):
     updated_permissions: list[PermissionUpdate] | None = None
 
 
-class PermissionResultDeny(StrictModel):
+@dataclass
+class PermissionResultDeny:
     """Deny permission result."""
 
     behavior: Literal["deny"] = "deny"
@@ -391,7 +391,8 @@ HookCallback = Callable[
 
 
 # Hook matcher configuration
-class HookMatcher(StrictModel):
+@dataclass
+class HookMatcher:
     """Hook matcher configuration."""
 
     # See https://docs.anthropic.com/en/docs/claude-code/hooks#structure for the
@@ -401,12 +402,10 @@ class HookMatcher(StrictModel):
     matcher: str | None = None
 
     # A list of Python functions with function signature HookCallback
-    hooks: list[HookCallback] = []
+    hooks: list[HookCallback] = field(default_factory=list)
 
     # Timeout in seconds for all hooks in this matcher (default: 60)
     timeout: float | None = None
-
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
 
 # MCP Server config
@@ -440,7 +439,7 @@ class McpSdkServerConfig(TypedDict):
 
     type: Literal["sdk"]
     name: str
-    instance: McpServer
+    instance: "McpServer"
 
 
 McpServerConfig = (
@@ -536,34 +535,34 @@ class SandboxSettings(TypedDict, total=False):
 
 
 # Content block types
-class TextBlock(StrictModel):
+@dataclass
+class TextBlock:
     """Text content block."""
 
-    type: Literal["text"] = "text"
     text: str
 
 
-class ThinkingBlock(StrictModel):
+@dataclass
+class ThinkingBlock:
     """Thinking content block."""
 
-    type: Literal["thinking"] = "thinking"
     thinking: str
     signature: str
 
 
-class ToolUseBlock(StrictModel):
+@dataclass
+class ToolUseBlock:
     """Tool use content block."""
 
-    type: Literal["tool_use"] = "tool_use"
     id: str
     name: str
     input: dict[str, Any]
 
 
-class ToolResultBlock(StrictModel):
+@dataclass
+class ToolResultBlock:
     """Tool result content block."""
 
-    type: Literal["tool_result"] = "tool_result"
     tool_use_id: str
     content: str | list[dict[str, Any]] | None = None
     is_error: bool | None = None
@@ -583,7 +582,8 @@ AssistantMessageError = Literal[
 ]
 
 
-class UserMessage(StrictModel):
+@dataclass
+class UserMessage:
     """User message."""
 
     content: str | list[ContentBlock]
@@ -591,7 +591,8 @@ class UserMessage(StrictModel):
     parent_tool_use_id: str | None = None
 
 
-class AssistantMessage(StrictModel):
+@dataclass
+class AssistantMessage:
     """Assistant message with content blocks."""
 
     content: list[ContentBlock]
@@ -600,14 +601,16 @@ class AssistantMessage(StrictModel):
     error: AssistantMessageError | None = None
 
 
-class SystemMessage(StrictModel):
+@dataclass
+class SystemMessage:
     """System message with metadata."""
 
     subtype: str
     data: dict[str, Any]
 
 
-class ResultMessage(StrictModel):
+@dataclass
+class ResultMessage:
     """Result message with cost and usage information."""
 
     subtype: str
@@ -622,7 +625,8 @@ class ResultMessage(StrictModel):
     structured_output: Any = None
 
 
-class StreamEvent(StrictModel):
+@dataclass
+class StreamEvent:
     """Stream event for partial message updates during streaming."""
 
     uuid: str
@@ -634,31 +638,34 @@ class StreamEvent(StrictModel):
 Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage | StreamEvent
 
 
-class ClaudeAgentOptions(StrictModel):
+@dataclass
+class ClaudeAgentOptions:
     """Query options for Claude SDK."""
 
     tools: list[str] | ToolsPreset | None = None
-    allowed_tools: list[str] = []
+    allowed_tools: list[str] = field(default_factory=list)
     system_prompt: str | SystemPromptPreset | None = None
-    mcp_servers: dict[str, McpServerConfig] | str | Path = {}
+    mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
     permission_mode: PermissionMode | None = None
     session_id: str | None = None
     continue_conversation: bool = False
     resume: str | None = None
     max_turns: int | None = None
     max_budget_usd: float | None = None
-    disallowed_tools: list[str] = []
+    disallowed_tools: list[str] = field(default_factory=list)
     model: str | None = None
     fallback_model: str | None = None
     # Beta features - see https://docs.anthropic.com/en/api/beta-headers
-    betas: list[SdkBeta] = []
+    betas: list[SdkBeta] = field(default_factory=list)
     permission_prompt_tool_name: str | None = None
     cwd: str | Path | None = None
     cli_path: str | Path | None = None
     settings: str | None = None
-    add_dirs: list[str | Path] = []
-    env: dict[str, str] = {}
-    extra_args: dict[str, str | None] = {}  # Pass arbitrary CLI flags
+    add_dirs: list[str | Path] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
+    extra_args: dict[str, str | None] = field(
+        default_factory=dict
+    )  # Pass arbitrary CLI flags
     max_buffer_size: int | None = None  # Max bytes when buffering CLI stdout
     debug_stderr: Any = (
         sys.stderr
@@ -687,7 +694,7 @@ class ClaudeAgentOptions(StrictModel):
     # not from these sandbox settings.
     sandbox: SandboxSettings | None = None
     # Plugin configurations for custom plugins
-    plugins: list[SdkPluginConfig] = []
+    plugins: list[SdkPluginConfig] = field(default_factory=list)
     # Max tokens for thinking blocks
     max_thinking_tokens: int | None = None
     # Output format for structured outputs (matches Messages API structure)
@@ -697,8 +704,6 @@ class ClaudeAgentOptions(StrictModel):
     # When enabled, files can be rewound to their state at any user message
     # using `ClaudeSDKClient.rewind_files()`.
     enable_file_checkpointing: bool = False
-
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
 
 # SDK Control Protocol

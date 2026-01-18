@@ -40,7 +40,6 @@ from .types import (
     PermissionResult,
     PermissionResultAllow,
     PermissionResultDeny,
-    PermissionRuleValue,
     PermissionUpdate,
     PostToolUseHookInput,
     PreCompactHookInput,
@@ -53,8 +52,6 @@ from .types import (
     SdkPluginConfig,
     SettingSource,
     StopHookInput,
-    StreamEvent,
-    StrictModel,
     SubagentStopHookInput,
     SystemMessage,
     TextBlock,
@@ -316,9 +313,7 @@ def create_sdk_mcp_server(
                                 type="resource",
                                 resource=BlobResourceContents(
                                     uri=f"document://{source.get('type', 'base64')}",
-                                    mimeType=source.get(
-                                        "media_type", "application/pdf"
-                                    ),
+                                    mimeType=source.get("media_type", "application/pdf"),
                                     blob=source.get("data", ""),
                                 ),
                             )
