@@ -50,7 +50,7 @@ class ClaudeSDKClient:
     See examples/streaming_mode.py for full examples of ClaudeSDKClient in
     different scenarios.
 
-    Caveat: As of v0.0.20, you cannot use a ClaudeSDKClient instance across
+    Caveat: As of v0.0.21, you cannot use a ClaudeSDKClient instance across
     different async runtime contexts (e.g., different trio nurseries or asyncio
     task groups). The client internally maintains a persistent anyio task group
     for reading messages that remains active from connect() until disconnect().
