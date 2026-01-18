@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import anyio
 import pytest
-from claude_agent_sdk.types import TextBlock
 
 from clawd_code_sdk import (
     APIError,
@@ -148,7 +147,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
@@ -191,7 +190,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
@@ -232,7 +231,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
@@ -270,7 +269,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
@@ -311,7 +310,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
@@ -347,7 +346,7 @@ class TestAPIErrorRaising:
 
         async def _test():
             with patch(
-                "claude_agent_sdk._internal.client.SubprocessCLITransport"
+                "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
                 mock_transport = AsyncMock()
                 mock_transport_class.return_value = mock_transport
