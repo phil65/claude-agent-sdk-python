@@ -3,12 +3,7 @@
 
 import anyio
 
-from clawd_code_sdk import (
-    AssistantMessage,
-    ClaudeAgentOptions,
-    TextBlock,
-    query,
-)
+from clawd_code_sdk import AssistantMessage, ClaudeAgentOptions, TextBlock, query
 
 
 async def no_system_prompt():
