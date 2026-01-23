@@ -4,7 +4,6 @@ import json
 import logging
 import os
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 import anyio
@@ -628,13 +627,18 @@ class Query:
             yield message
 
     async def close(self) -> None:
-        """Close the query and transport."""
+        """Close the query and transport.
+
+        Note: We only cancel the TaskGroup's scope here, we don't await __aexit__.
+        The TaskGroup was entered in a different task (during start()), so we can't
+        exit it from here. The cancellation will cause the TaskGroup to clean up
+        in its original task.
+        """
         self._closed = True
         if self._tg:
             self._tg.cancel_scope.cancel()
-            # Wait for task group to complete cancellation
-            with suppress(anyio.get_cancelled_exc_class()):
-                await self._tg.__aexit__(None, None, None)
+            # Don't await __aexit__ - it must be called from the same task that
+            # called __aenter__. The cancel will propagate and clean up.
         await self.transport.close()
 
     # Make Query an async iterator
