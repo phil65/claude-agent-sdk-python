@@ -559,6 +559,17 @@ class Query:
         """Get current MCP server connection status."""
         return await self._send_control_request({"subtype": "mcp_status"})
 
+    async def set_mcp_servers(
+        self, servers: dict[str, dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Add, replace, or remove MCP servers dynamically."""
+        return await self._send_control_request(
+            {
+                "subtype": "mcp_set_servers",
+                "servers": servers,
+            }
+        )
+
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens."""
         await self._send_control_request(

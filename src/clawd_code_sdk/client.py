@@ -339,6 +339,45 @@ class ClaudeSDKClient:
         result: dict[str, Any] = await self._query.get_mcp_status()
         return result
 
+    async def set_mcp_servers(
+        self, servers: dict[str, dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Add, replace, or remove MCP servers dynamically mid-session.
+
+        Allows dynamic registration of MCP servers without restarting the session.
+        Pass an empty dict to remove all dynamic servers.
+
+        Args:
+            servers: Dictionary mapping server names to server configurations.
+                Each server config should have at least:
+                - 'type': Server type (e.g., 'sdk', 'stdio')
+                - 'name': Server name
+                Additional fields depend on server type.
+
+        Returns:
+            Dictionary with results:
+            - 'added': List of server names that were added
+            - 'removed': List of server names that were removed
+            - 'errors': Dict mapping server names to error messages (if any)
+
+        Example:
+            ```python
+            async with ClaudeSDKClient(options) as client:
+                # Add a new MCP server
+                result = await client.set_mcp_servers({
+                    "my-server": {"type": "sdk", "name": "my-server"}
+                })
+                print(f"Added: {result['added']}")
+
+                # Remove all dynamic servers
+                await client.set_mcp_servers({})
+            ```
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        result: dict[str, Any] = await self._query.set_mcp_servers(servers)
+        return result
+
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking.
 
