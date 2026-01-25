@@ -558,6 +558,15 @@ class Query:
         """Get current MCP server connection status."""
         return await self._send_control_request({"subtype": "mcp_status"})
 
+    async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
+        """Set the maximum number of thinking tokens."""
+        await self._send_control_request(
+            {
+                "subtype": "set_max_thinking_tokens",
+                "max_thinking_tokens": max_thinking_tokens,
+            }
+        )
+
     async def interrupt(self) -> None:
         """Send interrupt control request."""
         await self._send_control_request({"subtype": "interrupt"})

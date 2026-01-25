@@ -339,6 +339,28 @@ class ClaudeSDKClient:
         result: dict[str, Any] = await self._query.get_mcp_status()
         return result
 
+    async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
+        """Set the maximum number of thinking tokens for extended thinking.
+
+        Controls how many tokens Claude can use for its internal reasoning
+        process when extended thinking is enabled.
+
+        Args:
+            max_thinking_tokens: Maximum number of tokens for thinking.
+                Higher values allow more thorough reasoning but increase
+                response time and token usage.
+
+        Example:
+            ```python
+            async with ClaudeSDKClient(options) as client:
+                await client.set_max_thinking_tokens(2000)
+                await client.query("Solve this complex problem...")
+            ```
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        await self._query.set_max_thinking_tokens(max_thinking_tokens)
+
     async def get_server_info(self) -> dict[str, Any] | None:
         """Get server initialization info including available commands and output styles.
 
