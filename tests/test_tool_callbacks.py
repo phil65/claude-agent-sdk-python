@@ -2,8 +2,6 @@
 
 import json
 
-import pytest
-
 from clawd_code_sdk import (
     ClaudeAgentOptions,
     HookContext,
@@ -52,7 +50,6 @@ class MockTransport(Transport):
 class TestToolPermissionCallbacks:
     """Test tool permission callback functionality."""
 
-    @pytest.mark.asyncio
     async def test_permission_callback_allow(self):
         """Test callback that allows tool execution."""
         callback_invoked = False
@@ -96,7 +93,6 @@ class TestToolPermissionCallbacks:
         response = transport.written_messages[0]
         assert '"behavior": "allow"' in response
 
-    @pytest.mark.asyncio
     async def test_permission_callback_deny(self):
         """Test callback that denies tool execution."""
 
@@ -132,7 +128,6 @@ class TestToolPermissionCallbacks:
         assert '"behavior": "deny"' in response
         assert '"message": "Security policy violation"' in response
 
-    @pytest.mark.asyncio
     async def test_permission_callback_input_modification(self):
         """Test callback that modifies tool input."""
 
@@ -171,7 +166,6 @@ class TestToolPermissionCallbacks:
         assert '"behavior": "allow"' in response
         assert '"safe_mode": true' in response
 
-    @pytest.mark.asyncio
     async def test_callback_exception_handling(self):
         """Test that callback exceptions are properly handled."""
 
@@ -211,7 +205,6 @@ class TestToolPermissionCallbacks:
 class TestHookCallbacks:
     """Test hook callback functionality."""
 
-    @pytest.mark.asyncio
     async def test_hook_execution(self):
         """Test that hooks are called at appropriate times."""
         hook_calls = []
@@ -261,7 +254,6 @@ class TestHookCallbacks:
         last_response = transport.written_messages[-1]
         assert '"processed": true' in last_response
 
-    @pytest.mark.asyncio
     async def test_hook_output_fields(self):
         """Test that all SyncHookJSONOutput fields are properly handled."""
 
@@ -345,7 +337,6 @@ class TestHookCallbacks:
         )
         assert "updatedInput" in hook_output
 
-    @pytest.mark.asyncio
     async def test_async_hook_output(self):
         """Test AsyncHookJSONOutput type with proper async fields."""
 
@@ -395,7 +386,6 @@ class TestHookCallbacks:
         assert "async_" not in result, "async_ should not appear in CLI output"
         assert result.get("asyncTimeout") == 5000
 
-    @pytest.mark.asyncio
     async def test_field_name_conversion(self):
         """Test that Python-safe field names (async_, continue_) are converted to CLI format (async, continue)."""
 

@@ -495,14 +495,24 @@ class Query:
                                     "mimeType": item.mimeType,
                                 }
                             )
-                        elif hasattr(item, "resource") and getattr(item, "type", None) == "resource":
+                        elif (
+                            hasattr(item, "resource")
+                            and getattr(item, "type", None) == "resource"
+                        ):
                             # EmbeddedResource - check if it's a document (PDF, etc.)
                             resource = item.resource
                             uri = getattr(resource, "uri", "")
                             mime_type = getattr(resource, "mimeType", "")
-                            if uri.startswith("document://") or mime_type == "application/pdf":
+                            if (
+                                uri.startswith("document://")
+                                or mime_type == "application/pdf"
+                            ):
                                 # Convert EmbeddedResource to Anthropic document format
-                                source_type = uri.replace("document://", "") if uri.startswith("document://") else "base64"
+                                source_type = (
+                                    uri.replace("document://", "")
+                                    if uri.startswith("document://")
+                                    else "base64"
+                                )
                                 content.append(
                                     {
                                         "type": "document",
@@ -543,6 +553,10 @@ class Query:
                 "id": message.get("id"),
                 "error": {"code": -32603, "message": str(e)},
             }
+
+    async def get_mcp_status(self) -> dict[str, Any]:
+        """Get current MCP server connection status."""
+        return await self._send_control_request({"subtype": "mcp_status"})
 
     async def interrupt(self) -> None:
         """Send interrupt control request."""

@@ -1,10 +1,14 @@
 """Claude SDK Client for interacting with Claude Code."""
 
+from __future__ import annotations
+
 import json
 import os
 from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import asdict, replace
 from typing import Any
+
+from clawd_code_sdk._internal.query import Query
 
 from . import Transport
 from ._errors import CLIConnectionError
@@ -70,7 +74,7 @@ class ClaudeSDKClient:
         self.options = options
         self._custom_transport = transport
         self._transport: Transport | None = None
-        self._query: Any | None = None
+        self._query: Query | None = None
         os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
 
     def _convert_hooks_to_internal_format(
@@ -86,7 +90,7 @@ class ClaudeSDKClient:
                     "matcher": matcher.matcher if hasattr(matcher, "matcher") else None,
                     "hooks": matcher.hooks if hasattr(matcher, "hooks") else [],
                 }
-                if hasattr(matcher, "timeout") and matcher.timeout is not None:
+                if matcher.timeout is not None:
                     internal_matcher["timeout"] = matcher.timeout
                 internal_hooks[event].append(internal_matcher)
         return internal_hooks
@@ -108,7 +112,6 @@ class ClaudeSDKClient:
             yield {}  # type: ignore[unreachable]
 
         actual_prompt = _empty_stream() if prompt is None else prompt
-
         # Validate and configure permission settings (matching TypeScript SDK logic)
         if self.options.can_use_tool:
             # canUseTool callback requires streaming mode (AsyncIterable prompt)
@@ -310,6 +313,32 @@ class ClaudeSDKClient:
             raise CLIConnectionError("Not connected. Call connect() first.")
         await self._query.rewind_files(user_message_id)
 
+    async def get_mcp_status(self) -> dict[str, Any]:
+        """Get current MCP server connection status (only works with streaming mode).
+
+        Queries the Claude Code CLI for the live connection status of all
+        configured MCP servers.
+
+        Returns:
+            Dictionary with MCP server status information. Contains a
+            'mcpServers' key with a list of server status objects, each having:
+            - 'name': Server name (str)
+            - 'status': Connection status ('connected', 'pending', 'failed',
+              'needs-auth', 'disabled')
+
+        Example:
+            ```python
+            async with ClaudeSDKClient(options) as client:
+                status = await client.get_mcp_status()
+                for server in status.get("mcpServers", []):
+                    print(f"{server['name']}: {server['status']}")
+            ```
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        result: dict[str, Any] = await self._query.get_mcp_status()
+        return result
+
     async def get_server_info(self) -> dict[str, Any] | None:
         """Get server initialization info including available commands and output styles.
 
@@ -333,7 +362,7 @@ class ClaudeSDKClient:
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
         # Return the initialization result that was already obtained during connect
-        return getattr(self._query, "_initialization_result", None)
+        return self._query._initialization_result
 
     async def receive_response(self) -> AsyncIterator[Message]:
         """
@@ -383,7 +412,7 @@ class ClaudeSDKClient:
             self._query = None
         self._transport = None
 
-    async def __aenter__(self) -> "ClaudeSDKClient":
+    async def __aenter__(self) -> ClaudeSDKClient:
         """Enter async context - automatically connects with empty stream for interactive use."""
         await self.connect()
         return self
