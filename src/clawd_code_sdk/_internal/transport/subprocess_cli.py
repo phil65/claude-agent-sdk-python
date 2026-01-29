@@ -154,7 +154,7 @@ class SubprocessCLITransport(Transport):
                 # Parse JSON string
                 try:
                     settings_obj = anyenv.load_json(settings_str)
-                except anyenv.LoadJsonError:
+                except anyenv.JsonLoadError:
                     # If parsing fails, treat as file path
                     logger.warning(
                         f"Failed to parse settings as JSON, treating as file path: {settings_str}"
@@ -564,7 +564,7 @@ class SubprocessCLITransport(Transport):
                         data = anyenv.load_json(json_buffer)
                         json_buffer = ""
                         yield data
-                    except anyenv.LoadJsonError:
+                    except anyenv.JsonLoadError:
                         # We are speculatively decoding the buffer until we get
                         # a full JSON object. If there is an actual issue, we
                         # raise an error after exceeding the configured limit.
