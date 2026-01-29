@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
+from anyio.abc import TaskGroup
 from mcp.types import (
     AudioContent,
     BlobResourceContents,
@@ -113,7 +114,7 @@ class Query:
         self._message_send, self._message_receive = anyio.create_memory_object_stream[
             dict[str, Any]
         ](max_buffer_size=100)
-        self._tg: anyio.abc.TaskGroup | None = None
+        self._tg: TaskGroup | None = None
         self._initialized = False
         self._closed = False
         self._initialization_result: dict[str, Any] | None = None
