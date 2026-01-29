@@ -1,3 +1,3 @@
 """Version information for clawd-code-sdk."""
 
-__version__ = "0.1.25"
+__version__ = "0.1.26"
