@@ -216,6 +216,20 @@ class InternalClient:
                         and message.error is not None
                     ):
                         _raise_api_error(message)
+
+                    # TODO: Verify if usage limit messages set the error field or come as
+                    # plain text. If they come as plain text without error field, uncomment
+                    # this block to detect and raise BillingError for usage limits.
+                    # if isinstance(message, AssistantMessage) and message.error is None:
+                    #     for block in message.content:
+                    #         if isinstance(block, TextBlock):
+                    #             if (
+                    #                 "You've hit your limit" in block.text
+                    #                 and "resets" in block.text
+                    #             ):
+                    #                 raise BillingError(block.text, message.model)
+                    #             break
+
                     yield message
 
         except GeneratorExit:
