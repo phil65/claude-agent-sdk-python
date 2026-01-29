@@ -9,10 +9,17 @@ from typing import TYPE_CHECKING, Any
 import anyenv
 import anyio
 from mcp.types import (
+    AudioContent,
+    BlobResourceContents,
     CallToolRequest,
     CallToolRequestParams,
+    EmbeddedResource,
+    ImageContent,
     ListToolsRequest,
+    ResourceLink,
+    TextContent,
 )
+from pydantic import BaseModel
 
 from ..types import (
     PermissionMode,
@@ -457,7 +464,7 @@ class Query:
                             "description": tool.description,
                             "inputSchema": (
                                 tool.inputSchema.model_dump()
-                                if hasattr(tool.inputSchema, "model_dump")
+                                if isinstance(tool.inputSchema, BaseModel)
                                 else tool.inputSchema
                             )
                             if tool.inputSchema
@@ -486,47 +493,52 @@ class Query:
                     # Convert MCP result to JSONRPC response
                     content = []
                     for item in result.root.content:  # type: ignore[union-attr]
-                        if hasattr(item, "text"):
-                            content.append({"type": "text", "text": item.text})
-                        elif hasattr(item, "data") and hasattr(item, "mimeType"):
-                            content.append(
-                                {
-                                    "type": "image",
-                                    "data": item.data,
-                                    "mimeType": item.mimeType,
-                                }
-                            )
-                        elif (
-                            hasattr(item, "resource")
-                            and getattr(item, "type", None) == "resource"
-                        ):
-                            # EmbeddedResource - check if it's a document (PDF, etc.)
-                            resource = item.resource
-                            uri = getattr(resource, "uri", "")
-                            mime_type = getattr(resource, "mimeType", "")
-                            if (
-                                uri.startswith("document://")
-                                or mime_type == "application/pdf"
-                            ):
-                                # Convert EmbeddedResource to Anthropic document format
-                                source_type = (
-                                    uri.replace("document://", "")
-                                    if uri.startswith("document://")
-                                    else "base64"
-                                )
+                        match item:
+                            case TextContent():
+                                content.append({"type": "text", "text": item.text})
+                            case ImageContent() | AudioContent():
                                 content.append(
                                     {
-                                        "type": "document",
-                                        "source": {
-                                            "type": source_type,
-                                            "media_type": mime_type,
-                                            "data": getattr(resource, "blob", ""),
-                                        },
+                                        "type": "image",
+                                        "data": item.data,
+                                        "mimeType": item.mimeType,
                                     }
                                 )
+                            case ResourceLink():
+                                pass
+                            case EmbeddedResource():
+                                # EmbeddedResource - check if it's a document (PDF, etc.)
+                                resource = item.resource
+                                uri = str(resource.uri)
+                                mime_type = resource.mimeType
+                                if (
+                                    uri.startswith("document://")
+                                    or mime_type == "application/pdf"
+                                ):
+                                    # Convert EmbeddedResource to Anthropic document format
+                                    source_type = (
+                                        uri.replace("document://", "")
+                                        if uri.startswith("document://")
+                                        else "base64"
+                                    )
+                                    data = (
+                                        resource.blob
+                                        if isinstance(resource, BlobResourceContents)
+                                        else ""
+                                    )
+                                    content.append(
+                                        {
+                                            "type": "document",
+                                            "source": {
+                                                "type": source_type,
+                                                "media_type": mime_type,
+                                                "data": data,
+                                            },
+                                        }
+                                    )
 
                     response_data = {"content": content}
-                    if hasattr(result.root, "isError") and result.root.isError:
+                    if hasattr(result.root, "isError") and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
                         response_data["is_error"] = True  # type: ignore[assignment]
 
                     return {
@@ -594,12 +606,7 @@ class Query:
 
     async def set_model(self, model: str | None) -> None:
         """Change the AI model."""
-        await self._send_control_request(
-            {
-                "subtype": "set_model",
-                "model": model,
-            }
-        )
+        await self._send_control_request({"subtype": "set_model", "model": model})
 
     async def rewind_files(self, user_message_id: str) -> None:
         """Rewind tracked files to their state at a specific user message.
@@ -610,10 +617,7 @@ class Query:
             user_message_id: UUID of the user message to rewind to
         """
         await self._send_control_request(
-            {
-                "subtype": "rewind_files",
-                "user_message_id": user_message_id,
-            }
+            {"subtype": "rewind_files", "user_message_id": user_message_id}
         )
 
     async def stream_input(self, stream: AsyncIterable[dict[str, Any]]) -> None:
