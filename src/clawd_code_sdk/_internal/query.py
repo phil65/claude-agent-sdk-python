@@ -2,7 +2,13 @@
 
 import logging
 import os
-from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterable,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+)
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +25,7 @@ from mcp.types import (
     ListToolsRequest,
     ResourceLink,
     TextContent,
+    TextResourceContents,
 )
 from pydantic import BaseModel
 
@@ -351,9 +358,9 @@ class Query:
                 # Type narrowing - we've verified these are not None above
                 assert isinstance(server_name, str)
                 assert isinstance(mcp_message, dict)
-                response = await self._handle_sdk_mcp_request(server_name, mcp_message)
+                mcp_resp = await self._handle_sdk_mcp_request(server_name, mcp_message)
                 # Wrap the MCP response as expected by the control protocol
-                response_data = {"mcp_response": response}
+                response_data = {"mcp_response": mcp_resp}
 
             else:
                 raise Exception(f"Unsupported control request subtype: {subtype}")
@@ -521,7 +528,7 @@ class Query:
                 if handler:
                     result = await handler(call_request)
                     # Convert MCP result to JSONRPC response
-                    content = []
+                    content: list[dict[str, Any]] = []
                     for item in result.root.content:  # type: ignore[union-attr]
                         match item:
                             case TextContent():
@@ -536,17 +543,22 @@ class Query:
                                 )
                             case ResourceLink():
                                 pass
-                            case EmbeddedResource(resource=resource, mimeType=mime_type):
+                            case EmbeddedResource(
+                                resource=BlobResourceContents(mimeType=mime_type, uri=uri)
+                                | TextResourceContents(
+                                    mimeType=mime_type, uri=uri
+                                ) as resource
+                            ):
                                 # EmbeddedResource - check if it's a document (PDF, etc.)
-                                uri = str(resource.uri)
+                                uri_str = str(uri)
                                 if (
-                                    uri.startswith("document://")
+                                    uri_str.startswith("document://")
                                     or mime_type == "application/pdf"
                                 ):
                                     # Convert EmbeddedResource to Anthropic document format
                                     source_type = (
-                                        uri.replace("document://", "")
-                                        if uri.startswith("document://")
+                                        uri_str.replace("document://", "")
+                                        if uri_str.startswith("document://")
                                         else "base64"
                                     )
                                     data = (
@@ -680,7 +692,7 @@ class Query:
         except Exception as e:
             logger.debug(f"Error streaming input: {e}")
 
-    async def receive_messages(self) -> AsyncIterator[dict[str, Any]]:
+    async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""
         async for message in self._message_receive:
             # Check for special messages
