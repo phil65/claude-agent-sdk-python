@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import asdict, replace
 from typing import Any
+
+import anyenv
 
 from clawd_code_sdk._internal.query import Query
 
@@ -217,14 +218,14 @@ class ClaudeSDKClient:
                 "parent_tool_use_id": None,
                 "session_id": session_id,
             }
-            await self._transport.write(json.dumps(message) + "\n")
+            await self._transport.write(anyenv.dump_json(message) + "\n")
         else:
             # Handle AsyncIterable prompts - stream them
             async for msg in prompt:
                 # Ensure session_id is set on each message
                 if "session_id" not in msg:
                     msg["session_id"] = session_id
-                await self._transport.write(json.dumps(msg) + "\n")
+                await self._transport.write(anyenv.dump_json(msg) + "\n")
 
     async def interrupt(self) -> None:
         """Send interrupt signal (only works with streaming mode)."""

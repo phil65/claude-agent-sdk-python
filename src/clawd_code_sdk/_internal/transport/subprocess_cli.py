@@ -14,6 +14,7 @@ from pathlib import Path
 from subprocess import PIPE
 from typing import Any
 
+import anyenv
 import anyio
 import anyio.abc
 from anyio.abc import Process
@@ -152,8 +153,8 @@ class SubprocessCLITransport(Transport):
             if settings_str.startswith("{") and settings_str.endswith("}"):
                 # Parse JSON string
                 try:
-                    settings_obj = json.loads(settings_str)
-                except json.JSONDecodeError:
+                    settings_obj = anyenv.load_json(settings_str)
+                except anyenv.LoadJsonError:
                     # If parsing fails, treat as file path
                     logger.warning(
                         f"Failed to parse settings as JSON, treating as file path: {settings_str}"
@@ -176,7 +177,7 @@ class SubprocessCLITransport(Transport):
         if has_sandbox:
             settings_obj["sandbox"] = self._options.sandbox
 
-        return json.dumps(settings_obj)
+        return anyenv.dump_json(settings_obj)
 
     def _build_command(self) -> list[str]:
         """Build CLI command with arguments."""
@@ -275,7 +276,7 @@ class SubprocessCLITransport(Transport):
                     cmd.extend(
                         [
                             "--mcp-config",
-                            json.dumps({"mcpServers": servers_for_cli}),
+                            anyenv.dump_json({"mcpServers": servers_for_cli}),
                         ]
                     )
             else:
@@ -329,7 +330,7 @@ class SubprocessCLITransport(Transport):
         ):
             schema = self._options.output_format.get("schema")
             if schema is not None:
-                cmd.extend(["--json-schema", json.dumps(schema)])
+                cmd.extend(["--json-schema", anyenv.dump_json(schema)])
 
         # Always use streaming mode with stdin (matching TypeScript SDK)
         # This allows agents and other large configs to be sent via initialize request
@@ -560,10 +561,10 @@ class SubprocessCLITransport(Transport):
                         )
 
                     try:
-                        data = json.loads(json_buffer)
+                        data = anyenv.load_json(json_buffer)
                         json_buffer = ""
                         yield data
-                    except json.JSONDecodeError:
+                    except anyenv.LoadJsonError:
                         # We are speculatively decoding the buffer until we get
                         # a full JSON object. If there is an actual issue, we
                         # raise an error after exceeding the configured limit.

@@ -1,12 +1,12 @@
 """Query class for handling bidirectional control protocol."""
 
-import json
 import logging
 import os
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
+import anyenv
 import anyio
 from mcp.types import (
     CallToolRequest,
@@ -330,7 +330,7 @@ class Query:
                     "response": response_data,
                 },
             }
-            await self.transport.write(json.dumps(success_response) + "\n")
+            await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
         except Exception as e:
             # Send error response
@@ -342,7 +342,7 @@ class Query:
                     "error": str(e),
                 },
             }
-            await self.transport.write(json.dumps(error_response) + "\n")
+            await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
     async def _send_control_request(
         self, request: dict[str, Any], timeout: float = 60.0
@@ -371,7 +371,7 @@ class Query:
             "request": request,
         }
 
-        await self.transport.write(json.dumps(control_request) + "\n")
+        await self.transport.write(anyenv.dump_json(control_request) + "\n")
 
         # Wait for response
         try:
@@ -626,7 +626,7 @@ class Query:
             async for message in stream:
                 if self._closed:
                     break
-                await self.transport.write(json.dumps(message) + "\n")
+                await self.transport.write(anyenv.dump_json(message) + "\n")
 
             # If we have SDK MCP servers or hooks that need bidirectional communication,
             # wait for first result before closing the channel

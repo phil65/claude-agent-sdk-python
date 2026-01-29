@@ -4,6 +4,8 @@ from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import asdict, replace
 from typing import Any
 
+import anyenv
+
 from .._errors import (
     APIError,
     AuthenticationError,
@@ -175,15 +177,13 @@ class InternalClient:
             if isinstance(prompt, str):
                 # For string prompts, write user message to stdin after initialize
                 # (matching TypeScript SDK behavior)
-                import json
-
                 user_message = {
                     "type": "user",
                     "session_id": "",
                     "message": {"role": "user", "content": prompt},
                     "parent_tool_use_id": None,
                 }
-                await chosen_transport.write(json.dumps(user_message) + "\n")
+                await chosen_transport.write(anyenv.dump_json(user_message) + "\n")
                 await chosen_transport.end_input()
             elif isinstance(prompt, AsyncIterable) and query._tg:
                 # Stream input in background for async iterables
