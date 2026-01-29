@@ -21,6 +21,7 @@ from ._errors import (
 )
 from ._internal.transport import Transport
 from ._version import __version__
+from .anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
 from .query import query
 from .types import (

@@ -1,16 +1,17 @@
 """Type definitions for Claude SDK."""
 
+from __future__ import annotations
+
 import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
+from .anthropic_types import ToolResultContentBlock
+
 if TYPE_CHECKING:
     from mcp.server import Server as McpServer
-else:
-    # Runtime placeholder for forward reference resolution in Pydantic 2.12+
-    McpServer = Any
 
 # Permission modes
 # - 'default': Standard behavior, prompts for dangerous operations
@@ -437,7 +438,7 @@ class McpSdkServerConfig(TypedDict):
 
     type: Literal["sdk"]
     name: str
-    instance: "McpServer"
+    instance: McpServer
 
 
 McpServerConfig = (
@@ -562,7 +563,7 @@ class ToolResultBlock:
     """Tool result content block."""
 
     tool_use_id: str
-    content: str | list[dict[str, Any]] | None = None
+    content: str | list[ToolResultContentBlock] | None = None
     is_error: bool | None = None
 
 
