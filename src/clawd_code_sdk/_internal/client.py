@@ -1,6 +1,8 @@
 """Internal client implementation."""
 
+import logging
 from collections.abc import AsyncIterable, AsyncIterator
+from contextlib import aclosing
 from dataclasses import asdict, replace
 from typing import Any
 
@@ -26,6 +28,8 @@ from .message_parser import parse_message
 from .query import Query
 from .transport import Transport
 from .transport.subprocess_cli import SubprocessCLITransport
+
+logger = logging.getLogger(__name__)
 
 # Map error types to exception classes
 _ERROR_TYPE_TO_EXCEPTION: dict[str, type[APIError]] = {
@@ -190,11 +194,17 @@ class InternalClient:
                 query._tg.start_soon(query.stream_input, prompt)
 
             # Yield parsed messages
-            async for data in query.receive_messages():
-                message = parse_message(data)
-                # Check for API errors and raise appropriate exceptions
-                _raise_if_api_error(message)
-                yield message
+            # Use aclosing() for proper async generator cleanup
+            async with aclosing(query.receive_messages()) as messages:
+                async for data in messages:
+                    message = parse_message(data)
+                    # Check for API errors and raise appropriate exceptions
+                    _raise_if_api_error(message)
+                    yield message
 
+        except GeneratorExit:
+            # Handle early termination of the async generator gracefully
+            # This occurs when the caller breaks out of the async for loop
+            logger.debug("process_query generator closed early by caller")
         finally:
             await query.close()
