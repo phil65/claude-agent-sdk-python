@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
-from anyio.abc import TaskGroup
+from anyio.abc import CancelScope, TaskGroup
 from mcp.types import (
     AudioContent,
     BlobResourceContents,
