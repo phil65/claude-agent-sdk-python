@@ -318,9 +318,7 @@ class SubprocessCLITransport(Transport):
                 cmd.extend([f"--{flag}", str(value)])
 
         if self._options.max_thinking_tokens is not None:
-            cmd.extend(
-                ["--max-thinking-tokens", str(self._options.max_thinking_tokens)]
-            )
+            cmd.extend(["--max-thinking-tokens", str(self._options.max_thinking_tokens)])
 
         # Extract schema from output_format structure if provided
         # Expected: {"type": "json_schema", "schema": {...}}
@@ -595,9 +593,7 @@ class SubprocessCLITransport(Transport):
 
         # Use exit code for error detection
         if returncode is not None and returncode != 0:
-            stderr_output = (
-                "\n".join(self._stderr_lines) if self._stderr_lines else None
-            )
+            stderr_output = "\n".join(self._stderr_lines) if self._stderr_lines else None
             self._exit_error = ProcessError(
                 f"Command failed with exit code {returncode}",
                 exit_code=returncode,

@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from pydantic import AnyUrl
 
@@ -67,11 +67,9 @@ from .types import (
 
 # MCP Server Support
 
-T = TypeVar("T")
-
 
 @dataclass
-class SdkMcpTool(Generic[T]):
+class SdkMcpTool[T]:
     """Definition for an SDK MCP tool."""
 
     name: str
@@ -317,9 +315,7 @@ def create_sdk_mcp_server(
                                     uri=AnyUrl(
                                         f"document://{source.get('type', 'base64')}"
                                     ),
-                                    mimeType=source.get(
-                                        "media_type", "application/pdf"
-                                    ),
+                                    mimeType=source.get("media_type", "application/pdf"),
                                     blob=source.get("data", ""),
                                 ),
                             )

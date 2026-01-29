@@ -340,9 +340,7 @@ class ClaudeSDKClient:
         result: dict[str, Any] = await self._query.get_mcp_status()
         return result
 
-    async def set_mcp_servers(
-        self, servers: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:
+    async def set_mcp_servers(self, servers: dict[str, dict[str, Any]]) -> dict[str, Any]:
         """Add, replace, or remove MCP servers dynamically mid-session.
 
         Allows dynamic registration of MCP servers without restarting the session.

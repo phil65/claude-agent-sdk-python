@@ -55,9 +55,7 @@ def parse_message(data: dict[str, Any]) -> Message:
                     for block in data["message"]["content"]:
                         match block["type"]:
                             case "text":
-                                user_content_blocks.append(
-                                    TextBlock(text=block["text"])
-                                )
+                                user_content_blocks.append(TextBlock(text=block["text"]))
                             case "tool_use":
                                 user_content_blocks.append(
                                     ToolUseBlock(

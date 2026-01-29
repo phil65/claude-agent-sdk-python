@@ -536,9 +536,7 @@ class Query:
                                 )
                             case ResourceLink():
                                 pass
-                            case EmbeddedResource(
-                                resource=resource, mimeType=mime_type
-                            ):
+                            case EmbeddedResource(resource=resource, mimeType=mime_type):
                                 # EmbeddedResource - check if it's a document (PDF, etc.)
                                 uri = str(resource.uri)
                                 if (
@@ -601,9 +599,7 @@ class Query:
         """Get current MCP server connection status."""
         return await self._send_control_request({"subtype": "mcp_status"})
 
-    async def set_mcp_servers(
-        self, servers: dict[str, dict[str, Any]]
-    ) -> dict[str, Any]:
+    async def set_mcp_servers(self, servers: dict[str, dict[str, Any]]) -> dict[str, Any]:
         """Add, replace, or remove MCP servers dynamically."""
         return await self._send_control_request(
             {
