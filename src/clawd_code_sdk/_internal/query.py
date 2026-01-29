@@ -15,18 +15,6 @@ from typing import TYPE_CHECKING, Any
 import anyenv
 import anyio
 from anyio.abc import CancelScope, TaskGroup
-from mcp.types import (
-    AudioContent,
-    BlobResourceContents,
-    CallToolRequest,
-    CallToolRequestParams,
-    EmbeddedResource,
-    ImageContent,
-    ListToolsRequest,
-    ResourceLink,
-    TextContent,
-    TextResourceContents,
-)
 from pydantic import BaseModel
 
 from ..types import (
@@ -451,6 +439,20 @@ class Query:
         Returns:
             The response message
         """
+        from mcp.types import (
+            AudioContent,
+            BlobResourceContents,
+            CallToolRequest,
+            CallToolRequestParams,
+            CallToolResult,
+            EmbeddedResource,
+            ImageContent,
+            ListToolsRequest,
+            ResourceLink,
+            TextContent,
+            TextResourceContents,
+        )
+
         if server_name not in self.sdk_mcp_servers:
             return {
                 "jsonrpc": "2.0",
@@ -491,8 +493,7 @@ class Query:
 
             elif method == "tools/list":
                 request = ListToolsRequest(method=method)
-                handler = server.request_handlers.get(ListToolsRequest)
-                if handler:
+                if handler := server.request_handlers.get(ListToolsRequest):
                     result = await handler(request)
                     # Convert MCP result to JSONRPC response
                     tools_data = [
@@ -524,8 +525,7 @@ class Query:
                         _meta=params.get("_meta"),
                     ),
                 )
-                handler = server.request_handlers.get(CallToolRequest)
-                if handler:
+                if handler := server.request_handlers.get(CallToolRequest):
                     result = await handler(call_request)
                     # Convert MCP result to JSONRPC response
                     content: list[dict[str, Any]] = []
@@ -578,7 +578,7 @@ class Query:
                                     )
 
                     response_data = {"content": content}
-                    if hasattr(result.root, "isError") and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
+                    if isinstance(result.root, CallToolResult) and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
                         response_data["is_error"] = True  # type: ignore[assignment]
 
                     return {
