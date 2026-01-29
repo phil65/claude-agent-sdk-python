@@ -903,7 +903,7 @@ class TestAsyncGeneratorCleanup:
                 await client.connect()
 
                 count = 0
-                async for msg in client.receive_messages():
+                async for _msg in client.receive_messages():
                     count += 1
                     if count >= 2:
                         break  # Early exit - this should NOT raise RuntimeError

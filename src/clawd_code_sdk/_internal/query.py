@@ -351,11 +351,9 @@ class Query:
                 # Type narrowing - we've verified these are not None above
                 assert isinstance(server_name, str)
                 assert isinstance(mcp_message, dict)
-                mcp_response = await self._handle_sdk_mcp_request(
-                    server_name, mcp_message
-                )
+                response = await self._handle_sdk_mcp_request(server_name, mcp_message)
                 # Wrap the MCP response as expected by the control protocol
-                response_data = {"mcp_response": mcp_response}
+                response_data = {"mcp_response": response}
 
             else:
                 raise Exception(f"Unsupported control request subtype: {subtype}")
@@ -538,11 +536,11 @@ class Query:
                                 )
                             case ResourceLink():
                                 pass
-                            case EmbeddedResource():
+                            case EmbeddedResource(
+                                resource=resource, mimeType=mime_type
+                            ):
                                 # EmbeddedResource - check if it's a document (PDF, etc.)
-                                resource = item.resource
                                 uri = str(resource.uri)
-                                mime_type = resource.mimeType
                                 if (
                                     uri.startswith("document://")
                                     or mime_type == "application/pdf"
