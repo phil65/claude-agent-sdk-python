@@ -32,18 +32,14 @@ class TestMessageTypes:
     def test_assistant_message_with_thinking(self):
         """Test creating an AssistantMessage with thinking content."""
         thinking_block = ThinkingBlock(thinking="I'm thinking...", signature="sig-123")
-        msg = AssistantMessage(
-            content=[thinking_block], model="claude-opus-4-1-20250805"
-        )
+        msg = AssistantMessage(content=[thinking_block], model="claude-opus-4-1-20250805")
         assert len(msg.content) == 1
         assert msg.content[0].thinking == "I'm thinking..."
         assert msg.content[0].signature == "sig-123"
 
     def test_tool_use_block(self):
         """Test creating a ToolUseBlock."""
-        block = ToolUseBlock(
-            id="tool-123", name="Read", input={"file_path": "/test.txt"}
-        )
+        block = ToolUseBlock(id="tool-123", name="Read", input={"file_path": "/test.txt"})
         assert block.id == "tool-123"
         assert block.name == "Read"
         assert block.input["file_path"] == "/test.txt"

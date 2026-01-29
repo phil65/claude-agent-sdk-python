@@ -14,14 +14,10 @@ messages will include StreamEvent messages interspersed with regular messages.
 """
 
 import asyncio
+
 from clawd_code_sdk import ClaudeSDKClient
 from clawd_code_sdk.types import (
     ClaudeAgentOptions,
-    StreamEvent,
-    AssistantMessage,
-    UserMessage,
-    SystemMessage,
-    ResultMessage,
 )
 
 

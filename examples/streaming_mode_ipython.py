@@ -36,6 +36,7 @@ import asyncio
 from clawd_code_sdk import AssistantMessage, ClaudeSDKClient, TextBlock
 
 async with ClaudeSDKClient() as client:
+
     async def send_and_receive(prompt):
         print(f"User: {prompt}")
         await client.query(prompt)
@@ -158,7 +159,7 @@ try:
                         if isinstance(block, TextBlock):
                             print(f"Claude: {block.text}")
 
-except asyncio.TimeoutError:
+except TimeoutError:
     print("Request timed out after 20 seconds")
 except Exception as e:
     print(f"Error: {e}")
@@ -178,22 +179,23 @@ async def message_generator():
         "type": "user",
         "message": {"role": "user", "content": "I have two math questions."},
         "parent_tool_use_id": None,
-        "session_id": "math-session"
+        "session_id": "math-session",
     }
     print("User: What is 25 * 4?")
     yield {
         "type": "user",
         "message": {"role": "user", "content": "What is 25 * 4?"},
         "parent_tool_use_id": None,
-        "session_id": "math-session"
+        "session_id": "math-session",
     }
     print("User: What is 100 / 5?")
     yield {
         "type": "user",
         "message": {"role": "user", "content": "What is 100 / 5?"},
         "parent_tool_use_id": None,
-        "session_id": "math-session"
+        "session_id": "math-session",
     }
+
 
 async with ClaudeSDKClient() as client:
     # Send async iterable instead of string

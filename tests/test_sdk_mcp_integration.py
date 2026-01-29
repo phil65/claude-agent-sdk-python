@@ -332,6 +332,8 @@ async def test_document_content_support():
     # Verify tool execution
     assert len(tool_executions) == 1
     assert tool_executions[0]["name"] == "read_document"
+
+
 async def test_error_handling_through_jsonrpc():
     """Test that tool errors are properly handled through the JSONRPC handler."""
 

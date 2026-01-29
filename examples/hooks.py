@@ -13,7 +13,6 @@ Usage:
 import asyncio
 import logging
 import sys
-from typing import Any
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from clawd_code_sdk.types import (

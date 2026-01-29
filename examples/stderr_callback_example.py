@@ -30,9 +30,8 @@ async def main():
         prompt="What is 2+2?",
         options=options
     ):
-        if hasattr(message, 'content'):
-            if isinstance(message.content, str):
-                print(f"Response: {message.content}")
+        if hasattr(message, 'content') and isinstance(message.content, str):
+            print(f"Response: {message.content}")
 
     # Show what we captured
     print(f"\nCaptured {len(stderr_messages)} stderr lines")

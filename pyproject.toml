@@ -87,6 +87,7 @@ asyncio_mode = "auto"
 [tool.ruff]
 target-version = "py313"
 line-length = 90
+exclude = ["examples/"]
 
 [tool.ruff.lint]
 select = [

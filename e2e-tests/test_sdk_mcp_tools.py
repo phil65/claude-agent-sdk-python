@@ -42,7 +42,7 @@ async def test_sdk_mcp_tool_execution():
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__test__echo tool with any text")
 
-        async for message in client.receive_response():
+        async for _message in client.receive_response():
             pass  # Just consume messages
 
     # Check if the actual Python function was called
@@ -84,7 +84,7 @@ async def test_sdk_mcp_permission_enforcement():
             "Use the echo tool to echo 'test' and use greet tool to greet 'Alice'"
         )
 
-        async for message in client.receive_response():
+        async for _message in client.receive_response():
             pass  # Just consume messages
 
     # Check actual function executions
@@ -126,7 +126,7 @@ async def test_sdk_mcp_multiple_tools():
             "Call mcp__multi__echo with text='test' and mcp__multi__greet with name='Bob'"
         )
 
-        async for message in client.receive_response():
+        async for _message in client.receive_response():
             pass  # Just consume messages
 
     # Both tools should have been executed
@@ -160,7 +160,7 @@ async def test_sdk_mcp_without_permissions():
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__noperm__echo tool")
 
-        async for message in client.receive_response():
+        async for _message in client.receive_response():
             pass  # Just consume messages
 
     assert "echo" not in executions, "SDK MCP tool was executed"

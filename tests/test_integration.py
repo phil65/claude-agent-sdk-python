@@ -253,9 +253,7 @@ class TestIntegration:
                         "type": "assistant",
                         "message": {
                             "role": "assistant",
-                            "content": [
-                                {"type": "text", "text": "Starting to read..."}
-                            ],
+                            "content": [{"type": "text", "text": "Starting to read..."}],
                             "model": "claude-opus-4-1-20250805",
                         },
                     }

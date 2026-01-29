@@ -445,7 +445,7 @@ async def example_error_handling():
                         display_message(msg)
                         break
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             print(
                 "\nResponse timeout after 10 seconds - demonstrating graceful handling"
             )

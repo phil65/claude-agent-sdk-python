@@ -426,9 +426,7 @@ class TestSubprocessCLITransport:
             options = make_options(env=custom_env)
 
             # Mock the subprocess to capture the env argument
-            with patch(
-                "anyio.open_process", new_callable=AsyncMock
-            ) as mock_open_process:
+            with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
                 mock_version_process = MagicMock()
                 mock_version_process.stdout = MagicMock()
@@ -486,9 +484,7 @@ class TestSubprocessCLITransport:
             options = make_options(user=custom_user)
 
             # Mock the subprocess to capture the env argument
-            with patch(
-                "anyio.open_process", new_callable=AsyncMock
-            ) as mock_open_process:
+            with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
                 mock_version_process = MagicMock()
                 mock_version_process.stdout = MagicMock()
@@ -573,9 +569,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk import SandboxSettings
 
         # Existing settings as JSON string
-        existing_settings = (
-            '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
-        )
+        existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
 
         sandbox: SandboxSettings = {
             "enabled": True,

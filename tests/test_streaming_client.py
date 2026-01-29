@@ -295,8 +295,7 @@ class TestClaudeSDKClientStreaming:
                             msg = json.loads(data.strip())
                             if (
                                 msg.get("type") == "control_request"
-                                and msg.get("request", {}).get("subtype")
-                                == "initialize"
+                                and msg.get("request", {}).get("subtype") == "initialize"
                             ):
                                 yield {
                                     "type": "control_response",
@@ -364,8 +363,7 @@ class TestClaudeSDKClientStreaming:
                             msg = json.loads(data.strip())
                             if (
                                 msg.get("type") == "control_request"
-                                and msg.get("request", {}).get("subtype")
-                                == "initialize"
+                                and msg.get("request", {}).get("subtype") == "initialize"
                             ):
                                 yield {
                                     "type": "control_response",
@@ -404,9 +402,7 @@ class TestClaudeSDKClientStreaming:
                         "type": "assistant",
                         "message": {
                             "role": "assistant",
-                            "content": [
-                                {"type": "text", "text": "Should not see this"}
-                            ],
+                            "content": [{"type": "text", "text": "Should not see this"}],
                         },
                         "model": "claude-opus-4-1-20250805",
                     }

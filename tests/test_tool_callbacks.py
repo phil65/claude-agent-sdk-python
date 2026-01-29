@@ -316,9 +316,7 @@ class TestHookCallbacks:
         result = response_data["response"]["response"]
 
         # Verify control fields are present and converted to CLI format
-        assert result.get("continue") is True, (
-            "continue_ should be converted to continue"
-        )
+        assert result.get("continue") is True, "continue_ should be converted to continue"
         assert "continue_" not in result, "continue_ should not appear in CLI output"
         assert result.get("suppressOutput") is False
         assert result.get("stopReason") == "Test stop reason"
@@ -332,9 +330,7 @@ class TestHookCallbacks:
         hook_output = result.get("hookSpecificOutput", {})
         assert hook_output.get("hookEventName") == "PreToolUse"
         assert hook_output.get("permissionDecision") == "deny"
-        assert (
-            hook_output.get("permissionDecisionReason") == "Security policy violation"
-        )
+        assert hook_output.get("permissionDecisionReason") == "Security policy violation"
         assert "updatedInput" in hook_output
 
     async def test_async_hook_output(self):
@@ -466,9 +462,7 @@ class TestClaudeAgentOptionsIntegration:
         options = ClaudeAgentOptions(
             can_use_tool=my_callback,
             hooks={
-                "tool_use_start": [
-                    HookMatcher(matcher={"tool": "Bash"}, hooks=[my_hook])
-                ]
+                "tool_use_start": [HookMatcher(matcher={"tool": "Bash"}, hooks=[my_hook])]
             },
         )
 
