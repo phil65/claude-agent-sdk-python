@@ -1,3 +1,5 @@
 """Version information for clawd-code-sdk."""
 
-__version__ = "0.1.26"
+from importlib.metadata import version
+
+__version__ = version("clawd-code-sdk")
