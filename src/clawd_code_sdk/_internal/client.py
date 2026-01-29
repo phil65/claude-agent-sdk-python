@@ -31,48 +31,60 @@ from .transport.subprocess_cli import SubprocessCLITransport
 
 logger = logging.getLogger(__name__)
 
-# Map error types to exception classes
-_ERROR_TYPE_TO_EXCEPTION: dict[str, type[APIError]] = {
-    "authentication_failed": AuthenticationError,
-    "billing_error": BillingError,
-    "rate_limit": RateLimitError,
-    "invalid_request": InvalidRequestError,
-    "server_error": ServerError,
-    "unknown": APIError,
-}
 
+def _extract_error_message(message: AssistantMessage) -> str:
+    """Extract the error message text from an AssistantMessage.
 
-def _raise_if_api_error(message: Message) -> None:
-    """Check if a message contains an API error and raise the appropriate exception.
+    When the API returns an error, the error text is typically in the
+    first TextBlock of the message content.
 
     Args:
-        message: The parsed message to check
+        message: The AssistantMessage containing the error.
+
+    Returns:
+        The error message text, or a default message if none found.
+    """
+    for block in message.content:
+        if isinstance(block, TextBlock):
+            return block.text
+    return "An API error occurred"
+
+
+def _raise_api_error(message: AssistantMessage) -> None:
+    """Raise the appropriate API exception for an AssistantMessage with an error.
+
+    This function converts the error field on an AssistantMessage into a proper
+    Python exception that can be caught and handled programmatically.
+
+    Args:
+        message: The AssistantMessage with error field set.
 
     Raises:
-        APIError: If the message contains an API error
+        AuthenticationError: For authentication_failed errors (401).
+        BillingError: For billing_error errors.
+        RateLimitError: For rate_limit errors (429).
+        InvalidRequestError: For invalid_request errors (400).
+        ServerError: For server_error errors (500/529).
+        APIError: For unknown error types.
     """
-    if isinstance(message, AssistantMessage) and message.error:
-        # Extract error text from message content
-        error_text = None
-        if message.content:
-            for block in message.content:
-                if isinstance(block, TextBlock):
-                    error_text = block.text
-                    break
+    error_type = message.error
+    error_message = _extract_error_message(message)
+    model = message.model
 
-        # Get the appropriate exception class
-        exc_class = _ERROR_TYPE_TO_EXCEPTION.get(message.error, APIError)
-
-        # Build error message
-        error_message = f"API error ({message.error})"
-        if error_text:
-            error_message = f"{error_message}: {error_text}"
-
-        raise exc_class(
-            message=error_message,
-            error_type=message.error,
-            error_text=error_text,
-        )
+    match error_type:
+        case "authentication_failed":
+            raise AuthenticationError(error_message, model)
+        case "billing_error":
+            raise BillingError(error_message, model)
+        case "rate_limit":
+            raise RateLimitError(error_message, model)
+        case "invalid_request":
+            raise InvalidRequestError(error_message, model)
+        case "server_error":
+            raise ServerError(error_message, model)
+        case _:
+            # Handle "unknown" or any future error types
+            raise APIError(error_message, error_type or "unknown", model)
 
 
 class InternalClient:
@@ -198,8 +210,12 @@ class InternalClient:
             async with aclosing(query.receive_messages()) as messages:
                 async for data in messages:
                     message = parse_message(data)
-                    # Check for API errors and raise appropriate exceptions
-                    _raise_if_api_error(message)
+                    # Check if this is an AssistantMessage with an API error
+                    if (
+                        isinstance(message, AssistantMessage)
+                        and message.error is not None
+                    ):
+                        _raise_api_error(message)
                     yield message
 
         except GeneratorExit:

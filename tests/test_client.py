@@ -181,7 +181,8 @@ class TestAPIErrorRaising:
                         pass
 
                 assert exc_info.value.error_type == "invalid_request"
-                assert "model identifier" in exc_info.value.error_text.lower()
+                assert exc_info.value.model == "claude-invalid-model"
+                assert "model identifier" in str(exc_info.value).lower()
 
         anyio.run(_test)
 

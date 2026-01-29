@@ -59,82 +59,76 @@ class TestErrorTypes:
 
 
 class TestAPIErrors:
-    """Test API error types for programmatic error handling."""
+    """Test API error types for programmatic error handling (issue #472)."""
 
     def test_api_error_base(self):
         """Test base APIError."""
-        error = APIError(
-            "API error (unknown): Something went wrong",
-            error_type="unknown",
-            error_text="Something went wrong",
-        )
+        error = APIError("API error occurred", "unknown", "claude-sonnet-4-5")
         assert isinstance(error, ClaudeSDKError)
         assert error.error_type == "unknown"
-        assert error.error_text == "Something went wrong"
-        assert "API error" in str(error)
+        assert error.model == "claude-sonnet-4-5"
+        assert "API error occurred" in str(error)
 
     def test_authentication_error(self):
         """Test AuthenticationError for 401 responses."""
-        error = AuthenticationError(
-            "API error (authentication_failed): Invalid API key",
-            error_type="authentication_failed",
-            error_text="Invalid API key",
-        )
+        error = AuthenticationError("Invalid API key", "claude-sonnet-4-5")
         assert isinstance(error, APIError)
         assert isinstance(error, ClaudeSDKError)
         assert error.error_type == "authentication_failed"
+        assert error.model == "claude-sonnet-4-5"
+        assert "Invalid API key" in str(error)
 
     def test_billing_error(self):
         """Test BillingError for billing issues."""
-        error = BillingError(
-            "API error (billing_error): Account suspended",
-            error_type="billing_error",
-            error_text="Account suspended",
-        )
+        error = BillingError("Insufficient credits", "claude-opus-4-5")
         assert isinstance(error, APIError)
         assert error.error_type == "billing_error"
+        assert error.model == "claude-opus-4-5"
+        assert "Insufficient credits" in str(error)
 
     def test_rate_limit_error(self):
         """Test RateLimitError for 429 responses."""
-        error = RateLimitError(
-            "API error (rate_limit): Too many requests",
-            error_type="rate_limit",
-            error_text="Too many requests",
-        )
+        error = RateLimitError("Rate limit exceeded", "claude-sonnet-4-5")
         assert isinstance(error, APIError)
         assert error.error_type == "rate_limit"
+        assert "Rate limit exceeded" in str(error)
 
     def test_invalid_request_error(self):
         """Test InvalidRequestError for 400 responses."""
         error = InvalidRequestError(
-            "API error (invalid_request): Model identifier is invalid",
-            error_type="invalid_request",
-            error_text="Model identifier is invalid",
+            "The provided model identifier is invalid", "invalid-model"
         )
         assert isinstance(error, APIError)
         assert error.error_type == "invalid_request"
+        assert "model identifier is invalid" in str(error)
 
     def test_server_error(self):
         """Test ServerError for 500/529 responses."""
-        error = ServerError(
-            "API error (server_error): Service temporarily unavailable",
-            error_type="server_error",
-            error_text="Service temporarily unavailable",
-        )
+        error = ServerError("API Error: Repeated 529 Overloaded errors")
         assert isinstance(error, APIError)
         assert error.error_type == "server_error"
+        assert error.model is None  # Model is optional
+        assert "529 Overloaded" in str(error)
 
-    def test_error_hierarchy(self):
-        """Test that all API errors inherit from APIError and ClaudeSDKError."""
-        error_classes = [
-            AuthenticationError,
-            BillingError,
-            RateLimitError,
-            InvalidRequestError,
-            ServerError,
+    def test_api_errors_are_catchable_by_base_class(self):
+        """Test that all API errors can be caught by APIError or ClaudeSDKError."""
+        errors = [
+            AuthenticationError("auth failed"),
+            BillingError("billing issue"),
+            RateLimitError("rate limited"),
+            InvalidRequestError("bad request"),
+            ServerError("server error"),
         ]
-        for cls in error_classes:
-            error = cls("test", error_type="test")
-            assert isinstance(error, APIError)
-            assert isinstance(error, ClaudeSDKError)
-            assert isinstance(error, Exception)
+
+        for error in errors:
+            # Should be catchable by APIError
+            try:
+                raise error
+            except APIError as e:
+                assert e.error_type is not None
+
+            # Should also be catchable by ClaudeSDKError
+            try:
+                raise error
+            except ClaudeSDKError:
+                pass  # Successfully caught
