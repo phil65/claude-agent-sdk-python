@@ -15,6 +15,7 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
+from clawd_code_sdk.types import SDKControlRequest
 
 
 class MockTransport(Transport):
@@ -147,17 +148,17 @@ class TestToolPermissionCallbacks:
             can_use_tool=modify_callback,
             hooks=None,
         )
-
-        request = {
-            "type": "control_request",
-            "request_id": "test-3",
-            "request": {
+        # missing tool_use_id
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-3",
+            request={  # pyright: ignore[reportArgumentType]
                 "subtype": "can_use_tool",
                 "tool_name": "WriteTool",
                 "input": {"file_path": "/etc/passwd"},
                 "permission_suggestions": [],
             },
-        }
+        )
 
         await query._handle_control_request(request)
 
@@ -182,17 +183,17 @@ class TestToolPermissionCallbacks:
             can_use_tool=error_callback,
             hooks=None,
         )
-
-        request = {
-            "type": "control_request",
-            "request_id": "test-5",
-            "request": {
+        # missing tool_use_id
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-5",
+            request={  # pyright: ignore[reportArgumentType]
                 "subtype": "can_use_tool",
                 "tool_name": "TestTool",
                 "input": {},
                 "permission_suggestions": [],
             },
-        }
+        )
 
         await query._handle_control_request(request)
 
@@ -232,16 +233,16 @@ class TestHookCallbacks:
         query.hook_callbacks[callback_id] = test_hook
 
         # Simulate hook callback request
-        request = {
-            "type": "control_request",
-            "request_id": "test-hook-1",
-            "request": {
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-hook-1",
+            request={
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": "tool-123",
             },
-        }
+        )
 
         await query._handle_control_request(request)
 
@@ -294,16 +295,16 @@ class TestHookCallbacks:
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
 
-        request = {
-            "type": "control_request",
-            "request_id": "test-comprehensive",
-            "request": {
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-comprehensive",
+            request={
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": "tool-456",
             },
-        }
+        )
 
         await query._handle_control_request(request)
 
@@ -353,16 +354,16 @@ class TestHookCallbacks:
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
 
-        request = {
-            "type": "control_request",
-            "request_id": "test-async",
-            "request": {
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-async",
+            request={
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "async_data"},
                 "tool_use_id": None,
             },
-        }
+        )
 
         await query._handle_control_request(request)
 
@@ -405,16 +406,16 @@ class TestHookCallbacks:
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
 
-        request = {
-            "type": "control_request",
-            "request_id": "test-conversion",
-            "request": {
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-conversion",
+            request={
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": None,
             },
-        }
+        )
 
         await query._handle_control_request(request)
 

@@ -18,10 +18,11 @@ from clawd_code_sdk.types import ClaudeAgentOptions
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
 
-def make_options(**kwargs: object) -> ClaudeAgentOptions:
+def make_options(**kwargs: Any) -> ClaudeAgentOptions:
     """Construct ClaudeAgentOptions with a default CLI path for tests."""
 
     cli_path = kwargs.pop("cli_path", DEFAULT_CLI_PATH)
+    assert isinstance(cli_path, str)
     return ClaudeAgentOptions(cli_path=cli_path, **kwargs)
 
 
@@ -98,8 +99,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([buffered_line])
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             messages: list[Any] = []
             async for msg in transport.read_messages():
@@ -126,8 +127,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([buffered_line])
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             messages: list[Any] = []
             async for msg in transport.read_messages():
@@ -170,8 +171,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([part1, part2, part3])
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream([part1, part2, part3])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             messages: list[Any] = []
             async for msg in transport.read_messages():
@@ -216,8 +217,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream(chunks)
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream(chunks)  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             messages: list[Any] = []
             async for msg in transport.read_messages():
@@ -244,8 +245,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             with pytest.raises(Exception) as exc_info:
                 messages: list[Any] = []
@@ -273,8 +274,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             with pytest.raises(CLIJSONDecodeError) as exc_info:
                 async for _ in transport.read_messages():
@@ -311,8 +312,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream(lines)
-            transport._stderr_stream = MockTextReceiveStream([])
+            transport._stdout_stream = MockTextReceiveStream(lines)  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
 
             messages: list[Any] = []
             async for msg in transport.read_messages():
@@ -327,3 +328,7 @@ class TestSubprocessBuffering:
             assert messages[2]["subtype"] == "end"
 
         anyio.run(_test)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])
