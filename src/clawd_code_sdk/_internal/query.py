@@ -1,5 +1,7 @@
 """Query class for handling bidirectional control protocol."""
 
+from __future__ import annotations
+
 import logging
 import os
 from collections.abc import (
@@ -75,7 +77,7 @@ class Query:
         ]
         | None = None,
         hooks: dict[str, list[dict[str, Any]]] | None = None,
-        sdk_mcp_servers: dict[str, "McpServer"] | None = None,
+        sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,
         agents: dict[str, dict[str, Any]] | None = None,
     ):
@@ -752,7 +754,7 @@ class Query:
         await self.transport.close()
 
     # Make Query an async context manager
-    async def __aenter__(self) -> "Query":
+    async def __aenter__(self) -> Query:
         """Enter async context - starts reading messages."""
         await self.start()
         return self

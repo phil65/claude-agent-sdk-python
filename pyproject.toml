@@ -92,6 +92,7 @@ line-length = 90
 exclude = ["examples/"]
 
 [tool.ruff.lint]
+future-annotations = true
 select = [
   "E",  # pycodestyle errors
   "W",  # pycodestyle warnings

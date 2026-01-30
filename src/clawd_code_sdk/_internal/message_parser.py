@@ -1,11 +1,12 @@
 """Message parser for Claude Code SDK responses."""
 
-import logging
-from typing import Any
+from __future__ import annotations
 
-from .._errors import MessageParseError
-from ..anthropic_types import ToolResultContentBlock, validate_tool_result_content
-from ..types import (
+import logging
+from typing import TYPE_CHECKING, Any
+
+from clawd_code_sdk._errors import MessageParseError
+from clawd_code_sdk.types import (
     AssistantMessage,
     ContentBlock,
     Message,
@@ -18,6 +19,9 @@ from ..types import (
     ToolUseBlock,
     UserMessage,
 )
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,9 @@ def _parse_tool_result_content(
     Returns:
         Validated content (string, list of typed blocks, or None)
     """
+
+    from clawd_code_sdk.anthropic_types import validate_tool_result_content
+
     if raw_content is None or isinstance(raw_content, str):
         return raw_content
     # Validate list content against Anthropic SDK types
@@ -53,16 +60,12 @@ def parse_message(data: dict[str, Any]) -> Message:
         MessageParseError: If parsing fails or message type is unrecognized
     """
     if not isinstance(data, dict):
-        raise MessageParseError(
-            f"Invalid message data type (expected dict, got {type(data).__name__})",
-            data,
-        )
+        msg = f"Invalid message data type (expected dict, got {type(data).__name__})"
+        raise MessageParseError(msg, data)
 
-    message_type = data.get("type")
-    if not message_type:
-        raise MessageParseError("Message missing 'type' field", data)
-
-    match message_type:
+    match data.get("type"):
+        case None:
+            raise MessageParseError("Message missing 'type' field", data)
         case "user":
             try:
                 parent_tool_use_id = data.get("parent_tool_use_id")
@@ -105,9 +108,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                     tool_use_result=tool_use_result,
                 )
             except KeyError as e:
-                raise MessageParseError(
-                    f"Missing required field in user message: {e}", data
-                ) from e
+                msg = f"Missing required field in user message: {e}"
+                raise MessageParseError(msg, data) from e
 
         case "assistant":
             try:
@@ -155,14 +157,10 @@ def parse_message(data: dict[str, Any]) -> Message:
 
         case "system":
             try:
-                return SystemMessage(
-                    subtype=data["subtype"],
-                    data=data,
-                )
+                return SystemMessage(subtype=data["subtype"], data=data)
             except KeyError as e:
-                raise MessageParseError(
-                    f"Missing required field in system message: {e}", data
-                ) from e
+                msg = f"Missing required field in system message: {e}"
+                raise MessageParseError(msg, data) from e
 
         case "result":
             try:
@@ -180,9 +178,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                     errors=data.get("errors"),
                 )
             except KeyError as e:
-                raise MessageParseError(
-                    f"Missing required field in result message: {e}", data
-                ) from e
+                msg = f"Missing required field in result message: {e}"
+                raise MessageParseError(msg, data) from e
 
         case "stream_event":
             try:
@@ -193,9 +190,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                     parent_tool_use_id=data.get("parent_tool_use_id"),
                 )
             except KeyError as e:
-                raise MessageParseError(
-                    f"Missing required field in stream_event message: {e}", data
-                ) from e
+                msg = f"Missing required field in stream_event message: {e}"
+                raise MessageParseError(msg, data) from e
 
-        case _:
-            raise MessageParseError(f"Unknown message type: {message_type}", data)
+        case _ as unknown_type:
+            raise MessageParseError(f"Unknown message type: {unknown_type}", data)

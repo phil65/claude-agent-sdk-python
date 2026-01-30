@@ -8,10 +8,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
-from .anthropic_types import ToolResultContentBlock
-
 if TYPE_CHECKING:
     from mcp.server import Server as McpServer
+
+    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 # Permission modes
 # - 'default': Standard behavior, prompts for dangerous operations
