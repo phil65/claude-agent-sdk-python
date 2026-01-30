@@ -28,7 +28,7 @@ from . import Transport
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MAX_BUFFER_SIZE = 1024 * 1024  # 1MB buffer limit
+_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 1MB buffer limit
 MINIMUM_CLAUDE_CODE_VERSION = "2.0.0"
 
 # Platform-specific command line length limits
