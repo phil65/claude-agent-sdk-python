@@ -1,4 +1,10 @@
 """Pytest configuration for tests."""
 
+import os
 
-# No async plugin needed since we're using sync tests with anyio.run()
+import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def unset_anthropic_api_key():
+    os.environ["ANTHROPIC_API_KEY"] = ""

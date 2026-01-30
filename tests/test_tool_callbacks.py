@@ -1,6 +1,7 @@
 """Tests for tool permission callbacks and hook callbacks."""
 
-import json
+import anyenv
+import pytest
 
 from clawd_code_sdk import (
     ClaudeAgentOptions,
@@ -91,7 +92,7 @@ class TestToolPermissionCallbacks:
         # Check response was sent
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
-        assert '"behavior": "allow"' in response
+        assert '"behavior":"allow"' in response
 
     async def test_permission_callback_deny(self):
         """Test callback that denies tool execution."""
@@ -125,8 +126,8 @@ class TestToolPermissionCallbacks:
         # Check response
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
-        assert '"behavior": "deny"' in response
-        assert '"message": "Security policy violation"' in response
+        assert '"behavior":"deny"' in response
+        assert '"message":"Security policy violation"' in response
 
     async def test_permission_callback_input_modification(self):
         """Test callback that modifies tool input."""
@@ -163,8 +164,8 @@ class TestToolPermissionCallbacks:
         # Check response includes modified input
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
-        assert '"behavior": "allow"' in response
-        assert '"safe_mode": true' in response
+        assert '"behavior":"allow"' in response
+        assert '"safe_mode":true' in response
 
     async def test_callback_exception_handling(self):
         """Test that callback exceptions are properly handled."""
@@ -198,7 +199,7 @@ class TestToolPermissionCallbacks:
         # Check error response was sent
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
-        assert '"subtype": "error"' in response
+        assert '"subtype":"error"' in response
         assert "Callback error" in response
 
 
@@ -252,7 +253,7 @@ class TestHookCallbacks:
         # Check response
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
-        assert '"processed": true' in last_response
+        assert '"processed":true' in last_response
 
     async def test_hook_output_fields(self):
         """Test that all SyncHookJSONOutput fields are properly handled."""
@@ -311,7 +312,7 @@ class TestHookCallbacks:
         last_response = transport.written_messages[-1]
 
         # Parse the JSON response
-        response_data = json.loads(last_response)
+        response_data = anyenv.load_json(last_response, return_type=dict)
         # The hook result is nested at response.response
         result = response_data["response"]["response"]
 
@@ -340,10 +341,7 @@ class TestHookCallbacks:
             input_data: HookInput, tool_use_id: str | None, context: HookContext
         ) -> HookJSONOutput:
             # Test that async hooks properly use async_ and asyncTimeout fields
-            return {
-                "async_": True,
-                "asyncTimeout": 5000,
-            }
+            return {"async_": True, "asyncTimeout": 5000}
 
         transport = MockTransport()
         hooks = {"PreToolUse": [{"matcher": None, "hooks": [async_hook]}]}
@@ -373,7 +371,7 @@ class TestHookCallbacks:
         last_response = transport.written_messages[-1]
 
         # Parse the JSON response
-        response_data = json.loads(last_response)
+        response_data = anyenv.load_json(last_response, return_type=dict)
         # The hook result is nested at response.response
         result = response_data["response"]["response"]
 
@@ -424,7 +422,7 @@ class TestHookCallbacks:
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
 
-        response_data = json.loads(last_response)
+        response_data = anyenv.load_json(last_response, return_type=dict)
         result = response_data["response"]["response"]
 
         # Verify async_ was converted to async
@@ -470,3 +468,7 @@ class TestClaudeAgentOptionsIntegration:
         assert "tool_use_start" in options.hooks
         assert len(options.hooks["tool_use_start"]) == 1
         assert options.hooks["tool_use_start"][0].hooks[0] == my_hook
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])
