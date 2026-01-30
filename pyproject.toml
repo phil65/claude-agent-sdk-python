@@ -23,7 +23,6 @@ dependencies = [
   "anyenv>=2.0.15",
   "anyio>=4.0.0",
   "mcp>=0.1.0",
-  "typing_extensions>=4.0.0; python_version<'3.11'",
 ]
 
 [project.urls]
@@ -75,15 +74,23 @@ warn_unreachable = true
 strict_equality = true
 
 [tool.pytest]
-addopts = [
-  "--import-mode=importlib",
-  "-p",
-  "asyncio",
+addopts = ["-m", "not slow and not acp_snapshot"]
+filterwarnings = ["ignore::DeprecationWarning:pydantic.*:"]
+log_cli = true
+log_date_format = "%Y-%m-%d %H:%M:%S"
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_level = "ERROR"
+markers = [
+  "integration: marks tests as integration tests",
+  "slow: marks tests as slow",
+  "unit: marks tests as unit tests",
 ]
+minversion = "9.0"
+python_files = ["test_*.py"]
 pythonpath = ["src"]
 testpaths = ["tests"]
-
-[tool.pytest-asyncio]
+timeout = "180"
+asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 
 [tool.ruff]
