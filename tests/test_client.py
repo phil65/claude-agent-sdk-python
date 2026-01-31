@@ -1,5 +1,7 @@
 """Tests for Claude SDK client functionality."""
 
+import asyncio
+import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import anyio
@@ -16,6 +18,59 @@ from clawd_code_sdk import (
     query,
 )
 from clawd_code_sdk.types import TextBlock
+
+
+def create_mock_transport_with_messages(messages: list[dict]):
+    """Create a mock transport that handles initialization and returns messages.
+
+    Args:
+        messages: List of message dicts to return after initialization
+    """
+    mock_transport = AsyncMock()
+    mock_transport.connect = AsyncMock()
+    mock_transport.close = AsyncMock()
+    mock_transport.end_input = AsyncMock()
+    mock_transport.is_ready = Mock(return_value=True)
+
+    # Track written messages to simulate control protocol responses
+    written_messages: list[str] = []
+
+    async def mock_write(data: str) -> None:
+        written_messages.append(data)
+
+    mock_transport.write = AsyncMock(side_effect=mock_write)
+
+    async def mock_receive():
+        # Wait for initialization request
+        await asyncio.sleep(0.01)
+
+        # Find and respond to initialization request
+        for msg_str in written_messages:
+            try:
+                msg = json.loads(msg_str.strip())
+                if (
+                    msg.get("type") == "control_request"
+                    and msg.get("request", {}).get("subtype") == "initialize"
+                ):
+                    yield {
+                        "type": "control_response",
+                        "response": {
+                            "request_id": msg.get("request_id"),
+                            "subtype": "success",
+                            "commands": [],
+                            "output_style": "default",
+                        },
+                    }
+                    break
+            except (json.JSONDecodeError, KeyError, AttributeError):
+                pass
+
+        # Yield all messages
+        for message in messages:
+            yield message
+
+    mock_transport.read_messages = mock_receive
+    return mock_transport
 
 
 class TestQueryFunction:
@@ -149,32 +204,22 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
+                error_message = {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "API Error: The provided model identifier is invalid.",
+                            }
+                        ],
+                        "model": "claude-invalid-model",
+                        "error": "invalid_request",
+                    },
+                }
+                mock_transport = create_mock_transport_with_messages([error_message])
                 mock_transport_class.return_value = mock_transport
-
-                # Mock a message with an error
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "API Error: The provided model identifier is invalid.",
-                                }
-                            ],
-                            "model": "claude-invalid-model",
-                            "error": "invalid_request",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
 
                 with pytest.raises(InvalidRequestError) as exc_info:
                     async for _ in query(prompt="test"):
@@ -193,31 +238,22 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
+                error_message = {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "API Error: Rate limit exceeded",
+                            }
+                        ],
+                        "model": "claude-sonnet-4-5-20250514",
+                        "error": "rate_limit",
+                    },
+                }
+                mock_transport = create_mock_transport_with_messages([error_message])
                 mock_transport_class.return_value = mock_transport
-
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "API Error: Rate limit exceeded",
-                                }
-                            ],
-                            "model": "claude-sonnet-4-5-20250514",
-                            "error": "rate_limit",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
 
                 with pytest.raises(RateLimitError) as exc_info:
                     async for _ in query(prompt="test"):
@@ -234,28 +270,19 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
+                error_message = {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "API Error: Invalid API key"}
+                        ],
+                        "model": "claude-sonnet-4-5-20250514",
+                        "error": "authentication_failed",
+                    },
+                }
+                mock_transport = create_mock_transport_with_messages([error_message])
                 mock_transport_class.return_value = mock_transport
-
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {"type": "text", "text": "API Error: Invalid API key"}
-                            ],
-                            "model": "claude-sonnet-4-5-20250514",
-                            "error": "authentication_failed",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
 
                 with pytest.raises(AuthenticationError) as exc_info:
                     async for _ in query(prompt="test"):
@@ -272,31 +299,22 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
+                error_message = {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "API Error: Repeated 529 Overloaded errors",
+                            }
+                        ],
+                        "model": "claude-sonnet-4-5-20250514",
+                        "error": "server_error",
+                    },
+                }
+                mock_transport = create_mock_transport_with_messages([error_message])
                 mock_transport_class.return_value = mock_transport
-
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "API Error: Repeated 529 Overloaded errors",
-                                }
-                            ],
-                            "model": "claude-sonnet-4-5-20250514",
-                            "error": "server_error",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
 
                 with pytest.raises(ServerError) as exc_info:
                     async for _ in query(prompt="test"):
@@ -313,26 +331,17 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
+                error_message = {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "Unknown error"}],
+                        "model": "claude-sonnet-4-5-20250514",
+                        "error": "unknown",
+                    },
+                }
+                mock_transport = create_mock_transport_with_messages([error_message])
                 mock_transport_class.return_value = mock_transport
-
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Unknown error"}],
-                            "model": "claude-sonnet-4-5-20250514",
-                            "error": "unknown",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
 
                 with pytest.raises(APIError) as exc_info:
                     async for _ in query(prompt="test"):
@@ -349,11 +358,8 @@ class TestAPIErrorRaising:
             with patch(
                 "clawd_code_sdk._internal.client.SubprocessCLITransport"
             ) as mock_transport_class:
-                mock_transport = AsyncMock()
-                mock_transport_class.return_value = mock_transport
-
-                async def mock_receive():
-                    yield {
+                test_messages = [
+                    {
                         "type": "assistant",
                         "message": {
                             "role": "assistant",
@@ -361,8 +367,8 @@ class TestAPIErrorRaising:
                             "model": "claude-sonnet-4-5-20250514",
                             # No error field
                         },
-                    }
-                    yield {
+                    },
+                    {
                         "type": "result",
                         "subtype": "success",
                         "duration_ms": 1000,
@@ -371,14 +377,10 @@ class TestAPIErrorRaising:
                         "num_turns": 1,
                         "session_id": "test-session",
                         "total_cost_usd": 0.001,
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
+                    },
+                ]
+                mock_transport = create_mock_transport_with_messages(test_messages)
+                mock_transport_class.return_value = mock_transport
 
                 messages = []
                 async for msg in query(prompt="test"):
