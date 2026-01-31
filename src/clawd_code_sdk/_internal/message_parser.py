@@ -20,8 +20,30 @@ from clawd_code_sdk.types import (
     UserMessage,
 )
 
+if TYPE_CHECKING:
+    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_tool_result_content(
+    raw_content: str | list[dict[str, Any]] | None,
+) -> str | list[ToolResultContentBlock] | None:
+    """Parse and validate tool result content.
+
+    Args:
+        raw_content: Raw content from CLI (string, list of dicts, or None)
+
+    Returns:
+        Validated content (string, list of typed blocks, or None)
+    """
+
+    from clawd_code_sdk.anthropic_types import validate_tool_result_content
+
+    if raw_content is None or isinstance(raw_content, str):
+        return raw_content
+    # Validate list content against Anthropic SDK types
+    return validate_tool_result_content(raw_content)
 
 
 def parse_message(data: dict[str, Any]) -> Message:
@@ -67,7 +89,9 @@ def parse_message(data: dict[str, Any]) -> Message:
                                 user_content_blocks.append(
                                     ToolResultBlock(
                                         tool_use_id=block["tool_use_id"],
-                                        content=block.get("content"),
+                                        content=_parse_tool_result_content(
+                                            block.get("content")
+                                        ),
                                         is_error=block.get("is_error"),
                                     )
                                 )
@@ -113,7 +137,9 @@ def parse_message(data: dict[str, Any]) -> Message:
                             content_blocks.append(
                                 ToolResultBlock(
                                     tool_use_id=block["tool_use_id"],
-                                    content=block.get("content"),
+                                    content=_parse_tool_result_content(
+                                        block.get("content")
+                                    ),
                                     is_error=block.get("is_error"),
                                 )
                             )
