@@ -1,5 +1,7 @@
 """Internal client implementation."""
 
+from __future__ import annotations
+
 import logging
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import aclosing

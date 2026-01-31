@@ -1,5 +1,7 @@
 """Query function for one-shot interactions with Claude Code."""
 
+from __future__ import annotations
+
 import os
 from collections.abc import AsyncIterable, AsyncIterator
 from typing import Any

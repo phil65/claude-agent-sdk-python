@@ -1,5 +1,7 @@
 """Subprocess transport implementation using Claude Code CLI."""
 
+from __future__ import annotations
+
 import json
 import logging
 import os
