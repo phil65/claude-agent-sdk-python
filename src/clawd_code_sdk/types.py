@@ -1,7 +1,5 @@
 """Type definitions for Claude SDK."""
 
-from __future__ import annotations
-
 import sys
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
@@ -14,6 +12,7 @@ else:
     # Runtime placeholder for forward reference resolution in Pydantic 2.12+
     McpServer = Any
 
+    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 # Permission modes
 # - 'default': Standard behavior, prompts for dangerous operations
@@ -461,7 +460,7 @@ class McpSdkServerConfig(TypedDict):
 
     type: Literal["sdk"]
     name: str
-    instance: McpServer
+    instance: "McpServer"
 
 
 McpServerConfig = (
