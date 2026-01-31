@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import AnyUrl
 
@@ -69,8 +69,6 @@ from .types import (
     UserPromptSubmitHookInput,
 )
 
-if TYPE_CHECKING:
-    from mcp.types import EmbeddedResource, ImageContent, TextContent
 # MCP Server Support
 
 
@@ -220,10 +218,17 @@ def create_sdk_mcp_server(
         - ClaudeAgentOptions: Configuration for using servers with query()
     """
     from mcp.server import Server
-    from mcp.types import Tool
+    from mcp.types import (
+        BlobResourceContents,
+        EmbeddedResource,
+        ImageContent,
+        TextContent,
+        Tool,
+    )
 
     # Create MCP server instance
     server = Server(name, version=version)
+
     # Register tools if provided
     if tools:
         # Store tools for access in handlers
@@ -285,46 +290,46 @@ def create_sdk_mcp_server(
             tool_def = tool_map[name]
             # Call the tool's handler with arguments
             result = await tool_def.handler(arguments)
+
             # Convert result to MCP format
             # The decorator expects us to return the content, not a CallToolResult
             # It will wrap our return value in CallToolResult
             content: list[TextContent | ImageContent | EmbeddedResource] = []
             if "content" in result:
                 for item in result["content"]:
-                    if i := to_content_item(item):
-                        content.append(i)
+                    if item.get("type") == "text":
+                        content.append(TextContent(type="text", text=item["text"]))
+                    elif item.get("type") == "image":
+                        content.append(
+                            ImageContent(
+                                type="image",
+                                data=item["data"],
+                                mimeType=item["mimeType"],
+                            )
+                        )
+                    elif item.get("type") == "document":
+                        # Convert document to EmbeddedResource with BlobResourceContents
+                        # This preserves document data through MCP for conversion to
+                        # Anthropic document format in query.py
+                        source = item.get("source", {})
+                        content.append(
+                            EmbeddedResource(
+                                type="resource",
+                                resource=BlobResourceContents(
+                                    uri=AnyUrl(
+                                        f"document://{source.get('type', 'base64')}"
+                                    ),
+                                    mimeType=source.get("media_type", "application/pdf"),
+                                    blob=source.get("data", ""),
+                                ),
+                            )
+                        )
+
             # Return just the content list - the decorator wraps it
             return content
 
     # Return SDK server configuration
     return McpSdkServerConfig(type="sdk", name=name, instance=server)
-
-
-def to_content_item(
-    item: dict[str, Any],
-) -> TextContent | ImageContent | EmbeddedResource | None:
-    from mcp.types import (
-        BlobResourceContents,
-        EmbeddedResource,
-        ImageContent,
-        TextContent,
-    )
-
-    if item.get("type") == "text":
-        return TextContent(type="text", text=item["text"])
-    elif item.get("type") == "image":
-        return ImageContent(type="image", data=item["data"], mimeType=item["mimeType"])
-
-    elif item.get("type") == "document":
-        # Convert document to EmbeddedResource with BlobResourceContents
-        # This preserves document data through MCP for conversion to
-        # Anthropic document format in query.py
-        source = item.get("source", {})
-        uri = AnyUrl(f"document://{source.get('type', 'base64')}")
-        mime = source.get("media_type", "application/pdf")
-        blob = BlobResourceContents(uri=uri, mimeType=mime, blob=source.get("data", ""))
-        return EmbeddedResource(type="resource", resource=blob)
-    return None
 
 
 __all__ = [
@@ -335,7 +340,6 @@ __all__ = [
     "Transport",
     "ClaudeSDKClient",
     # Types
-    "ToolResultContentBlock",
     "PermissionMode",
     "McpServerConfig",
     "McpSdkServerConfig",
