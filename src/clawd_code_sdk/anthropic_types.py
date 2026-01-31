@@ -30,7 +30,7 @@ from anthropic.types.beta import (
     BetaWebFetchBlock,
     BetaWebFetchToolResultErrorBlock,
 )
-from pydantic import Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 # Union of all possible content types that can appear in tool results.
 # These are the inner content blocks, not the outer tool result wrapper.
@@ -74,11 +74,35 @@ ToolResultContentBlock = Annotated[
     | BetaTextEditorCodeExecutionToolResultError,
     Field(discriminator="type"),
 ]
+_tool_result_content_adapter: TypeAdapter[list[ToolResultContentBlock]] | None = None
 
-# TypeAdapter for validating lists of tool result content blocks
-tool_result_content_adapter: TypeAdapter[list[ToolResultContentBlock]] = TypeAdapter(
-    list[ToolResultContentBlock]
-)
+
+def _get_adapter() -> TypeAdapter[list[ToolResultContentBlock]]:
+    global _tool_result_content_adapter
+    if _tool_result_content_adapter is None:
+        # Force schema build for Anthropic models (deferred by default)
+        for model in [
+            TextBlock,
+            WebSearchResultBlock,
+            WebSearchToolResultError,
+            BetaBashCodeExecutionResultBlock,
+            BetaBashCodeExecutionToolResultError,
+            BetaCodeExecutionResultBlock,
+            BetaCodeExecutionToolResultError,
+            BetaTextEditorCodeExecutionCreateResultBlock,
+            BetaTextEditorCodeExecutionStrReplaceResultBlock,
+            BetaTextEditorCodeExecutionToolResultError,
+            BetaTextEditorCodeExecutionViewResultBlock,
+            BetaToolReferenceBlock,
+            BetaToolSearchToolResultError,
+            BetaToolSearchToolSearchResultBlock,
+            BetaWebFetchBlock,
+            BetaWebFetchToolResultErrorBlock,
+        ]:
+            if isinstance(model, type) and issubclass(model, BaseModel):
+                model.model_rebuild()
+        _tool_result_content_adapter = TypeAdapter(list[ToolResultContentBlock])
+    return _tool_result_content_adapter
 
 
 def validate_tool_result_content(
@@ -92,4 +116,4 @@ def validate_tool_result_content(
     Returns:
         List of validated and typed content blocks
     """
-    return tool_result_content_adapter.validate_python(content)
+    return _get_adapter().validate_python(content)
