@@ -144,11 +144,13 @@ def parse_message(data: dict[str, Any]) -> Message:
                                 )
                             )
 
+                # Check for error at top level first, then inside message
+                error = data.get("error") or data["message"].get("error")
                 return AssistantMessage(
                     content=content_blocks,
                     model=data["message"]["model"],
                     parent_tool_use_id=data.get("parent_tool_use_id"),
-                    error=data.get("error"),
+                    error=error,
                 )
             except KeyError as e:
                 raise MessageParseError(
