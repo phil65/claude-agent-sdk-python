@@ -964,10 +964,8 @@ class TestAsyncGeneratorCleanup:
             # Give reader time to start
             await asyncio.sleep(0.05)
 
-            # Owner task pattern events should exist
-            assert q._owner_started_event is not None
-            assert q._owner_stop_event is not None
-            assert q._owner_started_event.is_set()
+            # Cancel scope should exist
+            assert q._reader_cancel_scope is not None
 
             # Close should work without RuntimeError
             # This is the key test - close() used to raise RuntimeError

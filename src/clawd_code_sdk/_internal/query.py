@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
-from anyio.abc import TaskGroup
+from anyio.abc import CancelScope, TaskGroup
 from pydantic import BaseModel
 
 from ..types import (
@@ -122,12 +122,14 @@ class Query:
             float(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000")) / 1000.0
         )  # Convert ms to seconds
 
-        # Owner task pattern: events for coordinating lifecycle
-        # This ensures the inner task group is properly managed by a single task,
-        # which is required for trio compatibility.
-        self._owner_stop_event: anyio.Event | None = None
-        self._owner_started_event: anyio.Event | None = None
-        self._outer_tg: TaskGroup | None = None
+        # Cancel scope for the reader task - can be cancelled from any task context
+        # This fixes the RuntimeError when async generator cleanup happens in a different task
+        self._reader_cancel_scope: CancelScope | None = None
+        self._reader_task_started = anyio.Event()
+
+        # Track whether we entered the task group in this task
+        # Used to determine if we can safely call __aexit__()
+        self._tg_entered_in_current_task = False
 
     async def initialize(self) -> dict[str, Any] | None:
         """Initialize control protocol if in streaming mode.
@@ -178,41 +180,31 @@ class Query:
     async def start(self) -> None:
         """Start reading messages from transport.
 
-        Uses the owner task pattern to ensure the inner task group is properly
-        managed by a single task, which is required for trio compatibility.
+        This method starts background tasks for reading messages. The task lifecycle
+        is managed using a CancelScope that can be safely cancelled from any async
+        task context, avoiding the RuntimeError that occurs when task group
+        __aexit__() is called from a different task than __aenter__().
         """
         if self._tg is None:
-            self._owner_stop_event = anyio.Event()
-            self._owner_started_event = anyio.Event()
+            # Create a task group for spawning background tasks
+            self._tg = anyio.create_task_group()
+            await self._tg.__aenter__()
+            self._tg_entered_in_current_task = True
 
-            # Outer task group spawns the owner task
-            self._outer_tg = anyio.create_task_group()
-            await self._outer_tg.__aenter__()
-            self._outer_tg.start_soon(self._task_group_owner)
+            # Start the reader with its own cancel scope that can be cancelled safely
+            self._tg.start_soon(self._read_messages_with_cancel_scope)
 
-            # Wait for owner to signal it's ready
-            await self._owner_started_event.wait()
+    async def _read_messages_with_cancel_scope(self) -> None:
+        """Wrapper for _read_messages that sets up a cancellable scope.
 
-    async def _task_group_owner(self) -> None:
-        """Owner task that manages the inner task group.
-
-        This task owns the task group for its entire lifetime, ensuring that
-        the same task that enters the cancel scope also exits it. This is
-        required for trio compatibility.
+        This wrapper creates a CancelScope that can be cancelled from any task
+        context, solving the issue where async generator cleanup happens in a
+        different task than where the task group was entered.
         """
-        try:
-            async with anyio.create_task_group() as tg:
-                self._tg = tg
-                tg.start_soon(self._read_messages)
-                self._owner_started_event.set()  # type: ignore[union-attr]
-
-                # Wait until close() signals us to stop
-                await self._owner_stop_event.wait()  # type: ignore[union-attr]
-
-                # Cancel child tasks
-                tg.cancel_scope.cancel()
-        finally:
-            self._tg = None
+        self._reader_cancel_scope = anyio.CancelScope()
+        self._reader_task_started.set()
+        with self._reader_cancel_scope:
+            await self._read_messages()
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
@@ -714,24 +706,52 @@ class Query:
             yield message
 
     async def close(self) -> None:
-        """Close the query and transport."""
+        """Close the query and transport.
+
+        This method safely cleans up resources, handling the case where cleanup
+        happens in a different async task context than where start() was called.
+        This commonly occurs during async generator cleanup (e.g., when breaking
+        out of an `async for` loop or when asyncio.run() shuts down).
+
+        The fix uses two mechanisms:
+        1. A CancelScope for the reader task that can be cancelled from any context
+        2. Suppressing the RuntimeError that occurs when task group __aexit__()
+           is called from a different task than __aenter__()
+        """
         if self._closed:
             return
         self._closed = True
 
-        # Signal owner task to stop
-        if self._owner_stop_event:
-            self._owner_stop_event.set()
+        # Cancel the reader task via its cancel scope (safe from any task context)
+        if self._reader_cancel_scope is not None:
+            self._reader_cancel_scope.cancel()
 
-        # Wait for outer task group to finish (owner will exit after stop event)
-        if self._outer_tg:
-            with suppress(anyio.get_cancelled_exc_class()):
-                await self._outer_tg.__aexit__(None, None, None)
-            self._outer_tg = None
+        # Handle task group cleanup
+        if self._tg is not None:
+            # Always cancel the task group's scope to stop any running tasks
+            self._tg.cancel_scope.cancel()
 
-        # Shield the transport close from cancellation to ensure proper cleanup
-        with anyio.CancelScope(shield=True):
-            await self.transport.close()
+            # Try to properly exit the task group, but handle the case where
+            # we're in a different task context than where __aenter__() was called
+            try:
+                with suppress(anyio.get_cancelled_exc_class()):
+                    await self._tg.__aexit__(None, None, None)
+            except RuntimeError as e:
+                # Handle "Attempted to exit cancel scope in a different task"
+                # This happens during async generator cleanup when Python's GC
+                # runs the finally block in a different task context.
+                if "different task" in str(e):
+                    logger.debug(
+                        "Task group cleanup skipped due to cross-task context "
+                        "(this is expected during async generator cleanup)"
+                    )
+                else:
+                    raise
+            finally:
+                self._tg = None
+                self._tg_entered_in_current_task = False
+
+        await self.transport.close()
 
     # Make Query an async context manager
     async def __aenter__(self) -> Query:
