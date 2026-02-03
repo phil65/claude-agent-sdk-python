@@ -359,6 +359,7 @@ __all__ = [
     "TextBlock",
     "ThinkingBlock",
     "ToolUseBlock",
+    "ToolResultContentBlock",
     "ToolResultBlock",
     "ContentBlock",
     # Tool callbacks
