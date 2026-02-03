@@ -59,18 +59,14 @@ def parse_message(data: dict[str, Any]) -> Message:
     Raises:
         MessageParseError: If parsing fails or message type is unrecognized
     """
-    if not isinstance(data, dict):
-        msg = f"Invalid message data type (expected dict, got {type(data).__name__})"
-        raise MessageParseError(msg, data)
-
     match data.get("type"):
         case None:
             raise MessageParseError("Message missing 'type' field", data)
         case "user":
+            parent_tool_use_id = data.get("parent_tool_use_id")
+            tool_use_result = data.get("tool_use_result")
+            uuid = data.get("uuid")
             try:
-                parent_tool_use_id = data.get("parent_tool_use_id")
-                tool_use_result = data.get("tool_use_result")
-                uuid = data.get("uuid")
                 if isinstance(data["message"]["content"], list):
                     user_content_blocks: list[ContentBlock] = []
                     for block in data["message"]["content"]:
@@ -112,8 +108,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                 raise MessageParseError(msg, data) from e
 
         case "assistant":
+            content_blocks: list[ContentBlock] = []
             try:
-                content_blocks: list[ContentBlock] = []
                 for block in data["message"]["content"]:
                     match block["type"]:
                         case "text":
