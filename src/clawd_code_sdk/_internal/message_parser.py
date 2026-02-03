@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.types import (
     AssistantMessage,
-    ContentBlock,
     Message,
     ResultMessage,
     StreamEvent,
@@ -68,31 +67,9 @@ def parse_message(data: dict[str, Any]) -> Message:
             uuid = data.get("uuid")
             try:
                 if isinstance(data["message"]["content"], list):
-                    user_content_blocks: list[ContentBlock] = []
-                    for block in data["message"]["content"]:
-                        match block["type"]:
-                            case "text":
-                                user_content_blocks.append(TextBlock(text=block["text"]))
-                            case "tool_use":
-                                user_content_blocks.append(
-                                    ToolUseBlock(
-                                        id=block["id"],
-                                        name=block["name"],
-                                        input=block["input"],
-                                    )
-                                )
-                            case "tool_result":
-                                user_content_blocks.append(
-                                    ToolResultBlock(
-                                        tool_use_id=block["tool_use_id"],
-                                        content=_parse_tool_result_content(
-                                            block.get("content")
-                                        ),
-                                        is_error=block.get("is_error"),
-                                    )
-                                )
+                    blocks = [to_block(i) for i in data["message"]["content"]]
                     return UserMessage(
-                        content=user_content_blocks,
+                        content=blocks,
                         uuid=uuid,
                         parent_tool_use_id=parent_tool_use_id,
                         tool_use_result=tool_use_result,
@@ -108,42 +85,12 @@ def parse_message(data: dict[str, Any]) -> Message:
                 raise MessageParseError(msg, data) from e
 
         case "assistant":
-            content_blocks: list[ContentBlock] = []
             try:
-                for block in data["message"]["content"]:
-                    match block["type"]:
-                        case "text":
-                            content_blocks.append(TextBlock(text=block["text"]))
-                        case "thinking":
-                            content_blocks.append(
-                                ThinkingBlock(
-                                    thinking=block["thinking"],
-                                    signature=block["signature"],
-                                )
-                            )
-                        case "tool_use":
-                            content_blocks.append(
-                                ToolUseBlock(
-                                    id=block["id"],
-                                    name=block["name"],
-                                    input=block["input"],
-                                )
-                            )
-                        case "tool_result":
-                            content_blocks.append(
-                                ToolResultBlock(
-                                    tool_use_id=block["tool_use_id"],
-                                    content=_parse_tool_result_content(
-                                        block.get("content")
-                                    ),
-                                    is_error=block.get("is_error"),
-                                )
-                            )
-
+                blocks = [to_block(i) for i in data["message"]["content"]]
                 # Check for error at top level first, then inside message
                 error = data.get("error") or data["message"].get("error")
                 return AssistantMessage(
-                    content=content_blocks,
+                    content=blocks,
                     model=data["message"]["model"],
                     parent_tool_use_id=data.get("parent_tool_use_id"),
                     error=error,
@@ -193,3 +140,24 @@ def parse_message(data: dict[str, Any]) -> Message:
 
         case _ as unknown_type:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
+
+
+def to_block(
+    data: dict[str, Any],
+) -> TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock:
+    match data["type"]:
+        case "text":
+            return TextBlock(text=data["text"])
+        case "tool_use":
+            return ToolUseBlock(id=data["id"], name=data["name"], input=data["input"])
+
+        case "tool_result":
+            return ToolResultBlock(
+                tool_use_id=data["tool_use_id"],
+                content=_parse_tool_result_content(data.get("content")),
+                is_error=data.get("is_error"),
+            )
+        case "thinking":
+            return ThinkingBlock(thinking=data["thinking"], signature=data["signature"])
+        case _:
+            raise ValueError(f"Unknown block type: {data['type']}")

@@ -667,7 +667,7 @@ AssistantMessageError = Literal[
 class UserMessage:
     """User message."""
 
-    content: str | list[ContentBlock]
+    content: str | Sequence[ContentBlock]
     uuid: str | None = None
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
@@ -677,7 +677,7 @@ class UserMessage:
 class AssistantMessage:
     """Assistant message with content blocks."""
 
-    content: list[ContentBlock]
+    content: Sequence[ContentBlock]
     model: str
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
