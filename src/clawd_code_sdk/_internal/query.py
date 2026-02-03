@@ -170,9 +170,7 @@ class Query:
             request["agents"] = self._agents
 
         # Use longer timeout for initialize since MCP servers may take time to start
-        response = await self._send_control_request(
-            request, timeout=self._initialize_timeout
-        )
+        response = await self._send_control_request(request, timeout=self._initialize_timeout)
         self._initialized = True
         self._initialization_result = response  # Store for later access
         return response
@@ -286,8 +284,7 @@ class Query:
                 context = ToolPermissionContext(
                     tool_use_id=permission_request.get("tool_use_id", ""),
                     signal=None,  # TODO: Add abort signal support
-                    suggestions=permission_request.get("permission_suggestions", [])
-                    or [],
+                    suggestions=permission_request.get("permission_suggestions", []) or [],
                     blocked_path=permission_request.get("blocked_path"),
                 )
 
@@ -309,8 +306,7 @@ class Query:
                     }
                     if response.updated_permissions is not None:
                         response_data["updatedPermissions"] = [
-                            permission.to_dict()
-                            for permission in response.updated_permissions
+                            permission.to_dict() for permission in response.updated_permissions
                         ]
                 elif isinstance(response, PermissionResultDeny):
                     response_data = {"behavior": "deny", "message": response.message}
@@ -547,9 +543,7 @@ class Query:
                                 pass
                             case EmbeddedResource(
                                 resource=BlobResourceContents(mimeType=mime_type, uri=uri)
-                                | TextResourceContents(
-                                    mimeType=mime_type, uri=uri
-                                ) as resource
+                                | TextResourceContents(mimeType=mime_type, uri=uri) as resource
                             ):
                                 # EmbeddedResource - check if it's a document (PDF, etc.)
                                 uri_str = str(uri)
@@ -685,9 +679,7 @@ class Query:
                         await self._first_result_event.wait()
                         logger.debug("Received first result, closing input stream")
                 except Exception:
-                    logger.debug(
-                        "Timed out waiting for first result, closing input stream"
-                    )
+                    logger.debug("Timed out waiting for first result, closing input stream")
 
             # After all messages sent (and result received if needed), end input
             await self.transport.end_input()

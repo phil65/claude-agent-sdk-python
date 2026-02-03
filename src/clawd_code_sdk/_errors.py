@@ -16,9 +16,7 @@ class CLIConnectionError(ClaudeSDKError):
 class CLINotFoundError(CLIConnectionError):
     """Raised when Claude Code is not found or not installed."""
 
-    def __init__(
-        self, message: str = "Claude Code not found", cli_path: str | None = None
-    ):
+    def __init__(self, message: str = "Claude Code not found", cli_path: str | None = None):
         if cli_path:
             message = f"{message}: {cli_path}"
         super().__init__(message)
@@ -27,9 +25,7 @@ class CLINotFoundError(CLIConnectionError):
 class ProcessError(ClaudeSDKError):
     """Raised when the CLI process fails."""
 
-    def __init__(
-        self, message: str, exit_code: int | None = None, stderr: str | None = None
-    ):
+    def __init__(self, message: str, exit_code: int | None = None, stderr: str | None = None):
         self.exit_code = exit_code
         self.stderr = stderr
 

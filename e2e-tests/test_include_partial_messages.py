@@ -64,22 +64,18 @@ async def test_include_partial_messages_stream_events():
     assert "message_stop" in event_types, "No message_stop StreamEvent"
 
     # Should have AssistantMessage messages with thinking and text
-    assistant_messages = [
-        msg for msg in collected_messages if isinstance(msg, AssistantMessage)
-    ]
+    assistant_messages = [msg for msg in collected_messages if isinstance(msg, AssistantMessage)]
     assert len(assistant_messages) >= 1, "No AssistantMessage received"
 
     # Check for thinking block in at least one AssistantMessage
     has_thinking = any(
-        any(isinstance(block, ThinkingBlock) for block in msg.content)
-        for msg in assistant_messages
+        any(isinstance(block, ThinkingBlock) for block in msg.content) for msg in assistant_messages
     )
     assert has_thinking, "No ThinkingBlock found in AssistantMessages"
 
     # Check for text block (the joke) in at least one AssistantMessage
     has_text = any(
-        any(isinstance(block, TextBlock) for block in msg.content)
-        for msg in assistant_messages
+        any(isinstance(block, TextBlock) for block in msg.content) for msg in assistant_messages
     )
     assert has_text, "No TextBlock found in AssistantMessages"
 
@@ -147,9 +143,7 @@ async def test_partial_messages_disabled_by_default():
 
     # Should NOT have any StreamEvent messages
     stream_events = [msg for msg in collected_messages if isinstance(msg, StreamEvent)]
-    assert len(stream_events) == 0, (
-        "StreamEvent messages present when partial messages disabled"
-    )
+    assert len(stream_events) == 0, "StreamEvent messages present when partial messages disabled"
 
     # Should still have the regular messages
     assert any(isinstance(msg, SystemMessage) for msg in collected_messages)

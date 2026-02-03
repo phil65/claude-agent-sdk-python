@@ -207,8 +207,7 @@ class TestSubprocessBuffering:
 
             chunk_size = 64 * 1024
             chunks = [
-                complete_json[i : i + chunk_size]
-                for i in range(0, len(complete_json), chunk_size)
+                complete_json[i : i + chunk_size] for i in range(0, len(complete_json), chunk_size)
             ]
 
             transport = SubprocessCLITransport(prompt="test", options=make_options())

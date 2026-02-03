@@ -155,9 +155,7 @@ class InternalClient:
 
         # Extract SDK MCP servers from configured options
         sdk_mcp_servers = {}
-        if configured_options.mcp_servers and isinstance(
-            configured_options.mcp_servers, dict
-        ):
+        if configured_options.mcp_servers and isinstance(configured_options.mcp_servers, dict):
             for name, config in configured_options.mcp_servers.items():
                 if isinstance(config, dict) and config.get("type") == "sdk":
                     sdk_mcp_servers[name] = config["instance"]  # type: ignore[typeddict-item]
@@ -213,10 +211,7 @@ class InternalClient:
                 async for data in messages:
                     message = parse_message(data)
                     # Check if this is an AssistantMessage with an API error
-                    if (
-                        isinstance(message, AssistantMessage)
-                        and message.error is not None
-                    ):
+                    if isinstance(message, AssistantMessage) and message.error is not None:
                         _raise_api_error(message)
 
                     # TODO: Verify if usage limit messages set the error field or come as

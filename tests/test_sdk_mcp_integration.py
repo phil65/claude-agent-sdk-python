@@ -161,9 +161,7 @@ async def test_mixed_servers():
     # Create configuration with both SDK and external servers
     external_server = {"type": "stdio", "command": "echo", "args": ["test"]}
 
-    options = ClaudeAgentOptions(
-        mcp_servers={"sdk": sdk_server, "external": external_server}
-    )
+    options = ClaudeAgentOptions(mcp_servers={"sdk": sdk_server, "external": external_server})
 
     # Verify both server types are in the configuration
     assert "sdk" in options.mcp_servers
@@ -211,9 +209,7 @@ async def test_image_content_support():
     tool_executions: list[dict[str, Any]] = []
 
     # Create a tool that returns both text and image content
-    @tool(
-        "generate_chart", "Generates a chart and returns it as an image", {"title": str}
-    )
+    @tool("generate_chart", "Generates a chart and returns it as an image", {"title": str})
     async def generate_chart(args: dict[str, Any]) -> dict[str, Any]:
         tool_executions.append({"name": "generate_chart", "args": args})
         return {
@@ -239,9 +235,7 @@ async def test_image_content_support():
     # Call the chart generation tool
     chart_request = CallToolRequest(
         method="tools/call",
-        params=CallToolRequestParams(
-            name="generate_chart", arguments={"title": "Sales Report"}
-        ),
+        params=CallToolRequestParams(name="generate_chart", arguments={"title": "Sales Report"}),
     )
     result = await call_handler(chart_request)
 
@@ -307,9 +301,7 @@ async def test_document_content_support():
 
     doc_request = CallToolRequest(
         method="tools/call",
-        params=CallToolRequestParams(
-            name="read_document", arguments={"filename": "report.pdf"}
-        ),
+        params=CallToolRequestParams(name="read_document", arguments={"filename": "report.pdf"}),
     )
     result = await call_handler(doc_request)
 

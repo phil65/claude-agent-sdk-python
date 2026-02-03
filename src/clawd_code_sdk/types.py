@@ -60,9 +60,7 @@ class AgentDefinition:
 
 
 # Permission Update types (matching TypeScript SDK)
-PermissionUpdateDestination = Literal[
-    "userSettings", "projectSettings", "localSettings", "session"
-]
+PermissionUpdateDestination = Literal["userSettings", "projectSettings", "localSettings", "session"]
 
 PermissionBehavior = Literal["allow", "deny", "ask"]
 
@@ -176,9 +174,7 @@ class PermissionResultDeny:
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny
 
-CanUseTool = Callable[
-    [str, dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]
-]
+CanUseTool = Callable[[str, dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]]
 
 
 ##### Hook types
@@ -398,9 +394,7 @@ class AsyncHookJSONOutput(TypedDict):
         asyncTimeout: Optional timeout in milliseconds for the async operation.
     """
 
-    async_: Literal[
-        True
-    ]  # Using async_ to avoid Python keyword (converted to "async" for CLI)
+    async_: Literal[True]  # Using async_ to avoid Python keyword (converted to "async" for CLI)
     asyncTimeout: NotRequired[int]
 
 
@@ -746,9 +740,7 @@ class ClaudeAgentOptions:
     settings: str | None = None
     add_dirs: list[str | Path] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
-    extra_args: dict[str, str | None] = field(
-        default_factory=dict
-    )  # Pass arbitrary CLI flags
+    extra_args: dict[str, str | None] = field(default_factory=dict)  # Pass arbitrary CLI flags
     max_buffer_size: int | None = None  # Max bytes when buffering CLI stdout
     debug_stderr: Any = (
         sys.stderr

@@ -95,9 +95,7 @@ class TestAPIErrors:
 
     def test_invalid_request_error(self):
         """Test InvalidRequestError for 400 responses."""
-        error = InvalidRequestError(
-            "The provided model identifier is invalid", "invalid-model"
-        )
+        error = InvalidRequestError("The provided model identifier is invalid", "invalid-model")
         assert isinstance(error, APIError)
         assert error.error_type == "invalid_request"
         assert "model identifier is invalid" in str(error)

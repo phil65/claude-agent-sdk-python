@@ -96,9 +96,7 @@ class ClaudeSDKClient:
                 internal_hooks[event].append(internal_matcher)
         return internal_hooks
 
-    async def connect(
-        self, prompt: str | AsyncIterable[dict[str, Any]] | None = None
-    ) -> None:
+    async def connect(self, prompt: str | AsyncIterable[dict[str, Any]] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
 
         from ._internal.query import Query
@@ -153,9 +151,7 @@ class ClaudeSDKClient:
 
         # Calculate initialize timeout from CLAUDE_CODE_STREAM_CLOSE_TIMEOUT env var if set
         # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
-        initialize_timeout_ms = int(
-            os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000")
-        )
+        initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
         initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
 
         # Convert agents to dict format for initialize request

@@ -61,9 +61,7 @@ class SubprocessCLITransport(Transport):
         # This allows agents and other large configs to be sent via initialize request
         self._is_streaming = True
         self._options = options
-        self._cli_path = (
-            str(options.cli_path) if options.cli_path is not None else self._find_cli()
-        )
+        self._cli_path = str(options.cli_path) if options.cli_path is not None else self._find_cli()
         self._cwd = str(options.cwd) if options.cwd else None
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
@@ -195,9 +193,7 @@ class SubprocessCLITransport(Transport):
                 self._options.system_prompt.get("type") == "preset"
                 and "append" in self._options.system_prompt
             ):
-                cmd.extend(
-                    ["--append-system-prompt", self._options.system_prompt["append"]]
-                )
+                cmd.extend(["--append-system-prompt", self._options.system_prompt["append"]])
 
         # Handle tools option (base set of tools)
         if self._options.tools is not None:
@@ -233,9 +229,7 @@ class SubprocessCLITransport(Transport):
             cmd.extend(["--betas", ",".join(self._options.betas)])
 
         if self._options.permission_prompt_tool_name:
-            cmd.extend(
-                ["--permission-prompt-tool", self._options.permission_prompt_tool_name]
-            )
+            cmd.extend(["--permission-prompt-tool", self._options.permission_prompt_tool_name])
 
         if self._options.permission_mode:
             cmd.extend(["--permission-mode", self._options.permission_mode])
@@ -403,9 +397,7 @@ class SubprocessCLITransport(Transport):
         except FileNotFoundError as e:
             # Check if the error comes from the working directory or the CLI
             if self._cwd and not Path(self._cwd).exists():
-                error = CLIConnectionError(
-                    f"Working directory does not exist: {self._cwd}"
-                )
+                error = CLIConnectionError(f"Working directory does not exist: {self._cwd}")
                 self._exit_error = error
                 raise error from e
             error = CLINotFoundError(f"Claude Code not found at: {self._cli_path}")
@@ -435,10 +427,7 @@ class SubprocessCLITransport(Transport):
                     self._options.stderr(line_str)
 
                 # For backward compatibility: write to debug_stderr if in debug mode
-                elif (
-                    "debug-to-stderr" in self._options.extra_args
-                    and self._options.debug_stderr
-                ):
+                elif "debug-to-stderr" in self._options.extra_args and self._options.debug_stderr:
                     self._options.debug_stderr.write(line_str + "\n")
                     if hasattr(self._options.debug_stderr, "flush"):
                         self._options.debug_stderr.flush()
@@ -509,9 +498,7 @@ class SubprocessCLITransport(Transport):
                 await self._stdin_stream.send(data)
             except Exception as e:
                 self._ready = False
-                self._exit_error = CLIConnectionError(
-                    f"Failed to write to process stdin: {e}"
-                )
+                self._exit_error = CLIConnectionError(f"Failed to write to process stdin: {e}")
                 raise self._exit_error from e
 
     async def end_input(self) -> None:
@@ -623,9 +610,7 @@ class SubprocessCLITransport(Transport):
                     if match:
                         version = match.group(1)
                         version_parts = [int(x) for x in version.split(".")]
-                        min_parts = [
-                            int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")
-                        ]
+                        min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
 
                         if version_parts < min_parts:
                             warning = (

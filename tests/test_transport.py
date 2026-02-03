@@ -165,9 +165,7 @@ class TestSubprocessCLITransport:
 
         transport = SubprocessCLITransport(
             prompt="test",
-            options=make_options(
-                betas=["context-1m-2025-08-07", "clear-thinking-20250115"]
-            ),
+            options=make_options(betas=["context-1m-2025-08-07", "clear-thinking-20250115"]),
         )
 
         cmd = transport._build_command()
@@ -229,9 +227,7 @@ class TestSubprocessCLITransport:
                 # Mock version check process
                 mock_version_process = MagicMock()
                 mock_version_process.stdout = MagicMock()
-                mock_version_process.stdout.receive = AsyncMock(
-                    return_value=b"2.0.0 (Claude Code)"
-                )
+                mock_version_process.stdout.receive = AsyncMock(return_value=b"2.0.0 (Claude Code)")
                 mock_version_process.terminate = MagicMock()
                 mock_version_process.wait = AsyncMock()
 
@@ -430,9 +426,7 @@ class TestSubprocessCLITransport:
                 # Mock version check process
                 mock_version_process = MagicMock()
                 mock_version_process.stdout = MagicMock()
-                mock_version_process.stdout.receive = AsyncMock(
-                    return_value=b"2.0.0 (Claude Code)"
-                )
+                mock_version_process.stdout.receive = AsyncMock(return_value=b"2.0.0 (Claude Code)")
                 mock_version_process.terminate = MagicMock()
                 mock_version_process.wait = AsyncMock()
 
@@ -488,9 +482,7 @@ class TestSubprocessCLITransport:
                 # Mock version check process
                 mock_version_process = MagicMock()
                 mock_version_process.stdout = MagicMock()
-                mock_version_process.stdout.receive = AsyncMock(
-                    return_value=b"2.0.0 (Claude Code)"
-                )
+                mock_version_process.stdout.receive = AsyncMock(return_value=b"2.0.0 (Claude Code)")
                 mock_version_process.terminate = MagicMock()
                 mock_version_process.wait = AsyncMock()
 
@@ -558,9 +550,7 @@ class TestSubprocessCLITransport:
         assert parsed["sandbox"]["enabled"] is True
         assert parsed["sandbox"]["autoAllowBashIfSandboxed"] is True
         assert parsed["sandbox"]["network"]["allowLocalBinding"] is True
-        assert parsed["sandbox"]["network"]["allowUnixSockets"] == [
-            "/var/run/docker.sock"
-        ]
+        assert parsed["sandbox"]["network"]["allowUnixSockets"] == ["/var/run/docker.sock"]
 
     def test_build_command_with_sandbox_and_settings_json(self):
         """Test building CLI command with sandbox merged into existing settings JSON."""
@@ -834,9 +824,7 @@ class TestSubprocessCLITransport:
                         tg.start_soon(do_write, i)
 
                 # Should have gotten errors due to concurrent access
-                assert len(errors) > 0, (
-                    "Expected errors from concurrent access, but got none"
-                )
+                assert len(errors) > 0, "Expected errors from concurrent access, but got none"
 
                 # Check that at least one error mentions the concurrent access
                 error_strs = [str(e) for e in errors]

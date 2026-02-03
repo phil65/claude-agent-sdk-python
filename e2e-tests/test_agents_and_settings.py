@@ -65,9 +65,7 @@ async def test_agent_definition():
                 assert isinstance(agents, list), (
                     f"agents should be a list of strings, got: {type(agents)}"
                 )
-                assert "test-agent" in agents, (
-                    f"test-agent should be available, got: {agents}"
-                )
+                assert "test-agent" in agents, f"test-agent should be available, got: {agents}"
                 break
 
 
@@ -359,9 +357,7 @@ async def test_large_agent_definitions_via_initialize():
         len(json.dumps({k: v for k, v in asdict(agent).items() if v is not None}))
         for agent in agents.values()
     )
-    assert total_size > 250_000, (
-        f"Test agents should be >250KB, got {total_size / 1024:.1f}KB"
-    )
+    assert total_size > 250_000, f"Test agents should be >250KB, got {total_size / 1024:.1f}KB"
 
     options = ClaudeAgentOptions(
         agents=agents,

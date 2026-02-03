@@ -223,13 +223,9 @@ class TestHookCallbacks:
         transport = MockTransport()
 
         # Create hooks configuration
-        hooks = {
-            "tool_use_start": [{"matcher": {"tool": "TestTool"}, "hooks": [test_hook]}]
-        }
+        hooks = {"tool_use_start": [{"matcher": {"tool": "TestTool"}, "hooks": [test_hook]}]}
 
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
         # Manually register the hook callback to avoid needing the full initialize flow
         callback_id = "test_hook_0"
@@ -285,15 +281,9 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {
-            "PreToolUse": [
-                {"matcher": {"tool": "TestTool"}, "hooks": [comprehensive_hook]}
-            ]
-        }
+        hooks = {"PreToolUse": [{"matcher": {"tool": "TestTool"}, "hooks": [comprehensive_hook]}]}
 
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
@@ -350,9 +340,7 @@ class TestHookCallbacks:
         transport = MockTransport()
         hooks = {"PreToolUse": [{"matcher": None, "hooks": [async_hook]}]}
 
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
@@ -402,9 +390,7 @@ class TestHookCallbacks:
         transport = MockTransport()
         hooks = {"PreToolUse": [{"matcher": None, "hooks": [conversion_test_hook]}]}
 
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
@@ -434,9 +420,7 @@ class TestHookCallbacks:
         assert "async_" not in result, "async_ should not appear in output"
 
         # Verify continue_ was converted to continue
-        assert result.get("continue") is False, (
-            "continue_ should be converted to continue"
-        )
+        assert result.get("continue") is False, "continue_ should be converted to continue"
         assert "continue_" not in result, "continue_ should not appear in output"
 
         # Verify other fields are unchanged
@@ -463,9 +447,7 @@ class TestClaudeAgentOptionsIntegration:
 
         options = ClaudeAgentOptions(
             can_use_tool=my_callback,
-            hooks={
-                "tool_use_start": [HookMatcher(matcher={"tool": "Bash"}, hooks=[my_hook])]
-            },
+            hooks={"tool_use_start": [HookMatcher(matcher={"tool": "Bash"}, hooks=[my_hook])]},
         )
 
         assert options.can_use_tool == my_callback
@@ -494,9 +476,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={}
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
 
         callback_id = "test_notification_hook"
         query.hook_callbacks[callback_id] = notification_hook
@@ -528,9 +508,7 @@ class TestHookEventCallbacks:
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
         assert result["hookSpecificOutput"]["hookEventName"] == "Notification"
-        assert (
-            result["hookSpecificOutput"]["additionalContext"] == "Notification processed"
-        )
+        assert result["hookSpecificOutput"]["additionalContext"] == "Notification processed"
 
     @pytest.mark.asyncio
     async def test_permission_request_hook_callback(self):
@@ -547,9 +525,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={}
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
 
         callback_id = "test_permission_request_hook"
         query.hook_callbacks[callback_id] = permission_request_hook
@@ -594,9 +570,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={}
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
 
         callback_id = "test_subagent_start_hook"
         query.hook_callbacks[callback_id] = subagent_start_hook
@@ -641,9 +615,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={}
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
 
         callback_id = "test_post_tool_mcp_hook"
         query.hook_callbacks[callback_id] = post_tool_hook
@@ -672,9 +644,7 @@ class TestHookEventCallbacks:
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
-        assert result["hookSpecificOutput"]["updatedMCPToolOutput"] == {
-            "result": "modified output"
-        }
+        assert result["hookSpecificOutput"]["updatedMCPToolOutput"] == {"result": "modified output"}
 
     @pytest.mark.asyncio
     async def test_pre_tool_use_hook_with_additional_context(self):
@@ -692,9 +662,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(
-            transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={}
-        )
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
 
         callback_id = "test_pre_tool_context_hook"
         query.hook_callbacks[callback_id] = pre_tool_hook
@@ -722,10 +690,7 @@ class TestHookEventCallbacks:
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
-        assert (
-            result["hookSpecificOutput"]["additionalContext"]
-            == "Extra context for Claude"
-        )
+        assert result["hookSpecificOutput"]["additionalContext"] == "Extra context for Claude"
         assert result["hookSpecificOutput"]["permissionDecision"] == "allow"
 
 

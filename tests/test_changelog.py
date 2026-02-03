@@ -11,9 +11,7 @@ class TestChangelog:
 
     def test_changelog_starts_with_header(self):
         content = self.changelog_path.read_text()
-        assert content.startswith("# Changelog"), (
-            "Changelog should start with '# Changelog'"
-        )
+        assert content.startswith("# Changelog"), "Changelog should start with '# Changelog'"
 
     def test_changelog_has_valid_version_format(self):
         content = self.changelog_path.read_text()
@@ -50,15 +48,11 @@ class TestChangelog:
                 has_bullet_points = True
             elif in_version_section and line.strip() == "" and i == len(lines) - 1:
                 # Last line check
-                assert has_bullet_points, (
-                    "Each version should have at least one bullet point"
-                )
+                assert has_bullet_points, "Each version should have at least one bullet point"
 
         # Check the last section
         if in_version_section:
-            assert has_bullet_points, (
-                "Last version section should have at least one bullet point"
-            )
+            assert has_bullet_points, "Last version section should have at least one bullet point"
 
     def test_changelog_versions_in_descending_order(self):
         content = self.changelog_path.read_text()

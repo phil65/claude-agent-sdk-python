@@ -274,9 +274,7 @@ class TestAPIErrorRaising:
                     "type": "assistant",
                     "message": {
                         "role": "assistant",
-                        "content": [
-                            {"type": "text", "text": "API Error: Invalid API key"}
-                        ],
+                        "content": [{"type": "text", "text": "API Error: Invalid API key"}],
                         "model": "claude-sonnet-4-5-20250514",
                         "error": "authentication_failed",
                     },

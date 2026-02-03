@@ -122,7 +122,5 @@ async def query(
 
     client = InternalClient()
 
-    async for message in client.process_query(
-        prompt=prompt, options=options, transport=transport
-    ):
+    async for message in client.process_query(prompt=prompt, options=options, transport=transport):
         yield message

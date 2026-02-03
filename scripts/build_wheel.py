@@ -309,9 +309,7 @@ def list_artifacts() -> None:
 
 def main() -> None:
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Build wheel with bundled Claude Code CLI"
-    )
+    parser = argparse.ArgumentParser(description="Build wheel with bundled Claude Code CLI")
     parser.add_argument(
         "--version",
         help="Version to set before building (e.g., 0.1.4)",

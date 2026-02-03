@@ -250,10 +250,7 @@ def create_sdk_mcp_server(
                 # Convert input_schema to JSON Schema format
                 if isinstance(tool_def.input_schema, dict):
                     # Check if it's already a JSON schema
-                    if (
-                        "type" in tool_def.input_schema
-                        and "properties" in tool_def.input_schema
-                    ):
+                    if "type" in tool_def.input_schema and "properties" in tool_def.input_schema:
                         schema = tool_def.input_schema
                     else:
                         # Simple dict mapping names to types - convert to JSON schema
@@ -323,9 +320,7 @@ def create_sdk_mcp_server(
                             EmbeddedResource(
                                 type="resource",
                                 resource=BlobResourceContents(
-                                    uri=AnyUrl(
-                                        f"document://{source.get('type', 'base64')}"
-                                    ),
+                                    uri=AnyUrl(f"document://{source.get('type', 'base64')}"),
                                     mimeType=source.get("media_type", "application/pdf"),
                                     blob=source.get("data", ""),
                                 ),

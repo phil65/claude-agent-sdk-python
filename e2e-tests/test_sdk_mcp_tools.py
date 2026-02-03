@@ -80,9 +80,7 @@ async def test_sdk_mcp_permission_enforcement():
     )
 
     async with ClaudeSDKClient(options=options) as client:
-        await client.query(
-            "Use the echo tool to echo 'test' and use greet tool to greet 'Alice'"
-        )
+        await client.query("Use the echo tool to echo 'test' and use greet tool to greet 'Alice'")
 
         async for _message in client.receive_response():
             pass  # Just consume messages

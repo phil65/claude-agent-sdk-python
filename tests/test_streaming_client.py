@@ -510,8 +510,7 @@ class TestClaudeSDKClientStreaming:
                                 msg = json.loads(data.strip())
                                 if (
                                     msg.get("type") == "control_request"
-                                    and msg.get("request", {}).get("subtype")
-                                    == "initialize"
+                                    and msg.get("request", {}).get("subtype") == "initialize"
                                 ):
                                     yield {
                                         "type": "control_response",
@@ -635,9 +634,7 @@ print('{"type": "result", "subtype": "success", "duration_ms": 100, "duration_ap
 
             try:
                 # Mock _find_cli to return the test script path directly
-                with patch.object(
-                    SubprocessCLITransport, "_find_cli", return_value=test_script
-                ):
+                with patch.object(SubprocessCLITransport, "_find_cli", return_value=test_script):
                     # Mock _build_command to properly execute Python script
                     original_build_command = SubprocessCLITransport._build_command
 
@@ -653,9 +650,7 @@ print('{"type": "result", "subtype": "success", "duration_ms": 100, "duration_ap
                             cmd[0] = test_script
                         return cmd
 
-                    with patch.object(
-                        SubprocessCLITransport, "_build_command", mock_build_command
-                    ):
+                    with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
                         # Run query with async iterable
                         messages = []
                         async for msg in query(prompt=message_stream()):
@@ -771,8 +766,7 @@ class TestClaudeSDKClientEdgeCases:
                                 msg = json.loads(data.strip())
                                 if (
                                     msg.get("type") == "control_request"
-                                    and msg.get("request", {}).get("subtype")
-                                    == "initialize"
+                                    and msg.get("request", {}).get("subtype") == "initialize"
                                 ):
                                     yield {
                                         "type": "control_response",
@@ -823,8 +817,7 @@ class TestClaudeSDKClientEdgeCases:
 
                     assert len(messages) == 3
                     assert all(
-                        isinstance(msg, AssistantMessage | ResultMessage)
-                        for msg in messages
+                        isinstance(msg, AssistantMessage | ResultMessage) for msg in messages
                     )
                     assert isinstance(messages[-1], ResultMessage)
 
@@ -866,8 +859,7 @@ class TestAsyncGeneratorCleanup:
                                 msg = json.loads(data.strip())
                                 if (
                                     msg.get("type") == "control_request"
-                                    and msg.get("request", {}).get("subtype")
-                                    == "initialize"
+                                    and msg.get("request", {}).get("subtype") == "initialize"
                                 ):
                                     yield {
                                         "type": "control_response",

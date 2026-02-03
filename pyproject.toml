@@ -96,7 +96,7 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 target-version = "py313"
-line-length = 90
+line-length = 100
 exclude = ["examples/"]
 
 [tool.ruff.lint]
