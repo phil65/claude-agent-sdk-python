@@ -8,7 +8,7 @@ import base64
 from typing import Any
 
 import pytest
-from mcp.types import CallToolRequest, CallToolRequestParams
+from mcp.types import CallToolRequest, CallToolRequestParams, ToolAnnotations
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
 
@@ -385,3 +385,121 @@ async def test_error_handling_through_jsonrpc():
     assert "is_error" in response["result"]
     assert response["result"]["is_error"] is True
     assert "Expected error" in str(response["result"]["content"])
+
+
+async def test_tool_annotations():
+    """Test that tool annotations are stored and flow through list_tools."""
+
+    @tool(
+        "read_data",
+        "Read data from source",
+        {"source": str},
+        annotations=ToolAnnotations(readOnlyHint=True),
+    )
+    async def read_data(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": f"Data from {args['source']}"}]}
+
+    @tool(
+        "delete_item",
+        "Delete an item",
+        {"id": str},
+        annotations=ToolAnnotations(destructiveHint=True, idempotentHint=True),
+    )
+    async def delete_item(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": f"Deleted {args['id']}"}]}
+
+    @tool(
+        "search",
+        "Search the web",
+        {"query": str},
+        annotations=ToolAnnotations(openWorldHint=True),
+    )
+    async def search(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": f"Results for {args['query']}"}]}
+
+    @tool("no_annotations", "Tool without annotations", {"x": str})
+    async def no_annotations(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": args["x"]}]}
+
+    # Verify annotations stored on SdkMcpTool
+    assert read_data.annotations is not None
+    assert read_data.annotations.readOnlyHint is True
+    assert delete_item.annotations is not None
+    assert delete_item.annotations.destructiveHint is True
+    assert delete_item.annotations.idempotentHint is True
+    assert search.annotations is not None
+    assert search.annotations.openWorldHint is True
+    assert no_annotations.annotations is None
+
+    # Verify annotations flow through list_tools handler
+    server_config = create_sdk_mcp_server(
+        name="annotations-test",
+        tools=[read_data, delete_item, search, no_annotations],
+    )
+    server = server_config["instance"]
+
+    from mcp.types import ListToolsRequest
+
+    list_handler = server.request_handlers[ListToolsRequest]
+    request = ListToolsRequest(method="tools/list")
+    response = await list_handler(request)
+
+    tools_by_name = {t.name: t for t in response.root.tools}
+
+    assert tools_by_name["read_data"].annotations is not None
+    assert tools_by_name["read_data"].annotations.readOnlyHint is True
+    assert tools_by_name["delete_item"].annotations is not None
+    assert tools_by_name["delete_item"].annotations.destructiveHint is True
+    assert tools_by_name["delete_item"].annotations.idempotentHint is True
+    assert tools_by_name["search"].annotations is not None
+    assert tools_by_name["search"].annotations.openWorldHint is True
+    assert tools_by_name["no_annotations"].annotations is None
+
+
+@pytest.mark.asyncio
+async def test_tool_annotations_in_jsonrpc():
+    """Test that annotations are included in JSONRPC tools/list response."""
+    from clawd_code_sdk._internal.query import Query
+
+    @tool(
+        "read_only_tool",
+        "A read-only tool",
+        {"input": str},
+        annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
+    )
+    async def read_only_tool(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": args["input"]}]}
+
+    @tool("plain_tool", "A tool without annotations", {"input": str})
+    async def plain_tool(args: dict[str, Any]) -> dict[str, Any]:
+        return {"content": [{"type": "text", "text": args["input"]}]}
+
+    server_config = create_sdk_mcp_server(
+        name="jsonrpc-annotations-test",
+        tools=[read_only_tool, plain_tool],
+    )
+
+    # Simulate the JSONRPC tools/list request
+    query_instance = Query.__new__(Query)
+    query_instance.sdk_mcp_servers = {"test": server_config["instance"]}
+
+    response = await query_instance._handle_sdk_mcp_request(
+        "test",
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+    )
+
+    assert response is not None
+    tools_data = response["result"]["tools"]
+    tools_by_name = {t["name"]: t for t in tools_data}
+
+    # Tool with annotations should include them
+    assert "annotations" in tools_by_name["read_only_tool"]
+    assert tools_by_name["read_only_tool"]["annotations"]["readOnlyHint"] is True
+    assert tools_by_name["read_only_tool"]["annotations"]["openWorldHint"] is False
+
+    # Tool without annotations should not have the key
+    assert "annotations" not in tools_by_name["plain_tool"]
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

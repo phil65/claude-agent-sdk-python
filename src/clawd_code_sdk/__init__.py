@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from mcp.types import ToolAnnotations
 from pydantic import AnyUrl
 
 from ._errors import (
@@ -89,10 +90,14 @@ class SdkMcpTool[T]:
     description: str
     input_schema: type[T] | dict[str, Any]
     handler: Callable[[T], Awaitable[dict[str, Any]]]
+    annotations: ToolAnnotations | None = None
 
 
 def tool(
-    name: str, description: str, input_schema: type | dict[str, Any]
+    name: str,
+    description: str,
+    input_schema: type | dict[str, Any],
+    annotations: ToolAnnotations | None = None,
 ) -> Callable[[Callable[[Any], Awaitable[dict[str, Any]]]], SdkMcpTool[Any]]:
     """Decorator for defining MCP tools with type safety.
 
@@ -149,6 +154,7 @@ def tool(
             description=description,
             input_schema=input_schema,
             handler=handler,
+            annotations=annotations,
         )
 
     return decorator
@@ -282,6 +288,7 @@ def create_sdk_mcp_server(
                         name=tool_def.name,
                         description=tool_def.description,
                         inputSchema=schema,
+                        annotations=tool_def.annotations,
                     )
                 )
             return tool_list
@@ -402,6 +409,7 @@ __all__ = [
     "create_sdk_mcp_server",
     "tool",
     "SdkMcpTool",
+    "ToolAnnotations",
     # Errors
     "ClaudeSDKError",
     "CLIConnectionError",
