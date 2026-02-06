@@ -37,11 +37,6 @@ logger = logging.getLogger(__name__)
 _DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 1MB buffer limit
 MINIMUM_CLAUDE_CODE_VERSION = "2.0.0"
 
-# Platform-specific command line length limits
-# Windows cmd.exe has a limit of 8191 characters, use 8000 for safety
-# Other platforms have much higher limits
-_CMD_LENGTH_LIMIT = 8000 if platform.system() == "Windows" else 100000
-
 # Platform-specific process creation flags
 # On Windows, CREATE_NO_WINDOW prevents a visible console window from appearing
 # when spawning the CLI subprocess, which improves UX for GUI applications
