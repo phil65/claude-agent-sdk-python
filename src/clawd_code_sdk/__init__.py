@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import AnyUrl
 
@@ -75,6 +74,9 @@ from .types import (
     UserMessage,
     UserPromptSubmitHookInput,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 # MCP Server Support
 

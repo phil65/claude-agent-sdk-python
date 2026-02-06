@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterable
 from contextlib import aclosing
 from dataclasses import asdict, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyenv
 
@@ -20,16 +20,16 @@ from .._errors import (
     RateLimitError,
     ServerError,
 )
-from ..types import (
-    AssistantMessage,
-    ClaudeAgentOptions,
-    Message,
-    TextBlock,
-)
+from ..types import AssistantMessage, TextBlock
 from .message_parser import parse_message
 from .query import Query
-from .transport import Transport
 from .transport.subprocess_cli import SubprocessCLITransport
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from ..types import ClaudeAgentOptions, Message
+    from .transport import Transport
 
 logger = logging.getLogger(__name__)
 
@@ -127,10 +127,7 @@ class InternalClient:
         if transport is not None:
             chosen_transport = transport
         else:
-            chosen_transport = SubprocessCLITransport(
-                prompt=prompt,
-                options=configured_options,
-            )
+            chosen_transport = SubprocessCLITransport(prompt=prompt, options=configured_options)
 
         # Connect transport
         await chosen_transport.connect()
@@ -167,10 +164,8 @@ class InternalClient:
         try:
             # Start reading messages
             await query.start()
-
             # Always initialize to send agents via stdin (matching TypeScript SDK)
             await query.initialize()
-
             # Handle prompt input
             if isinstance(prompt, str):
                 # For string prompts, write user message to stdin after initialize

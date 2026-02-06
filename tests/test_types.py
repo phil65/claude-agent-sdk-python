@@ -1,25 +1,33 @@
 """Tests for Claude SDK type definitions."""
 
+from typing import TYPE_CHECKING
+
 from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
-    NotificationHookInput,
-    NotificationHookSpecificOutput,
-    PermissionRequestHookInput,
-    PermissionRequestHookSpecificOutput,
     ResultMessage,
-    SubagentStartHookInput,
-    SubagentStartHookSpecificOutput,
 )
 from clawd_code_sdk.types import (
-    PostToolUseHookSpecificOutput,
-    PreToolUseHookSpecificOutput,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
 )
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import (
+        NotificationHookInput,
+        NotificationHookSpecificOutput,
+        PermissionRequestHookInput,
+        PermissionRequestHookSpecificOutput,
+        SubagentStartHookInput,
+        SubagentStartHookSpecificOutput,
+    )
+    from clawd_code_sdk.types import (
+        PostToolUseHookSpecificOutput,
+        PreToolUseHookSpecificOutput,
+    )
 
 
 class TestMessageTypes:

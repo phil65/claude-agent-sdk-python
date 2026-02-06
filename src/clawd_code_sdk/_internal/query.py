@@ -4,35 +4,39 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import (
-    AsyncGenerator,
-    AsyncIterable,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-)
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
-from anyio.abc import CancelScope, TaskGroup
 from pydantic import BaseModel
 
 from ..types import (
-    PermissionMode,
     PermissionResultAllow,
     PermissionResultDeny,
-    SDKControlPermissionRequest,
-    SDKControlRequest,
-    SDKControlResponse,
-    SDKHookCallbackRequest,
     ToolPermissionContext,
 )
-from .transport import Transport
 
 if TYPE_CHECKING:
+    from collections.abc import (
+        AsyncGenerator,
+        AsyncIterable,
+        AsyncIterator,
+        Awaitable,
+        Callable,
+    )
+
+    from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
+
+    from ..types import (
+        PermissionMode,
+        SDKControlPermissionRequest,
+        SDKControlRequest,
+        SDKControlResponse,
+        SDKHookCallbackRequest,
+    )
+    from .transport import Transport
 
 logger = logging.getLogger(__name__)
 

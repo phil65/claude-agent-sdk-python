@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterable
 from dataclasses import asdict, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyenv
 
-from clawd_code_sdk._internal.query import Query
+from clawd_code_sdk._errors import CLIConnectionError
+from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
+from clawd_code_sdk.types import ClaudeAgentOptions, ResultMessage
 
-from . import Transport
-from ._errors import CLIConnectionError
-from .types import (
-    ClaudeAgentOptions,
-    Message,
-    PermissionMode,
-    ResultMessage,
-)
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from clawd_code_sdk import Transport
+    from clawd_code_sdk._internal.query import Query
+    from clawd_code_sdk.types import Message, PermissionMode
 
 
 class ClaudeSDKClient:
@@ -79,8 +79,8 @@ class ClaudeSDKClient:
     async def connect(self, prompt: str | AsyncIterable[dict[str, Any]] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
 
-        from ._internal.query import Query
-        from ._internal.transport.subprocess_cli import SubprocessCLITransport
+        from clawd_code_sdk._internal.query import Query
+        from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
         # Auto-connect with empty async iterable if no prompt is provided
         async def _empty_stream() -> AsyncIterator[dict[str, Any]]:
@@ -116,10 +116,7 @@ class ClaudeSDKClient:
         if self._custom_transport:
             self._transport = self._custom_transport
         else:
-            self._transport = SubprocessCLITransport(
-                prompt=actual_prompt,
-                options=options,
-            )
+            self._transport = SubprocessCLITransport(prompt=actual_prompt, options=options)
         await self._transport.connect()
 
         # Extract SDK MCP servers from options
@@ -168,7 +165,7 @@ class ClaudeSDKClient:
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
 
-        from ._internal.message_parser import parse_message
+        from clawd_code_sdk._internal.message_parser import parse_message
 
         async for data in self._query.receive_messages():
             yield parse_message(data)

@@ -2,6 +2,7 @@
 
 import os
 import uuid
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anyio
@@ -9,6 +10,9 @@ import pytest
 
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.types import ClaudeAgentOptions
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import SandboxSettings
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
@@ -521,8 +525,6 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox settings (no existing settings)."""
         import json
 
-        from clawd_code_sdk import SandboxSettings
-
         sandbox: SandboxSettings = {
             "enabled": True,
             "autoAllowBashIfSandboxed": True,
@@ -555,8 +557,6 @@ class TestSubprocessCLITransport:
     def test_build_command_with_sandbox_and_settings_json(self):
         """Test building CLI command with sandbox merged into existing settings JSON."""
         import json
-
-        from clawd_code_sdk import SandboxSettings
 
         # Existing settings as JSON string
         existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
@@ -607,8 +607,6 @@ class TestSubprocessCLITransport:
         """Test sandbox with minimal configuration."""
         import json
 
-        from clawd_code_sdk import SandboxSettings
-
         sandbox: SandboxSettings = {"enabled": True}
 
         transport = SubprocessCLITransport(
@@ -628,8 +626,6 @@ class TestSubprocessCLITransport:
     def test_sandbox_network_config(self):
         """Test sandbox with full network configuration."""
         import json
-
-        from clawd_code_sdk import SandboxSettings
 
         sandbox: SandboxSettings = {
             "enabled": True,

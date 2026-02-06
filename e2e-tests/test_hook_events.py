@@ -1,17 +1,15 @@
 """End-to-end tests for hook event types with real Claude API calls."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from clawd_code_sdk import (
-    ClaudeAgentOptions,
-    ClaudeSDKClient,
-    HookContext,
-    HookInput,
-    HookJSONOutput,
-    HookMatcher,
-)
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import HookContext, HookInput, HookJSONOutput
 
 
 @pytest.mark.e2e

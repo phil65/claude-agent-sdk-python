@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterable, AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ._internal.client import InternalClient
-from ._internal.transport import Transport
-from .types import ClaudeAgentOptions, Message
+from .types import ClaudeAgentOptions
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable, AsyncIterator
+
+    from ._internal.transport import Transport
+    from .types import Message
 
 
 async def query(

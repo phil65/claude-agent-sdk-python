@@ -1,8 +1,9 @@
 """Tests for subprocess transport buffering edge cases."""
 
+from __future__ import annotations
+
 import json
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import anyio
@@ -14,6 +15,9 @@ from clawd_code_sdk._internal.transport.subprocess_cli import (
     SubprocessCLITransport,
 )
 from clawd_code_sdk.types import ClaudeAgentOptions
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 

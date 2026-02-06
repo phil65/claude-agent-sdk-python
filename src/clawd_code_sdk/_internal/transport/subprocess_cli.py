@@ -10,23 +10,27 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import suppress
 from pathlib import Path
 from subprocess import PIPE
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
 import anyio.abc
-from anyio.abc import Process
 from anyio.streams.text import TextReceiveStream, TextSendStream
 
 from ..._errors import CLIConnectionError, CLINotFoundError, ProcessError
 from ..._errors import CLIJSONDecodeError as SDKJSONDecodeError
 from ..._version import __version__
-from ...types import ClaudeAgentOptions
 from . import Transport
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable, AsyncIterator
+
+    from anyio.abc import Process
+
+    from ...types import ClaudeAgentOptions
 
 logger = logging.getLogger(__name__)
 

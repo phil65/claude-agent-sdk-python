@@ -1,24 +1,30 @@
 """Tests for tool permission callbacks and hook callbacks."""
 
+from __future__ import annotations
+
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyenv
 import pytest
 
 from clawd_code_sdk import (
     ClaudeAgentOptions,
-    HookContext,
-    HookInput,
-    HookJSONOutput,
     HookMatcher,
     PermissionResultAllow,
     PermissionResultDeny,
-    ToolPermissionContext,
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk.types import SDKControlRequest
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import (
+        HookContext,
+        HookInput,
+        HookJSONOutput,
+        ToolPermissionContext,
+    )
 
 
 class MockTransport(Transport):

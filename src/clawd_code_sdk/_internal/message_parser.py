@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.types import (
     AssistantMessage,
-    ContentBlock,
-    Message,
     ResultMessage,
     StreamEvent,
     SystemMessage,
@@ -22,6 +20,7 @@ from clawd_code_sdk.types import (
 
 if TYPE_CHECKING:
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
+    from clawd_code_sdk.types import ContentBlock, Message
 
 logger = logging.getLogger(__name__)
 

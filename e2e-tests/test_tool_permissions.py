@@ -1,17 +1,17 @@
 """End-to-end tests for tool permission callbacks with real Claude API calls."""
 
+from __future__ import annotations
+
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from clawd_code_sdk import (
-    ClaudeAgentOptions,
-    ClaudeSDKClient,
-    PermissionResultAllow,
-    PermissionResultDeny,
-    ToolPermissionContext,
-)
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, PermissionResultAllow
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import PermissionResultDeny, ToolPermissionContext
 
 
 @pytest.mark.e2e

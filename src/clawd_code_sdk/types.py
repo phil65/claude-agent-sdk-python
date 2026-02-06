@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from pathlib import Path
+
     from mcp.server import Server as McpServer
 
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
