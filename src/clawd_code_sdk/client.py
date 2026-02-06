@@ -15,8 +15,6 @@ from . import Transport
 from ._errors import CLIConnectionError
 from .types import (
     ClaudeAgentOptions,
-    HookEvent,
-    HookMatcher,
     Message,
     PermissionMode,
     ResultMessage,
@@ -77,24 +75,6 @@ class ClaudeSDKClient:
         self._transport: Transport | None = None
         self._query: Query | None = None
         os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
-
-    def _convert_hooks_to_internal_format(
-        self, hooks: dict[HookEvent, list[HookMatcher]]
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Convert HookMatcher format to internal Query format."""
-        internal_hooks: dict[str, list[dict[str, Any]]] = {}
-        for event, matchers in hooks.items():
-            internal_hooks[event] = []
-            for matcher in matchers:
-                # Convert HookMatcher to internal dict format
-                internal_matcher: dict[str, Any] = {
-                    "matcher": matcher.matcher if hasattr(matcher, "matcher") else None,
-                    "hooks": matcher.hooks if hasattr(matcher, "hooks") else [],
-                }
-                if matcher.timeout is not None:
-                    internal_matcher["timeout"] = matcher.timeout
-                internal_hooks[event].append(internal_matcher)
-        return internal_hooks
 
     async def connect(self, prompt: str | AsyncIterable[dict[str, Any]] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
@@ -167,7 +147,7 @@ class ClaudeSDKClient:
             transport=self._transport,
             is_streaming_mode=True,  # ClaudeSDKClient always uses streaming mode
             can_use_tool=self.options.can_use_tool,
-            hooks=self._convert_hooks_to_internal_format(self.options.hooks)
+            hooks=convert_hooks_to_internal_format(self.options.hooks)
             if self.options.hooks
             else None,
             sdk_mcp_servers=sdk_mcp_servers,

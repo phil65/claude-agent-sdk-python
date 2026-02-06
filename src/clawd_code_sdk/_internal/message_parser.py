@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.types import (
     AssistantMessage,
+    ContentBlock,
     Message,
     ResultMessage,
     StreamEvent,
@@ -142,9 +143,7 @@ def parse_message(data: dict[str, Any]) -> Message:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
 
 
-def to_block(
-    data: dict[str, Any],
-) -> TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock:
+def to_block(data: dict[str, Any]) -> ContentBlock:
     match data["type"]:
         case "text":
             return TextBlock(text=data["text"])

@@ -10,6 +10,8 @@ from typing import Any
 
 import anyenv
 
+from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
+
 from .._errors import (
     APIError,
     AuthenticationError,
@@ -21,8 +23,6 @@ from .._errors import (
 from ..types import (
     AssistantMessage,
     ClaudeAgentOptions,
-    HookEvent,
-    HookMatcher,
     Message,
     TextBlock,
 )
@@ -46,10 +46,10 @@ def _extract_error_message(message: AssistantMessage) -> str:
     Returns:
         The error message text, or a default message if none found.
     """
-    for block in message.content:
-        if isinstance(block, TextBlock):
-            return block.text
-    return "An API error occurred"
+    return next(
+        (block.text for block in message.content if isinstance(block, TextBlock)),
+        "An API error occurred",
+    )
 
 
 def _raise_api_error(message: AssistantMessage) -> None:
@@ -94,24 +94,6 @@ class InternalClient:
 
     def __init__(self) -> None:
         """Initialize the internal client."""
-
-    def _convert_hooks_to_internal_format(
-        self, hooks: dict[HookEvent, list[HookMatcher]]
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Convert HookMatcher format to internal Query format."""
-        internal_hooks: dict[str, list[dict[str, Any]]] = {}
-        for event, matchers in hooks.items():
-            internal_hooks[event] = []
-            for matcher in matchers:
-                # Convert HookMatcher to internal dict format
-                internal_matcher: dict[str, Any] = {
-                    "matcher": matcher.matcher,
-                    "hooks": matcher.hooks,
-                }
-                if matcher.timeout is not None:
-                    internal_matcher["timeout"] = matcher.timeout
-                internal_hooks[event].append(internal_matcher)
-        return internal_hooks
 
     async def process_query(
         self,
@@ -175,7 +157,7 @@ class InternalClient:
             transport=chosen_transport,
             is_streaming_mode=True,  # Always streaming internally
             can_use_tool=configured_options.can_use_tool,
-            hooks=self._convert_hooks_to_internal_format(configured_options.hooks)
+            hooks=convert_hooks_to_internal_format(configured_options.hooks)
             if configured_options.hooks
             else None,
             sdk_mcp_servers=sdk_mcp_servers,

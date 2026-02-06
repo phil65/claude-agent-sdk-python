@@ -61,7 +61,7 @@ class SubprocessCLITransport(Transport):
         # This allows agents and other large configs to be sent via initialize request
         self._is_streaming = True
         self._options = options
-        self._cli_path = str(options.cli_path) if options.cli_path is not None else self._find_cli()
+        self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
         self._cwd = str(options.cwd) if options.cwd else None
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
@@ -77,54 +77,6 @@ class SubprocessCLITransport(Transport):
         )
         self._stderr_lines: list[str] = []
         self._write_lock: anyio.Lock = anyio.Lock()
-
-    def _find_cli(self) -> str:
-        """Find Claude Code CLI binary."""
-        # First, check for bundled CLI
-        bundled_cli = self._find_bundled_cli()
-        if bundled_cli:
-            return bundled_cli
-
-        # Fall back to system-wide search
-        if cli := shutil.which("claude"):
-            return cli
-
-        locations = [
-            Path.home() / ".npm-global/bin/claude",
-            Path("/usr/local/bin/claude"),
-            Path.home() / ".local/bin/claude",
-            Path.home() / "node_modules/.bin/claude",
-            Path.home() / ".yarn/bin/claude",
-            Path.home() / ".claude/local/claude",
-        ]
-
-        for path in locations:
-            if path.exists() and path.is_file():
-                return str(path)
-
-        raise CLINotFoundError(
-            "Claude Code not found. Install with:\n"
-            "  npm install -g @anthropic-ai/claude-code\n"
-            "\nIf already installed locally, try:\n"
-            '  export PATH="$HOME/node_modules/.bin:$PATH"\n'
-            "\nOr provide the path via ClaudeAgentOptions:\n"
-            "  ClaudeAgentOptions(cli_path='/path/to/claude')"
-        )
-
-    def _find_bundled_cli(self) -> str | None:
-        """Find bundled CLI binary if it exists."""
-        # Determine the CLI binary name based on platform
-        cli_name = "claude.exe" if platform.system() == "Windows" else "claude"
-
-        # Get the path to the bundled CLI
-        # The _bundled directory is in the same package as this module
-        bundled_path = Path(__file__).parent.parent.parent / "_bundled" / cli_name
-
-        if bundled_path.exists() and bundled_path.is_file():
-            logger.info(f"Using bundled Claude Code CLI: {bundled_path}")
-            return str(bundled_path)
-
-        return None
 
     def _build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.
@@ -632,3 +584,53 @@ class SubprocessCLITransport(Transport):
     def is_ready(self) -> bool:
         """Check if transport is ready for communication."""
         return self._ready
+
+
+def _find_bundled_cli() -> str | None:
+    """Find bundled CLI binary if it exists."""
+    # Determine the CLI binary name based on platform
+    cli_name = "claude.exe" if platform.system() == "Windows" else "claude"
+
+    # Get the path to the bundled CLI
+    # The _bundled directory is in the same package as this module
+    bundled_path = Path(__file__).parent.parent.parent / "_bundled" / cli_name
+
+    if bundled_path.exists() and bundled_path.is_file():
+        logger.info(f"Using bundled Claude Code CLI: {bundled_path}")
+        return str(bundled_path)
+
+    return None
+
+
+def _find_cli() -> str:
+    """Find Claude Code CLI binary."""
+    # First, check for bundled CLI
+    bundled_cli = _find_bundled_cli()
+    if bundled_cli:
+        return bundled_cli
+
+    # Fall back to system-wide search
+    if cli := shutil.which("claude"):
+        return cli
+
+    locations = [
+        Path.home() / ".npm-global/bin/claude",
+        Path("/usr/local/bin/claude"),
+        Path.home() / ".local/bin/claude",
+        Path.home() / "node_modules/.bin/claude",
+        Path.home() / ".yarn/bin/claude",
+        Path.home() / ".claude/local/claude",
+    ]
+
+    for path in locations:
+        if path.exists() and path.is_file():
+            return str(path)
+
+    raise CLINotFoundError(
+        "Claude Code not found. Install with:\n"
+        "  npm install -g @anthropic-ai/claude-code\n"
+        "\nIf already installed locally, try:\n"
+        '  export PATH="$HOME/node_modules/.bin:$PATH"\n'
+        "\nOr provide the path via ClaudeAgentOptions:\n"
+        "  ClaudeAgentOptions(cli_path='/path/to/claude')"
+    )
