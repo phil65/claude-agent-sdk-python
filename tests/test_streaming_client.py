@@ -20,6 +20,7 @@ from clawd_code_sdk import (
     UserMessage,
     query,
 )
+from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
 
@@ -634,7 +635,7 @@ print('{"type": "result", "subtype": "success", "duration_ms": 100, "duration_ap
 
             try:
                 # Mock _find_cli to return the test script path directly
-                with patch.object(SubprocessCLITransport, "_find_cli", return_value=test_script):
+                with patch.object(subprocess_cli, "_find_cli", return_value=test_script):
                     # Mock _build_command to properly execute Python script
                     original_build_command = SubprocessCLITransport._build_command
 

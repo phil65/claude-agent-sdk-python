@@ -58,10 +58,8 @@ def parse_message(data: dict[str, Any]) -> Message:
     Raises:
         MessageParseError: If parsing fails or message type is unrecognized
     """
-    match data.get("type"):
-        case None:
-            raise MessageParseError("Message missing 'type' field", data)
-        case "user":
+    match data:
+        case {"type": "user"}:
             parent_tool_use_id = data.get("parent_tool_use_id")
             tool_use_result = data.get("tool_use_result")
             uuid = data.get("uuid")
@@ -84,7 +82,7 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in user message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case "assistant":
+        case {"type": "assistant"}:
             try:
                 blocks = [to_block(i) for i in data["message"]["content"]]
                 # Check for error at top level first, then inside message
@@ -100,14 +98,14 @@ def parse_message(data: dict[str, Any]) -> Message:
                     f"Missing required field in assistant message: {e}", data
                 ) from e
 
-        case "system":
+        case {"type": "system"}:
             try:
                 return SystemMessage(subtype=data["subtype"], data=data)
             except KeyError as e:
                 msg = f"Missing required field in system message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case "result":
+        case {"type": "result"}:
             try:
                 return ResultMessage(
                     subtype=data["subtype"],
@@ -126,7 +124,7 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case "stream_event":
+        case {"type": "stream_event"}:
             try:
                 return StreamEvent(
                     uuid=data["uuid"],
@@ -137,9 +135,15 @@ def parse_message(data: dict[str, Any]) -> Message:
             except KeyError as e:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
+        case {"type": unknown_type}:
+            raise MessageParseError(f"Unknown message type: {unknown_type}", data)
+        case dict():
+            raise MessageParseError("Message missing 'type' field", data)
 
         case _ as unknown_type:
-            raise MessageParseError(f"Unknown message type: {unknown_type}", data)
+            raise MessageParseError(
+                f"Invalid message data type: expected dict, got {type(unknown_type).__name__}", data
+            )
 
 
 def to_block(data: dict[str, Any]) -> ContentBlock:

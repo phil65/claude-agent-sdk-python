@@ -297,3 +297,7 @@ class TestMessageParser:
         with pytest.raises(MessageParseError) as exc_info:
             parse_message(data)
         assert exc_info.value.data == data
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

@@ -16,7 +16,7 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
-from clawd_code_sdk.types import SDKControlRequest
+from clawd_code_sdk.types import SDKControlPermissionRequest, SDKControlRequest
 
 if TYPE_CHECKING:
     from clawd_code_sdk import (
@@ -75,24 +75,18 @@ class TestToolPermissionCallbacks:
             return PermissionResultAllow()
 
         transport = MockTransport()
-        query = Query(
-            transport=transport,
-            is_streaming_mode=True,
-            can_use_tool=allow_callback,
-            hooks=None,
-        )
-
+        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=allow_callback)
         # Simulate control request
-        request = {
-            "type": "control_request",
-            "request_id": "test-1",
-            "request": {
-                "subtype": "can_use_tool",
-                "tool_name": "TestTool",
-                "input": {"param": "value"},
-                "permission_suggestions": [],
-            },
-        }
+        request = SDKControlRequest(
+            type="control_request",
+            request_id="test-1",
+            request=SDKControlPermissionRequest(  # pyright: ignore[reportCallIssue]
+                subtype="can_use_tool",
+                tool_name="TestTool",
+                input={"param": "value"},
+                permission_suggestions=[],
+            ),
+        )
 
         await query._handle_control_request(request)
 
