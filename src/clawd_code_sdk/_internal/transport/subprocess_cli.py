@@ -231,8 +231,7 @@ class SubprocessCLITransport(Transport):
                 # String or Path format: pass directly as file path or JSON string
                 cmd.extend(["--mcp-config", str(self._options.mcp_servers)])
 
-        if self._options.include_partial_messages:
-            cmd.append("--include-partial-messages")
+        cmd.append("--include-partial-messages")
 
         if self._options.fork_session:
             cmd.append("--fork-session")
@@ -271,7 +270,7 @@ class SubprocessCLITransport(Transport):
             if t["type"] == "adaptive":
                 resolved = 32_000
             elif t["type"] == "enabled":
-                resolved = t["budget_tokens"]  # type: ignore[assignment]
+                resolved = t["budget_tokens"]
             elif t["type"] == "disabled":
                 resolved = 0
             if resolved is not None:

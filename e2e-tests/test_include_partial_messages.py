@@ -26,7 +26,6 @@ async def test_include_partial_messages_stream_events():
     """Test that include_partial_messages produces StreamEvent messages."""
 
     options = ClaudeAgentOptions(
-        include_partial_messages=True,
         model="claude-sonnet-4-5",
         max_turns=2,
         env={
@@ -90,7 +89,6 @@ async def test_include_partial_messages_thinking_deltas():
     """Test that thinking content is streamed incrementally via deltas."""
 
     options = ClaudeAgentOptions(
-        include_partial_messages=True,
         model="claude-sonnet-4-5",
         max_turns=2,
         env={
@@ -120,32 +118,3 @@ async def test_include_partial_messages_thinking_deltas():
 
     # Should contain some reasoning about the calculation
     assert "2" in combined_thinking.lower(), "Thinking doesn't mention the numbers"
-
-
-@pytest.mark.e2e
-@pytest.mark.asyncio
-async def test_partial_messages_disabled_by_default():
-    """Test that partial messages are not included when option is not set."""
-
-    options = ClaudeAgentOptions(
-        # include_partial_messages not set (defaults to False)
-        model="claude-sonnet-4-5",
-        max_turns=2,
-    )
-
-    collected_messages: list[Any] = []
-
-    async with ClaudeSDKClient(options) as client:
-        await client.query("Say hello")
-
-        async for message in client.receive_response():
-            collected_messages.append(message)
-
-    # Should NOT have any StreamEvent messages
-    stream_events = [msg for msg in collected_messages if isinstance(msg, StreamEvent)]
-    assert len(stream_events) == 0, "StreamEvent messages present when partial messages disabled"
-
-    # Should still have the regular messages
-    assert any(isinstance(msg, SystemMessage) for msg in collected_messages)
-    assert any(isinstance(msg, AssistantMessage) for msg in collected_messages)
-    assert any(isinstance(msg, ResultMessage) for msg in collected_messages)

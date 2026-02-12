@@ -776,8 +776,6 @@ class ClaudeAgentOptions:
 
     user: str | None = None
 
-    # Partial message streaming support
-    include_partial_messages: bool = False
     # When true resumed sessions will fork to a new session ID rather than
     # continuing the previous session.
     fork_session: bool = False
