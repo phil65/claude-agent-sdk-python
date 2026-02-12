@@ -31,6 +31,8 @@ SdkBeta = Literal[
     "clear-thinking-20250115",  # Clear thinking blocks from previous turns to reduce token usage
 ]
 
+ReasoningEffort = Literal["low", "medium", "high", "max"]
+
 
 # Thinking configuration types
 class ThinkingConfigAdaptive(TypedDict):
@@ -792,7 +794,7 @@ class ClaudeAgentOptions:
     # Controls extended thinking behavior.
     thinking: ThinkingConfig | None = None
     # Effort level for thinking depth.
-    effort: Literal["low", "medium", "high", "max"] | None = None
+    effort: ReasoningEffort | None = None
     # Output format for structured outputs (matches Messages API structure)
     # Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
     output_format: dict[str, Any] | None = None
