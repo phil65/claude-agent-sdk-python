@@ -32,6 +32,29 @@ SdkBeta = Literal[
     "clear-thinking-20250115",  # Clear thinking blocks from previous turns to reduce token usage
 ]
 
+
+# Thinking configuration types
+class ThinkingConfigAdaptive(TypedDict):
+    """Adaptive thinking configuration - model decides thinking budget."""
+
+    type: Literal["adaptive"]
+
+
+class ThinkingConfigEnabled(TypedDict):
+    """Enabled thinking configuration with explicit token budget."""
+
+    type: Literal["enabled"]
+    budget_tokens: int
+
+
+class ThinkingConfigDisabled(TypedDict):
+    """Disabled thinking configuration."""
+
+    type: Literal["disabled"]
+
+
+ThinkingConfig = ThinkingConfigAdaptive | ThinkingConfigEnabled | ThinkingConfigDisabled
+
 # Agent definitions
 SettingSource = Literal["user", "project", "local"]
 
@@ -773,7 +796,12 @@ class ClaudeAgentOptions:
     # Plugin configurations for custom plugins
     plugins: list[SdkPluginConfig] = field(default_factory=list)
     # Max tokens for thinking blocks
+    # @deprecated Use `thinking` instead.
     max_thinking_tokens: int | None = None
+    # Controls extended thinking behavior. Takes precedence over max_thinking_tokens.
+    thinking: ThinkingConfig | None = None
+    # Effort level for thinking depth.
+    effort: Literal["low", "medium", "high", "max"] | None = None
     # Output format for structured outputs (matches Messages API structure)
     # Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
     output_format: dict[str, Any] | None = None

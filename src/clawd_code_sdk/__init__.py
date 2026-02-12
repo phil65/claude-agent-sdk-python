@@ -69,6 +69,10 @@ from .types import (
     SystemMessage,
     TextBlock,
     ThinkingBlock,
+    ThinkingConfig,
+    ThinkingConfigAdaptive,
+    ThinkingConfigDisabled,
+    ThinkingConfigEnabled,
     ToolPermissionContext,
     ToolResultBlock,
     ToolUseBlock,
@@ -397,6 +401,11 @@ __all__ = [
     # Agent support
     "AgentDefinition",
     "SettingSource",
+    # Thinking configuration
+    "ThinkingConfig",
+    "ThinkingConfigAdaptive",
+    "ThinkingConfigEnabled",
+    "ThinkingConfigDisabled",
     # Plugin support
     "SdkPluginConfig",
     # Beta support
