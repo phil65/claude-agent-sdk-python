@@ -325,10 +325,7 @@ class SubprocessCLITransport(Transport):
             # Always pipe stderr so we can capture it for error reporting.
             # The callback and debug mode flags control whether lines are
             # forwarded in real-time, but we always collect them.
-            should_pipe_stderr = True
-
-            # For backward compat: use debug_stderr file object if no callback and debug is on
-            stderr_dest = PIPE if should_pipe_stderr else None
+            stderr_dest = PIPE
 
             self._process = await anyio.open_process(
                 cmd,
@@ -345,7 +342,7 @@ class SubprocessCLITransport(Transport):
                 self._stdout_stream = TextReceiveStream(self._process.stdout)
 
             # Setup stderr stream if piped
-            if should_pipe_stderr and self._process.stderr:
+            if self._process.stderr:
                 self._stderr_stream = TextReceiveStream(self._process.stderr)
                 # Start async task to read stderr
                 self._stderr_task_group = anyio.create_task_group()
@@ -389,12 +386,6 @@ class SubprocessCLITransport(Transport):
                 # Call the stderr callback if provided
                 if self._options.stderr:
                     self._options.stderr(line_str)
-
-                # For backward compatibility: write to debug_stderr if in debug mode
-                elif "debug-to-stderr" in self._options.extra_args and self._options.debug_stderr:
-                    self._options.debug_stderr.write(line_str + "\n")
-                    if hasattr(self._options.debug_stderr, "flush"):
-                        self._options.debug_stderr.flush()
         except anyio.ClosedResourceError:
             pass  # Stream closed, exit normally
         except Exception:

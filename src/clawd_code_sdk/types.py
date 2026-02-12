@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
@@ -767,9 +766,6 @@ class ClaudeAgentOptions:
     env: dict[str, str] = field(default_factory=dict)
     extra_args: dict[str, str | None] = field(default_factory=dict)  # Pass arbitrary CLI flags
     max_buffer_size: int | None = None  # Max bytes when buffering CLI stdout
-    debug_stderr: Any = (
-        sys.stderr
-    )  # Deprecated: File-like object for debug output. Use stderr callback instead.
     stderr: Callable[[str], None] | None = None  # Callback for stderr output from CLI
 
     # Tool permission callback
