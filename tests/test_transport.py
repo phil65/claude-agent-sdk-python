@@ -153,16 +153,49 @@ class TestSubprocessCLITransport:
         assert "--fallback-model" in cmd
         assert "sonnet" in cmd
 
-    def test_build_command_with_max_thinking_tokens(self):
-        """Test building CLI command with max_thinking_tokens option."""
+    def test_build_command_with_thinking_enabled(self):
+        """Test building CLI command with thinking config."""
         transport = SubprocessCLITransport(
             prompt="test",
-            options=make_options(max_thinking_tokens=5000),
+            options=make_options(thinking={"type": "enabled", "budget_tokens": 5000}),
         )
 
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
         assert "5000" in cmd
+
+    def test_build_command_with_thinking_adaptive(self):
+        """Test building CLI command with adaptive thinking config."""
+        transport = SubprocessCLITransport(
+            prompt="test",
+            options=make_options(thinking={"type": "adaptive"}),
+        )
+
+        cmd = transport._build_command()
+        assert "--max-thinking-tokens" in cmd
+        assert "32000" in cmd
+
+    def test_build_command_with_thinking_disabled(self):
+        """Test building CLI command with disabled thinking config."""
+        transport = SubprocessCLITransport(
+            prompt="test",
+            options=make_options(thinking={"type": "disabled"}),
+        )
+
+        cmd = transport._build_command()
+        assert "--max-thinking-tokens" in cmd
+        assert "0" in cmd
+
+    def test_build_command_with_effort(self):
+        """Test building CLI command with effort option."""
+        transport = SubprocessCLITransport(
+            prompt="test",
+            options=make_options(effort="high"),
+        )
+
+        cmd = transport._build_command()
+        assert "--effort" in cmd
+        assert "high" in cmd
 
     def test_build_command_with_betas(self):
         """Test building CLI command with betas option."""

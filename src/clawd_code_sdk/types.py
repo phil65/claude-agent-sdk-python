@@ -795,10 +795,7 @@ class ClaudeAgentOptions:
     sandbox: SandboxSettings | None = None
     # Plugin configurations for custom plugins
     plugins: list[SdkPluginConfig] = field(default_factory=list)
-    # Max tokens for thinking blocks
-    # @deprecated Use `thinking` instead.
-    max_thinking_tokens: int | None = None
-    # Controls extended thinking behavior. Takes precedence over max_thinking_tokens.
+    # Controls extended thinking behavior.
     thinking: ThinkingConfig | None = None
     # Effort level for thinking depth.
     effort: Literal["low", "medium", "high", "max"] | None = None
