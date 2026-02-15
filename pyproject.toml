@@ -4,7 +4,7 @@ version = "0.1.40"
 description = "Python SDK for Claude Code"
 readme = "README.md"
 requires-python = ">=3.13"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
   { name = "phil65", email = "philipptemminghoff@gmail.com" },
 ]
@@ -120,3 +120,15 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["clawd_code_sdk"]
+
+[tool.ty.environment]
+python-version = "3.13"
+python-platform = "all"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unused-type-ignore-comment = "ignore"
+invalid-type-form = "ignore"
+not-subscriptable = "ignore"
+possibly-missing-import = "warn"
+division-by-zero = "warn"

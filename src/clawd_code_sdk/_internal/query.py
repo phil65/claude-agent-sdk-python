@@ -581,9 +581,9 @@ class Query:
                                         }
                                     )
 
-                    response_data = {"content": content}
+                    response_data: dict[str, Any] = {"content": content}
                     if isinstance(result.root, CallToolResult) and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
-                        response_data["is_error"] = True  # type: ignore[assignment]
+                        response_data["is_error"] = True
 
                     return {
                         "jsonrpc": "2.0",

@@ -2,7 +2,7 @@
 
 import os
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import anyio
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
 
-def make_options(**kwargs: object) -> ClaudeAgentOptions:
+def make_options(**kwargs: Any) -> ClaudeAgentOptions:
     """Construct options using the standard CLI path unless overridden."""
 
     cli_path = kwargs.pop("cli_path", DEFAULT_CLI_PATH)
@@ -768,6 +768,7 @@ class TestSubprocessCLITransport:
                 # Same setup as production: TextSendStream wrapping process.stdin
                 transport._ready = True
                 transport._process = MagicMock(returncode=None)
+                assert process.stdin
                 transport._stdin_stream = TextSendStream(process.stdin)
 
                 # Spawn concurrent writes - the lock should serialize them
@@ -822,6 +823,7 @@ class TestSubprocessCLITransport:
                 # Same setup as production
                 transport._ready = True
                 transport._process = MagicMock(returncode=None)
+                assert process.stdin
                 transport._stdin_stream = TextSendStream(process.stdin)
 
                 # Replace lock with no-op to trigger the race condition
@@ -836,7 +838,7 @@ class TestSubprocessCLITransport:
                     async def __aexit__(self, *args):
                         pass
 
-                transport._write_lock = NoOpLock()
+                transport._write_lock = NoOpLock()  # pyright: ignore[reportAttributeAccessIssue]
 
                 # Spawn concurrent writes - should fail without lock
                 num_writes = 10
