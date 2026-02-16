@@ -34,6 +34,15 @@ SdkBeta = Literal[
 ]
 
 ReasoningEffort = Literal["low", "medium", "high", "max"]
+StopReason = Literal[
+    "end_turn",
+    "max_tokens",
+    "stop_sequence",
+    "tool_use",
+    "pause_turn",
+    "refusal",
+    "model_context_window_exceeded",
+]
 
 
 # Thinking configuration types
@@ -728,6 +737,7 @@ class ResultMessage:
     result: str | None = None
     structured_output: Any = None
     errors: list[str] | None = None
+    stop_reason: StopReason | None = None
 
 
 @dataclass
