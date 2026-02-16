@@ -302,7 +302,7 @@ class SubprocessCLITransport(Transport):
             return
 
         if not os.environ.get("CLAWD_CODE_SDK_SKIP_VERSION_CHECK"):
-            await self._check_claude_version()
+            await _check_claude_version(self._cli_path)
 
         cmd = self._build_command()
         try:
@@ -544,48 +544,41 @@ class SubprocessCLITransport(Transport):
             )
             raise self._exit_error
 
-    async def _check_claude_version(self) -> None:
-        """Check Claude Code version and warn if below minimum."""
-        version_process = None
-        try:
-            with anyio.fail_after(2):  # 2 second timeout
-                version_process = await anyio.open_process(
-                    [self._cli_path, "-v"],
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    creationflags=_CREATION_FLAGS,
-                )
-
-                if version_process.stdout:
-                    stdout_bytes = await version_process.stdout.receive()
-                    version_output = stdout_bytes.decode().strip()
-
-                    match = re.match(r"([0-9]+\.[0-9]+\.[0-9]+)", version_output)
-                    if match:
-                        version = match.group(1)
-                        version_parts = [int(x) for x in version.split(".")]
-                        min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
-
-                        if version_parts < min_parts:
-                            warning = (
-                                f"Warning: Claude Code version {version} is unsupported in the Agent SDK. "
-                                f"Minimum required version is {MINIMUM_CLAUDE_CODE_VERSION}. "
-                                "Some features may not work correctly."
-                            )
-                            logger.warning(warning)
-                            print(warning, file=sys.stderr)
-        except Exception:
-            pass
-        finally:
-            if version_process:
-                with suppress(Exception):
-                    version_process.terminate()
-                with suppress(Exception):
-                    await version_process.wait()
-
     def is_ready(self) -> bool:
         """Check if transport is ready for communication."""
         return self._ready
+
+
+async def _check_claude_version(cli_path: str) -> None:
+    """Check Claude Code version and warn if below minimum."""
+    proc = None
+    try:
+        with anyio.fail_after(2):  # 2 second timeout
+            proc = await anyio.open_process([cli_path, "-v"], creationflags=_CREATION_FLAGS)
+            if proc.stdout:
+                stdout_bytes = await proc.stdout.receive()
+                version_output = stdout_bytes.decode().strip()
+                match = re.match(r"([0-9]+\.[0-9]+\.[0-9]+)", version_output)
+                if match:
+                    version = match.group(1)
+                    version_parts = [int(x) for x in version.split(".")]
+                    min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
+                    if version_parts < min_parts:
+                        warning = (
+                            f"Warning: Claude Code version {version} is unsupported in the Agent SDK. "
+                            f"Minimum required version is {MINIMUM_CLAUDE_CODE_VERSION}. "
+                            "Some features may not work correctly."
+                        )
+                        logger.warning(warning)
+                        print(warning, file=sys.stderr)
+    except Exception:
+        pass
+    finally:
+        if proc:
+            with suppress(Exception):
+                proc.terminate()
+            with suppress(Exception):
+                await proc.wait()
 
 
 def _find_bundled_cli() -> str | None:
