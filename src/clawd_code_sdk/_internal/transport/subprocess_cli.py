@@ -305,27 +305,26 @@ class SubprocessCLITransport(Transport):
             await _check_claude_version(self._cli_path)
 
         cmd = self._build_command()
+        # Merge environment variables: system -> user -> SDK required
+        process_env = {
+            **os.environ,
+            **self._options.env,  # User-provided env vars
+            "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
+            "CLAWD_CODE_SDK_VERSION": __version__,
+        }
+
+        # Enable file checkpointing if requested
+        if self._options.enable_file_checkpointing:
+            process_env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"
+
+        if self._cwd:
+            process_env["PWD"] = self._cwd
+
+        # Always pipe stderr so we can capture it for error reporting.
+        # The callback and debug mode flags control whether lines are
+        # forwarded in real-time, but we always collect them.
+        stderr_dest = PIPE
         try:
-            # Merge environment variables: system -> user -> SDK required
-            process_env = {
-                **os.environ,
-                **self._options.env,  # User-provided env vars
-                "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
-                "CLAWD_CODE_SDK_VERSION": __version__,
-            }
-
-            # Enable file checkpointing if requested
-            if self._options.enable_file_checkpointing:
-                process_env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"
-
-            if self._cwd:
-                process_env["PWD"] = self._cwd
-
-            # Always pipe stderr so we can capture it for error reporting.
-            # The callback and debug mode flags control whether lines are
-            # forwarded in real-time, but we always collect them.
-            stderr_dest = PIPE
-
             self._process = await anyio.open_process(
                 cmd,
                 stdin=PIPE,
@@ -473,7 +472,6 @@ class SubprocessCLITransport(Transport):
             raise CLIConnectionError("Not connected")
 
         json_buffer = ""
-
         # Process stdout messages
         try:
             async for line in self._stdout_stream:
@@ -585,11 +583,9 @@ def _find_bundled_cli() -> str | None:
     """Find bundled CLI binary if it exists."""
     # Determine the CLI binary name based on platform
     cli_name = "claude.exe" if platform.system() == "Windows" else "claude"
-
     # Get the path to the bundled CLI
     # The _bundled directory is in the same package as this module
     bundled_path = Path(__file__).parent.parent.parent / "_bundled" / cli_name
-
     if bundled_path.exists() and bundled_path.is_file():
         logger.info(f"Using bundled Claude Code CLI: {bundled_path}")
         return str(bundled_path)
