@@ -59,29 +59,14 @@ def parse_message(data: dict[str, Any]) -> Message:
         MessageParseError: If parsing fails or message type is unrecognized
     """
     match data:
-        case {"type": "user"}:
-            parent_tool_use_id = data.get("parent_tool_use_id")
-            tool_use_result = data.get("tool_use_result")
-            uuid = data.get("uuid")
-            try:
-                if isinstance(data["message"]["content"], list):
-                    blocks = [to_block(i) for i in data["message"]["content"]]
-                    return UserMessage(
-                        content=blocks,
-                        uuid=uuid,
-                        parent_tool_use_id=parent_tool_use_id,
-                        tool_use_result=tool_use_result,
-                    )
-                return UserMessage(
-                    content=data["message"]["content"],
-                    uuid=uuid,
-                    parent_tool_use_id=parent_tool_use_id,
-                    tool_use_result=tool_use_result,
-                )
-            except KeyError as e:
-                msg = f"Missing required field in user message: {e}"
-                raise MessageParseError(msg, data) from e
-
+        case {"type": "user", "message": {"content": content}}:
+            content_ = [to_block(i) for i in content] if isinstance(content, list) else content
+            return UserMessage(
+                content=content_,
+                uuid=data.get("uuid"),
+                parent_tool_use_id=data.get("parent_tool_use_id"),
+                tool_use_result=data.get("tool_use_result"),
+            )
         case {"type": "assistant", "message": message}:
             try:
                 # Check for error at top level first, then inside message
@@ -95,8 +80,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                 err = f"Missing required field in assistant message: {e}"
                 raise MessageParseError(err, data) from e
 
-        case {"type": "system", "subtype": subtype}:
-            return SystemMessage(subtype=subtype, data=data)
+        case {"type": "system", **system_data}:
+            return SystemMessage(**system_data)
 
         case {"type": "result", **result_data}:
             try:

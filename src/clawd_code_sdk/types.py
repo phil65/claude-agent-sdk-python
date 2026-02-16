@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
+    from anthropic.types import RawMessageStreamEvent
     from mcp.server import Server as McpServer
 
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
@@ -43,6 +44,7 @@ StopReason = Literal[
     "refusal",
     "model_context_window_exceeded",
 ]
+ApiKeySource = Literal["user", "project", "org", "temporary"]
 
 
 # Thinking configuration types
@@ -694,7 +696,7 @@ AssistantMessageError = Literal[
 ]
 
 
-@dataclass
+@dataclass(kw_only=True)
 class UserMessage:
     """User message."""
 
@@ -704,7 +706,7 @@ class UserMessage:
     tool_use_result: dict[str, Any] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AssistantMessage:
     """Assistant message with content blocks."""
 
@@ -715,11 +717,26 @@ class AssistantMessage:
 
 
 @dataclass
+class McpServerStatus:
+    name: str
+    status: str
+
+
+@dataclass(kw_only=True)
 class SystemMessage:
     """System message with metadata."""
 
-    subtype: str
-    data: dict[str, Any]
+    subtype: str = "init"
+    uuid: str
+    session_id: str
+    apiKeySource: ApiKeySource  # noqa: N815
+    cwd: str
+    tools: list[str]
+    mcp_servers: list[McpServerStatus]
+    model: str
+    permissionMode: PermissionMode  # noqa: N815
+    slash_commands: list[str]
+    output_style: str
 
 
 class ModelUsage(TypedDict):
@@ -734,6 +751,15 @@ class SDKPermissionDenial(TypedDict):
     tool_input: dict[str, Any]
 
 
+class Usage(TypedDict):
+    """Token usage from Claude API response."""
+
+    input_tokens: int
+    output_tokens: int
+    cache_creation_input_tokens: int
+    cache_read_input_tokens: int
+
+
 @dataclass
 class ResultMessage:
     """Result message with cost and usage information."""
@@ -746,7 +772,7 @@ class ResultMessage:
     session_id: str
     uuid: str
     total_cost_usd: float | None = None
-    usage: dict[str, Any] | None = None
+    usage: Usage | None = None
     result: str | None = None
     structured_output: Any = None
     errors: list[str] | None = None
@@ -761,7 +787,7 @@ class StreamEvent:
 
     uuid: str
     session_id: str
-    event: dict[str, Any]  # The raw Anthropic API stream event
+    event: RawMessageStreamEvent
     parent_tool_use_id: str | None = None
 
 
