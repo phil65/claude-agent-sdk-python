@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDic
 
 from pydantic import Discriminator, TypeAdapter
 
+from clawd_code_sdk.input_types import ToolInput
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
@@ -198,7 +200,7 @@ class PermissionResultAllow:
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
-    updated_input: dict[str, Any] | None = None
+    updated_input: ToolInput | None = None
     updated_permissions: list[PermissionUpdate] | None = None
 
 
@@ -213,7 +215,7 @@ class PermissionResultDeny:
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny
 
-CanUseTool = Callable[[str, dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]]
+CanUseTool = Callable[[str, ToolInput, ToolPermissionContext], Awaitable[PermissionResult]]
 
 
 ##### Hook types
@@ -748,7 +750,7 @@ class ModelUsage(TypedDict):
 class SDKPermissionDenial(TypedDict):
     tool_name: str
     tool_use_id: str
-    tool_input: dict[str, Any]
+    tool_input: ToolInput
 
 
 class Usage(TypedDict):
