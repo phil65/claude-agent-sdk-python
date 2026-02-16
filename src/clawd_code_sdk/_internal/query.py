@@ -274,10 +274,8 @@ class Query:
         request_id = request["request_id"]
         request_data = request["request"]
         subtype = request_data["subtype"]
-
+        response_data: dict[str, Any] = {}
         try:
-            response_data: dict[str, Any] = {}
-
             if subtype == "can_use_tool":
                 permission_request: SDKControlPermissionRequest = request_data  # type: ignore[assignment]
                 original_input = permission_request["input"]
@@ -393,20 +391,12 @@ class Query:
         # Generate unique request ID
         self._request_counter += 1
         request_id = f"req_{self._request_counter}_{os.urandom(4).hex()}"
-
         # Create event for response
         event = anyio.Event()
         self.pending_control_responses[request_id] = event
-
         # Build and send request
-        control_request = {
-            "type": "control_request",
-            "request_id": request_id,
-            "request": request,
-        }
-
+        control_request = {"type": "control_request", "request_id": request_id, "request": request}
         await self.transport.write(anyenv.dump_json(control_request) + "\n")
-
         # Wait for response
         try:
             with anyio.fail_after(timeout):

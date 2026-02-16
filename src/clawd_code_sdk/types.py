@@ -848,18 +848,21 @@ class SDKControlRewindFilesRequest(TypedDict):
     user_message_id: str
 
 
+ControlRequestUnion = (
+    SDKControlInterruptRequest
+    | SDKControlPermissionRequest
+    | SDKControlInitializeRequest
+    | SDKControlSetPermissionModeRequest
+    | SDKHookCallbackRequest
+    | SDKControlMcpMessageRequest
+    | SDKControlRewindFilesRequest
+)
+
+
 class SDKControlRequest(TypedDict):
     type: Literal["control_request"]
     request_id: str
-    request: (
-        SDKControlInterruptRequest
-        | SDKControlPermissionRequest
-        | SDKControlInitializeRequest
-        | SDKControlSetPermissionModeRequest
-        | SDKHookCallbackRequest
-        | SDKControlMcpMessageRequest
-        | SDKControlRewindFilesRequest
-    )
+    request: ControlRequestUnion
 
 
 class ControlResponse(TypedDict):
