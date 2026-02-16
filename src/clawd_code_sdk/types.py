@@ -744,6 +744,7 @@ class ResultMessage:
     is_error: bool
     num_turns: int
     session_id: str
+    uuid: str
     total_cost_usd: float | None = None
     usage: dict[str, Any] | None = None
     result: str | None = None
@@ -752,7 +753,6 @@ class ResultMessage:
     stop_reason: StopReason | None = None
     modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
     permission_denials: list[SDKPermissionDenial] | None = None
-    uuid: str
 
 
 @dataclass
