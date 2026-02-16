@@ -82,27 +82,21 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in user message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case {"type": "assistant"}:
+        case {"type": "assistant", "message": message}:
             try:
-                blocks = [to_block(i) for i in data["message"]["content"]]
                 # Check for error at top level first, then inside message
-                error = data.get("error") or data["message"].get("error")
                 return AssistantMessage(
-                    content=blocks,
-                    model=data["message"]["model"],
+                    content=[to_block(i) for i in message["content"]],
+                    model=message["model"],
                     parent_tool_use_id=data.get("parent_tool_use_id"),
-                    error=error,
+                    error=data.get("error") or message.get("error"),
                 )
             except KeyError as e:
                 err = f"Missing required field in assistant message: {e}"
                 raise MessageParseError(err, data) from e
 
-        case {"type": "system"}:
-            try:
-                return SystemMessage(subtype=data["subtype"], data=data)
-            except KeyError as e:
-                msg = f"Missing required field in system message: {e}"
-                raise MessageParseError(msg, data) from e
+        case {"type": "system", "subtype": subtype}:
+            return SystemMessage(subtype=subtype, data=data)
 
         case {"type": "result", **result_data}:
             try:
