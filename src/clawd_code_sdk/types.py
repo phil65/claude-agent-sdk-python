@@ -752,6 +752,7 @@ class ResultMessage:
     stop_reason: StopReason | None = None
     modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
     permission_denials: list[SDKPermissionDenial] | None = None
+    uuid: str
 
 
 @dataclass
