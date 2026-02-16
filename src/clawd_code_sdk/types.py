@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
+
+from pydantic import Discriminator, TypeAdapter
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -805,61 +807,76 @@ class ClaudeAgentOptions:
 
 
 # SDK Control Protocol
-class SDKControlInterruptRequest(TypedDict):
-    subtype: Literal["interrupt"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlInterruptRequest:
+    subtype: Literal["interrupt"] = "interrupt"
 
 
-class SDKControlPermissionRequest(TypedDict):
-    subtype: Literal["can_use_tool"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlPermissionRequest:
+    subtype: Literal["can_use_tool"] = "can_use_tool"
     tool_name: str
     input: dict[str, Any]
-    tool_use_id: str  # Unique identifier for this tool call
-    # TODO: Add PermissionUpdate type here
-    permission_suggestions: list[Any] | None
-    blocked_path: str | None
+    tool_use_id: str
+    permission_suggestions: list[Any] | None = None
+    blocked_path: str | None = None
 
 
-class SDKControlInitializeRequest(TypedDict):
-    subtype: Literal["initialize"]
-    hooks: dict[HookEvent, Any] | None
-    agents: NotRequired[dict[str, dict[str, Any]]]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlInitializeRequest:
+    subtype: Literal["initialize"] = "initialize"
+    hooks: dict[HookEvent, Any] | None = None
+    agents: dict[str, dict[str, Any]] | None = None
 
 
-class SDKControlSetPermissionModeRequest(TypedDict):
-    subtype: Literal["set_permission_mode"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlSetPermissionModeRequest:
+    subtype: Literal["set_permission_mode"] = "set_permission_mode"
     mode: PermissionMode
 
 
-class SDKHookCallbackRequest(TypedDict):
-    subtype: Literal["hook_callback"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKHookCallbackRequest:
+    subtype: Literal["hook_callback"] = "hook_callback"
     callback_id: str
     input: Any
-    tool_use_id: str | None
+    tool_use_id: str | None = None
 
 
-class SDKControlMcpMessageRequest(TypedDict):
-    subtype: Literal["mcp_message"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlMcpMessageRequest:
+    subtype: Literal["mcp_message"] = "mcp_message"
     server_name: str
     message: Any
 
 
-class SDKControlRewindFilesRequest(TypedDict):
-    subtype: Literal["rewind_files"]
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlRewindFilesRequest:
+    subtype: Literal["rewind_files"] = "rewind_files"
     user_message_id: str
 
 
-ControlRequestUnion = (
+ControlRequestUnion = Annotated[
     SDKControlInterruptRequest
     | SDKControlPermissionRequest
     | SDKControlInitializeRequest
     | SDKControlSetPermissionModeRequest
     | SDKHookCallbackRequest
     | SDKControlMcpMessageRequest
-    | SDKControlRewindFilesRequest
-)
+    | SDKControlRewindFilesRequest,
+    Discriminator("subtype"),
+]
+
+_control_request_adapter: TypeAdapter[ControlRequestUnion] = TypeAdapter(ControlRequestUnion)
 
 
-class SDKControlRequest(TypedDict):
+def parse_control_request(data: dict[str, Any]) -> ControlRequestUnion:
+    """Parse a raw dict into a typed control request dataclass."""
+    return _control_request_adapter.validate_python(data)
+
+
+@dataclass(frozen=True, slots=True)
+class SDKControlRequest:
     type: Literal["control_request"]
     request_id: str
     request: ControlRequestUnion

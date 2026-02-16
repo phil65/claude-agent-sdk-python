@@ -16,7 +16,14 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
-from clawd_code_sdk.types import SDKControlPermissionRequest, SDKControlRequest
+from clawd_code_sdk.types import SDKControlPermissionRequest, parse_control_request
+
+
+async def _dispatch(query: Query, request: dict[str, Any]) -> None:
+    """Helper to dispatch a raw control request dict to the handler."""
+    request_data = parse_control_request(request["request"])
+    await query._handle_control_request(request["request_id"], request_data)
+
 
 if TYPE_CHECKING:
     from clawd_code_sdk import (
@@ -76,19 +83,15 @@ class TestToolPermissionCallbacks:
 
         transport = MockTransport()
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=allow_callback)
-        # Simulate control request
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-1",
-            request=SDKControlPermissionRequest(  # pyright: ignore[reportCallIssue]
-                subtype="can_use_tool",
-                tool_name="TestTool",
-                input={"param": "value"},
-                permission_suggestions=[],
-            ),
+
+        request_data = SDKControlPermissionRequest(
+            tool_name="TestTool",
+            input={"param": "value"},
+            tool_use_id="tu-1",
+            permission_suggestions=[],
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-1", request_data)
 
         # Check callback was invoked
         assert callback_invoked
@@ -114,18 +117,18 @@ class TestToolPermissionCallbacks:
             hooks=None,
         )
 
-        request = {
-            "type": "control_request",
-            "request_id": "test-2",
-            "request": {
+        request_data = parse_control_request(
+            {
                 "subtype": "can_use_tool",
                 "tool_name": "DangerousTool",
                 "input": {"command": "rm -rf /"},
+                "tool_use_id": "tu-2",
                 "permission_suggestions": ["deny"],
-            },
-        }
+                "blocked_path": None,
+            }
+        )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-2", request_data)
 
         # Check response
         assert len(transport.written_messages) == 1
@@ -151,19 +154,14 @@ class TestToolPermissionCallbacks:
             can_use_tool=modify_callback,
             hooks=None,
         )
-        # missing tool_use_id
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-3",
-            request={  # pyright: ignore[reportArgumentType]
-                "subtype": "can_use_tool",
-                "tool_name": "WriteTool",
-                "input": {"file_path": "/etc/passwd"},
-                "permission_suggestions": [],
-            },
+        request_data = SDKControlPermissionRequest(
+            tool_name="WriteTool",
+            input={"file_path": "/etc/passwd"},
+            tool_use_id="tu-3",
+            permission_suggestions=[],
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-3", request_data)
 
         # Check response includes modified input
         assert len(transport.written_messages) == 1
@@ -186,19 +184,14 @@ class TestToolPermissionCallbacks:
             can_use_tool=error_callback,
             hooks=None,
         )
-        # missing tool_use_id
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-5",
-            request={  # pyright: ignore[reportArgumentType]
-                "subtype": "can_use_tool",
-                "tool_name": "TestTool",
-                "input": {},
-                "permission_suggestions": [],
-            },
+        request_data = SDKControlPermissionRequest(
+            tool_name="TestTool",
+            input={},
+            tool_use_id="tu-5",
+            permission_suggestions=[],
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-5", request_data)
 
         # Check error response was sent
         assert len(transport.written_messages) == 1
@@ -232,18 +225,16 @@ class TestHookCallbacks:
         query.hook_callbacks[callback_id] = test_hook
 
         # Simulate hook callback request
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-hook-1",
-            request={
+        request_data = parse_control_request(
+            {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": "tool-123",
-            },
+            }
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-hook-1", request_data)
 
         # Check hook was called
         assert len(hook_calls) == 1
@@ -288,18 +279,16 @@ class TestHookCallbacks:
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
 
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-comprehensive",
-            request={
+        request_data = parse_control_request(
+            {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": "tool-456",
-            },
+            }
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-comprehensive", request_data)
 
         # Check response contains all the fields
         assert len(transport.written_messages) > 0
@@ -345,18 +334,16 @@ class TestHookCallbacks:
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
 
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-async",
-            request={
+        request_data = parse_control_request(
+            {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "async_data"},
                 "tool_use_id": None,
-            },
+            }
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-async", request_data)
 
         # Check response contains async fields
         assert len(transport.written_messages) > 0
@@ -395,18 +382,16 @@ class TestHookCallbacks:
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
 
-        request = SDKControlRequest(
-            type="control_request",
-            request_id="test-conversion",
-            request={
+        request_data = parse_control_request(
+            {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
                 "input": {"test": "data"},
                 "tool_use_id": None,
-            },
+            }
         )
 
-        await query._handle_control_request(request)
+        await query._handle_control_request("test-conversion", request_data)
 
         # Check response has converted field names
         assert len(transport.written_messages) > 0
@@ -499,7 +484,7 @@ class TestHookEventCallbacks:
             },
         }
 
-        await query._handle_control_request(request)
+        await _dispatch(query, request)
 
         assert len(hook_calls) == 1
         assert hook_calls[0]["input"]["hook_event_name"] == "Notification"
@@ -548,7 +533,7 @@ class TestHookEventCallbacks:
             },
         }
 
-        await query._handle_control_request(request)
+        await _dispatch(query, request)
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
@@ -593,7 +578,7 @@ class TestHookEventCallbacks:
             },
         }
 
-        await query._handle_control_request(request)
+        await _dispatch(query, request)
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
@@ -640,7 +625,7 @@ class TestHookEventCallbacks:
             },
         }
 
-        await query._handle_control_request(request)
+        await _dispatch(query, request)
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]
@@ -686,7 +671,7 @@ class TestHookEventCallbacks:
             },
         }
 
-        await query._handle_control_request(request)
+        await _dispatch(query, request)
 
         response_data = json.loads(transport.written_messages[-1])
         result = response_data["response"]["response"]

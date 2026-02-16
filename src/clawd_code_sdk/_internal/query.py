@@ -14,6 +14,13 @@ from pydantic import BaseModel
 from ..types import (
     PermissionResultAllow,
     PermissionResultDeny,
+    SDKControlInitializeRequest,
+    SDKControlInterruptRequest,
+    SDKControlMcpMessageRequest,
+    SDKControlPermissionRequest,
+    SDKControlRewindFilesRequest,
+    SDKControlSetPermissionModeRequest,
+    SDKHookCallbackRequest,
     ToolPermissionContext,
 )
 
@@ -30,11 +37,9 @@ if TYPE_CHECKING:
     from mcp.server import Server as McpServer
 
     from ..types import (
+        ControlRequestUnion,
         PermissionMode,
-        SDKControlPermissionRequest,
-        SDKControlRequest,
         SDKControlResponse,
-        SDKHookCallbackRequest,
     )
     from .transport import Transport
 
@@ -166,10 +171,7 @@ class Query:
                         hooks_config[event].append(hook_matcher_config)
 
         # Send initialize request
-        request: dict[str, Any] = {
-            "subtype": "initialize",
-            "hooks": hooks_config if hooks_config else None,
-        }
+        request: dict[str, Any] = {"subtype": "initialize", "hooks": hooks_config or None}
         if self._agents:
             request["agents"] = self._agents
 
@@ -233,11 +235,16 @@ class Query:
                     continue
 
                 elif msg_type == "control_request":
-                    # Handle incoming control requests from CLI
-                    # Cast message to SDKControlRequest for type safety
-                    request: SDKControlRequest = message  # type: ignore[assignment]
+                    from ..types import parse_control_request
+
+                    request_data = parse_control_request(message["request"])
+                    ctrl_request_id: str = message["request_id"]
                     if self._tg:
-                        self._tg.start_soon(self._handle_control_request, request)
+                        self._tg.start_soon(
+                            self._handle_control_request,
+                            ctrl_request_id,
+                            request_data,
+                        )
                     continue
 
                 elif msg_type == "control_cancel_request":
@@ -269,91 +276,31 @@ class Query:
             # Always signal end of stream
             await self._message_send.send({"type": "end"})
 
-    async def _handle_control_request(self, request: SDKControlRequest) -> None:
+    async def _handle_control_request(
+        self,
+        request_id: str,
+        request_data: ControlRequestUnion,
+    ) -> None:
         """Handle incoming control request from CLI."""
-        request_id = request["request_id"]
-        request_data = request["request"]
-        subtype = request_data["subtype"]
         response_data: dict[str, Any] = {}
         try:
-            if subtype == "can_use_tool":
-                permission_request: SDKControlPermissionRequest = request_data  # type: ignore[assignment]
-                original_input = permission_request["input"]
-                # Handle tool permission request
-                if not self.can_use_tool:
-                    raise Exception("canUseTool callback is not provided")
+            match request_data:
+                case SDKControlPermissionRequest() as req:
+                    response_data = await self._handle_permission_request(req)
+                case SDKHookCallbackRequest() as req:
+                    response_data = await self._handle_hook_callback(req)
+                case SDKControlMcpMessageRequest() as req:
+                    mcp_resp = await self._handle_sdk_mcp_request(req.server_name, req.message)
+                    response_data = {"mcp_response": mcp_resp}
+                case SDKControlInterruptRequest():
+                    pass  # No response data needed
+                case SDKControlInitializeRequest():
+                    pass  # Handled elsewhere
+                case SDKControlSetPermissionModeRequest():
+                    pass  # Handled elsewhere
+                case SDKControlRewindFilesRequest():
+                    pass  # Handled elsewhere
 
-                context = ToolPermissionContext(
-                    tool_use_id=permission_request.get("tool_use_id", ""),
-                    signal=None,  # TODO: Add abort signal support
-                    suggestions=permission_request.get("permission_suggestions", []) or [],
-                    blocked_path=permission_request.get("blocked_path"),
-                )
-
-                response = await self.can_use_tool(
-                    permission_request["tool_name"],
-                    permission_request["input"],
-                    context,
-                )
-
-                # Convert PermissionResult to expected dict format
-                if isinstance(response, PermissionResultAllow):
-                    response_data = {
-                        "behavior": "allow",
-                        "updatedInput": (
-                            response.updated_input
-                            if response.updated_input is not None
-                            else original_input
-                        ),
-                    }
-                    if response.updated_permissions is not None:
-                        response_data["updatedPermissions"] = [
-                            permission.to_dict() for permission in response.updated_permissions
-                        ]
-                elif isinstance(response, PermissionResultDeny):
-                    response_data = {"behavior": "deny", "message": response.message}
-                    if response.interrupt:
-                        response_data["interrupt"] = response.interrupt
-                else:
-                    raise TypeError(
-                        f"Tool permission callback must return PermissionResult (PermissionResultAllow or PermissionResultDeny), got {type(response)}"
-                    )
-
-            elif subtype == "hook_callback":
-                hook_callback_request: SDKHookCallbackRequest = request_data  # type: ignore[assignment]
-                # Handle hook callback
-                callback_id = hook_callback_request["callback_id"]
-                callback = self.hook_callbacks.get(callback_id)
-                if not callback:
-                    raise Exception(f"No hook callback found for ID: {callback_id}")
-
-                hook_output = await callback(
-                    request_data.get("input"),
-                    request_data.get("tool_use_id"),
-                    {"signal": None},  # TODO: Add abort signal support
-                )
-                # Convert Python-safe field names (async_, continue_) to CLI-expected names (async, continue)
-                response_data = _convert_hook_output_for_cli(hook_output)
-
-            elif subtype == "mcp_message":
-                # Handle SDK MCP request
-                server_name = request_data.get("server_name")
-                mcp_message = request_data.get("message")
-
-                if not server_name or not mcp_message:
-                    raise Exception("Missing server_name or message for MCP request")
-
-                # Type narrowing - we've verified these are not None above
-                assert isinstance(server_name, str)
-                assert isinstance(mcp_message, dict)
-                mcp_resp = await self._handle_sdk_mcp_request(server_name, mcp_message)
-                # Wrap the MCP response as expected by the control protocol
-                response_data = {"mcp_response": mcp_resp}
-
-            else:
-                raise Exception(f"Unsupported control request subtype: {subtype}")
-
-            # Send success response
             success_response: SDKControlResponse = {
                 "type": "control_response",
                 "response": {
@@ -365,7 +312,6 @@ class Query:
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
         except Exception as e:
-            # Send error response
             error_response: SDKControlResponse = {
                 "type": "control_response",
                 "response": {
@@ -375,6 +321,59 @@ class Query:
                 },
             }
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
+
+    async def _handle_permission_request(
+        self,
+        req: SDKControlPermissionRequest,
+    ) -> dict[str, Any]:
+        """Handle a tool permission request."""
+        if not self.can_use_tool:
+            msg = "canUseTool callback is not provided"
+            raise RuntimeError(msg)
+
+        context = ToolPermissionContext(
+            tool_use_id=req.tool_use_id,
+            signal=None,
+            suggestions=req.permission_suggestions or [],
+            blocked_path=req.blocked_path,
+        )
+
+        response = await self.can_use_tool(req.tool_name, req.input, context)
+
+        if isinstance(response, PermissionResultAllow):
+            result: dict[str, Any] = {
+                "behavior": "allow",
+                "updatedInput": (
+                    response.updated_input if response.updated_input is not None else req.input
+                ),
+            }
+            if response.updated_permissions is not None:
+                result["updatedPermissions"] = [
+                    permission.to_dict() for permission in response.updated_permissions
+                ]
+            return result
+        assert isinstance(response, PermissionResultDeny)
+        result = {"behavior": "deny", "message": response.message}
+        if response.interrupt:
+            result["interrupt"] = response.interrupt
+        return result
+
+    async def _handle_hook_callback(
+        self,
+        req: SDKHookCallbackRequest,
+    ) -> dict[str, Any]:
+        """Handle a hook callback request."""
+        callback = self.hook_callbacks.get(req.callback_id)
+        if not callback:
+            msg = f"No hook callback found for ID: {req.callback_id}"
+            raise RuntimeError(msg)
+
+        hook_output = await callback(
+            req.input,
+            req.tool_use_id,
+            {"signal": None},
+        )
+        return _convert_hook_output_for_cli(hook_output)
 
     async def _send_control_request(
         self, request: dict[str, Any], timeout: float = 60.0

@@ -94,9 +94,8 @@ def parse_message(data: dict[str, Any]) -> Message:
                     error=error,
                 )
             except KeyError as e:
-                raise MessageParseError(
-                    f"Missing required field in assistant message: {e}", data
-                ) from e
+                err = f"Missing required field in assistant message: {e}"
+                raise MessageParseError(err, data) from e
 
         case {"type": "system"}:
             try:
@@ -105,45 +104,27 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in system message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case {"type": "result"}:
+        case {"type": "result", **result_data}:
             try:
-                return ResultMessage(
-                    subtype=data["subtype"],
-                    duration_ms=data["duration_ms"],
-                    duration_api_ms=data["duration_api_ms"],
-                    is_error=data["is_error"],
-                    num_turns=data["num_turns"],
-                    session_id=data["session_id"],
-                    total_cost_usd=data.get("total_cost_usd"),
-                    usage=data.get("usage"),
-                    result=data.get("result"),
-                    structured_output=data.get("structured_output"),
-                    errors=data.get("errors"),
-                )
-            except KeyError as e:
+                return ResultMessage(**result_data)
+            except TypeError as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case {"type": "stream_event"}:
+        case {"type": "stream_event", **event_data}:
             try:
-                return StreamEvent(
-                    uuid=data["uuid"],
-                    session_id=data["session_id"],
-                    event=data["event"],
-                    parent_tool_use_id=data.get("parent_tool_use_id"),
-                )
-            except KeyError as e:
+                return StreamEvent(**event_data)
+            except TypeError as e:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
+        # case {"type": "compact_boundary"}:
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():
             raise MessageParseError("Message missing 'type' field", data)
-
         case _ as unknown_type:
-            raise MessageParseError(
-                f"Invalid message data type: expected dict, got {type(unknown_type).__name__}", data
-            )
+            typ = type(unknown_type).__name__  # type: ignore[unreachable]
+            raise MessageParseError(f"Invalid message data type: expected dict, got {typ}", data)
 
 
 def to_block(data: dict[str, Any]) -> ContentBlock:
@@ -152,7 +133,6 @@ def to_block(data: dict[str, Any]) -> ContentBlock:
             return TextBlock(text=data["text"])
         case "tool_use":
             return ToolUseBlock(id=data["id"], name=data["name"], input=data["input"])
-
         case "tool_result":
             return ToolResultBlock(
                 tool_use_id=data["tool_use_id"],
