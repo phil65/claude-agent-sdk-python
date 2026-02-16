@@ -722,6 +722,12 @@ class SystemMessage:
     data: dict[str, Any]
 
 
+class ModelUsage(TypedDict):
+    inputTokens: int
+    outputTokens: int
+    cacheReadInputTokens: int
+
+
 @dataclass
 class ResultMessage:
     """Result message with cost and usage information."""
@@ -738,6 +744,7 @@ class ResultMessage:
     structured_output: Any = None
     errors: list[str] | None = None
     stop_reason: StopReason | None = None
+    modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
 
 
 @dataclass
