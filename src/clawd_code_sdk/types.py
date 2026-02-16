@@ -728,6 +728,12 @@ class ModelUsage(TypedDict):
     cacheReadInputTokens: int
 
 
+class SDKPermissionDenial(TypedDict):
+    tool_name: str
+    tool_use_id: str
+    tool_input: dict[str, Any]
+
+
 @dataclass
 class ResultMessage:
     """Result message with cost and usage information."""
@@ -745,6 +751,7 @@ class ResultMessage:
     errors: list[str] | None = None
     stop_reason: StopReason | None = None
     modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
+    permission_denials: list[SDKPermissionDenial] | None = None
 
 
 @dataclass
