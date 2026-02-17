@@ -26,30 +26,9 @@ from clawd_code_sdk.models import (
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
     from clawd_code_sdk.models import ContentBlock, Message
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_tool_result_content(
-    raw_content: str | list[dict[str, Any]] | None,
-) -> str | list[ToolResultContentBlock] | None:
-    """Parse and validate tool result content.
-
-    Args:
-        raw_content: Raw content from CLI (string, list of dicts, or None)
-
-    Returns:
-        Validated content (string, list of typed blocks, or None)
-    """
-
-    from clawd_code_sdk.anthropic_types import validate_tool_result_content
-
-    if raw_content is None or isinstance(raw_content, str):
-        return raw_content
-    # Validate list content against Anthropic SDK types
-    return validate_tool_result_content(raw_content)
 
 
 def parse_message(data: dict[str, Any]) -> Message:
@@ -120,9 +99,8 @@ def to_block(data: dict[str, Any]) -> ContentBlock:
             return TextBlock(**text_data)
         case {"type": "tool_use", **tool_use_data}:
             return ToolUseBlock(**tool_use_data)
-        case {"type": "tool_result", "content": content, **tool_result_data}:
-            result_content = _parse_tool_result_content(content)
-            return ToolResultBlock(content=result_content, **tool_result_data)
+        case {"type": "tool_result", **tool_result_data}:
+            return ToolResultBlock(**tool_result_data)
         case {"type": "thinking", **thinking_data}:
             return ThinkingBlock(**thinking_data)
         case _:

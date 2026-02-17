@@ -49,8 +49,16 @@ class ToolResultBlock:
     """Tool result content block."""
 
     tool_use_id: str
-    content: str | list[ToolResultContentBlock] | None = None
+    content: str | list[dict[str, Any]] | None = None
     is_error: bool | None = None
+
+    def get_parsed_content(self) -> list[ToolResultContentBlock] | str | None:
+        from clawd_code_sdk.anthropic_types import validate_tool_result_content
+
+        if self.content is None or isinstance(self.content, str):
+            return self.content
+        # Validate list content against Anthropic SDK types
+        return validate_tool_result_content(self.content)
 
 
 ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock
