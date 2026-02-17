@@ -195,7 +195,7 @@ class SystemMessage:
     subtype: Literal["init"] = "init"
     uuid: str
     session_id: str
-    apiKeySource: ApiKeySource  # noqa: N815
+    apiKeySource: ApiKeySource | None = None  # noqa: N815
     cwd: str
     tools: list[str]
     mcp_servers: list[McpServerStatus]
@@ -204,7 +204,7 @@ class SystemMessage:
     slash_commands: list[str]
     output_style: str
     claude_code_version: str
-    agents: dict[str, dict[str, Any]]
+    agents: list[str]
     skills: list[str]
     plugins: list[str]
     fast_mode_state: bool
