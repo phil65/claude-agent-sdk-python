@@ -66,7 +66,7 @@ class ToolUseBlock:
     id: str = ""
     name: str = ""
     input: dict[str, Any] = field(default_factory=dict)
-    caller: str | None = None
+    caller: dict[str, str] | None = None
 
 
 @dataclass
