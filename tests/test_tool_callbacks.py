@@ -26,12 +26,7 @@ async def _dispatch(query: Query, request: dict[str, Any]) -> None:
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk import (
-        HookContext,
-        HookInput,
-        HookJSONOutput,
-        ToolPermissionContext,
-    )
+    from clawd_code_sdk import HookContext, HookInput, HookJSONOutput, ToolPermissionContext
 
 
 class MockTransport(Transport):
@@ -129,7 +124,6 @@ class TestToolPermissionCallbacks:
         )
 
         await query._handle_control_request("test-2", request_data)
-
         # Check response
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
@@ -162,7 +156,6 @@ class TestToolPermissionCallbacks:
         )
 
         await query._handle_control_request("test-3", request_data)
-
         # Check response includes modified input
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
@@ -192,7 +185,6 @@ class TestToolPermissionCallbacks:
         )
 
         await query._handle_control_request("test-5", request_data)
-
         # Check error response was sent
         assert len(transport.written_messages) == 1
         response = transport.written_messages[0]
@@ -214,16 +206,12 @@ class TestHookCallbacks:
             return {"processed": True}
 
         transport = MockTransport()
-
         # Create hooks configuration
         hooks = {"tool_use_start": [{"matcher": {"tool": "TestTool"}, "hooks": [test_hook]}]}
-
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
-
         # Manually register the hook callback to avoid needing the full initialize flow
         callback_id = "test_hook_0"
         query.hook_callbacks[callback_id] = test_hook
-
         # Simulate hook callback request
         request_data = parse_control_request(
             {
@@ -235,12 +223,10 @@ class TestHookCallbacks:
         )
 
         await query._handle_control_request("test-hook-1", request_data)
-
         # Check hook was called
         assert len(hook_calls) == 1
         assert hook_calls[0]["input"] == {"test": "data"}
         assert hook_calls[0]["tool_use_id"] == "tool-123"
-
         # Check response
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
@@ -289,27 +275,22 @@ class TestHookCallbacks:
         )
 
         await query._handle_control_request("test-comprehensive", request_data)
-
         # Check response contains all the fields
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
-
         # Parse the JSON response
         response_data = anyenv.load_json(last_response, return_type=dict)
         # The hook result is nested at response.response
         result = response_data["response"]["response"]
-
         # Verify control fields are present and converted to CLI format
         assert result.get("continue") is True, "continue_ should be converted to continue"
         assert "continue_" not in result, "continue_ should not appear in CLI output"
         assert result.get("suppressOutput") is False
         assert result.get("stopReason") == "Test stop reason"
-
         # Verify decision fields are present
         assert result.get("decision") == "block"
         assert result.get("reason") == "Test reason for blocking"
         assert result.get("systemMessage") == "Test system message"
-
         # Verify hook-specific output is present
         hook_output = result.get("hookSpecificOutput", {})
         assert hook_output.get("hookEventName") == "PreToolUse"
@@ -328,12 +309,9 @@ class TestHookCallbacks:
 
         transport = MockTransport()
         hooks = {"PreToolUse": [{"matcher": None, "hooks": [async_hook]}]}
-
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
-
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
-
         request_data = parse_control_request(
             {
                 "subtype": "hook_callback",
@@ -344,16 +322,13 @@ class TestHookCallbacks:
         )
 
         await query._handle_control_request("test-async", request_data)
-
         # Check response contains async fields
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
-
         # Parse the JSON response
         response_data = anyenv.load_json(last_response, return_type=dict)
         # The hook result is nested at response.response
         result = response_data["response"]["response"]
-
         # The SDK should convert async_ to "async" for CLI compatibility
         assert result.get("async") is True, "async_ should be converted to async"
         assert "async_" not in result, "async_ should not appear in CLI output"
@@ -396,18 +371,14 @@ class TestHookCallbacks:
         # Check response has converted field names
         assert len(transport.written_messages) > 0
         last_response = transport.written_messages[-1]
-
         response_data = anyenv.load_json(last_response, return_type=dict)
         result = response_data["response"]["response"]
-
         # Verify async_ was converted to async
         assert result.get("async") is True, "async_ should be converted to async"
         assert "async_" not in result, "async_ should not appear in output"
-
         # Verify continue_ was converted to continue
         assert result.get("continue") is False, "continue_ should be converted to continue"
         assert "continue_" not in result, "continue_ should not appear in output"
-
         # Verify other fields are unchanged
         assert result.get("asyncTimeout") == 10000
         assert result.get("stopReason") == "Testing field conversion"
