@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import Message, PermissionMode
+    from clawd_code_sdk.models.mcp import McpServerConfig
 
 
 class ClaudeSDKClient:
@@ -309,21 +310,22 @@ class ClaudeSDKClient:
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
-        result: dict[str, Any] = await self._query.get_mcp_status()
+        result = await self._query.get_mcp_status()
         return result
 
-    async def set_mcp_servers(self, servers: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> dict[str, Any]:
         """Add, replace, or remove MCP servers dynamically mid-session.
 
         Allows dynamic registration of MCP servers without restarting the session.
         Pass an empty dict to remove all dynamic servers.
 
+        The server name is automatically injected from the dict key into each
+        config, so callers don't need to specify it redundantly.
+
         Args:
             servers: Dictionary mapping server names to server configurations.
-                Each server config should have at least:
-                - 'type': Server type (e.g., 'sdk', 'stdio')
-                - 'name': Server name
-                Additional fields depend on server type.
+                Values are typed MCP server configs (McpStdioServerConfig,
+                McpSSEServerConfig, McpHttpServerConfig, or McpSdkServerConfig).
 
         Returns:
             Dictionary with results:
@@ -334,9 +336,9 @@ class ClaudeSDKClient:
         Example:
             ```python
             async with ClaudeSDKClient(options) as client:
-                # Add a new MCP server
+                # Add a stdio MCP server
                 result = await client.set_mcp_servers({
-                    "my-server": {"type": "sdk", "name": "my-server"}
+                    "my-server": {"type": "stdio", "command": "my-cmd"}
                 })
                 print(f"Added: {result['added']}")
 
@@ -346,7 +348,12 @@ class ClaudeSDKClient:
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
-        result: dict[str, Any] = await self._query.set_mcp_servers(servers)
+        wire_servers: dict[str, dict[str, Any]] = {}
+        for name, config in servers.items():
+            server_dict = dict(config)
+            server_dict["name"] = name
+            wire_servers[name] = server_dict
+        result: dict[str, Any] = await self._query.set_mcp_servers(wire_servers)
         return result
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
