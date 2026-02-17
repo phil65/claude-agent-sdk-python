@@ -258,10 +258,26 @@ class HookResponseSystemMessage(BaseMessage):
     output: str
 
 
+class CacheCreation(TypedDict):
+    ephemeral_1h_input_tokens: int
+    ephemeral_5m_input_tokens: int
+
+
+class ServerToolUse(TypedDict):
+    web_search_requests: int
+    web_fetch_requests: int
+    service_tier: Literal["standard", "priority"]
+    cache_creation: CacheCreation
+    inference_geo: str
+    iterations: list[Any]
+    speed: str
+
+
 class ModelUsage(TypedDict):
     inputTokens: int
     outputTokens: int
     cacheReadInputTokens: int
+    server_tool_use: ServerToolUse
 
 
 class SDKPermissionDenial(TypedDict):
