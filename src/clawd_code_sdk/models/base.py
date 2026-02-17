@@ -32,7 +32,7 @@ StopReason = Literal[
     "refusal",
     "model_context_window_exceeded",
 ]
-ApiKeySource = Literal["user", "project", "org", "temporary", "ANTHROPIC_API_KEY"]
+ApiKeySource = Literal["none", "env", "config", "ANTHROPIC_API_KEY"]
 
 # Agent definitions
 SettingSource = Literal["user", "project", "local"]
