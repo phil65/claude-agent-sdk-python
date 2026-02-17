@@ -270,16 +270,13 @@ class SubprocessCLITransport(Transport):
 
         # Resolve thinking config → --max-thinking-tokens
         if self._options.thinking is not None:
-            t = self._options.thinking
-            resolved: int | None = None
-            if t["type"] == "adaptive":
-                resolved = 32_000
-            elif t["type"] == "enabled":
-                resolved = t["budget_tokens"]
-            elif t["type"] == "disabled":
-                resolved = 0
-            if resolved is not None:
-                cmd.extend(["--max-thinking-tokens", str(resolved)])
+            match self._options.thinking:
+                case {"type": "adaptive"}:
+                    cmd.extend(["--max-thinking-tokens", "32000"])
+                case {"type": "enabled", "budget_tokens": budget}:
+                    cmd.extend(["--max-thinking-tokens", str(budget)])
+                case {"type": "disabled"}:
+                    cmd.extend(["--max-thinking-tokens", "0"])
 
         if self._options.effort is not None:
             cmd.extend(["--effort", self._options.effort])
@@ -487,9 +484,7 @@ class SubprocessCLITransport(Transport):
                 # Accumulate partial JSON until we can parse it
                 # Note: TextReceiveStream can truncate long lines, so we need to buffer
                 # and speculatively parse until we get a complete JSON object
-                json_lines = line_str.split("\n")
-
-                for json_line in json_lines:
+                for json_line in line_str.split("\n"):
                     json_line = json_line.strip()
                     if not json_line:
                         continue
