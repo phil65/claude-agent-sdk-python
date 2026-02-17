@@ -14,7 +14,7 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, assert_never
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -63,6 +63,23 @@ class ClaudeMessageContent(BaseModel):
     # For thinking blocks
     thinking: str | None = None
     signature: str | None = None
+
+    def extract_tool_result_content(self) -> str:
+        """Extract content from a tool_result block."""
+        match self.content:
+            case None:
+                return ""
+            case str():
+                return self.content
+            case list():
+                text_parts = [
+                    tc.get("text", "")
+                    for tc in self.content
+                    if isinstance(tc, dict) and tc.get("type") == "text"
+                ]
+                return "\n".join(text_parts)
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 class ClaudeApiMessage(BaseModel):
