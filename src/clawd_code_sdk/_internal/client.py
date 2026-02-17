@@ -71,19 +71,16 @@ class InternalClient:
 
         # Extract SDK MCP servers from configured options
         sdk_mcp_servers = {}
-        if configured_options.mcp_servers and isinstance(configured_options.mcp_servers, dict):
+        if isinstance(configured_options.mcp_servers, dict):
             for name, config in configured_options.mcp_servers.items():
-                if isinstance(config, dict) and config.get("type") == "sdk":
+                if config.get("type") == "sdk":
                     sdk_mcp_servers[name] = config["instance"]  # type: ignore[typeddict-item]
 
         # Convert agents to dict format for initialize request
-        agents_dict = None
-        if configured_options.agents:
-            agents_dict = {
-                name: {k: v for k, v in asdict(agent_def).items() if v is not None}
-                for name, agent_def in configured_options.agents.items()
-            }
-
+        agents_dict = {
+            name: {k: v for k, v in asdict(agent_def).items() if v is not None}
+            for name, agent_def in (configured_options.agents or {}).items()
+        }
         # Create Query to handle control protocol
         # Always use streaming mode internally (matching TypeScript SDK)
         # This ensures agents are always sent via initialize request
