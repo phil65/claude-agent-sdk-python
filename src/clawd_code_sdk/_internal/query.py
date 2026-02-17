@@ -477,14 +477,10 @@ class Query:
                                 tool.inputSchema.model_dump()
                                 if isinstance(tool.inputSchema, BaseModel)
                                 else tool.inputSchema
-                            )
-                            if tool.inputSchema
-                            else {},
+                            ),
                         }
-                        if tool.annotations:
-                            tool_data["annotations"] = tool.annotations.model_dump(
-                                exclude_none=True
-                            )
+                        if annots := tool.annotations:
+                            tool_data["annotations"] = annots.model_dump(exclude_none=True)
                         tools_data.append(tool_data)
                     return {
                         "jsonrpc": "2.0",
