@@ -101,14 +101,18 @@ def parse_content_block(data: dict[str, Any]) -> ContentBlock:
 
 
 @dataclass(kw_only=True)
-class UserMessage:
+class BaseMessage:
+    uuid: str
+    session_id: str
+
+
+@dataclass(kw_only=True)
+class UserMessage(BaseMessage):
     """User message."""
 
     content: str | Sequence[ContentBlock]
-    uuid: str | None = None
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
-    session_id: str
     isReplay: bool | None = None  # noqa: N815
 
     def parse_command_output(self) -> str | None:
@@ -189,12 +193,10 @@ class McpServerStatus:
 
 
 @dataclass(kw_only=True)
-class SystemMessage:
+class SystemMessage(BaseMessage):
     """System message with metadata."""
 
     subtype: Literal["init"] = "init"
-    uuid: str
-    session_id: str
     apiKeySource: ApiKeySource | None = None  # noqa: N815
     cwd: str
     tools: list[str]
@@ -202,7 +204,7 @@ class SystemMessage:
     model: str
     permissionMode: PermissionMode  # noqa: N815
     slash_commands: list[str]
-    output_style: str
+    output_style: Literal["default", "json"]
     claude_code_version: str
     agents: list[str]
     skills: list[str]
@@ -211,25 +213,21 @@ class SystemMessage:
 
 
 @dataclass(kw_only=True)
-class HookStartedSystemMessage:
+class HookStartedSystemMessage(BaseMessage):
     """System message with metadata."""
 
     subtype: Literal["hook_started"] = "hook_started"
     hook_id: str | None = None
     hook_name: str | None = None
     hook_event: str | None = None
-    uuid: str
-    session_id: str
 
 
 @dataclass(kw_only=True)
-class StatusSystemMessage:
+class StatusSystemMessage(BaseMessage):
     """System status message."""
 
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | str | None
-    session_id: str
-    uuid: str
 
 
 class TriggerMetadata(TypedDict):
@@ -238,25 +236,21 @@ class TriggerMetadata(TypedDict):
 
 
 @dataclass(kw_only=True)
-class CompactBoundarySystemMessage:
+class CompactBoundarySystemMessage(BaseMessage):
     """System message with metadata."""
 
     subtype: Literal["compact_boundary"] = "compact_boundary"
     compact_metadata: TriggerMetadata
-    session_id: str
-    uuid: str
 
 
 @dataclass(kw_only=True)
-class HookResponseSystemMessage:
+class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
 
     subtype: Literal["hook_response"] = "hook_response"
     hook_id: str
     hook_name: str
     hook_event: str
-    uuid: str
-    session_id: str
     outcome: Literal["success", "failure"]  # need to verify
     exit_code: int
     stderr: str
@@ -286,7 +280,7 @@ class Usage(TypedDict):
 
 
 @dataclass
-class ResultMessage:
+class ResultMessage(BaseMessage):
     """Result message with cost and usage information."""
 
     subtype: str
@@ -294,8 +288,6 @@ class ResultMessage:
     duration_api_ms: int
     is_error: bool
     num_turns: int
-    session_id: str
-    uuid: str | None = None
     total_cost_usd: float | None = None
     usage: Usage | None = None
     result: str | None = None
@@ -307,11 +299,9 @@ class ResultMessage:
 
 
 @dataclass
-class StreamEvent:
+class StreamEvent(BaseMessage):
     """Stream event for partial message updates during streaming."""
 
-    uuid: str
-    session_id: str
     event: RawMessageStreamEvent
     parent_tool_use_id: str | None = None
 
