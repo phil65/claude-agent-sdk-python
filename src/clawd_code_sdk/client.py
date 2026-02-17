@@ -458,10 +458,13 @@ class ClaudeSDKClient:
 if __name__ == "__main__":
     import asyncio
 
+    from clawd_code_sdk.models import ThinkingConfigAdaptive
+
     async def main() -> None:
-        client = ClaudeSDKClient()
+        opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive(type="adaptive"))
+        client = ClaudeSDKClient(opts)
         await client.connect()
-        await client.query("test")
+        await client.query("ultrathink")
         async for msg in client.receive_response():
             print(msg)
         await client.query("/compact")
