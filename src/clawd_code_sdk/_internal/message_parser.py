@@ -16,6 +16,7 @@ from clawd_code_sdk.models import (
     parse_content_block,
     parse_system_message,
 )
+from clawd_code_sdk.models.messages import RateLimitMessage
 
 
 if TYPE_CHECKING:
@@ -74,6 +75,12 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
         # case {"type": "compact_boundary"}:
+        case {"type": "rate_limit_event", **event_data}:
+            try:
+                return RateLimitMessage(**event_data)
+            except TypeError as e:
+                msg = f"Missing required field in result message: {e}"
+                raise MessageParseError(msg, data) from e
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():

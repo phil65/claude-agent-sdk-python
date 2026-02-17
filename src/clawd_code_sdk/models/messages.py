@@ -269,6 +269,22 @@ class CompactBoundarySystemMessage(BaseMessage):
     compact_metadata: TriggerMetadata
 
 
+class RateLimitInfo(TypedDict):
+    status: Literal["allowed", "rejected"]
+    resetsAt: int
+    rateLimitType: Literal["five_hour", "twenty_four_hour"]
+    overageStatus: Literal["allowed", "rejected"]
+    overageDisabledReason: Literal["org_level_disabled", "user_level_disabled"]
+    isUsingOverage: bool
+
+
+class RateLimitMessage(BaseMessage):
+    """System message with metadata."""
+
+    subtype: Literal["rate_limit"] = "rate_limit"
+    rate_limit_info: RateLimitInfo
+
+
 @dataclass(kw_only=True)
 class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
@@ -371,6 +387,7 @@ Message = (
     | SystemMessage
     | ResultMessage
     | StreamEvent
+    | RateLimitMessage
     | HookStartedSystemMessage
     | HookResponseSystemMessage
     | CompactBoundarySystemMessage
