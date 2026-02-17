@@ -707,7 +707,7 @@ class UserMessage:
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
     session_id: str
-    isReplay: bool  # noqa: N815
+    isReplay: bool | None = None  # noqa: N815
 
 
 @dataclass(kw_only=True)

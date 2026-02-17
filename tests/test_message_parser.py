@@ -23,6 +23,7 @@ class TestMessageParser:
         data = {
             "type": "user",
             "message": {"content": [{"type": "text", "text": "Hello"}]},
+            "session_id": "session-123",
         }
         message = parse_message(data)
         assert isinstance(message, UserMessage)
@@ -37,6 +38,7 @@ class TestMessageParser:
         """
         data = {
             "type": "user",
+            "session_id": "session-123",
             "uuid": "msg-abc123-def456",
             "message": {"content": [{"type": "text", "text": "Hello"}]},
         }
@@ -49,6 +51,7 @@ class TestMessageParser:
         """Test parsing a user message with tool_use block."""
         data = {
             "type": "user",
+            "session_id": "session-123",
             "message": {
                 "content": [
                     {"type": "text", "text": "Let me read this file"},
@@ -74,6 +77,7 @@ class TestMessageParser:
         """Test parsing a user message with tool_result block."""
         data = {
             "type": "user",
+            "session_id": "session-123",
             "message": {
                 "content": [
                     {
@@ -95,6 +99,7 @@ class TestMessageParser:
         """Test parsing a user message with error tool_result block."""
         data = {
             "type": "user",
+            "session_id": "session-123",
             "message": {
                 "content": [
                     {
@@ -118,6 +123,7 @@ class TestMessageParser:
         """Test parsing a user message with mixed content blocks."""
         data = {
             "type": "user",
+            "session_id": "session-123",
             "message": {
                 "content": [
                     {"type": "text", "text": "Here's what I found:"},
@@ -148,6 +154,7 @@ class TestMessageParser:
         """Test parsing a valid user message."""
         data = {
             "type": "user",
+            "session_id": "session-123",
             "message": {"content": [{"type": "text", "text": "Hello"}]},
             "parent_tool_use_id": "toolu_01Xrwd5Y13sEHtzScxR77So8",
         }

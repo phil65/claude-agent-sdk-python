@@ -89,7 +89,11 @@ def parse_message(data: dict[str, Any]) -> Message:
             return StatusSystemMessage(**compact_data)
 
         case {"type": "result", **result_data}:
-            return ResultMessage(**result_data)
+            try:
+                return ResultMessage(**result_data)
+            except TypeError as e:
+                msg = f"Missing required field in result message: {e}"
+                raise MessageParseError(msg, data) from e
         case {"type": "stream_event", "event": event, **event_data}:
             from anthropic.types import RawMessageStreamEvent
 

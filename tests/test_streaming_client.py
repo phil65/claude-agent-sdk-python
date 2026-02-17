@@ -322,6 +322,7 @@ class TestClaudeSDKClientStreaming:
                     }
                     yield {
                         "type": "user",
+                        "session_id": "session-123",
                         "message": {"role": "user", "content": "Hi there"},
                     }
 

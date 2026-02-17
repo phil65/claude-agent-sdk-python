@@ -462,6 +462,11 @@ if __name__ == "__main__":
     async def main() -> None:
         client = ClaudeSDKClient()
         await client.connect()
+        await client.query("test")
+        async for msg in client.receive_response():
+            print(msg)
         await client.query("/compact")
+        async for msg in client.receive_response():
+            print(msg)
 
     asyncio.run(main())

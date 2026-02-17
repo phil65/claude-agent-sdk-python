@@ -35,7 +35,7 @@ class TestMessageTypes:
 
     def test_user_message_creation(self):
         """Test creating a UserMessage."""
-        msg = UserMessage(content="Hello, Claude!")
+        msg = UserMessage(content="Hello, Claude!", session_id="session-123")
         assert msg.content == "Hello, Claude!"
 
     def test_assistant_message_with_text(self):
