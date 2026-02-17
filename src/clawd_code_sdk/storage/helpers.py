@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import anyenv
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
@@ -75,6 +75,12 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
                     str(session_path),
                     str(e),
                     raw_line,
+                )
+            except ValidationError as e:
+                logger.warning(
+                    "Failed to validate JSONL entry (path: %s, error: %s)",
+                    str(session_path),
+                    str(e),
                 )
     return entries
 
