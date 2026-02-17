@@ -14,6 +14,7 @@ from clawd_code_sdk.models import (
     HookResponseSystemMessage,
     HookStartedSystemMessage,
     ResultMessage,
+    StatusSystemMessage,
     StreamEvent,
     SystemMessage,
     TextBlock,
@@ -84,6 +85,8 @@ def parse_message(data: dict[str, Any]) -> Message:
             return HookResponseSystemMessage(**system_data)
         case {"type": "system", "subtype": "compact_boundary", **compact_data}:
             return CompactBoundarySystemMessage(**compact_data)
+        case {"type": "system", "subtype": "status", **compact_data}:
+            return StatusSystemMessage(**compact_data)
 
         case {"type": "result", **result_data}:
             return ResultMessage(**result_data)

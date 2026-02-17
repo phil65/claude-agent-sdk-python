@@ -706,6 +706,8 @@ class UserMessage:
     uuid: str | None = None
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
+    session_id: str
+    isReplay: bool  # noqa: N815
 
 
 @dataclass(kw_only=True)
@@ -758,6 +760,16 @@ class HookStartedSystemMessage:
     session_id: str
 
 
+@dataclass(kw_only=True)
+class StatusSystemMessage:
+    """System status message."""
+
+    subtype: str = "status"
+    status: Literal["compacting"] | str | None
+    session_id: str
+    uuid: str
+
+
 class TriggerMetadata(TypedDict):
     trigger: Literal["auto", "manual"]
     pre_tokens: int
@@ -769,6 +781,8 @@ class CompactBoundarySystemMessage:
 
     subtype: str = "compact_boundary"
     compact_metadata: TriggerMetadata
+    session_id: str
+    uuid: str
 
 
 @dataclass(kw_only=True)
@@ -849,6 +863,7 @@ Message = (
     | HookStartedSystemMessage
     | HookResponseSystemMessage
     | CompactBoundarySystemMessage
+    | StatusSystemMessage
 )
 
 
