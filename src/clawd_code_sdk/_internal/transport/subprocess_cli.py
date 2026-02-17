@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from anyio.abc import Process
 
     from ...models import ClaudeAgentOptions
+    from ...models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class SubprocessCLITransport(Transport):
 
     def __init__(
         self,
-        prompt: str | AsyncIterable[dict[str, Any]],
+        prompt: str | AsyncIterable[UserPromptMessage],
         options: ClaudeAgentOptions,
     ):
         self._prompt = prompt

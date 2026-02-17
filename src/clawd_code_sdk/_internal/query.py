@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import ToolInput
 
     from ..models import ControlRequestUnion, PermissionMode, SDKControlResponse
+    from ..models.messages import UserPromptMessage
     from .transport import Transport
 
 logger = logging.getLogger(__name__)
@@ -600,7 +601,7 @@ class Query:
             {"subtype": "rewind_files", "user_message_id": user_message_id}
         )
 
-    async def stream_input(self, stream: AsyncIterable[dict[str, Any]]) -> None:
+    async def stream_input(self, stream: AsyncIterable[UserPromptMessage]) -> None:
         """Stream input messages to transport.
 
         If SDK MCP servers or hooks are present, waits for the first result

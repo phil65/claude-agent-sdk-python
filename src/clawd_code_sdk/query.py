@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ._internal.client import InternalClient
-from .models import ClaudeAgentOptions
+from .models import ClaudeAgentOptions, UserPromptMessage
 
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 async def query(
     *,
-    prompt: str | AsyncIterable[dict[str, Any]],
+    prompt: str | AsyncIterable[UserPromptMessage],
     options: ClaudeAgentOptions | None = None,
     transport: Transport | None = None,
 ) -> AsyncIterator[Message]:
@@ -51,14 +51,7 @@ async def query(
 
     Args:
         prompt: The prompt to send to Claude. Can be a string for single-shot queries
-                or an AsyncIterable[dict] for streaming mode with continuous interaction.
-                In streaming mode, each dict should have the structure:
-                {
-                    "type": "user",
-                    "message": {"role": "user", "content": "..."},
-                    "parent_tool_use_id": None,
-                    "session_id": "..."
-                }
+                or an AsyncIterable[UserPromptMessage] for streaming mode.
         options: Optional configuration (defaults to ClaudeAgentOptions() if None).
                  Set options.permission_mode to control tool execution:
                  - 'default': CLI prompts for dangerous tools

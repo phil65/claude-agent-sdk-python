@@ -127,6 +127,8 @@ from .messages import (
     TriggerMetadata,
     Usage,
     UserMessage,
+    UserPromptMessage,
+    UserPromptMessageContent,
     parse_content_block,
     parse_system_message,
 )
@@ -232,6 +234,8 @@ __all__ = [
     "TriggerMetadata",
     "Usage",
     "UserMessage",
+    "UserPromptMessage",
+    "UserPromptMessageContent",
     "parse_content_block",
     "parse_system_message",
     # options

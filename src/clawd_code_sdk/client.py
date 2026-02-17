@@ -11,7 +11,7 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
-from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
+from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
 from clawd_code_sdk.server_info_models import ClaudeCodeServerInfo
 
 
@@ -79,14 +79,14 @@ class ClaudeSDKClient:
         self._query: Query | None = None
         os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
 
-    async def connect(self, prompt: str | AsyncIterable[dict[str, Any]] | None = None) -> None:
+    async def connect(self, prompt: str | AsyncIterable[UserPromptMessage] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
 
         from clawd_code_sdk._internal.query import Query
         from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
         # Auto-connect with empty async iterable if no prompt is provided
-        async def _empty_stream() -> AsyncIterator[dict[str, Any]]:
+        async def _empty_stream() -> AsyncIterator[UserPromptMessage]:
             # Never yields, but indicates that this function is an iterator and
             # keeps the connection open.
             # This yield is never reached but makes this an async generator
@@ -170,7 +170,7 @@ class ClaudeSDKClient:
 
     async def query(
         self,
-        prompt: str | AsyncIterable[dict[str, Any]],
+        prompt: str | AsyncIterable[UserPromptMessage],
         session_id: str = "default",
     ) -> None:
         """
@@ -185,7 +185,7 @@ class ClaudeSDKClient:
 
         # Handle string prompts
         if isinstance(prompt, str):
-            message = {
+            message: UserPromptMessage = {
                 "type": "user",
                 "message": {"role": "user", "content": prompt},
                 "parent_tool_use_id": None,

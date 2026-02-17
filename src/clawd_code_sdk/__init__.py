@@ -76,6 +76,8 @@ from .models import (
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
+    UserPromptMessage,
+    UserPromptMessageContent,
     UserPromptSubmitHookInput,
 )
 from .query import query
@@ -359,6 +361,8 @@ __all__ = [
     "McpServerConfig",
     "McpSdkServerConfig",
     "UserMessage",
+    "UserPromptMessage",
+    "UserPromptMessageContent",
     "AssistantMessage",
     "SystemMessage",
     "ResultMessage",

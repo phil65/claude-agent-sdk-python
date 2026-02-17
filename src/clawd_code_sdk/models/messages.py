@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
 
 from pydantic import Discriminator, TypeAdapter
 
@@ -38,6 +38,31 @@ AssistantMessageError = Literal[
     "server_error",
     "unknown",
 ]
+
+
+class UserPromptMessageContent(TypedDict):
+    """Inner message content for a user prompt."""
+
+    role: Literal["user"]
+    """Message role, always 'user'."""
+    content: str
+    """The text content of the message."""
+
+
+class UserPromptMessage(TypedDict):
+    """A user prompt message sent over the wire to the Claude Code CLI.
+
+    Used as the element type for streaming prompt iterables.
+    """
+
+    type: Literal["user"]
+    """Message type, always 'user'."""
+    message: UserPromptMessageContent
+    """The message content."""
+    parent_tool_use_id: NotRequired[str | None]
+    """Optional parent tool use ID for tool result responses."""
+    session_id: NotRequired[str]
+    """Session identifier. Auto-injected if not provided."""
 
 
 # Content block types

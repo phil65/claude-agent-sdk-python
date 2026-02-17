@@ -6,7 +6,7 @@ from collections.abc import AsyncIterable
 from contextlib import aclosing
 from dataclasses import asdict, replace
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import anyenv
 
@@ -14,7 +14,7 @@ from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.models import AssistantMessage
+from clawd_code_sdk.models import AssistantMessage, UserPromptMessage
 
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class InternalClient:
 
     async def process_query(
         self,
-        prompt: str | AsyncIterable[dict[str, Any]],
+        prompt: str | AsyncIterable[UserPromptMessage],
         options: ClaudeAgentOptions,
         transport: Transport | None = None,
     ) -> AsyncIterator[Message]:
@@ -99,7 +99,7 @@ class InternalClient:
             if isinstance(prompt, str):
                 # For string prompts, write user message to stdin after initialize
                 # (matching TypeScript SDK behavior)
-                user_message = {
+                user_message: UserPromptMessage = {
                     "type": "user",
                     "session_id": "",
                     "message": {"role": "user", "content": prompt},
