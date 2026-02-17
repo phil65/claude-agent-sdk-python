@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from anthropic.types import RawMessageStreamEvent
 
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
-    from clawd_code_sdk.input_types import ToolInput
+    from clawd_code_sdk.models import ToolInput
 
 
 # Message types

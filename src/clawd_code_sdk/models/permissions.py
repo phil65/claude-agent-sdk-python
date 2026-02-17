@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
-from clawd_code_sdk.input_types import ToolInput
+from clawd_code_sdk.models import ToolInput
 
 
 if TYPE_CHECKING:

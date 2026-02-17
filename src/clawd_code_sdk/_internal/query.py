@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
 
-    from clawd_code_sdk.input_types import ToolInput
+    from clawd_code_sdk.models import ToolInput
 
     from ..models import ControlRequestUnion, PermissionMode, SDKControlResponse
     from .transport import Transport
