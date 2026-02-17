@@ -739,6 +739,40 @@ class SystemMessage:
     permissionMode: PermissionMode  # noqa: N815
     slash_commands: list[str]
     output_style: str
+    claude_code_version: str
+    agents: dict[str, dict[str, Any]]
+    skills: list[str]
+    plugins: list[str]
+    fast_mode_state: bool
+
+
+@dataclass(kw_only=True)
+class HookStartedSystemMessage:
+    """System message with metadata."""
+
+    subtype: str = "hook_started"
+    hook_id: str | None = None
+    hook_name: str | None = None
+    hook_event: str | None = None
+    uuid: str
+    session_id: str
+
+
+@dataclass(kw_only=True)
+class HookResponseSystemMessage:
+    """System message with metadata."""
+
+    subtype: str = "hook_response"
+    hook_id: str
+    hook_name: str
+    hook_event: str
+    uuid: str
+    session_id: str
+    outcome: Literal["success", "failure"]  # need to verify
+    exit_code: int
+    stderr: str
+    stdout: str
+    output: str
 
 
 class ModelUsage(TypedDict):
@@ -793,7 +827,15 @@ class StreamEvent:
     parent_tool_use_id: str | None = None
 
 
-Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage | StreamEvent
+Message = (
+    UserMessage
+    | AssistantMessage
+    | SystemMessage
+    | ResultMessage
+    | StreamEvent
+    | HookStartedSystemMessage
+    | HookResponseSystemMessage
+)
 
 
 @dataclass

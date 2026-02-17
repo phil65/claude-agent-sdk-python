@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.types import (
     AssistantMessage,
+    HookResponseSystemMessage,
+    HookStartedSystemMessage,
     ResultMessage,
     StreamEvent,
     SystemMessage,
@@ -80,8 +82,12 @@ def parse_message(data: dict[str, Any]) -> Message:
                 err = f"Missing required field in assistant message: {e}"
                 raise MessageParseError(err, data) from e
 
-        case {"type": "system", **system_data}:
+        case {"type": "system", "subtype": "init", **system_data}:
             return SystemMessage(**system_data)
+        case {"type": "system", "subtype": "hook_started", **system_data}:
+            return HookStartedSystemMessage(**system_data)
+        case {"type": "system", "subtype": "hook_response", **system_data}:
+            return HookResponseSystemMessage(**system_data)
 
         case {"type": "result", **result_data}:
             try:
