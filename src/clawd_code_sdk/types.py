@@ -911,7 +911,7 @@ class SDKControlInterruptRequest:
 class SDKControlPermissionRequest:
     subtype: Literal["can_use_tool"] = "can_use_tool"
     tool_name: str
-    input: dict[str, Any]
+    input: ToolInput
     tool_use_id: str
     permission_suggestions: list[Any] | None = None
     blocked_path: str | None = None

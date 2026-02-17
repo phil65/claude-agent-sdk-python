@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
 
+    from clawd_code_sdk.input_types import ToolInput
+
     from ..types import (
         ControlRequestUnion,
         PermissionMode,
@@ -81,7 +83,7 @@ class Query:
         transport: Transport,
         is_streaming_mode: bool,
         can_use_tool: Callable[
-            [str, dict[str, Any], ToolPermissionContext],
+            [str, ToolInput, ToolPermissionContext],
             Awaitable[PermissionResultAllow | PermissionResultDeny],
         ]
         | None = None,

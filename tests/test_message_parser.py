@@ -269,25 +269,25 @@ class TestMessageParser:
 
     def test_parse_user_message_missing_fields(self):
         """Test that user message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
+        with pytest.raises(MessageParseError):
             parse_message({"type": "user"})
         # assert "Missing required field in user message" in str(exc_info.value)
 
     def test_parse_assistant_message_missing_fields(self):
         """Test that assistant message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
+        with pytest.raises(MessageParseError):
             parse_message({"type": "assistant"})
         # assert "Missing required field in assistant message" in str(exc_info.value)
 
     def test_parse_system_message_missing_fields(self):
         """Test that system message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
+        with pytest.raises(MessageParseError):
             parse_message({"type": "system"})
         # assert "Missing required field in system message" in str(exc_info.value)
 
     def test_parse_result_message_missing_fields(self):
         """Test that result message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
+        with pytest.raises(MessageParseError):
             parse_message({"type": "result", "subtype": "success"})
         # assert "Missing required field in result message" in str(exc_info.value)
 
