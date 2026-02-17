@@ -10,19 +10,11 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 
-from clawd_code_sdk._errors import (
-    APIError,
-    AuthenticationError,
-    BillingError,
-    InvalidRequestError,
-    RateLimitError,
-    ServerError,
-)
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.models import AssistantMessage, TextBlock
+from clawd_code_sdk.models import AssistantMessage
 
 
 if TYPE_CHECKING:
@@ -32,61 +24,6 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import ClaudeAgentOptions, Message
 
 logger = logging.getLogger(__name__)
-
-
-def _extract_error_message(message: AssistantMessage) -> str:
-    """Extract the error message text from an AssistantMessage.
-
-    When the API returns an error, the error text is typically in the
-    first TextBlock of the message content.
-
-    Args:
-        message: The AssistantMessage containing the error.
-
-    Returns:
-        The error message text, or a default message if none found.
-    """
-    return next(
-        (block.text for block in message.content if isinstance(block, TextBlock)),
-        "An API error occurred",
-    )
-
-
-def _raise_api_error(message: AssistantMessage) -> None:
-    """Raise the appropriate API exception for an AssistantMessage with an error.
-
-    This function converts the error field on an AssistantMessage into a proper
-    Python exception that can be caught and handled programmatically.
-
-    Args:
-        message: The AssistantMessage with error field set.
-
-    Raises:
-        AuthenticationError: For authentication_failed errors (401).
-        BillingError: For billing_error errors.
-        RateLimitError: For rate_limit errors (429).
-        InvalidRequestError: For invalid_request errors (400).
-        ServerError: For server_error errors (500/529).
-        APIError: For unknown error types.
-    """
-    error_type = message.error
-    error_message = _extract_error_message(message)
-    model = message.model
-
-    match error_type:
-        case "authentication_failed":
-            raise AuthenticationError(error_message, model)
-        case "billing_error":
-            raise BillingError(error_message, model)
-        case "rate_limit":
-            raise RateLimitError(error_message, model)
-        case "invalid_request":
-            raise InvalidRequestError(error_message, model)
-        case "server_error":
-            raise ServerError(error_message, model)
-        case _:
-            # Handle "unknown" or any future error types
-            raise APIError(error_message, error_type or "unknown", model)
 
 
 class InternalClient:
@@ -189,7 +126,7 @@ class InternalClient:
                     message = parse_message(data)
                     # Check if this is an AssistantMessage with an API error
                     if isinstance(message, AssistantMessage) and message.error is not None:
-                        _raise_api_error(message)
+                        message.raise_api_error()
 
                     # TODO: Verify if usage limit messages set the error field or come as
                     # plain text. If they come as plain text without error field, uncomment

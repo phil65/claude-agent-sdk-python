@@ -56,8 +56,7 @@ def parse_message(data: dict[str, Any]) -> Message:
             try:
                 return parse_system_message(system_data)
             except Exception as e:
-                msg = f"Failed to parse system message: {e}"
-                raise MessageParseError(msg, data) from e
+                raise MessageParseError(f"Failed to parse system message: {e}", data) from e
 
         case {"type": "result", **result_data}:
             try:
