@@ -730,7 +730,7 @@ class McpServerStatus:
 class SystemMessage:
     """System message with metadata."""
 
-    subtype: str = "init"
+    subtype: Literal["init"] = "init"
     uuid: str
     session_id: str
     apiKeySource: ApiKeySource  # noqa: N815
@@ -752,7 +752,7 @@ class SystemMessage:
 class HookStartedSystemMessage:
     """System message with metadata."""
 
-    subtype: str = "hook_started"
+    subtype: Literal["hook_started"] = "hook_started"
     hook_id: str | None = None
     hook_name: str | None = None
     hook_event: str | None = None
@@ -764,7 +764,7 @@ class HookStartedSystemMessage:
 class StatusSystemMessage:
     """System status message."""
 
-    subtype: str = "status"
+    subtype: Literal["status"] = "status"
     status: Literal["compacting"] | str | None
     session_id: str
     uuid: str
@@ -779,7 +779,7 @@ class TriggerMetadata(TypedDict):
 class CompactBoundarySystemMessage:
     """System message with metadata."""
 
-    subtype: str = "compact_boundary"
+    subtype: Literal["compact_boundary"] = "compact_boundary"
     compact_metadata: TriggerMetadata
     session_id: str
     uuid: str
@@ -789,7 +789,7 @@ class CompactBoundarySystemMessage:
 class HookResponseSystemMessage:
     """System message with metadata."""
 
-    subtype: str = "hook_response"
+    subtype: Literal["hook_response"] = "hook_response"
     hook_id: str
     hook_name: str
     hook_event: str
