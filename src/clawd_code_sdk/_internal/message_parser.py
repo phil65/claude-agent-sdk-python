@@ -10,6 +10,7 @@ from pydantic import TypeAdapter
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.models import (
     AssistantMessage,
+    CompactBoundarySystemMessage,
     HookResponseSystemMessage,
     HookStartedSystemMessage,
     ResultMessage,
@@ -81,6 +82,9 @@ def parse_message(data: dict[str, Any]) -> Message:
             return HookStartedSystemMessage(**system_data)
         case {"type": "system", "subtype": "hook_response", **system_data}:
             return HookResponseSystemMessage(**system_data)
+        case {"type": "system", "subtype": "compact_boundary", **compact_data}:
+            return CompactBoundarySystemMessage(**compact_data)
+
         case {"type": "result", **result_data}:
             return ResultMessage(**result_data)
         case {"type": "stream_event", "event": event, **event_data}:
