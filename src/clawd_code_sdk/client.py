@@ -168,7 +168,9 @@ class ClaudeSDKClient:
             yield parse_message(data)
 
     async def query(
-        self, prompt: str | AsyncIterable[dict[str, Any]], session_id: str = "default"
+        self,
+        prompt: str | AsyncIterable[dict[str, Any]],
+        session_id: str = "default",
     ) -> None:
         """
         Send a new request in streaming mode.

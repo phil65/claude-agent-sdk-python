@@ -361,11 +361,7 @@ class Query:
             msg = f"No hook callback found for ID: {req.callback_id}"
             raise RuntimeError(msg)
 
-        hook_output = await callback(
-            req.input,
-            req.tool_use_id,
-            {"signal": None},
-        )
+        hook_output = await callback(req.input, req.tool_use_id, {"signal": None})
         return _convert_hook_output_for_cli(hook_output)
 
     async def _send_control_request(
@@ -441,16 +437,12 @@ class Query:
             return {
                 "jsonrpc": "2.0",
                 "id": message.get("id"),
-                "error": {
-                    "code": -32601,
-                    "message": f"Server '{server_name}' not found",
-                },
+                "error": {"code": -32601, "message": f"Server '{server_name}' not found"},
             }
 
         server = self.sdk_mcp_servers[server_name]
         method = message.get("method")
         params = message.get("params", {})
-
         try:
             # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
             # TypeScript: server.connect(transport) allows custom transports
@@ -468,10 +460,7 @@ class Query:
                         "capabilities": {
                             "tools": {}  # Tools capability without listChanged
                         },
-                        "serverInfo": {
-                            "name": server.name,
-                            "version": server.version or "1.0.0",
-                        },
+                        "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
                     },
                 }
 
@@ -505,29 +494,26 @@ class Query:
                     }
 
             elif method == "tools/call":
-                call_request = CallToolRequest(
-                    method=method,
-                    params=CallToolRequestParams(
-                        name=params.get("name"),
-                        arguments=params.get("arguments", {}),
-                        _meta=params.get("_meta"),
-                    ),
+                call_params = CallToolRequestParams(
+                    name=params.get("name"),
+                    arguments=params.get("arguments", {}),
+                    _meta=params.get("_meta"),
                 )
+                call_request = CallToolRequest(method=method, params=call_params)
                 if handler := server.request_handlers.get(CallToolRequest):
                     result = await handler(call_request)
                     # Convert MCP result to JSONRPC response
                     content: list[dict[str, Any]] = []
                     for item in result.root.content:  # type: ignore[union-attr]
                         match item:
-                            case TextContent():
-                                content.append({"type": "text", "text": item.text})
-                            case ImageContent() | AudioContent():
+                            case TextContent(text=text):
+                                content.append({"type": "text", "text": text})
+                            case (
+                                ImageContent(data=data, mimeType=mime_type)
+                                | AudioContent(data=data, mimeType=mime_type)
+                            ):
                                 content.append(
-                                    {
-                                        "type": "image",
-                                        "data": item.data,
-                                        "mimeType": item.mimeType,
-                                    }
+                                    {"type": "image", "data": data, "mimeType": mime_type}
                                 )
                             case ResourceLink():
                                 pass
@@ -542,8 +528,8 @@ class Query:
                                     or mime_type == "application/pdf"
                                 ):
                                     # Convert EmbeddedResource to Anthropic document format
-                                    source_type = (
-                                        uri_str.replace("document://", "")
+                                    typ = (
+                                        uri_str.removeprefix("document://")
                                         if uri_str.startswith("document://")
                                         else "base64"
                                     )
@@ -552,26 +538,14 @@ class Query:
                                         if isinstance(resource, BlobResourceContents)
                                         else ""
                                     )
-                                    content.append(
-                                        {
-                                            "type": "document",
-                                            "source": {
-                                                "type": source_type,
-                                                "media_type": mime_type,
-                                                "data": data,
-                                            },
-                                        }
-                                    )
+                                    dct = {"type": typ, "media_type": mime_type, "data": data}
+                                    content.append({"type": "document", "source": dct})
 
                     response_data: dict[str, Any] = {"content": content}
                     if isinstance(result.root, CallToolResult) and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
                         response_data["is_error"] = True
 
-                    return {
-                        "jsonrpc": "2.0",
-                        "id": message.get("id"),
-                        "result": response_data,
-                    }
+                    return {"jsonrpc": "2.0", "id": message.get("id"), "result": response_data}
 
             elif method == "notifications/initialized":
                 # Handle initialized notification - just acknowledge it
@@ -599,12 +573,7 @@ class Query:
 
     async def set_mcp_servers(self, servers: dict[str, dict[str, Any]]) -> dict[str, Any]:
         """Add, replace, or remove MCP servers dynamically."""
-        return await self._send_control_request(
-            {
-                "subtype": "mcp_set_servers",
-                "servers": servers,
-            }
-        )
+        return await self._send_control_request({"subtype": "mcp_set_servers", "servers": servers})
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens."""
@@ -621,12 +590,7 @@ class Query:
 
     async def set_permission_mode(self, mode: PermissionMode) -> None:
         """Change permission mode."""
-        await self._send_control_request(
-            {
-                "subtype": "set_permission_mode",
-                "mode": mode,
-            }
-        )
+        await self._send_control_request({"subtype": "set_permission_mode", "mode": mode})
 
     async def set_model(self, model: str | None) -> None:
         """Change the AI model."""
@@ -680,12 +644,13 @@ class Query:
         """Receive SDK messages (not control messages)."""
         async for message in self._message_receive:
             # Check for special messages
-            if message.get("type") == "end":
-                break
-            elif message.get("type") == "error":
-                raise Exception(message.get("error", "Unknown error"))
-
-            yield message
+            match message.get("type"):
+                case "end":
+                    break
+                case "error":
+                    raise Exception(message.get("error", "Unknown error"))
+                case _:
+                    yield message
 
     async def close(self) -> None:
         """Close the query and transport.
