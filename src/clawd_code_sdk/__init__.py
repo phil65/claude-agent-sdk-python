@@ -49,7 +49,6 @@ from .input_types import (
     WebFetchInput,
     WebSearchInput,
 )
-from .query import query
 from .models import (
     AgentDefinition,
     AssistantMessage,
@@ -103,6 +102,7 @@ from .models import (
     UserMessage,
     UserPromptSubmitHookInput,
 )
+from .query import query
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

@@ -459,7 +459,7 @@ class ClaudeSDKClient:
 if __name__ == "__main__":
     import asyncio
 
-    async def main():
+    async def main() -> None:
         client = ClaudeSDKClient()
         await client.connect()
         await client.query("/compact")
