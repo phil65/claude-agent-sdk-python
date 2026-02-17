@@ -41,6 +41,8 @@ class InternalClient:
         """Process a query through transport and Query."""
 
         # Validate and configure permission settings (matching TypeScript SDK logic)
+        options.validate()
+
         configured_options = options
         if options.can_use_tool:
             # canUseTool callback requires streaming mode (AsyncIterable prompt)
@@ -48,13 +50,6 @@ class InternalClient:
                 raise ValueError(
                     "can_use_tool callback requires streaming mode. "
                     "Please provide prompt as an AsyncIterable instead of a string."
-                )
-
-            # canUseTool and permission_prompt_tool_name are mutually exclusive
-            if options.permission_prompt_tool_name:
-                raise ValueError(
-                    "can_use_tool callback cannot be used with permission_prompt_tool_name. "
-                    "Please use one or the other."
                 )
 
             # Automatically set permission_prompt_tool_name to "stdio" for control protocol

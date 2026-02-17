@@ -94,19 +94,14 @@ class ClaudeSDKClient:
 
         actual_prompt = _empty_stream() if prompt is None else prompt
         # Validate and configure permission settings (matching TypeScript SDK logic)
+        self.options.validate()
+
         if self.options.can_use_tool:
             # canUseTool callback requires streaming mode (AsyncIterable prompt)
             if isinstance(prompt, str):
                 raise ValueError(
                     "can_use_tool callback requires streaming mode. "
                     "Please provide prompt as an AsyncIterable instead of a string."
-                )
-
-            # canUseTool and permission_prompt_tool_name are mutually exclusive
-            if self.options.permission_prompt_tool_name:
-                raise ValueError(
-                    "can_use_tool callback cannot be used with permission_prompt_tool_name. "
-                    "Please use one or the other."
                 )
 
             # Automatically set permission_prompt_tool_name to "stdio" for control protocol

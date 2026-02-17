@@ -79,3 +79,16 @@ class ClaudeAgentOptions:
     # When enabled, files can be rewound to their state at any user message
     # using `ClaudeSDKClient.rewind_files()`.
     enable_file_checkpointing: bool = False
+
+    def validate(self) -> None:
+        """Validate option constraints.
+
+        Raises:
+            ValueError: If mutually exclusive options are set.
+        """
+        if self.can_use_tool and self.permission_prompt_tool_name:
+            msg = (
+                "can_use_tool callback cannot be used with permission_prompt_tool_name. "
+                "Please use one or the other."
+            )
+            raise ValueError(msg)
