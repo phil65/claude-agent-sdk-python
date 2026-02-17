@@ -442,7 +442,6 @@ class Query:
 
         server = self.sdk_mcp_servers[server_name]
         method = message.get("method")
-        params = message.get("params", {})
         try:
             # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
             # TypeScript: server.connect(transport) allows custom transports
@@ -494,11 +493,8 @@ class Query:
                     }
 
             elif method == "tools/call":
-                call_params = CallToolRequestParams(
-                    name=params.get("name"),
-                    arguments=params.get("arguments", {}),
-                    _meta=params.get("_meta"),
-                )
+                params = message.get("params", {})
+                call_params = CallToolRequestParams(**params)
                 call_request = CallToolRequest(method=method, params=call_params)
                 if handler := server.request_handlers.get(CallToolRequest):
                     result = await handler(call_request)
