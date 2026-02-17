@@ -134,10 +134,7 @@ class PermissionUpdate:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        result: dict[str, Any] = {
-            "type": self.type,
-        }
-
+        result: dict[str, Any] = {"type": self.type}
         # Add destination for all variants
         if self.destination is not None:
             result["destination"] = self.destination
@@ -147,11 +144,7 @@ class PermissionUpdate:
             # Rules-based variants require rules and behavior
             if self.rules is not None:
                 result["rules"] = [
-                    {
-                        "toolName": rule.tool_name,
-                        "ruleContent": rule.rule_content,
-                    }
-                    for rule in self.rules
+                    {"toolName": r.tool_name, "ruleContent": r.rule_content} for r in self.rules
                 ]
             if self.behavior is not None:
                 result["behavior"] = self.behavior
@@ -466,19 +459,15 @@ class SyncHookJSONOutput(TypedDict):
     """
 
     # Common control fields
-    continue_: NotRequired[
-        bool
-    ]  # Using continue_ to avoid Python keyword (converted to "continue" for CLI)
+    continue_: NotRequired[bool]  # Avoid name clash (converted to "continue" for CLI)
     suppressOutput: NotRequired[bool]
     stopReason: NotRequired[str]
-
     # Decision fields
     # Note: "approve" is deprecated for PreToolUse (use permissionDecision instead)
     # For other hooks, only "block" is meaningful
     decision: NotRequired[Literal["block"]]
     systemMessage: NotRequired[str]
     reason: NotRequired[str]
-
     # Hook-specific outputs
     hookSpecificOutput: NotRequired[HookSpecificOutput]
 
@@ -516,10 +505,8 @@ class HookMatcher:
     # a tool name like "Bash" or a combination of tool names like
     # "Write|MultiEdit|Edit".
     matcher: str | None = None
-
     # A list of Python functions with function signature HookCallback
     hooks: Sequence[HookCallback] = field(default_factory=list)
-
     # Timeout in seconds for all hooks in this matcher (default: 60)
     timeout: float | None = None
 
@@ -673,6 +660,7 @@ class ToolUseBlock:
     id: str
     name: str
     input: dict[str, Any]
+    caller: str | None = None
 
 
 @dataclass
