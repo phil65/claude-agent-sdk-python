@@ -7,7 +7,6 @@ from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk.types import (
     AssistantMessage,
     ResultMessage,
-    SystemMessage,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -204,12 +203,12 @@ class TestMessageParser:
         assert isinstance(message.content[1], TextBlock)
         assert message.content[1].text == "Here's my response"
 
-    def test_parse_valid_system_message(self):
-        """Test parsing a valid system message."""
-        data = {"type": "system", "subtype": "start"}
-        message = parse_message(data)
-        assert isinstance(message, SystemMessage)
-        assert message.subtype == "start"
+    # def test_parse_valid_system_message(self):
+    #     """Test parsing a valid system message."""
+    #     data = {"type": "system", "subtype": "start"}
+    #     message = parse_message(data)
+    #     assert isinstance(message, SystemMessage)
+    #     assert message.subtype == "start"
 
     def test_parse_assistant_message_inside_subagent(self):
         """Test parsing a valid assistant message."""

@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from pydantic import TypeAdapter
+
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.types import (
     AssistantMessage,
@@ -96,9 +98,12 @@ def parse_message(data: dict[str, Any]) -> Message:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
 
-        case {"type": "stream_event", **event_data}:
+        case {"type": "stream_event", "event": event, **event_data}:
+            from anthropic.types import RawMessageStreamEvent
+
             try:
-                return StreamEvent(**event_data)
+                event = TypeAdapter(RawMessageStreamEvent).validate_python(event)
+                return StreamEvent(event=event, **event_data)
             except TypeError as e:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
