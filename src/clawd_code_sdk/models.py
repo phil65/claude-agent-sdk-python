@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+import re
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
 
 from pydantic import Discriminator, TypeAdapter
@@ -697,6 +698,13 @@ class UserMessage:
     tool_use_result: dict[str, Any] | None = None
     session_id: str
     isReplay: bool | None = None  # noqa: N815
+
+    def parse_command_output(self) -> str | None:
+        content = self.content if isinstance(self.content, str) else ""
+        # Extract content from <local-command-stdout> or <local-command-stderr>
+        pattern = r"<local-command-(?:stdout|stderr)>(.*?)</local-command-(?:stdout|stderr)>"
+        match = re.search(pattern, content, re.DOTALL)
+        return match.group(1) if match else None
 
 
 @dataclass(kw_only=True)
