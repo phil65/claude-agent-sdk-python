@@ -12,6 +12,7 @@ import anyenv
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
+from clawd_code_sdk.server_info_models import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -373,7 +374,7 @@ class ClaudeSDKClient:
             raise CLIConnectionError("Not connected. Call connect() first.")
         await self._query.set_max_thinking_tokens(max_thinking_tokens)
 
-    async def get_server_info(self) -> dict[str, Any] | None:
+    async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.
 
         Returns initialization information from the Claude Code server including:
@@ -396,7 +397,9 @@ class ClaudeSDKClient:
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
         # Return the initialization result that was already obtained during connect
-        return self._query._initialization_result
+        if raw_info := self._query._initialization_result:
+            return ClaudeCodeServerInfo.model_validate(raw_info)
+        return None
 
     async def receive_response(self) -> AsyncIterator[Message]:
         """
