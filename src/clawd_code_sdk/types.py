@@ -806,7 +806,7 @@ class ResultMessage:
     is_error: bool
     num_turns: int
     session_id: str
-    uuid: str
+    uuid: str | None = None
     total_cost_usd: float | None = None
     usage: Usage | None = None
     result: str | None = None

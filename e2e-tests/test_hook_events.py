@@ -192,3 +192,7 @@ async def test_multiple_hooks_together():
     # At minimum, PreToolUse and PostToolUse should fire for the Bash command
     assert "PreToolUse" in event_names, "PreToolUse hook should have fired"
     assert "PostToolUse" in event_names, "PostToolUse hook should have fired"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

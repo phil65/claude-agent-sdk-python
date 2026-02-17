@@ -4,11 +4,14 @@ These tests verify that the output_schema feature works correctly by making
 actual API calls to Claude with JSON Schema validation.
 """
 
+import os
 import tempfile
 
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, ResultMessage, query
+
+os.environ["ANTHROPIC_API_KEY"] = ""
 
 
 @pytest.mark.e2e
@@ -198,3 +201,7 @@ async def test_structured_output_with_tools():
     assert isinstance(output["file_count"], (int, float))
     assert isinstance(output["has_readme"], bool)
     assert output["file_count"] >= 0  # Should be non-negative
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

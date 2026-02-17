@@ -95,3 +95,7 @@ async def test_interrupt():
         async for message in client.receive_response():
             print(f"Got message after interrupt: {message}")
             pass
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

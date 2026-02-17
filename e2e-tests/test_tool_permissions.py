@@ -63,3 +63,7 @@ async def test_permission_callback_gets_called():
         # Clean up
         if test_path.exists():
             test_path.unlink()
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

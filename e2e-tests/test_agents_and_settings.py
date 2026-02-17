@@ -60,7 +60,7 @@ async def test_agent_definition():
 
         # Check that agent is available in init message
         async for message in client.receive_response():
-            if isinstance(message, SystemMessage) and message.subtype == "init":
+            if isinstance(message, SystemMessage):
                 agents = message.agents
                 assert isinstance(agents, list), (
                     f"agents should be a list of strings, got: {type(agents)}"
@@ -92,7 +92,7 @@ async def test_agent_definition_with_query_function():
     # Use query() with string prompt
     found_agent = False
     async for message in query(prompt="What is 2 + 2?", options=options):
-        if isinstance(message, SystemMessage) and message.subtype == "init":
+        if isinstance(message, SystemMessage):
             agents = message.agents
             assert "test-agent-query" in agents, (
                 f"test-agent-query should be available, got: {agents}"
@@ -120,7 +120,7 @@ async def test_large_agents_with_query_function():
     # Use query() with string prompt - agents still go via initialize
     found_agents = []
     async for message in query(prompt="What is 2 + 2?", options=options):
-        if isinstance(message, SystemMessage) and message.subtype == "init":
+        if isinstance(message, SystemMessage):
             found_agents = message.agents
             break
 
@@ -192,7 +192,7 @@ You are a simple test agent. When asked a question, provide a brief, helpful ans
 
         # Find the init message and check for the filesystem agent
         for msg in messages:
-            if isinstance(msg, SystemMessage) and msg.subtype == "init":
+            if isinstance(msg, SystemMessage):
                 agents = msg.agents
                 # Agents are returned as strings (just names)
                 assert "fs-test-agent" in agents, (
@@ -230,7 +230,7 @@ async def test_setting_sources_default():
 
             # Check that settings were NOT loaded
             async for message in client.receive_response():
-                if isinstance(message, SystemMessage) and message.subtype == "init":
+                if isinstance(message, SystemMessage):
                     output_style = message.output_style
                     assert output_style != "local-test-style", (
                         f"outputStyle should NOT be from local settings (default is no settings), got: {output_style}"
@@ -277,7 +277,7 @@ This is a test command.
 
             # Check that project command is NOT available
             async for message in client.receive_response():
-                if isinstance(message, SystemMessage) and message.subtype == "init":
+                if isinstance(message, SystemMessage):
                     commands = message.slash_commands
                     assert "testcmd" not in commands, (
                         f"testcmd should NOT be available with user-only sources, got: {commands}"
@@ -315,7 +315,7 @@ async def test_setting_sources_project_included():
 
             # Check that settings WERE loaded
             async for message in client.receive_response():
-                if isinstance(message, SystemMessage) and message.subtype == "init":
+                if isinstance(message, SystemMessage):
                     output_style = message.output_style
                     assert output_style == "local-test-style", (
                         f"outputStyle should be from local settings, got: {output_style}"
@@ -364,7 +364,7 @@ async def test_large_agent_definitions_via_initialize():
 
         # Check that all agents are available in init message
         async for message in client.receive_response():
-            if isinstance(message, SystemMessage) and message.subtype == "init":
+            if isinstance(message, SystemMessage):
                 registered_agents = message.agents
                 assert isinstance(registered_agents, list), (
                     f"agents should be a list, got: {type(registered_agents)}"

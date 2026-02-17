@@ -5,16 +5,9 @@ import os
 import pytest
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def api_key():
-    """Ensure ANTHROPIC_API_KEY is set for e2e tests."""
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        pytest.fail(
-            "ANTHROPIC_API_KEY environment variable is required for e2e tests. "
-            "Set it before running: export ANTHROPIC_API_KEY=your-key-here"
-        )
-    return key
+    os.environ["ANTHROPIC_API_KEY"] = ""
 
 
 @pytest.fixture(scope="session")

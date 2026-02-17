@@ -154,3 +154,7 @@ async def test_hook_with_additional_context():
     assert "context_added" in hook_invocations, (
         "Hook with hookSpecificOutput should have been invoked"
     )
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

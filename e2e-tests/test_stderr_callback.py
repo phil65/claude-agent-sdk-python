@@ -44,3 +44,7 @@ async def test_stderr_callback_without_debug():
 
     # Should work but capture minimal/no output without debug
     assert len(stderr_lines) == 0, "Should not capture stderr output without debug mode"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])
