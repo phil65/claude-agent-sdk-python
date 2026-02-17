@@ -11,7 +11,7 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
-from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
+from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
 from clawd_code_sdk.server_info_models import ClaudeCodeServerInfo
 
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
-    from clawd_code_sdk.models import Message, PermissionMode
+    from clawd_code_sdk.models import Message, PermissionMode, UserPromptMessage
     from clawd_code_sdk.models.mcp import McpServerConfig
 
 

@@ -6,14 +6,14 @@ import os
 from typing import TYPE_CHECKING
 
 from ._internal.client import InternalClient
-from .models import ClaudeAgentOptions, UserPromptMessage
+from .models import ClaudeAgentOptions
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable, AsyncIterator
 
     from ._internal.transport import Transport
-    from .models import Message
+    from .models import Message, UserPromptMessage
 
 
 async def query(
