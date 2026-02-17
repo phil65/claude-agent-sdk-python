@@ -139,6 +139,7 @@ class UserMessage(BaseMessage):
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
     isReplay: bool | None = None  # noqa: N815
+    isSynthetic: bool | None = None  # noqa: N815
 
     def parse_command_output(self) -> str | None:
         content = self.content if isinstance(self.content, str) else ""
