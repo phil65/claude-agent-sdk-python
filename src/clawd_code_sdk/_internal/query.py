@@ -26,24 +26,14 @@ from ..models import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import (
-        AsyncGenerator,
-        AsyncIterable,
-        AsyncIterator,
-        Awaitable,
-        Callable,
-    )
+    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Awaitable, Callable
 
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
 
     from clawd_code_sdk.input_types import ToolInput
 
-    from ..models import (
-        ControlRequestUnion,
-        PermissionMode,
-        SDKControlResponse,
-    )
+    from ..models import ControlRequestUnion, PermissionMode, SDKControlResponse
     from .transport import Transport
 
 logger = logging.getLogger(__name__)
@@ -156,22 +146,23 @@ class Query:
         hooks_config: dict[str, Any] = {}
         if self.hooks:
             for event, matchers in self.hooks.items():
-                if matchers:
-                    hooks_config[event] = []
-                    for matcher in matchers:
-                        callback_ids = []
-                        for callback in matcher.get("hooks", []):
-                            callback_id = f"hook_{self.next_callback_id}"
-                            self.next_callback_id += 1
-                            self.hook_callbacks[callback_id] = callback
-                            callback_ids.append(callback_id)
-                        hook_matcher_config: dict[str, Any] = {
-                            "matcher": matcher.get("matcher"),
-                            "hookCallbackIds": callback_ids,
-                        }
-                        if matcher.get("timeout") is not None:
-                            hook_matcher_config["timeout"] = matcher.get("timeout")
-                        hooks_config[event].append(hook_matcher_config)
+                if not matchers:
+                    continue
+                hooks_config[event] = []
+                for matcher in matchers:
+                    callback_ids = []
+                    for callback in matcher.get("hooks", []):
+                        callback_id = f"hook_{self.next_callback_id}"
+                        self.next_callback_id += 1
+                        self.hook_callbacks[callback_id] = callback
+                        callback_ids.append(callback_id)
+                    hook_matcher_config: dict[str, Any] = {
+                        "matcher": matcher.get("matcher"),
+                        "hookCallbackIds": callback_ids,
+                    }
+                    if matcher.get("timeout") is not None:
+                        hook_matcher_config["timeout"] = matcher.get("timeout")
+                    hooks_config[event].append(hook_matcher_config)
 
         # Send initialize request
         request: dict[str, Any] = {"subtype": "initialize", "hooks": hooks_config or None}
@@ -229,9 +220,8 @@ class Query:
                     if request_id in self.pending_control_responses:
                         event = self.pending_control_responses[request_id]
                         if response.get("subtype") == "error":
-                            self.pending_control_results[request_id] = Exception(
-                                response.get("error", "Unknown error")
-                            )
+                            msg = response.get("error", "Unknown error")
+                            self.pending_control_results[request_id] = Exception(msg)
                         else:
                             self.pending_control_results[request_id] = response
                         event.set()
@@ -242,12 +232,8 @@ class Query:
 
                     request_data = parse_control_request(message["request"])
                     ctrl_request_id: str = message["request_id"]
-                    if self._tg:
-                        self._tg.start_soon(
-                            self._handle_control_request,
-                            ctrl_request_id,
-                            request_data,
-                        )
+                    if tg := self._tg:
+                        tg.start_soon(self._handle_control_request, ctrl_request_id, request_data)
                     continue
 
                 elif msg_type == "control_cancel_request":
