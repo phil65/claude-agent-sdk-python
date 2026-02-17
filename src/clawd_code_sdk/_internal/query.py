@@ -206,6 +206,8 @@ class Query:
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
+        from ..models import parse_control_request
+
         try:
             async for message in self.transport.read_messages():
                 if self._closed:
@@ -228,12 +230,13 @@ class Query:
                     continue
 
                 elif msg_type == "control_request":
-                    from ..models import parse_control_request
-
-                    request_data = parse_control_request(message["request"])
-                    ctrl_request_id: str = message["request_id"]
                     if tg := self._tg:
-                        tg.start_soon(self._handle_control_request, ctrl_request_id, request_data)
+                        request_data = parse_control_request(message["request"])
+                        tg.start_soon(
+                            self._handle_control_request,
+                            message["request_id"],
+                            request_data,
+                        )
                     continue
 
                 elif msg_type == "control_cancel_request":
