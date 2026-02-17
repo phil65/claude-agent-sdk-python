@@ -22,6 +22,7 @@ class TestMessageParser:
         """Test parsing a valid user message."""
         data = {
             "type": "user",
+            "uuid": "msg-001",
             "message": {"content": [{"type": "text", "text": "Hello"}]},
             "session_id": "session-123",
         }
@@ -51,6 +52,7 @@ class TestMessageParser:
         """Test parsing a user message with tool_use block."""
         data = {
             "type": "user",
+            "uuid": "msg-002",
             "session_id": "session-123",
             "message": {
                 "content": [
@@ -77,6 +79,7 @@ class TestMessageParser:
         """Test parsing a user message with tool_result block."""
         data = {
             "type": "user",
+            "uuid": "msg-003",
             "session_id": "session-123",
             "message": {
                 "content": [
@@ -99,6 +102,7 @@ class TestMessageParser:
         """Test parsing a user message with error tool_result block."""
         data = {
             "type": "user",
+            "uuid": "msg-004",
             "session_id": "session-123",
             "message": {
                 "content": [
@@ -123,6 +127,7 @@ class TestMessageParser:
         """Test parsing a user message with mixed content blocks."""
         data = {
             "type": "user",
+            "uuid": "msg-005",
             "session_id": "session-123",
             "message": {
                 "content": [
@@ -154,6 +159,7 @@ class TestMessageParser:
         """Test parsing a valid user message."""
         data = {
             "type": "user",
+            "uuid": "msg-006",
             "session_id": "session-123",
             "message": {"content": [{"type": "text", "text": "Hello"}]},
             "parent_tool_use_id": "toolu_01Xrwd5Y13sEHtzScxR77So8",
@@ -243,6 +249,7 @@ class TestMessageParser:
         """Test parsing a valid result message."""
         data = {
             "type": "result",
+            "uuid": "msg-007",
             "subtype": "success",
             "duration_ms": 1000,
             "duration_api_ms": 500,

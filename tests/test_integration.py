@@ -49,6 +49,7 @@ class TestIntegration:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-001",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,
@@ -124,6 +125,7 @@ class TestIntegration:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-002",
                         "subtype": "success",
                         "duration_ms": 1500,
                         "duration_api_ms": 1200,
@@ -259,6 +261,7 @@ class TestIntegration:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-003",
                         "subtype": "error_max_budget_usd",
                         "duration_ms": 500,
                         "duration_api_ms": 400,

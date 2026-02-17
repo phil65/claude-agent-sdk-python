@@ -164,6 +164,7 @@ class TestQueryFunction:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-001",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,
@@ -368,6 +369,7 @@ class TestAPIErrorRaising:
                     },
                     {
                         "type": "result",
+                        "uuid": "msg-002",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,

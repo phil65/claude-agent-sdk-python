@@ -322,6 +322,7 @@ class TestClaudeSDKClientStreaming:
                     }
                     yield {
                         "type": "user",
+                        "uuid": "msg-001",
                         "session_id": "session-123",
                         "message": {"role": "user", "content": "Hi there"},
                     }
@@ -391,6 +392,7 @@ class TestClaudeSDKClientStreaming:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-002",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,
@@ -540,6 +542,7 @@ class TestClaudeSDKClientStreaming:
                     await asyncio.sleep(0.1)
                     yield {
                         "type": "result",
+                        "uuid": "msg-003",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,
@@ -627,7 +630,7 @@ assert '"First"' in stdin_messages[0]
 assert '"Second"' in stdin_messages[1]
 
 # Output a valid result
-print('{"type": "result", "subtype": "success", "duration_ms": 100, "duration_api_ms": 50, "is_error": false, "num_turns": 1, "session_id": "test", "total_cost_usd": 0.001}')
+print('{"type": "result", "uuid": "msg-004", "subtype": "success", "duration_ms": 100, "duration_api_ms": 50, "is_error": false, "num_turns": 1, "session_id": "test", "total_cost_usd": 0.001}')
 """)
 
             # Make script executable (Unix-style systems)
@@ -802,6 +805,7 @@ class TestClaudeSDKClientEdgeCases:
                     }
                     yield {
                         "type": "result",
+                        "uuid": "msg-005",
                         "subtype": "success",
                         "duration_ms": 1000,
                         "duration_api_ms": 800,
