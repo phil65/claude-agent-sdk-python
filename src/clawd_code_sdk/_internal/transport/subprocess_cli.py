@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from anyio.abc import Process
 
-    from ...types import ClaudeAgentOptions
+    from ...models import ClaudeAgentOptions
 
 logger = logging.getLogger(__name__)
 

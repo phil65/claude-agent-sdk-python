@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from clawd_code_sdk import ClaudeSDKClient
-from clawd_code_sdk.types import (
+from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ResultMessage,

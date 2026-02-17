@@ -50,7 +50,7 @@ from .input_types import (
     WebSearchInput,
 )
 from .query import query
-from .types import (
+from .models import (
     AgentDefinition,
     AssistantMessage,
     BaseHookInput,

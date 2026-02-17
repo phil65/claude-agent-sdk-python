@@ -7,7 +7,7 @@ from clawd_code_sdk import (
     ClaudeAgentOptions,
     ResultMessage,
 )
-from clawd_code_sdk.types import (
+from clawd_code_sdk.models import (
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         SubagentStartHookInput,
         SubagentStartHookSpecificOutput,
     )
-    from clawd_code_sdk.types import (
+    from clawd_code_sdk.models import (
         PostToolUseHookSpecificOutput,
         PreToolUseHookSpecificOutput,
     )

@@ -9,7 +9,7 @@ import anyio
 import pytest
 
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.types import ClaudeAgentOptions
+from clawd_code_sdk.models import ClaudeAgentOptions
 
 if TYPE_CHECKING:
     from clawd_code_sdk import SandboxSettings
@@ -874,7 +874,7 @@ class TestSubprocessCLITransport:
         Matching TypeScript SDK behavior, agents are always sent via the
         initialize request through stdin, regardless of prompt type.
         """
-        from clawd_code_sdk.types import AgentDefinition
+        from clawd_code_sdk.models import AgentDefinition
 
         agents = {
             "test-agent": AgentDefinition(
@@ -928,7 +928,7 @@ class TestSubprocessCLITransport:
         Since agents are sent via initialize request through stdin,
         there are no ARG_MAX or command line length limits.
         """
-        from clawd_code_sdk.types import AgentDefinition
+        from clawd_code_sdk.models import AgentDefinition
 
         # Create a large agent definition (50KB prompt)
         large_prompt = "x" * 50000

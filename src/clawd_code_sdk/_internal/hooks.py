@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from clawd_code_sdk import HookMatcher
-    from clawd_code_sdk.types import HookEvent
+    from clawd_code_sdk.models import HookEvent
 
 
 def convert_hooks_to_internal_format(

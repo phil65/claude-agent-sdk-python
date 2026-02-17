@@ -15,7 +15,7 @@ from clawd_code_sdk import (
     ResultMessage,
     query,
 )
-from clawd_code_sdk.types import ToolUseBlock
+from clawd_code_sdk.models import ToolUseBlock
 
 
 class TestIntegration:

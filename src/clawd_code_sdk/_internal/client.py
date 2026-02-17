@@ -22,13 +22,13 @@ from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.types import AssistantMessage, TextBlock
+from clawd_code_sdk.models import AssistantMessage, TextBlock
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from clawd_code_sdk._internal.transport import Transport
-    from clawd_code_sdk.types import ClaudeAgentOptions, Message
+    from clawd_code_sdk.models import ClaudeAgentOptions, Message
 
 logger = logging.getLogger(__name__)
 

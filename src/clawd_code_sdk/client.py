@@ -11,14 +11,14 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
-from clawd_code_sdk.types import ClaudeAgentOptions, ResultMessage
+from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
-    from clawd_code_sdk.types import Message, PermissionMode
+    from clawd_code_sdk.models import Message, PermissionMode
 
 
 class ClaudeSDKClient:

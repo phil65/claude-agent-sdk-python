@@ -17,7 +17,7 @@ from clawd_code_sdk import (
     ServerError,
     query,
 )
-from clawd_code_sdk.types import TextBlock
+from clawd_code_sdk.models import TextBlock
 
 
 def create_mock_transport_with_messages(messages: list[dict]):

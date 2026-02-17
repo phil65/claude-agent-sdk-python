@@ -11,7 +11,7 @@ import anyenv
 import anyio
 from pydantic import BaseModel
 
-from ..types import (
+from ..models import (
     PermissionResultAllow,
     PermissionResultDeny,
     SDKControlInitializeRequest,
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk.input_types import ToolInput
 
-    from ..types import (
+    from ..models import (
         ControlRequestUnion,
         PermissionMode,
         SDKControlResponse,
@@ -237,7 +237,7 @@ class Query:
                     continue
 
                 elif msg_type == "control_request":
-                    from ..types import parse_control_request
+                    from ..models import parse_control_request
 
                     request_data = parse_control_request(message["request"])
                     ctrl_request_id: str = message["request_id"]

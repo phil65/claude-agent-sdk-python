@@ -4,7 +4,7 @@ import pytest
 
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk._internal.message_parser import parse_message
-from clawd_code_sdk.types import (
+from clawd_code_sdk.models import (
     AssistantMessage,
     ResultMessage,
     TextBlock,
