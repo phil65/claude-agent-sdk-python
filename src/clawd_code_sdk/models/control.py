@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import Discriminator, TypeAdapter
 
+from clawd_code_sdk.input_types import ToolInput  # noqa: TC001
 
-if TYPE_CHECKING:
-    from clawd_code_sdk.input_types import ToolInput
-
-    from .base import PermissionMode
-    from .hooks import HookEvent
+from .base import PermissionMode  # noqa: TC001
+from .hooks import HookEvent  # noqa: TC001
 
 
 # SDK Control Protocol

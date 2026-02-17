@@ -103,6 +103,8 @@ from .messages import (
     TriggerMetadata,
     Usage,
     UserMessage,
+    parse_content_block,
+    parse_system_message,
 )
 from .options import ClaudeAgentOptions
 from .permissions import (
@@ -206,6 +208,8 @@ __all__ = [
     "TriggerMetadata",
     "Usage",
     "UserMessage",
+    "parse_content_block",
+    "parse_system_message",
     # options
     "ClaudeAgentOptions",
     # control

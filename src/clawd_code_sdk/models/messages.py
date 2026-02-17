@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
+
+from pydantic import Discriminator, TypeAdapter
+
+from .base import ApiKeySource, PermissionMode, StopReason  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -15,32 +19,33 @@ if TYPE_CHECKING:
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
     from clawd_code_sdk.input_types import ToolInput
 
-    from .base import ApiKeySource, PermissionMode, StopReason
-
 
 # Content block types
 @dataclass
 class TextBlock:
     """Text content block."""
 
-    text: str
+    type: Literal["text"] = field(default="text", repr=False)
+    text: str = ""
 
 
 @dataclass
 class ThinkingBlock:
     """Thinking content block."""
 
-    thinking: str
-    signature: str
+    type: Literal["thinking"] = field(default="thinking", repr=False)
+    thinking: str = ""
+    signature: str = ""
 
 
 @dataclass
 class ToolUseBlock:
     """Tool use content block."""
 
-    id: str
-    name: str
-    input: dict[str, Any]
+    type: Literal["tool_use"] = field(default="tool_use", repr=False)
+    id: str = ""
+    name: str = ""
+    input: dict[str, Any] = field(default_factory=dict)
     caller: str | None = None
 
 
@@ -48,7 +53,8 @@ class ToolUseBlock:
 class ToolResultBlock:
     """Tool result content block."""
 
-    tool_use_id: str
+    type: Literal["tool_result"] = field(default="tool_result", repr=False)
+    tool_use_id: str = ""
     content: str | list[dict[str, Any]] | None = None
     is_error: bool | None = None
 
@@ -61,7 +67,17 @@ class ToolResultBlock:
         return validate_tool_result_content(self.content)
 
 
-ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock
+ContentBlock = Annotated[
+    TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock,
+    Discriminator("type"),
+]
+
+_content_block_adapter: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
+
+
+def parse_content_block(data: dict[str, Any]) -> ContentBlock:
+    """Parse a raw dict into a typed ContentBlock dataclass."""
+    return _content_block_adapter.validate_python(data)
 
 
 # Message types
@@ -236,6 +252,23 @@ class StreamEvent:
     session_id: str
     event: RawMessageStreamEvent
     parent_tool_use_id: str | None = None
+
+
+SystemMessageUnion = Annotated[
+    SystemMessage
+    | HookStartedSystemMessage
+    | StatusSystemMessage
+    | CompactBoundarySystemMessage
+    | HookResponseSystemMessage,
+    Discriminator("subtype"),
+]
+
+_system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMessageUnion)
+
+
+def parse_system_message(data: dict[str, Any]) -> SystemMessageUnion:
+    """Parse a raw dict into a typed system message dataclass."""
+    return _system_message_adapter.validate_python(data)
 
 
 Message = (

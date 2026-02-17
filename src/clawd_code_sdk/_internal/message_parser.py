@@ -10,23 +10,16 @@ from pydantic import TypeAdapter
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.models import (
     AssistantMessage,
-    CompactBoundarySystemMessage,
-    HookResponseSystemMessage,
-    HookStartedSystemMessage,
     ResultMessage,
-    StatusSystemMessage,
     StreamEvent,
-    SystemMessage,
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
     UserMessage,
+    parse_content_block,
+    parse_system_message,
 )
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models import ContentBlock, Message
+    from clawd_code_sdk.models import Message
 
 logger = logging.getLogger(__name__)
 
@@ -46,27 +39,25 @@ def parse_message(data: dict[str, Any]) -> Message:
     """
     match data:
         case {"type": "user", "message": {"content": content}, **user_data}:
-            content_ = [to_block(i) for i in content] if isinstance(content, list) else content
+            content_ = (
+                [parse_content_block(i) for i in content] if isinstance(content, list) else content
+            )
             return UserMessage(content=content_, **user_data)
         case {"type": "assistant", "message": message}:
             # Check for error at top level first, then inside message
             return AssistantMessage(
-                content=[to_block(i) for i in message["content"]],
+                content=[parse_content_block(i) for i in message["content"]],
                 model=message["model"],
                 parent_tool_use_id=data.get("parent_tool_use_id"),
                 error=data.get("error") or message.get("error"),
             )
 
-        case {"type": "system", "subtype": "init", **system_data}:
-            return SystemMessage(**system_data)
-        case {"type": "system", "subtype": "hook_started", **system_data}:
-            return HookStartedSystemMessage(**system_data)
-        case {"type": "system", "subtype": "hook_response", **system_data}:
-            return HookResponseSystemMessage(**system_data)
-        case {"type": "system", "subtype": "compact_boundary", **compact_data}:
-            return CompactBoundarySystemMessage(**compact_data)
-        case {"type": "system", "subtype": "status", **compact_data}:
-            return StatusSystemMessage(**compact_data)
+        case {"type": "system", **system_data}:
+            try:
+                return parse_system_message(system_data)
+            except Exception as e:
+                msg = f"Failed to parse system message: {e}"
+                raise MessageParseError(msg, data) from e
 
         case {"type": "result", **result_data}:
             try:
@@ -91,17 +82,3 @@ def parse_message(data: dict[str, Any]) -> Message:
         case _ as unknown_type:
             typ = type(unknown_type).__name__  # type: ignore[unreachable]
             raise MessageParseError(f"Invalid message data type: expected dict, got {typ}", data)
-
-
-def to_block(data: dict[str, Any]) -> ContentBlock:
-    match data:
-        case {"type": "text", **text_data}:
-            return TextBlock(**text_data)
-        case {"type": "tool_use", **tool_use_data}:
-            return ToolUseBlock(**tool_use_data)
-        case {"type": "tool_result", **tool_result_data}:
-            return ToolResultBlock(**tool_result_data)
-        case {"type": "thinking", **thinking_data}:
-            return ThinkingBlock(**thinking_data)
-        case _:
-            raise ValueError(f"Unknown block type: {data['type']}")
