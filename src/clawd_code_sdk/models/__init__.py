@@ -1,0 +1,225 @@
+"""Type definitions for Claude SDK.
+
+This package re-exports all types for backwards compatibility.
+Types are organized into submodules:
+- base: Type aliases, literals, and thinking configuration
+- agents: Agent definitions and presets
+- permissions: Permission system types
+- hooks: Hook system types (inputs, outputs, matchers, callbacks)
+- mcp: MCP server and plugin configuration
+- sandbox: Sandbox configuration
+- messages: Content blocks, message types, and stream events
+- options: ClaudeAgentOptions
+- control: SDK control protocol types
+"""
+
+from __future__ import annotations
+
+from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
+from .base import (
+    ApiKeySource,
+    PermissionMode,
+    ReasoningEffort,
+    SdkBeta,
+    SettingSource,
+    StopReason,
+    ThinkingConfig,
+    ThinkingConfigAdaptive,
+    ThinkingConfigDisabled,
+    ThinkingConfigEnabled,
+)
+from .control import (
+    ControlErrorResponse,
+    ControlRequestUnion,
+    ControlResponse,
+    SDKControlInitializeRequest,
+    SDKControlInterruptRequest,
+    SDKControlMcpMessageRequest,
+    SDKControlPermissionRequest,
+    SDKControlRequest,
+    SDKControlResponse,
+    SDKControlRewindFilesRequest,
+    SDKControlSetPermissionModeRequest,
+    SDKHookCallbackRequest,
+    parse_control_request,
+)
+from .hooks import (
+    AsyncHookJSONOutput,
+    BaseHookInput,
+    HookCallback,
+    HookContext,
+    HookEvent,
+    HookInput,
+    HookJSONOutput,
+    HookMatcher,
+    HookSpecificOutput,
+    NotificationHookInput,
+    NotificationHookSpecificOutput,
+    PermissionRequestHookInput,
+    PermissionRequestHookSpecificOutput,
+    PostToolUseFailureHookInput,
+    PostToolUseFailureHookSpecificOutput,
+    PostToolUseHookInput,
+    PostToolUseHookSpecificOutput,
+    PreCompactHookInput,
+    PreToolUseHookInput,
+    PreToolUseHookSpecificOutput,
+    SessionStartHookSpecificOutput,
+    StopHookInput,
+    SubagentStartHookInput,
+    SubagentStartHookSpecificOutput,
+    SubagentStopHookInput,
+    SyncHookJSONOutput,
+    UserPromptSubmitHookInput,
+    UserPromptSubmitHookSpecificOutput,
+)
+from .mcp import (
+    McpHttpServerConfig,
+    McpSdkServerConfig,
+    McpServerConfig,
+    McpSSEServerConfig,
+    McpStdioServerConfig,
+    SdkPluginConfig,
+)
+from .messages import (
+    AssistantMessage,
+    AssistantMessageError,
+    CompactBoundarySystemMessage,
+    ContentBlock,
+    HookResponseSystemMessage,
+    HookStartedSystemMessage,
+    McpServerStatus,
+    Message,
+    ModelUsage,
+    ResultMessage,
+    SDKPermissionDenial,
+    StatusSystemMessage,
+    StreamEvent,
+    SystemMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    TriggerMetadata,
+    Usage,
+    UserMessage,
+)
+from .options import ClaudeAgentOptions
+from .permissions import (
+    CanUseTool,
+    PermissionBehavior,
+    PermissionResult,
+    PermissionResultAllow,
+    PermissionResultDeny,
+    PermissionRuleValue,
+    PermissionUpdate,
+    PermissionUpdateDestination,
+    ToolPermissionContext,
+)
+from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
+
+__all__ = [
+    # base
+    "ApiKeySource",
+    "PermissionMode",
+    "ReasoningEffort",
+    "SdkBeta",
+    "SettingSource",
+    "StopReason",
+    "ThinkingConfig",
+    "ThinkingConfigAdaptive",
+    "ThinkingConfigDisabled",
+    "ThinkingConfigEnabled",
+    # agents
+    "AgentDefinition",
+    "SystemPromptPreset",
+    "ToolsPreset",
+    # permissions
+    "CanUseTool",
+    "PermissionBehavior",
+    "PermissionResult",
+    "PermissionResultAllow",
+    "PermissionResultDeny",
+    "PermissionRuleValue",
+    "PermissionUpdate",
+    "PermissionUpdateDestination",
+    "ToolPermissionContext",
+    # hooks
+    "AsyncHookJSONOutput",
+    "BaseHookInput",
+    "HookCallback",
+    "HookContext",
+    "HookEvent",
+    "HookInput",
+    "HookJSONOutput",
+    "HookMatcher",
+    "HookSpecificOutput",
+    "NotificationHookInput",
+    "NotificationHookSpecificOutput",
+    "PermissionRequestHookInput",
+    "PermissionRequestHookSpecificOutput",
+    "PostToolUseFailureHookInput",
+    "PostToolUseFailureHookSpecificOutput",
+    "PostToolUseHookInput",
+    "PostToolUseHookSpecificOutput",
+    "PreCompactHookInput",
+    "PreToolUseHookInput",
+    "PreToolUseHookSpecificOutput",
+    "SessionStartHookSpecificOutput",
+    "StopHookInput",
+    "SubagentStartHookInput",
+    "SubagentStartHookSpecificOutput",
+    "SubagentStopHookInput",
+    "SyncHookJSONOutput",
+    "UserPromptSubmitHookInput",
+    "UserPromptSubmitHookSpecificOutput",
+    # mcp
+    "McpHttpServerConfig",
+    "McpSdkServerConfig",
+    "McpServerConfig",
+    "McpSSEServerConfig",
+    "McpStdioServerConfig",
+    "SdkPluginConfig",
+    # sandbox
+    "SandboxIgnoreViolations",
+    "SandboxNetworkConfig",
+    "SandboxSettings",
+    # messages
+    "AssistantMessage",
+    "AssistantMessageError",
+    "CompactBoundarySystemMessage",
+    "ContentBlock",
+    "HookResponseSystemMessage",
+    "HookStartedSystemMessage",
+    "McpServerStatus",
+    "Message",
+    "ModelUsage",
+    "ResultMessage",
+    "SDKPermissionDenial",
+    "StatusSystemMessage",
+    "StreamEvent",
+    "SystemMessage",
+    "TextBlock",
+    "ThinkingBlock",
+    "ToolResultBlock",
+    "ToolUseBlock",
+    "TriggerMetadata",
+    "Usage",
+    "UserMessage",
+    # options
+    "ClaudeAgentOptions",
+    # control
+    "ControlErrorResponse",
+    "ControlRequestUnion",
+    "ControlResponse",
+    "SDKControlInitializeRequest",
+    "SDKControlInterruptRequest",
+    "SDKControlMcpMessageRequest",
+    "SDKControlPermissionRequest",
+    "SDKControlRequest",
+    "SDKControlResponse",
+    "SDKControlRewindFilesRequest",
+    "SDKControlSetPermissionModeRequest",
+    "SDKHookCallbackRequest",
+    "parse_control_request",
+]

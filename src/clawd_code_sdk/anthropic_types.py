@@ -9,11 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from anthropic.types import (
-    TextBlock,
-    WebSearchResultBlock,
-    WebSearchToolResultError,
-)
+from anthropic.types import TextBlock, WebSearchResultBlock, WebSearchToolResultError
 from anthropic.types.beta import (
     BetaBashCodeExecutionResultBlock,
     BetaBashCodeExecutionToolResultError,
