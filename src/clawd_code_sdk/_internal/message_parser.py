@@ -114,18 +114,15 @@ def parse_message(data: dict[str, Any]) -> Message:
 
 
 def to_block(data: dict[str, Any]) -> ContentBlock:
-    match data["type"]:
-        case "text":
-            return TextBlock(text=data["text"])
-        case "tool_use":
-            return ToolUseBlock(id=data["id"], name=data["name"], input=data["input"])
-        case "tool_result":
-            return ToolResultBlock(
-                tool_use_id=data["tool_use_id"],
-                content=_parse_tool_result_content(data.get("content")),
-                is_error=data.get("is_error"),
-            )
-        case "thinking":
-            return ThinkingBlock(thinking=data["thinking"], signature=data["signature"])
+    match data:
+        case {"type": "text", **text_data}:
+            return TextBlock(**text_data)
+        case {"type": "tool_use", **tool_use_data}:
+            return ToolUseBlock(**tool_use_data)
+        case {"type": "tool_result", "content": content, **tool_result_data}:
+            result_content = _parse_tool_result_content(content)
+            return ToolResultBlock(content=result_content, **tool_result_data)
+        case {"type": "thinking", **thinking_data}:
+            return ThinkingBlock(**thinking_data)
         case _:
             raise ValueError(f"Unknown block type: {data['type']}")
