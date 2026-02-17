@@ -469,6 +469,8 @@ if __name__ == "__main__":
 
     from clawd_code_sdk.models import ThinkingConfigAdaptive
 
+    os.environ["ANTHROPIC_API_KEY"] = ""
+
     async def main() -> None:
         opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive(type="adaptive"))
         client = ClaudeSDKClient(opts)

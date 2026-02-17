@@ -278,6 +278,7 @@ class RateLimitInfo(TypedDict):
     isUsingOverage: bool
 
 
+@dataclass(kw_only=True)
 class RateLimitMessage(BaseMessage):
     """System message with metadata."""
 
