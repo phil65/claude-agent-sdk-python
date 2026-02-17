@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
@@ -121,7 +122,7 @@ class Query:
         # Message stream
         self._message_send, self._message_receive = anyio.create_memory_object_stream[
             dict[str, Any]
-        ](max_buffer_size=100)
+        ](max_buffer_size=math.inf)
         self._tg: TaskGroup | None = None
         self._initialized = False
         self._closed = False
