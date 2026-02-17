@@ -63,26 +63,17 @@ def parse_message(data: dict[str, Any]) -> Message:
         MessageParseError: If parsing fails or message type is unrecognized
     """
     match data:
-        case {"type": "user", "message": {"content": content}}:
+        case {"type": "user", "message": {"content": content}, **user_data}:
             content_ = [to_block(i) for i in content] if isinstance(content, list) else content
-            return UserMessage(
-                content=content_,
-                uuid=data.get("uuid"),
-                parent_tool_use_id=data.get("parent_tool_use_id"),
-                tool_use_result=data.get("tool_use_result"),
-            )
+            return UserMessage(content=content_, **user_data)
         case {"type": "assistant", "message": message}:
-            try:
-                # Check for error at top level first, then inside message
-                return AssistantMessage(
-                    content=[to_block(i) for i in message["content"]],
-                    model=message["model"],
-                    parent_tool_use_id=data.get("parent_tool_use_id"),
-                    error=data.get("error") or message.get("error"),
-                )
-            except KeyError as e:
-                err = f"Missing required field in assistant message: {e}"
-                raise MessageParseError(err, data) from e
+            # Check for error at top level first, then inside message
+            return AssistantMessage(
+                content=[to_block(i) for i in message["content"]],
+                model=message["model"],
+                parent_tool_use_id=data.get("parent_tool_use_id"),
+                error=data.get("error") or message.get("error"),
+            )
 
         case {"type": "system", "subtype": "init", **system_data}:
             return SystemMessage(**system_data)
@@ -90,14 +81,8 @@ def parse_message(data: dict[str, Any]) -> Message:
             return HookStartedSystemMessage(**system_data)
         case {"type": "system", "subtype": "hook_response", **system_data}:
             return HookResponseSystemMessage(**system_data)
-
         case {"type": "result", **result_data}:
-            try:
-                return ResultMessage(**result_data)
-            except TypeError as e:
-                msg = f"Missing required field in result message: {e}"
-                raise MessageParseError(msg, data) from e
-
+            return ResultMessage(**result_data)
         case {"type": "stream_event", "event": event, **event_data}:
             from anthropic.types import RawMessageStreamEvent
 

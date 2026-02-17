@@ -10,9 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 
-from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
-
-from .._errors import (
+from clawd_code_sdk._errors import (
     APIError,
     AuthenticationError,
     BillingError,
@@ -20,16 +18,17 @@ from .._errors import (
     RateLimitError,
     ServerError,
 )
-from ..types import AssistantMessage, TextBlock
-from .message_parser import parse_message
-from .query import Query
-from .transport.subprocess_cli import SubprocessCLITransport
+from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
+from clawd_code_sdk._internal.message_parser import parse_message
+from clawd_code_sdk._internal.query import Query
+from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+from clawd_code_sdk.types import AssistantMessage, TextBlock
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from ..types import ClaudeAgentOptions, Message
-    from .transport import Transport
+    from clawd_code_sdk._internal.transport import Transport
+    from clawd_code_sdk.types import ClaudeAgentOptions, Message
 
 logger = logging.getLogger(__name__)
 

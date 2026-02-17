@@ -454,3 +454,14 @@ class ClaudeSDKClient:
         """Exit async context - always disconnects."""
         await self.disconnect()
         return False
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        client = ClaudeSDKClient()
+        await client.connect()
+        await client.query("/compact")
+
+    asyncio.run(main())

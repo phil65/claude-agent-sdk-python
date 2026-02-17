@@ -758,6 +758,19 @@ class HookStartedSystemMessage:
     session_id: str
 
 
+class TriggerMetadata(TypedDict):
+    trigger: Literal["auto", "manual"]
+    pre_tokens: int
+
+
+@dataclass(kw_only=True)
+class CompactBoundarySystemMessage:
+    """System message with metadata."""
+
+    subtype: str = "compact_boundary"
+    compact_metadata: TriggerMetadata
+
+
 @dataclass(kw_only=True)
 class HookResponseSystemMessage:
     """System message with metadata."""
@@ -835,6 +848,7 @@ Message = (
     | StreamEvent
     | HookStartedSystemMessage
     | HookResponseSystemMessage
+    | CompactBoundarySystemMessage
 )
 
 
