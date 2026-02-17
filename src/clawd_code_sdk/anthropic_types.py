@@ -32,6 +32,7 @@ from anthropic.types.beta import (
 )
 from pydantic import BaseModel, Field, TypeAdapter
 
+
 # Union of all possible content types that can appear in tool results.
 # These are the inner content blocks, not the outer tool result wrapper.
 # Discriminated by the "type" field.

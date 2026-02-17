@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from ._internal.client import InternalClient
 from .models import ClaudeAgentOptions
 
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable, AsyncIterator
 

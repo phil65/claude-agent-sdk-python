@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncIterable
 from contextlib import aclosing
 from dataclasses import asdict, replace
+import logging
 from typing import TYPE_CHECKING, Any
 
 import anyenv
@@ -23,6 +23,7 @@ from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import AssistantMessage, TextBlock
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

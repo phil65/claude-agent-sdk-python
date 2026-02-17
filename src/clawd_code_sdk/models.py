@@ -10,6 +10,7 @@ from pydantic import Discriminator, TypeAdapter
 
 from clawd_code_sdk.input_types import ToolInput
 
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path

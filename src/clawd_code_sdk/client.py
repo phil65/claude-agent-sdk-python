@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncIterable
 from dataclasses import asdict, replace
+import os
 from typing import TYPE_CHECKING, Any
 
 import anyenv
@@ -12,6 +12,7 @@ import anyenv
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

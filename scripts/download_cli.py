@@ -6,11 +6,11 @@ binary using the official install script and place it in the package directory.
 """
 
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 
 def get_cli_version() -> str:

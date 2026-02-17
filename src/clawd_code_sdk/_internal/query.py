@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 import logging
 import math
 import os
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 import anyenv
@@ -24,6 +24,7 @@ from ..models import (
     SDKHookCallbackRequest,
     ToolPermissionContext,
 )
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Awaitable, Callable

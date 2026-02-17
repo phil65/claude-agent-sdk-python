@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
+import uuid
 
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, PermissionResultAllow
+
 
 if TYPE_CHECKING:
     from clawd_code_sdk import PermissionResultDeny, ToolPermissionContext

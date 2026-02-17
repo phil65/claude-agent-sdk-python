@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Update Claude Code CLI version in _cli_version.py."""
 
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 def update_cli_version(new_version: str) -> None:

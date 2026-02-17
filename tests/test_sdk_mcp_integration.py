@@ -7,8 +7,8 @@ matching the TypeScript SDK test/sdk.test.ts pattern.
 import base64
 from typing import Any
 
-import pytest
 from mcp.types import CallToolRequest, CallToolRequestParams, ToolAnnotations
+import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
 

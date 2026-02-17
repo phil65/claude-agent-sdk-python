@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Update version in pyproject.toml and __init__.py files."""
 
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 
 
 def update_version(new_version: str) -> None:

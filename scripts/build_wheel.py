@@ -16,12 +16,13 @@ Usage:
 
 import argparse
 import os
+from pathlib import Path
 import platform
 import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+
 
 try:
     import twine  # noqa: F401

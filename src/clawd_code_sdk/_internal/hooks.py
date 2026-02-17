@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
     from clawd_code_sdk import HookMatcher
     from clawd_code_sdk.models import HookEvent

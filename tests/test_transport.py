@@ -1,15 +1,16 @@
 """Tests for Claude SDK transport layer."""
 
 import os
-import uuid
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
+import uuid
 
 import anyio
 import pytest
 
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import ClaudeAgentOptions
+
 
 if TYPE_CHECKING:
     from clawd_code_sdk import SandboxSettings
@@ -746,8 +747,8 @@ class TestSubprocessCLITransport:
         """
 
         async def _test():
-            import sys
             from subprocess import PIPE
+            import sys
 
             from anyio.streams.text import TextSendStream
 
@@ -800,9 +801,9 @@ class TestSubprocessCLITransport:
         """
 
         async def _test():
-            import sys
             from contextlib import asynccontextmanager
             from subprocess import PIPE
+            import sys
 
             from anyio.streams.text import TextSendStream
 
