@@ -11,7 +11,7 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
-from clawd_code_sdk.server_info_models import ClaudeCodeServerInfo
+from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
