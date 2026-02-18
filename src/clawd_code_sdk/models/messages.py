@@ -248,6 +248,32 @@ class TaskNotificationSystemMessage(BaseMessage):
     summary: str = ""
 
 
+class FilePersistedEntry(TypedDict):
+    """A single file that was persisted."""
+
+    filename: str
+    file_id: str
+
+
+class FilePersistedFailure(TypedDict):
+    """A file that failed to persist."""
+
+    filename: str
+    error: str
+
+
+@dataclass(kw_only=True)
+class FilesPersistedSystemMessage(BaseMessage):
+    """System message emitted when files have been persisted."""
+
+    subtype: Literal["files_persisted"] = "files_persisted"
+    files: list[FilePersistedEntry] | None = None
+    failed: list[FilePersistedFailure] | None = None
+    processed_at: str = ""
+    uuid: str = ""
+    session_id: str = ""
+
+
 @dataclass(kw_only=True)
 class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
@@ -352,7 +378,8 @@ SystemMessageUnion = Annotated[
     | CompactBoundarySystemMessage
     | HookResponseSystemMessage
     | TaskStartedSystemMessage
-    | TaskNotificationSystemMessage,
+    | TaskNotificationSystemMessage
+    | FilesPersistedSystemMessage,
     Discriminator("subtype"),
 ]
 
@@ -377,6 +404,7 @@ Message = (
     | StatusSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
+    | FilesPersistedSystemMessage
     | ToolProgressMessage
     | ToolUseSummaryMessage
 )
