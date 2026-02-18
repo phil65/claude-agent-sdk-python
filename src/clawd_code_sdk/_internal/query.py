@@ -290,18 +290,17 @@ class Query:
                     response_data = await self._handle_permission_request(req)
                 case SDKHookCallbackRequest() as req:
                     response_data = await self._handle_hook_callback(req)
-                case SDKControlMcpMessageRequest() as req:
-                    mcp_resp = await self._handle_sdk_mcp_request(req.server_name, req.message)
+                case SDKControlMcpMessageRequest(server_name=server_name, message=message):
+                    mcp_resp = await self._handle_sdk_mcp_request(server_name, message)
                     response_data = {"mcp_response": mcp_resp}
                 case SDKControlInterruptRequest():
                     pass  # No response data needed
-                case SDKControlInitializeRequest():
-                    pass  # Handled elsewhere
-                case SDKControlSetPermissionModeRequest():
-                    pass  # Handled elsewhere
-                case SDKControlRewindFilesRequest():
-                    pass  # Handled elsewhere
-                case SDKControlStopTaskRequest():
+                case (
+                    SDKControlInitializeRequest()
+                    | SDKControlSetPermissionModeRequest()
+                    | SDKControlRewindFilesRequest()
+                    | SDKControlStopTaskRequest()
+                ):
                     pass  # Handled elsewhere
 
             success_response: SDKControlResponse = {
@@ -430,19 +429,6 @@ class Query:
         Returns:
             The response message
         """
-        from mcp.types import (
-            AudioContent,
-            BlobResourceContents,
-            CallToolRequest,
-            CallToolRequestParams,
-            CallToolResult,
-            EmbeddedResource,
-            ImageContent,
-            ListToolsRequest,
-            ResourceLink,
-            TextContent,
-            TextResourceContents,
-        )
 
         if server_name not in self.sdk_mcp_servers:
             return {
@@ -452,124 +438,7 @@ class Query:
             }
 
         server = self.sdk_mcp_servers[server_name]
-        method = message.get("method")
-        try:
-            # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
-            # TypeScript: server.connect(transport) allows custom transports
-            # Python: server.run(read_stream, write_stream) requires actual streams
-            #
-            # This forces us to manually route methods. When Python MCP adds Transport
-            # support, we can refactor to match the TypeScript approach.
-            if method == "initialize":
-                # Handle MCP initialization - hardcoded for tools only, no listChanged
-                return {
-                    "jsonrpc": "2.0",
-                    "id": message.get("id"),
-                    "result": {
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {
-                            "tools": {}  # Tools capability without listChanged
-                        },
-                        "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
-                    },
-                }
-
-            elif method == "tools/list":
-                request = ListToolsRequest(method=method)
-                if handler := server.request_handlers.get(ListToolsRequest):
-                    result = await handler(request)
-                    # Convert MCP result to JSONRPC response
-                    tools_data = []
-                    for tool in result.root.tools:  # type: ignore[union-attr]
-                        tool_data: dict[str, Any] = {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "inputSchema": (
-                                tool.inputSchema.model_dump()
-                                if isinstance(tool.inputSchema, BaseModel)
-                                else tool.inputSchema
-                            ),
-                        }
-                        if annots := tool.annotations:
-                            tool_data["annotations"] = annots.model_dump(exclude_none=True)
-                        tools_data.append(tool_data)
-                    return {
-                        "jsonrpc": "2.0",
-                        "id": message.get("id"),
-                        "result": {"tools": tools_data},
-                    }
-
-            elif method == "tools/call":
-                params = message.get("params", {})
-                call_params = CallToolRequestParams(**params)
-                call_request = CallToolRequest(method=method, params=call_params)
-                if handler := server.request_handlers.get(CallToolRequest):
-                    result = await handler(call_request)
-                    # Convert MCP result to JSONRPC response
-                    content: list[dict[str, Any]] = []
-                    assert isinstance(result.root, CallToolResult)
-                    for item in result.root.content:
-                        match item:
-                            case TextContent(text=text):
-                                content.append({"type": "text", "text": text})
-                            case (
-                                ImageContent(data=data, mimeType=mime_type)
-                                | AudioContent(data=data, mimeType=mime_type)
-                            ):
-                                content.append(
-                                    {"type": "image", "data": data, "mimeType": mime_type}
-                                )
-                            case ResourceLink():
-                                pass
-                            case EmbeddedResource(
-                                resource=BlobResourceContents(mimeType=mime_type, uri=uri)
-                                | TextResourceContents(mimeType=mime_type, uri=uri) as resource
-                            ):
-                                # EmbeddedResource - check if it's a document (PDF, etc.)
-                                uri_str = str(uri)
-                                if (
-                                    uri_str.startswith("document://")
-                                    or mime_type == "application/pdf"
-                                ):
-                                    # Convert EmbeddedResource to Anthropic document format
-                                    typ = (
-                                        uri_str.removeprefix("document://")
-                                        if uri_str.startswith("document://")
-                                        else "base64"
-                                    )
-                                    data = (
-                                        resource.blob
-                                        if isinstance(resource, BlobResourceContents)
-                                        else ""
-                                    )
-                                    dct = {"type": typ, "media_type": mime_type, "data": data}
-                                    content.append({"type": "document", "source": dct})
-
-                    response_data: dict[str, Any] = {"content": content}
-                    if result.root.isError:
-                        response_data["is_error"] = True
-
-                    return {"jsonrpc": "2.0", "id": message.get("id"), "result": response_data}
-
-            elif method == "notifications/initialized":
-                # Handle initialized notification - just acknowledge it
-                return {"jsonrpc": "2.0", "result": {}}
-
-            # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
-            # This is the limitation Ashwin pointed out - we have to manually update
-
-            return {
-                "jsonrpc": "2.0",
-                "id": message.get("id"),
-                "error": {"code": -32601, "message": f"Method '{method}' not found"},
-            }
-
-        except Exception as e:
-            return {
-                "jsonrpc": "2.0",
-                "id": message.get("id"),
-                "error": {"code": -32603, "message": str(e)},
-            }
+        return await process_mcp_tool_call(message, server)
 
     async def get_mcp_status(self) -> dict[str, Any]:
         """Get current MCP server connection status."""
@@ -757,3 +626,134 @@ class Query:
         async for message in self.receive_messages():
             return message
         raise StopAsyncIteration
+
+
+async def process_mcp_tool_call(message: dict[str, Any], server: McpServer) -> dict[str, Any]:
+    from mcp.types import (
+        AudioContent,
+        BlobResourceContents,
+        CallToolRequest,
+        CallToolRequestParams,
+        CallToolResult,
+        EmbeddedResource,
+        ImageContent,
+        ListToolsRequest,
+        ResourceLink,
+        TextContent,
+        TextResourceContents,
+    )
+
+    method = message.get("method")
+    assert isinstance(method, str)
+    try:
+        # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
+        # TypeScript: server.connect(transport) allows custom transports
+        # Python: server.run(read_stream, write_stream) requires actual streams
+        #
+        # This forces us to manually route methods. When Python MCP adds Transport
+        # support, we can refactor to match the TypeScript approach.
+        if method == "initialize":
+            # Handle MCP initialization - hardcoded for tools only, no listChanged
+            return {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}  # Tools capability without listChanged
+                    },
+                    "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
+                },
+            }
+
+        elif method == "tools/list":
+            request = ListToolsRequest(method=method)
+            if handler := server.request_handlers.get(ListToolsRequest):
+                result = await handler(request)
+                # Convert MCP result to JSONRPC response
+                tools_data = []
+                for tool in result.root.tools:  # type: ignore[union-attr]
+                    tool_data: dict[str, Any] = {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "inputSchema": (
+                            tool.inputSchema.model_dump()
+                            if isinstance(tool.inputSchema, BaseModel)
+                            else tool.inputSchema
+                        ),
+                    }
+                    if annots := tool.annotations:
+                        tool_data["annotations"] = annots.model_dump(exclude_none=True)
+                    tools_data.append(tool_data)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": message.get("id"),
+                    "result": {"tools": tools_data},
+                }
+
+        elif method == "tools/call":
+            params = message.get("params", {})
+            call_params = CallToolRequestParams(**params)
+            call_request = CallToolRequest(method=method, params=call_params)
+            if handler := server.request_handlers.get(CallToolRequest):
+                result = await handler(call_request)
+                # Convert MCP result to JSONRPC response
+                content: list[dict[str, Any]] = []
+                assert isinstance(result.root, CallToolResult)
+                for item in result.root.content:
+                    match item:
+                        case TextContent(text=text):
+                            content.append({"type": "text", "text": text})
+                        case (
+                            ImageContent(data=data, mimeType=mime_type)
+                            | AudioContent(data=data, mimeType=mime_type)
+                        ):
+                            content.append({"type": "image", "data": data, "mimeType": mime_type})
+                        case ResourceLink():
+                            pass
+                        case EmbeddedResource(
+                            resource=BlobResourceContents(mimeType=mime_type, uri=uri)
+                            | TextResourceContents(mimeType=mime_type, uri=uri) as resource
+                        ):
+                            # EmbeddedResource - check if it's a document (PDF, etc.)
+                            uri_str = str(uri)
+                            if uri_str.startswith("document://") or mime_type == "application/pdf":
+                                # Convert EmbeddedResource to Anthropic document format
+                                typ = (
+                                    uri_str.removeprefix("document://")
+                                    if uri_str.startswith("document://")
+                                    else "base64"
+                                )
+                                data = (
+                                    resource.blob
+                                    if isinstance(resource, BlobResourceContents)
+                                    else ""
+                                )
+                                dct = {"type": typ, "media_type": mime_type, "data": data}
+                                content.append({"type": "document", "source": dct})
+
+                response_data: dict[str, Any] = {"content": content}
+                if result.root.isError:
+                    response_data["is_error"] = True
+
+                return {"jsonrpc": "2.0", "id": message.get("id"), "result": response_data}
+
+        elif method == "notifications/initialized":
+            # Handle initialized notification - just acknowledge it
+            return {"jsonrpc": "2.0", "result": {}}
+
+        # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
+        # This is the limitation Ashwin pointed out - we have to manually update
+
+        return {
+            "jsonrpc": "2.0",
+            "id": message.get("id"),
+            "error": {"code": -32601, "message": f"Method '{method}' not found"},
+        }
+
+    except Exception as e:
+        return {
+            "jsonrpc": "2.0",
+            "id": message.get("id"),
+            "error": {"code": -32603, "message": str(e)},
+        }
