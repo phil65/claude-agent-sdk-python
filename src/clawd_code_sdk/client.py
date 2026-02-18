@@ -77,6 +77,12 @@ class ClaudeSDKClient:
         self._query: Query | None = None
         os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
 
+    def _ensure_connected(self) -> Query:
+        """Return the active Query, raising if not connected."""
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        return self._query
+
     async def connect(self, prompt: str | AsyncIterable[UserPromptMessage] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
 
@@ -147,10 +153,8 @@ class ClaudeSDKClient:
         """Receive all messages from Claude."""
         from clawd_code_sdk._internal.message_parser import parse_message
 
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-
-        async for data in self._query.receive_messages():
+        query = self._ensure_connected()
+        async for data in query.receive_messages():
             yield parse_message(data)
 
     async def query(
@@ -165,7 +169,8 @@ class ClaudeSDKClient:
             prompt: Either a string message or an async iterable of message dictionaries
             session_id: Session identifier for the conversation
         """
-        if not self._query or not self._transport:
+        query = self._ensure_connected()
+        if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
 
         # Handle string prompts
@@ -186,9 +191,8 @@ class ClaudeSDKClient:
 
     async def interrupt(self) -> None:
         """Send interrupt signal (only works with streaming mode)."""
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.interrupt()
+        query = self._ensure_connected()
+        await query.interrupt()
 
     async def set_permission_mode(self, mode: PermissionMode) -> None:
         """Change permission mode during conversation (only works with streaming mode).
@@ -200,9 +204,8 @@ class ClaudeSDKClient:
                 - 'plan': Plan mode for planning tasks
                 - 'bypassPermissions': Allow all tools (use with caution)
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.set_permission_mode(mode)
+        query = self._ensure_connected()
+        await query.set_permission_mode(mode)
 
     async def set_model(self, model: str | None = None) -> None:
         """Change the AI model during conversation (only works with streaming mode).
@@ -210,9 +213,8 @@ class ClaudeSDKClient:
         Args:
             model: The model to use, or None to use default. Example: 'claude-sonnet-4-5'
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.set_model(model)
+        query = self._ensure_connected()
+        await query.set_model(model)
 
     async def stop_task(self, task_id: str) -> None:
         """Stop a running task.
@@ -220,9 +222,8 @@ class ClaudeSDKClient:
         Args:
             task_id: ID of the task to stop
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.stop_task(task_id)
+        query = self._ensure_connected()
+        await query.stop_task(task_id)
 
     async def rewind_files(self, user_message_id: str) -> None:
         """Rewind tracked files to their state at a specific user message.
@@ -252,9 +253,8 @@ class ClaudeSDKClient:
                 await client.rewind_files(checkpoint_id)
             ```
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.rewind_files(user_message_id)
+        query = self._ensure_connected()
+        await query.rewind_files(user_message_id)
 
     async def get_mcp_status(self) -> dict[str, Any]:
         """Get current MCP server connection status (only works with streaming mode).
@@ -277,9 +277,8 @@ class ClaudeSDKClient:
                     print(f"{server['name']}: {server['status']}")
             ```
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        result = await self._query.get_mcp_status()
+        query = self._ensure_connected()
+        result = await query.get_mcp_status()
         return result
 
     async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> dict[str, Any]:
@@ -315,14 +314,13 @@ class ClaudeSDKClient:
                 await client.set_mcp_servers({})
             ```
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
+        query = self._ensure_connected()
         wire_servers: dict[str, dict[str, Any]] = {}
         for name, config in servers.items():
             server_dict = dict(config)
             server_dict["name"] = name
             wire_servers[name] = server_dict
-        return await self._query.set_mcp_servers(wire_servers)
+        return await query.set_mcp_servers(wire_servers)
 
     async def mcp_reconnect(self, server_name: str) -> None:
         """Reconnect to an MCP server.
@@ -330,9 +328,8 @@ class ClaudeSDKClient:
         Args:
             server_name: Name of the MCP server to reconnect
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.mcp_reconnect(server_name)
+        query = self._ensure_connected()
+        await query.mcp_reconnect(server_name)
 
     async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
         """Enable or disable an MCP server.
@@ -341,9 +338,8 @@ class ClaudeSDKClient:
             server_name: Name of the MCP server to toggle
             enabled: Whether the server should be enabled
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.mcp_toggle(server_name, enabled=enabled)
+        query = self._ensure_connected()
+        await query.mcp_toggle(server_name, enabled=enabled)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking.
@@ -356,9 +352,8 @@ class ClaudeSDKClient:
                 Higher values allow more thorough reasoning but increase
                 response time and token usage.
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
-        await self._query.set_max_thinking_tokens(max_thinking_tokens)
+        query = self._ensure_connected()
+        await query.set_max_thinking_tokens(max_thinking_tokens)
 
     async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.
@@ -371,10 +366,9 @@ class ClaudeSDKClient:
         Returns:
             Dictionary with server info, or None if not in streaming mode
         """
-        if not self._query:
-            raise CLIConnectionError("Not connected. Call connect() first.")
+        query = self._ensure_connected()
         # Return the initialization result that was already obtained during connect
-        if raw_info := self._query._initialization_result:
+        if raw_info := query._initialization_result:
             return ClaudeCodeServerInfo.model_validate(raw_info)
         return None
 
