@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version to publish (e.g., 0.1.4)'
+        description: "Package version to publish (e.g., 0.1.4)"
         required: true
         type: string
 jobs:
@@ -67,34 +67,34 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine wheel
-      shell: bash
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine wheel
+        shell: bash
 
-    - name: Build wheel with bundled CLI
-      run: |
-        python scripts/build_wheel.py \
-          --version "${{ github.event.inputs.version }}" \
-          --skip-sdist \
-          --clean
-      shell: bash
+      - name: Build wheel with bundled CLI
+        run: |
+          python scripts/build_wheel.py \
+            --version "${{ github.event.inputs.version }}" \
+            --skip-sdist \
+            --clean
+        shell: bash
 
-    - name: Upload wheel artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: wheel-${{ matrix.os }}
-        path: dist/*.whl
-        if-no-files-found: error
-        compression-level: 0
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.os }}
+          path: dist/*.whl
+          if-no-files-found: error
+          compression-level: 0
 
   publish:
     needs: [build-wheels]
@@ -104,119 +104,119 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0  # Fetch all history including tags for changelog generation
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Fetch all history including tags for changelog generation
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Set version
-      id: version
-      run: |
-        VERSION="${{ github.event.inputs.version }}"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Set version
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Update version
-      run: |
-        python scripts/update_version.py "${{ env.VERSION }}"
+      - name: Update version
+        run: |
+          python scripts/update_version.py "${{ env.VERSION }}"
 
-    - name: Read CLI version from code
-      id: cli_version
-      run: |
-        CLI_VERSION=$(python -c "import re; print(re.search(r'__cli_version__ = \"([^\"]+)\"', open('src/clawd_code_sdk/_cli_version.py').read()).group(1))")
-        echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
-        echo "Bundled CLI version: $CLI_VERSION"
+      - name: Read CLI version from code
+        id: cli_version
+        run: |
+          CLI_VERSION=$(python -c "import re; print(re.search(r'__cli_version__ = \"([^\"]+)\"', open('src/clawd_code_sdk/__init__.py').read()).group(1))")
+          echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
+          echo "Bundled CLI version: $CLI_VERSION"
 
-    - name: Download all wheel artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: dist
-        pattern: wheel-*
-        merge-multiple: true
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheel-*
+          merge-multiple: true
 
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
 
-    - name: Build source distribution
-      run: python -m build --sdist
+      - name: Build source distribution
+        run: python -m build --sdist
 
-    - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        twine upload dist/*
-        echo "Package published to PyPI"
-        echo "Install with: pip install clawd-code-sdk==${{ env.VERSION }}"
-    
-    - name: Get previous release tag
-      id: previous_tag
-      run: |
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
-        echo "Previous release: $PREVIOUS_TAG"
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload dist/*
+          echo "Package published to PyPI"
+          echo "Install with: pip install clawd-code-sdk==${{ env.VERSION }}"
 
-    - name: Create release branch and commit version changes
-      run: |
-        # Create a new branch for the version update
-        BRANCH_NAME="release/v${{ env.VERSION }}"
-        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+      - name: Get previous release tag
+        id: previous_tag
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          echo "Previous release: $PREVIOUS_TAG"
 
-        # Configure git
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+      - name: Create release branch and commit version changes
+        run: |
+          # Create a new branch for the version update
+          BRANCH_NAME="release/v${{ env.VERSION }}"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
-        # Create and switch to new branch
-        git checkout -b "$BRANCH_NAME"
+          # Configure git
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
 
-        # Commit version changes
-        git add pyproject.toml src/clawd_code_sdk/_version.py
-        git commit -m "chore: release v${{ env.VERSION }}"
+          # Create and switch to new branch
+          git checkout -b "$BRANCH_NAME"
 
-    - name: Update changelog with Claude
-      continue-on-error: true
-      uses: anthropics/claude-code-action@v1
-      with:
-        prompt: "/generate-changelog new version: ${{ env.VERSION }}, old version: ${{ steps.previous_tag.outputs.previous_tag }}"
-        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        claude_args: |
-          --model claude-opus-4-5
-          --allowedTools 'Bash(git add:*),Bash(git commit:*),Edit'
+          # Commit version changes
+          git add pyproject.toml src/clawd_code_sdk/_version.py
+          git commit -m "chore: release v${{ env.VERSION }}"
 
-    - name: Push branch and create PR
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Push the branch with all commits
-        git push origin "${{ env.BRANCH_NAME }}"
+      - name: Update changelog with Claude
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: "/generate-changelog new version: ${{ env.VERSION }}, old version: ${{ steps.previous_tag.outputs.previous_tag }}"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --model claude-opus-4-5
+            --allowedTools 'Bash(git add:*),Bash(git commit:*),Edit'
 
-        # Create PR using GitHub CLI
-        PR_BODY="This PR updates the version to ${{ env.VERSION }} after publishing to PyPI.
+      - name: Push branch and create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Push the branch with all commits
+          git push origin "${{ env.BRANCH_NAME }}"
 
-        ## Changes
-        - Updated version in \`pyproject.toml\` to ${{ env.VERSION }}
-        - Updated version in \`src/clawd_code_sdk/_version.py\` to ${{ env.VERSION }}
-        - Updated \`CHANGELOG.md\` with release notes
+          # Create PR using GitHub CLI
+          PR_BODY="This PR updates the version to ${{ env.VERSION }} after publishing to PyPI.
 
-        ## Release Information
-        - Published to PyPI: https://pypi.org/project/clawd-code-sdk/${{ env.VERSION }}/
-        - Bundled CLI version: ${{ steps.cli_version.outputs.cli_version }}
-        - Install with: \`pip install clawd-code-sdk==${{ env.VERSION }}\`
+          ## Changes
+          - Updated version in \`pyproject.toml\` to ${{ env.VERSION }}
+          - Updated version in \`src/clawd_code_sdk/_version.py\` to ${{ env.VERSION }}
+          - Updated \`CHANGELOG.md\` with release notes
 
-        🤖 Generated by GitHub Actions"
+          ## Release Information
+          - Published to PyPI: https://pypi.org/project/clawd-code-sdk/${{ env.VERSION }}/
+          - Bundled CLI version: ${{ steps.cli_version.outputs.cli_version }}
+          - Install with: \`pip install clawd-code-sdk==${{ env.VERSION }}\`
 
-        PR_URL=$(gh pr create \
-          --title "chore: release v${{ env.VERSION }}" \
-          --body "$PR_BODY" \
-          --base main \
-          --head "${{ env.BRANCH_NAME }}")
+          🤖 Generated by GitHub Actions"
 
-        echo "PR created: $PR_URL"
+          PR_URL=$(gh pr create \
+            --title "chore: release v${{ env.VERSION }}" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "${{ env.BRANCH_NAME }}")
+
+          echo "PR created: $PR_URL"

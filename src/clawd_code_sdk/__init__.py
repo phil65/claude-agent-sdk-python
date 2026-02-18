@@ -87,6 +87,8 @@ if TYPE_CHECKING:
 
 # MCP Server Support
 
+__cli_version__ = "2.1.11"
+
 
 @dataclass
 class SdkMcpTool[T]:

@@ -72,7 +72,7 @@ def update_version(version: str) -> None:
 
 def get_bundled_cli_version() -> str:
     """Get the CLI version that should be bundled from _cli_version.py."""
-    version_file = Path("src/clawd_code_sdk/_cli_version.py")
+    version_file = Path("src/clawd_code_sdk/__init__.py")
     if not version_file.exists():
         return "latest"
 
