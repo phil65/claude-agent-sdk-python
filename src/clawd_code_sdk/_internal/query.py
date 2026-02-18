@@ -53,7 +53,7 @@ def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
 
     Falls back to 0 if the message has no id (e.g. notifications).
     """
-    raw_id = message.get("id")  # type: ignore[call-overload]
+    raw_id = message.get("id")
     if isinstance(raw_id, str | int):
         return raw_id
     return 0
