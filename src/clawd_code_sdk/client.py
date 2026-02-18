@@ -118,9 +118,9 @@ class ClaudeSDKClient:
 
         # Extract SDK MCP servers from options
         sdk_mcp_servers = {}
-        if self.options.mcp_servers and isinstance(self.options.mcp_servers, dict):
+        if isinstance(self.options.mcp_servers, dict):
             for name, config in self.options.mcp_servers.items():
-                if isinstance(config, dict) and config.get("type") == "sdk":
+                if config.get("type") == "sdk":
                     sdk_mcp_servers[name] = config["instance"]  # type: ignore[typeddict-item]
 
         # Calculate initialize timeout from CLAUDE_CODE_STREAM_CLOSE_TIMEOUT env var if set
@@ -201,17 +201,6 @@ class ClaudeSDKClient:
                 - 'acceptEdits': Auto-accept file edits
                 - 'plan': Plan mode for planning tasks
                 - 'bypassPermissions': Allow all tools (use with caution)
-
-        Example:
-            ```python
-            async with ClaudeSDKClient() as client:
-                # Start with default permissions
-                await client.query("Help me analyze this codebase")
-
-                # Review mode done, switch to auto-accept edits
-                await client.set_permission_mode('acceptEdits')
-                await client.query("Now implement the fix we discussed")
-            ```
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
@@ -221,21 +210,7 @@ class ClaudeSDKClient:
         """Change the AI model during conversation (only works with streaming mode).
 
         Args:
-            model: The model to use, or None to use default. Examples:
-                - 'claude-sonnet-4-5'
-                - 'claude-opus-4-1-20250805'
-                - 'claude-opus-4-20250514'
-
-        Example:
-            ```python
-            async with ClaudeSDKClient() as client:
-                # Start with default model
-                await client.query("Help me understand this problem")
-
-                # Switch to a different model for implementation
-                await client.set_model('claude-sonnet-4-5')
-                await client.query("Now implement the solution")
-            ```
+            model: The model to use, or None to use default. Example: 'claude-sonnet-4-5'
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
@@ -339,8 +314,7 @@ class ClaudeSDKClient:
             server_dict = dict(config)
             server_dict["name"] = name
             wire_servers[name] = server_dict
-        result: dict[str, Any] = await self._query.set_mcp_servers(wire_servers)
-        return result
+        return await self._query.set_mcp_servers(wire_servers)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking.
@@ -352,13 +326,6 @@ class ClaudeSDKClient:
             max_thinking_tokens: Maximum number of tokens for thinking.
                 Higher values allow more thorough reasoning but increase
                 response time and token usage.
-
-        Example:
-            ```python
-            async with ClaudeSDKClient(options) as client:
-                await client.set_max_thinking_tokens(2000)
-                await client.query("Solve this complex problem...")
-            ```
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
@@ -374,15 +341,6 @@ class ClaudeSDKClient:
 
         Returns:
             Dictionary with server info, or None if not in streaming mode
-
-        Example:
-            ```python
-            async with ClaudeSDKClient() as client:
-                info = await client.get_server_info()
-                if info:
-                    print(f"Commands available: {len(info.get('commands', []))}")
-                    print(f"Output style: {info.get('output_style', 'default')}")
-            ```
         """
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
