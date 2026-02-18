@@ -144,9 +144,12 @@ class ClaudeSDKClient:
         # Start reading messages and initialize
         await self._query.start()
         await self._query.initialize()
-        # If we have an initial prompt stream, start streaming it
-        if isinstance(prompt, AsyncIterable) and self._query._tg:
-            self._query._tg.start_soon(self._query.stream_input, prompt)
+        # Send the initial prompt
+        match prompt:
+            case str() as text:
+                await self.query(text)
+            case AsyncIterable() if self._query._tg:
+                self._query._tg.start_soon(self._query.stream_input, prompt)
 
     async def receive_messages(self) -> AsyncIterator[Message]:
         """Receive all messages from Claude."""
