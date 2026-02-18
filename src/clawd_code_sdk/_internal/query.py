@@ -42,10 +42,21 @@ if TYPE_CHECKING:
     )
     from clawd_code_sdk.models.agents import AgentDefinition
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
-    from clawd_code_sdk.models.mcp import JSONRPCMessage
+    from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
     from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
+
+
+def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
+    """Extract the request ID from a JSON-RPC message.
+
+    Falls back to 0 if the message has no id (e.g. notifications).
+    """
+    raw_id = message.get("id")  # type: ignore[call-overload]
+    if isinstance(raw_id, str | int):
+        return raw_id
+    return 0
 
 
 def convert_hooks_to_internal_format(
@@ -415,7 +426,7 @@ class Query:
 
     async def _handle_sdk_mcp_request(
         self, server_name: str, message: JSONRPCMessage
-    ) -> dict[str, Any]:
+    ) -> JSONRPCResponse:
         """Handle an MCP request for an SDK server.
 
         This acts as a bridge between JSONRPC messages from the CLI
@@ -433,7 +444,7 @@ class Query:
         if server_name not in self.sdk_mcp_servers:
             return {
                 "jsonrpc": "2.0",
-                "id": message.get("id"),
+                "id": get_jsonrpc_request_id(message),
                 "error": {"code": -32601, "message": f"Server '{server_name}' not found"},
             }
 
@@ -628,7 +639,7 @@ class Query:
         raise StopAsyncIteration
 
 
-async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> dict[str, Any]:
+async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
     from mcp.types import (
         AudioContent,
         BlobResourceContents,
@@ -656,7 +667,7 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> dic
             # Handle MCP initialization - hardcoded for tools only, no listChanged
             return {
                 "jsonrpc": "2.0",
-                "id": message.get("id"),
+                "id": get_jsonrpc_request_id(message),
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {
@@ -687,7 +698,7 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> dic
                     tools_data.append(tool_data)
                 return {
                     "jsonrpc": "2.0",
-                    "id": message.get("id"),
+                    "id": get_jsonrpc_request_id(message),
                     "result": {"tools": tools_data},
                 }
 
@@ -737,24 +748,28 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> dic
                 if result.root.isError:
                     response_data["is_error"] = True
 
-                return {"jsonrpc": "2.0", "id": message.get("id"), "result": response_data}
+                return {
+                    "jsonrpc": "2.0",
+                    "id": get_jsonrpc_request_id(message),
+                    "result": response_data,
+                }
 
         elif method == "notifications/initialized":
             # Handle initialized notification - just acknowledge it
-            return {"jsonrpc": "2.0", "result": {}}
+            return {"jsonrpc": "2.0", "id": get_jsonrpc_request_id(message), "result": {}}
 
         # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
         # This is the limitation Ashwin pointed out - we have to manually update
 
         return {
             "jsonrpc": "2.0",
-            "id": message.get("id"),
+            "id": get_jsonrpc_request_id(message),
             "error": {"code": -32601, "message": f"Method '{method}' not found"},
         }
 
     except Exception as e:
         return {
             "jsonrpc": "2.0",
-            "id": message.get("id"),
+            "id": get_jsonrpc_request_id(message),
             "error": {"code": -32603, "message": str(e)},
         }
