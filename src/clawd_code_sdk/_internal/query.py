@@ -89,7 +89,6 @@ class Query:
     def __init__(
         self,
         transport: Transport,
-        is_streaming_mode: bool,
         can_use_tool: Callable[
             [str, ToolInput, ToolPermissionContext],
             Awaitable[PermissionResultAllow | PermissionResultDeny],
@@ -104,7 +103,6 @@ class Query:
 
         Args:
             transport: Low-level transport for I/O
-            is_streaming_mode: Whether using streaming (bidirectional) mode
             can_use_tool: Optional callback for tool permission requests
             hooks: Optional hook configurations
             sdk_mcp_servers: Optional SDK MCP server instances
@@ -113,7 +111,6 @@ class Query:
         """
         self._initialize_timeout = initialize_timeout
         self.transport = transport
-        self.is_streaming_mode = is_streaming_mode
         self.can_use_tool = can_use_tool
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
@@ -155,14 +152,11 @@ class Query:
         self._tg_entered_in_current_task = False
 
     async def initialize(self) -> dict[str, Any] | None:
-        """Initialize control protocol if in streaming mode.
+        """Initialize control protocol.
 
         Returns:
-            Initialize response with supported commands, or None if not streaming
+            Initialize response with supported commands
         """
-        if not self.is_streaming_mode:
-            return None
-
         # Build hooks configuration for initialization
         hooks_config: dict[str, Any] = {}
         if self.hooks:
@@ -394,9 +388,6 @@ class Query:
             request: The control request to send
             timeout: Timeout in seconds to wait for response (default 60s)
         """
-        if not self.is_streaming_mode:
-            raise Exception("Control requests require streaming mode")
-
         # Generate unique request ID
         self._request_counter += 1
         request_id = f"req_{self._request_counter}_{os.urandom(4).hex()}"

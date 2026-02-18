@@ -135,7 +135,6 @@ class ClaudeSDKClient:
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
-            is_streaming_mode=True,  # ClaudeSDKClient always uses streaming mode
             can_use_tool=self.options.can_use_tool,
             hooks=self.options.hooks,
             sdk_mcp_servers=sdk_mcp_servers,

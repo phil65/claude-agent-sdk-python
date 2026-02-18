@@ -363,7 +363,6 @@ async def test_error_handling_through_jsonrpc():
     transport = MockTransport()
     query = Query(
         transport=transport,
-        is_streaming_mode=False,
         sdk_mcp_servers=sdk_mcp_servers,
     )
 

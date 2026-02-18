@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from clawd_code_sdk._internal.client import InternalClient
-from clawd_code_sdk.models import ClaudeAgentOptions
+from clawd_code_sdk.client import ClaudeSDKClient
+from clawd_code_sdk.models import AssistantMessage, ClaudeAgentOptions
 
 
 if TYPE_CHECKING:
@@ -22,85 +22,35 @@ async def query(
     options: ClaudeAgentOptions | None = None,
     transport: Transport | None = None,
 ) -> AsyncIterator[Message]:
-    """
-    Query Claude Code for one-shot or unidirectional streaming interactions.
+    """Query Claude Code for one-shot interactions.
 
-    This function is ideal for simple, stateless queries where you don't need
-    bidirectional communication or conversation management. For interactive,
-    stateful conversations, use ClaudeSDKClient instead.
-
-    Key differences from ClaudeSDKClient:
-    - **Unidirectional**: Send all messages upfront, receive all responses
-    - **Stateless**: Each query is independent, no conversation state
-    - **Simple**: Fire-and-forget style, no connection management
-    - **No interrupts**: Cannot interrupt or send follow-up messages
+    Convenience wrapper around ClaudeSDKClient for simple, stateless queries.
+    For interactive, stateful conversations, use ClaudeSDKClient directly.
 
     Args:
         prompt: The prompt to send to Claude. Can be a string for single-shot queries
-                or an AsyncIterable[UserPromptMessage] for streaming mode.
+                or an AsyncIterable[UserPromptMessage] for streaming input.
         options: Optional configuration (defaults to ClaudeAgentOptions() if None).
-                 Set options.permission_mode to control tool execution:
-                 - 'default': CLI prompts for dangerous tools
-                 - 'acceptEdits': Auto-accept file edits
-                 - 'bypassPermissions': Allow all tools (use with caution)
-                 Set options.cwd for working directory.
-        transport: Optional transport implementation. If provided, this will be used
-                  instead of the default transport selection based on options.
-                  The transport will be automatically configured with the prompt and options.
+        transport: Optional transport implementation override.
 
     Yields:
         Messages from the conversation
 
-    Example - Simple query:
+    Example:
         ```python
-        # One-off question
         async for message in query(prompt="What is the capital of France?"):
             print(message)
         ```
-
-    Example - With options:
-        ```python
-        # Code generation with specific settings
-        async for message in query(
-            prompt="Create a Python web server",
-            options=ClaudeAgentOptions(
-                system_prompt="You are an expert Python developer",
-                cwd="/home/user/project"
-            )
-        ):
-            print(message)
-        ```
-
-    Example - Streaming mode (still unidirectional):
-        ```python
-        async def prompts():
-            yield {"type": "user", "message": {"role": "user", "content": "Hello"}}
-            yield {"type": "user", "message": {"role": "user", "content": "How are you?"}}
-
-        # All prompts are sent, then all responses received
-        async for message in query(prompt=prompts()):
-            print(message)
-        ```
-
-    Example - With custom transport:
-        ```python
-        from clawd_code_sdk import query, Transport
-
-        class MyCustomTransport(Transport):
-            # Implement custom transport logic
-            pass
-
-        transport = MyCustomTransport()
-        async for message in query(
-            prompt="Hello",
-            transport=transport
-        ):
-            print(message)
-        ```
-
     """
     options = options or ClaudeAgentOptions()
     os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py"
-    client = InternalClient()
-    async for message in client.process_query(prompt=prompt, options=options, transport=transport):
-        yield message
+
+    client = ClaudeSDKClient(options=options, transport=transport)
+    try:
+        await client.connect(prompt)
+        async for message in client.receive_messages():
+            if isinstance(message, AssistantMessage) and message.error is not None:
+                message.raise_api_error()
+            yield message
+    finally:
+        await client.disconnect()

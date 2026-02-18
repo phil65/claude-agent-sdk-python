@@ -953,7 +953,6 @@ class TestAsyncGeneratorCleanup:
             # Create Query
             q = Query(
                 transport=mock_transport,
-                is_streaming_mode=False,
             )
 
             # Start the query
@@ -1002,7 +1001,6 @@ class TestAsyncGeneratorCleanup:
             # Use Query as async context manager
             q = Query(
                 transport=mock_transport,
-                is_streaming_mode=False,
             )
 
             async with q:

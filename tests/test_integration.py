@@ -3,6 +3,8 @@
 These tests verify end-to-end functionality with mocked CLI responses.
 """
 
+import asyncio
+import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import anyio
@@ -18,6 +20,50 @@ from clawd_code_sdk import (
 from clawd_code_sdk.models import ToolUseBlock
 
 
+def create_mock_transport(messages: list[dict]):
+    """Create a mock transport that handles initialization and returns messages."""
+    mock_transport = AsyncMock()
+    mock_transport.connect = AsyncMock()
+    mock_transport.close = AsyncMock()
+    mock_transport.end_input = AsyncMock()
+    mock_transport.is_ready = Mock(return_value=True)
+
+    written_messages: list[str] = []
+
+    async def mock_write(data: str) -> None:
+        written_messages.append(data)
+
+    mock_transport.write = AsyncMock(side_effect=mock_write)
+
+    async def mock_receive():
+        await asyncio.sleep(0.01)
+        for msg_str in written_messages:
+            try:
+                msg = json.loads(msg_str.strip())
+                if (
+                    msg.get("type") == "control_request"
+                    and msg.get("request", {}).get("subtype") == "initialize"
+                ):
+                    yield {
+                        "type": "control_response",
+                        "response": {
+                            "request_id": msg.get("request_id"),
+                            "subtype": "success",
+                            "commands": [],
+                            "output_style": "default",
+                        },
+                    }
+                    break
+            except (json.JSONDecodeError, KeyError, AttributeError):
+                pass
+
+        for message in messages:
+            yield message
+
+    mock_transport.read_messages = mock_receive
+    return mock_transport
+
+
 class TestIntegration:
     """End-to-end integration tests."""
 
@@ -25,64 +71,40 @@ class TestIntegration:
         """Test a simple query with text response."""
 
         async def _test():
-            with (
-                patch(
-                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
-                ) as mock_transport_class,
-                patch(
-                    "clawd_code_sdk._internal.query.Query.initialize",
-                    new_callable=AsyncMock,
-                ),
-            ):
-                mock_transport = AsyncMock()
-                mock_transport_class.return_value = mock_transport
+            test_messages = [
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "2 + 2 equals 4"}],
+                        "model": "claude-opus-4-1-20250805",
+                    },
+                },
+                {
+                    "type": "result",
+                    "uuid": "msg-001",
+                    "subtype": "success",
+                    "duration_ms": 1000,
+                    "duration_api_ms": 800,
+                    "is_error": False,
+                    "num_turns": 1,
+                    "session_id": "test-session",
+                    "total_cost_usd": 0.001,
+                },
+            ]
+            mock_transport = create_mock_transport(test_messages)
 
-                # Mock the message stream
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "2 + 2 equals 4"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
-                    }
-                    yield {
-                        "type": "result",
-                        "uuid": "msg-001",
-                        "subtype": "success",
-                        "duration_ms": 1000,
-                        "duration_api_ms": 800,
-                        "is_error": False,
-                        "num_turns": 1,
-                        "session_id": "test-session",
-                        "total_cost_usd": 0.001,
-                    }
+            messages = []
+            async for msg in query(prompt="What is 2 + 2?", transport=mock_transport):
+                messages.append(msg)
 
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
-
-                # Run query
-                messages = []
-                async for msg in query(prompt="What is 2 + 2?"):
-                    messages.append(msg)
-
-                # Verify results
-                assert len(messages) == 2
-
-                # Check assistant message
-                assert isinstance(messages[0], AssistantMessage)
-                assert len(messages[0].content) == 1
-                assert messages[0].content[0].text == "2 + 2 equals 4"
-
-                # Check result message
-                assert isinstance(messages[1], ResultMessage)
-                assert messages[1].total_cost_usd == 0.001
-                assert messages[1].session_id == "test-session"
+            assert len(messages) == 2
+            assert isinstance(messages[0], AssistantMessage)
+            assert len(messages[0].content) == 1
+            assert messages[0].content[0].text == "2 + 2 equals 4"
+            assert isinstance(messages[1], ResultMessage)
+            assert messages[1].total_cost_usd == 0.001
+            assert messages[1].session_id == "test-session"
 
         anyio.run(_test)
 
@@ -90,76 +112,52 @@ class TestIntegration:
         """Test query that uses tools."""
 
         async def _test():
-            with (
-                patch(
-                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
-                ) as mock_transport_class,
-                patch(
-                    "clawd_code_sdk._internal.query.Query.initialize",
-                    new_callable=AsyncMock,
-                ),
+            test_messages = [
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "Let me read that file for you."},
+                            {
+                                "type": "tool_use",
+                                "id": "tool-123",
+                                "name": "Read",
+                                "input": {"file_path": "/test.txt"},
+                            },
+                        ],
+                        "model": "claude-opus-4-1-20250805",
+                    },
+                },
+                {
+                    "type": "result",
+                    "uuid": "msg-002",
+                    "subtype": "success",
+                    "duration_ms": 1500,
+                    "duration_api_ms": 1200,
+                    "is_error": False,
+                    "num_turns": 1,
+                    "session_id": "test-session-2",
+                    "total_cost_usd": 0.002,
+                },
+            ]
+            mock_transport = create_mock_transport(test_messages)
+
+            messages = []
+            async for msg in query(
+                prompt="Read /test.txt",
+                options=ClaudeAgentOptions(allowed_tools=["Read"]),
+                transport=mock_transport,
             ):
-                mock_transport = AsyncMock()
-                mock_transport_class.return_value = mock_transport
+                messages.append(msg)
 
-                # Mock the message stream with tool use
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "Let me read that file for you.",
-                                },
-                                {
-                                    "type": "tool_use",
-                                    "id": "tool-123",
-                                    "name": "Read",
-                                    "input": {"file_path": "/test.txt"},
-                                },
-                            ],
-                            "model": "claude-opus-4-1-20250805",
-                        },
-                    }
-                    yield {
-                        "type": "result",
-                        "uuid": "msg-002",
-                        "subtype": "success",
-                        "duration_ms": 1500,
-                        "duration_api_ms": 1200,
-                        "is_error": False,
-                        "num_turns": 1,
-                        "session_id": "test-session-2",
-                        "total_cost_usd": 0.002,
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
-
-                # Run query with tools enabled
-                messages = []
-                async for msg in query(
-                    prompt="Read /test.txt",
-                    options=ClaudeAgentOptions(allowed_tools=["Read"]),
-                ):
-                    messages.append(msg)
-
-                # Verify results
-                assert len(messages) == 2
-
-                # Check assistant message with tool use
-                assert isinstance(messages[0], AssistantMessage)
-                assert len(messages[0].content) == 2
-                assert messages[0].content[0].text == "Let me read that file for you."
-                assert isinstance(messages[0].content[1], ToolUseBlock)
-                assert messages[0].content[1].name == "Read"
-                assert messages[0].content[1].input["file_path"] == "/test.txt"
+            assert len(messages) == 2
+            assert isinstance(messages[0], AssistantMessage)
+            assert len(messages[0].content) == 2
+            assert messages[0].content[0].text == "Let me read that file for you."
+            assert isinstance(messages[0].content[1], ToolUseBlock)
+            assert messages[0].content[1].name == "Read"
+            assert messages[0].content[1].input["file_path"] == "/test.txt"
 
         anyio.run(_test)
 
@@ -183,53 +181,42 @@ class TestIntegration:
         """Test query with continue_conversation option."""
 
         async def _test():
-            with (
-                patch(
-                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
-                ) as mock_transport_class,
-                patch(
-                    "clawd_code_sdk._internal.query.Query.initialize",
-                    new_callable=AsyncMock,
-                ),
+            test_messages = [
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": "Continuing from previous conversation"}
+                        ],
+                        "model": "claude-opus-4-1-20250805",
+                    },
+                },
+                {
+                    "type": "result",
+                    "uuid": "msg-003",
+                    "subtype": "success",
+                    "duration_ms": 500,
+                    "duration_api_ms": 400,
+                    "is_error": False,
+                    "num_turns": 1,
+                    "session_id": "test-session",
+                    "total_cost_usd": 0.001,
+                },
+            ]
+            mock_transport = create_mock_transport(test_messages)
+
+            messages = []
+            async for msg in query(
+                prompt="Continue",
+                options=ClaudeAgentOptions(continue_conversation=True),
+                transport=mock_transport,
             ):
-                mock_transport = AsyncMock()
-                mock_transport_class.return_value = mock_transport
+                messages.append(msg)
 
-                # Mock the message stream
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "Continuing from previous conversation",
-                                }
-                            ],
-                            "model": "claude-opus-4-1-20250805",
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
-
-                # Run query with continuation
-                messages = []
-                async for msg in query(
-                    prompt="Continue",
-                    options=ClaudeAgentOptions(continue_conversation=True),
-                ):
-                    messages.append(msg)
-
-                # Verify transport was created with continuation option
-                mock_transport_class.assert_called_once()
-                call_kwargs = mock_transport_class.call_args.kwargs
-                assert call_kwargs["options"].continue_conversation is True
+            assert len(messages) == 2
+            assert isinstance(messages[0], AssistantMessage)
+            assert messages[0].content[0].text == "Continuing from previous conversation"
 
         anyio.run(_test)
 
@@ -237,73 +224,46 @@ class TestIntegration:
         """Test query with max_budget_usd option."""
 
         async def _test():
-            with (
-                patch(
-                    "clawd_code_sdk._internal.client.SubprocessCLITransport"
-                ) as mock_transport_class,
-                patch(
-                    "clawd_code_sdk._internal.query.Query.initialize",
-                    new_callable=AsyncMock,
-                ),
+            test_messages = [
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "Starting to read..."}],
+                        "model": "claude-opus-4-1-20250805",
+                    },
+                },
+                {
+                    "type": "result",
+                    "uuid": "msg-003",
+                    "subtype": "error_max_budget_usd",
+                    "duration_ms": 500,
+                    "duration_api_ms": 400,
+                    "is_error": False,
+                    "num_turns": 1,
+                    "session_id": "test-session-budget",
+                    "total_cost_usd": 0.0002,
+                    "usage": {
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                    },
+                },
+            ]
+            mock_transport = create_mock_transport(test_messages)
+
+            messages = []
+            async for msg in query(
+                prompt="Read the readme",
+                options=ClaudeAgentOptions(max_budget_usd=0.0001),
+                transport=mock_transport,
             ):
-                mock_transport = AsyncMock()
-                mock_transport_class.return_value = mock_transport
+                messages.append(msg)
 
-                # Mock the message stream that exceeds budget
-                async def mock_receive():
-                    yield {
-                        "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Starting to read..."}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
-                    }
-                    yield {
-                        "type": "result",
-                        "uuid": "msg-003",
-                        "subtype": "error_max_budget_usd",
-                        "duration_ms": 500,
-                        "duration_api_ms": 400,
-                        "is_error": False,
-                        "num_turns": 1,
-                        "session_id": "test-session-budget",
-                        "total_cost_usd": 0.0002,
-                        "usage": {
-                            "input_tokens": 100,
-                            "output_tokens": 50,
-                        },
-                    }
-
-                mock_transport.read_messages = mock_receive
-                mock_transport.connect = AsyncMock()
-                mock_transport.close = AsyncMock()
-                mock_transport.end_input = AsyncMock()
-                mock_transport.write = AsyncMock()
-                mock_transport.is_ready = Mock(return_value=True)
-
-                # Run query with very small budget
-                messages = []
-                async for msg in query(
-                    prompt="Read the readme",
-                    options=ClaudeAgentOptions(max_budget_usd=0.0001),
-                ):
-                    messages.append(msg)
-
-                # Verify results
-                assert len(messages) == 2
-
-                # Check result message
-                assert isinstance(messages[1], ResultMessage)
-                assert messages[1].subtype == "error_max_budget_usd"
-                assert messages[1].is_error is False
-                assert messages[1].total_cost_usd == 0.0002
-                assert messages[1].total_cost_usd is not None
-                assert messages[1].total_cost_usd > 0
-
-                # Verify transport was created with max_budget_usd option
-                mock_transport_class.assert_called_once()
-                call_kwargs = mock_transport_class.call_args.kwargs
-                assert call_kwargs["options"].max_budget_usd == 0.0001
+            assert len(messages) == 2
+            assert isinstance(messages[1], ResultMessage)
+            assert messages[1].subtype == "error_max_budget_usd"
+            assert messages[1].is_error is False
+            assert messages[1].total_cost_usd == 0.0002
+            assert messages[1].total_cost_usd > 0
 
         anyio.run(_test)

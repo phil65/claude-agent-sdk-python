@@ -77,7 +77,7 @@ class TestToolPermissionCallbacks:
             return PermissionResultAllow()
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=allow_callback)
+        query = Query(transport=transport, can_use_tool=allow_callback)
 
         request_data = SDKControlPermissionRequest(
             tool_name="TestTool",
@@ -107,7 +107,6 @@ class TestToolPermissionCallbacks:
         transport = MockTransport()
         query = Query(
             transport=transport,
-            is_streaming_mode=True,
             can_use_tool=deny_callback,
             hooks=None,
         )
@@ -144,7 +143,6 @@ class TestToolPermissionCallbacks:
         transport = MockTransport()
         query = Query(
             transport=transport,
-            is_streaming_mode=True,
             can_use_tool=modify_callback,
             hooks=None,
         )
@@ -173,7 +171,6 @@ class TestToolPermissionCallbacks:
         transport = MockTransport()
         query = Query(
             transport=transport,
-            is_streaming_mode=True,
             can_use_tool=error_callback,
             hooks=None,
         )
@@ -208,7 +205,7 @@ class TestHookCallbacks:
         transport = MockTransport()
         # Create hooks configuration
         hooks = {"tool_use_start": [HookMatcher(matcher="TestTool", hooks=[test_hook])]}
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
+        query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         # Manually register the hook callback to avoid needing the full initialize flow
         callback_id = "test_hook_0"
         query.hook_callbacks[callback_id] = test_hook
@@ -269,7 +266,7 @@ class TestHookCallbacks:
         transport = MockTransport()
         hooks = {"PreToolUse": [HookMatcher(matcher="TestTool", hooks=[comprehensive_hook])]}
 
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
+        query = Query(transport=transport, can_use_tool=None, hooks=hooks)
 
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
@@ -326,7 +323,7 @@ class TestHookCallbacks:
 
         transport = MockTransport()
         hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[async_hook])]}
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
+        query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
         request_data = parse_control_request(
@@ -377,7 +374,7 @@ class TestHookCallbacks:
         transport = MockTransport()
         hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[conversion_test_hook])]}
 
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
+        query = Query(transport=transport, can_use_tool=None, hooks=hooks)
 
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
@@ -465,7 +462,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
+        query = Query(transport=transport, can_use_tool=None, hooks={})
 
         callback_id = "test_notification_hook"
         query.hook_callbacks[callback_id] = notification_hook
@@ -514,7 +511,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
+        query = Query(transport=transport, can_use_tool=None, hooks={})
 
         callback_id = "test_permission_request_hook"
         query.hook_callbacks[callback_id] = permission_request_hook
@@ -559,7 +556,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
+        query = Query(transport=transport, can_use_tool=None, hooks={})
 
         callback_id = "test_subagent_start_hook"
         query.hook_callbacks[callback_id] = subagent_start_hook
@@ -604,7 +601,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
+        query = Query(transport=transport, can_use_tool=None, hooks={})
 
         callback_id = "test_post_tool_mcp_hook"
         query.hook_callbacks[callback_id] = post_tool_hook
@@ -651,7 +648,7 @@ class TestHookEventCallbacks:
             }
 
         transport = MockTransport()
-        query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks={})
+        query = Query(transport=transport, can_use_tool=None, hooks={})
 
         callback_id = "test_pre_tool_context_hook"
         query.hook_callbacks[callback_id] = pre_tool_hook
