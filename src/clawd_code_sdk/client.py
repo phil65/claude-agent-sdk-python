@@ -169,7 +169,7 @@ class ClaudeSDKClient:
             prompt: Either a string message or an async iterable of message dictionaries
             session_id: Session identifier for the conversation
         """
-        query = self._ensure_connected()
+        self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
 
@@ -425,10 +425,9 @@ class ClaudeSDKClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit async context - always disconnects."""
         await self.disconnect()
-        return False
 
 
 if __name__ == "__main__":
