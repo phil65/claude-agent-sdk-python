@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
-from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
+from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
 from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
-    from clawd_code_sdk.models import Message, PermissionMode, UserPromptMessage
+    from clawd_code_sdk.models import Message, PermissionMode
     from clawd_code_sdk.models.mcp import McpServerConfig
 
 
@@ -70,8 +70,7 @@ class ClaudeSDKClient:
         transport: Transport | None = None,
     ):
         """Initialize Claude SDK client."""
-        if options is None:
-            options = ClaudeAgentOptions()
+        options = options or ClaudeAgentOptions()
         self.options = options
         self._custom_transport = transport
         self._transport: Transport | None = None
@@ -171,19 +170,18 @@ class ClaudeSDKClient:
 
         # Handle string prompts
         if isinstance(prompt, str):
-            message: UserPromptMessage = {
-                "type": "user",
-                "message": {"role": "user", "content": prompt},
-                "parent_tool_use_id": None,
-                "session_id": session_id,
-            }
+            message = UserPromptMessage(
+                type="user",
+                message={"role": "user", "content": prompt},
+                parent_tool_use_id=None,
+                session_id=session_id,
+            )
             await self._transport.write(anyenv.dump_json(message) + "\n")
         else:
             # Handle AsyncIterable prompts - stream them
             async for msg in prompt:
                 # Ensure session_id is set on each message
-                if "session_id" not in msg:
-                    msg["session_id"] = session_id
+                msg.setdefault("session_id", session_id)
                 await self._transport.write(anyenv.dump_json(msg) + "\n")
 
     async def interrupt(self) -> None:
