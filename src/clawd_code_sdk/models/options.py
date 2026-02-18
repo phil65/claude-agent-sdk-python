@@ -68,6 +68,20 @@ class ClaudeAgentOptions:
     # When enabled, files can be rewound to their state at any user message
     # using `ClaudeSDKClient.rewind_files()`.
     enable_file_checkpointing: bool = False
+    # Agent name for the main thread. The agent must be defined in `agents` or settings.
+    agent: str | None = None
+    # When false, disables session persistence to disk.
+    persist_session: bool | None = None
+    # Must be True when using permission_mode='bypassPermissions'.
+    allow_dangerously_skip_permissions: bool = False
+    # Resume from a specific message UUID (use with `resume`).
+    resume_session_at: str | None = None
+    # Enable debug mode for the Claude Code process.
+    debug: bool = False
+    # Write debug logs to a specific file path. Implicitly enables debug mode.
+    debug_file: str | None = None
+    # Enforce strict validation of MCP server configurations.
+    strict_mcp_config: bool = False
 
     def validate(self) -> None:
         """Validate option constraints.

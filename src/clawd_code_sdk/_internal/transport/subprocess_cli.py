@@ -225,8 +225,29 @@ class SubprocessCLITransport(Transport):
 
         cmd.append("--include-partial-messages")
 
+        if self._options.agent:
+            cmd.extend(["--agent", self._options.agent])
+
         if self._options.fork_session:
             cmd.append("--fork-session")
+
+        if self._options.persist_session is False:
+            cmd.append("--no-persist-session")
+
+        if self._options.allow_dangerously_skip_permissions:
+            cmd.append("--dangerously-skip-permissions")
+
+        if self._options.resume_session_at:
+            cmd.extend(["--resume-session-at", self._options.resume_session_at])
+
+        if self._options.debug or self._options.debug_file:
+            cmd.append("--debug")
+
+        if self._options.debug_file:
+            cmd.extend(["--debug-file", self._options.debug_file])
+
+        if self._options.strict_mcp_config:
+            cmd.append("--strict-mcp-config")
 
         # Agents are always sent via initialize request (matching TypeScript SDK)
         # No --agents CLI flag needed
