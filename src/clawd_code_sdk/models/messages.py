@@ -75,6 +75,7 @@ class BaseMessage:
 class UserMessage(BaseMessage):
     """User message."""
 
+    type: Literal["user"] = "user"
     content: str | Sequence[ContentBlock]
     parent_tool_use_id: str | None = None
     tool_use_result: dict[str, Any] | None = None
@@ -93,6 +94,7 @@ class UserMessage(BaseMessage):
 class AssistantMessage:
     """Assistant message with content blocks."""
 
+    type: Literal["assistant"] = "assistant"
     content: Sequence[ContentBlock]
     model: str
     parent_tool_use_id: str | None = None
@@ -152,7 +154,7 @@ class AssistantMessage:
         )
 
 
-@dataclass
+@dataclass(kw_only=True)
 class McpServerStatus:
     name: str
     status: str
@@ -162,6 +164,7 @@ class McpServerStatus:
 class SystemMessage(BaseMessage):
     """System message with metadata."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["init"] = "init"
     apiKeySource: ApiKeySource | None = None  # noqa: N815
     cwd: str
@@ -182,6 +185,7 @@ class SystemMessage(BaseMessage):
 class HookStartedSystemMessage(BaseMessage):
     """System message with metadata."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["hook_started"] = "hook_started"
     hook_id: str | None = None
     hook_name: str | None = None
@@ -192,6 +196,7 @@ class HookStartedSystemMessage(BaseMessage):
 class StatusSystemMessage(BaseMessage):
     """System status message."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | str | None
 
@@ -205,6 +210,7 @@ class TriggerMetadata(TypedDict):
 class CompactBoundarySystemMessage(BaseMessage):
     """System message with metadata."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["compact_boundary"] = "compact_boundary"
     compact_metadata: TriggerMetadata
 
@@ -220,8 +226,9 @@ class RateLimitInfo(TypedDict):
 
 @dataclass(kw_only=True)
 class RateLimitMessage(BaseMessage):
-    """System message with metadata."""
+    """Rate limit event message."""
 
+    type: Literal["rate_limit_event"] = "rate_limit_event"
     subtype: Literal["rate_limit"] = "rate_limit"
     rate_limit_info: RateLimitInfo
 
@@ -230,6 +237,7 @@ class RateLimitMessage(BaseMessage):
 class TaskStartedSystemMessage(BaseMessage):
     """System message emitted when a subagent task starts."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["task_started"] = "task_started"
     task_id: str = ""
     tool_use_id: str | None = None
@@ -241,6 +249,7 @@ class TaskStartedSystemMessage(BaseMessage):
 class TaskNotificationSystemMessage(BaseMessage):
     """System message emitted when a subagent task completes, fails, or stops."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["task_notification"] = "task_notification"
     task_id: str = ""
     status: Literal["completed", "failed", "stopped"] = "completed"
@@ -266,6 +275,7 @@ class FilePersistedFailure(TypedDict):
 class FilesPersistedSystemMessage(BaseMessage):
     """System message emitted when files have been persisted."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["files_persisted"] = "files_persisted"
     files: list[FilePersistedEntry] | None = None
     failed: list[FilePersistedFailure] | None = None
@@ -278,6 +288,7 @@ class FilesPersistedSystemMessage(BaseMessage):
 class HookProgressSystemMessage(BaseMessage):
     """Progress update from a running hook."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["hook_progress"] = "hook_progress"
     hook_id: str = ""
     hook_name: str = ""
@@ -291,6 +302,7 @@ class HookProgressSystemMessage(BaseMessage):
 class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
 
+    type: Literal["system"] = "system"
     subtype: Literal["hook_response"] = "hook_response"
     hook_id: str
     hook_name: str
@@ -339,10 +351,11 @@ class Usage(TypedDict):
     cache_read_input_tokens: int
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ResultMessage(BaseMessage):
     """Result message with cost and usage information."""
 
+    type: Literal["result"] = "result"
     subtype: str
     duration_ms: int
     duration_api_ms: int
@@ -358,36 +371,40 @@ class ResultMessage(BaseMessage):
     permission_denials: list[SDKPermissionDenial] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class StreamEvent(BaseMessage):
     """Stream event for partial message updates during streaming."""
 
+    type: Literal["stream_event"] = "stream_event"
     event: RawMessageStreamEvent
     parent_tool_use_id: str | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ToolProgressMessage(BaseMessage):
     """Progress update for a running tool."""
 
+    type: Literal["tool_progress"] = "tool_progress"
     tool_use_id: str = ""
     tool_name: str = ""
     parent_tool_use_id: str | None = None
     elapsed_time_seconds: float = 0.0
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ToolUseSummaryMessage(BaseMessage):
     """Summary of preceding tool uses."""
 
+    type: Literal["tool_use_summary"] = "tool_use_summary"
     summary: str = ""
     preceding_tool_use_ids: list[str] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AuthStatusMessage(BaseMessage):
     """Authentication status update."""
 
+    type: Literal["auth_status"] = "auth_status"
     is_authenticating: bool = False
     output: list[str] | None = None
     error: str | None = None
