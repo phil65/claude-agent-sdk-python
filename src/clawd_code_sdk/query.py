@@ -35,20 +35,6 @@ async def query(
     - **Simple**: Fire-and-forget style, no connection management
     - **No interrupts**: Cannot interrupt or send follow-up messages
 
-    When to use query():
-    - Simple one-off questions ("What is 2+2?")
-    - Batch processing of independent prompts
-    - Code generation or analysis tasks
-    - Automated scripts and CI/CD pipelines
-    - When you know all inputs upfront
-
-    When to use ClaudeSDKClient:
-    - Interactive conversations with follow-ups
-    - Chat applications or REPL-like interfaces
-    - When you need to send messages based on responses
-    - When you need interrupt capabilities
-    - Long-running sessions with state
-
     Args:
         prompt: The prompt to send to Claude. Can be a string for single-shot queries
                 or an AsyncIterable[UserPromptMessage] for streaming mode.
@@ -113,12 +99,8 @@ async def query(
         ```
 
     """
-    if options is None:
-        options = ClaudeAgentOptions()
-
+    options = options or ClaudeAgentOptions()
     os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py"
-
     client = InternalClient()
-
     async for message in client.process_query(prompt=prompt, options=options, transport=transport):
         yield message

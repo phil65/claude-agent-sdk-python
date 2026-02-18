@@ -102,9 +102,7 @@ def _get_adapter() -> TypeAdapter[list[ToolResultContentBlock]]:
     return _tool_result_content_adapter
 
 
-def validate_tool_result_content(
-    content: list[dict[str, object]],
-) -> list[ToolResultContentBlock]:
+def validate_tool_result_content(content: list[dict[str, object]]) -> list[ToolResultContentBlock]:
     """Validate and parse raw tool result content into typed blocks.
 
     Args:
