@@ -311,7 +311,7 @@ class ServerToolUse(TypedDict):
     web_fetch_requests: int
     service_tier: Literal["standard", "priority"]
     cache_creation: CacheCreation
-    inference_geo: str
+    inference_geo: Literal["not_available"] | str
     iterations: list[Any]
     speed: str
 
