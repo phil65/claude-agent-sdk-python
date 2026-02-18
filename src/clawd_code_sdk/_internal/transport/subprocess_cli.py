@@ -136,15 +136,12 @@ class SubprocessCLITransport(Transport):
                 cmd.extend(["--append-system-prompt", append])
 
         # Handle tools option (base set of tools)
-        if self._options.tools is not None:
-            tools = self._options.tools
-            if isinstance(tools, list):
-                if len(tools) == 0:
-                    cmd.extend(["--tools", ""])
-                else:
-                    cmd.extend(["--tools", ",".join(tools)])
-            else:
-                # Preset object - 'claude_code' preset maps to 'default'
+        match self._options.tools:
+            case []:
+                cmd.extend(["--tools", ""])
+            case list() as tools:
+                cmd.extend(["--tools", ",".join(tools)])
+            case {"type": "preset"}:
                 cmd.extend(["--tools", "default"])
 
         if self._options.allowed_tools:
@@ -184,8 +181,7 @@ class SubprocessCLITransport(Transport):
             cmd.extend(["--session-id", self._options.session_id])
 
         # Handle settings and sandbox: merge sandbox into settings if both are provided
-        settings_value = self._build_settings_value()
-        if settings_value:
+        if settings_value := self._build_settings_value():
             cmd.extend(["--settings", settings_value])
 
         if self._options.add_dirs:
@@ -193,32 +189,16 @@ class SubprocessCLITransport(Transport):
             for directory in self._options.add_dirs:
                 cmd.extend(["--add-dir", str(directory)])
 
-        if self._options.mcp_servers:
-            if isinstance(self._options.mcp_servers, dict):
-                # Process all servers, stripping instance field from SDK servers
-                servers_for_cli: dict[str, Any] = {}
-                for name, config in self._options.mcp_servers.items():
-                    if isinstance(config, dict) and config.get("type") == "sdk":
-                        # For SDK servers, pass everything except the instance field
-                        sdk_config: dict[str, object] = {
-                            k: v for k, v in config.items() if k != "instance"
-                        }
-                        servers_for_cli[name] = sdk_config
-                    else:
-                        # For external servers, pass as-is
-                        servers_for_cli[name] = config
-
-                # Pass all servers to CLI
-                if servers_for_cli:
-                    cmd.extend(
-                        [
-                            "--mcp-config",
-                            anyenv.dump_json({"mcpServers": servers_for_cli}),
-                        ]
-                    )
-            else:
-                # String or Path format: pass directly as file path or JSON string
-                cmd.extend(["--mcp-config", str(self._options.mcp_servers)])
+        match self._options.mcp_servers:
+            case dict() as servers if servers:
+                servers_for_cli = {
+                    name: {k: v for k, v in cfg.items() if k != "instance"}
+                    for name, cfg in servers.items()
+                }
+                dct = anyenv.dump_json({"mcpServers": servers_for_cli})
+                cmd.extend(["--mcp-config", dct])
+            case str() | Path() as path if str(path):
+                cmd.extend(["--mcp-config", str(path)])
 
         cmd.append("--include-partial-messages")
 

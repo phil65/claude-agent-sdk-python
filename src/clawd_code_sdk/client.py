@@ -145,7 +145,7 @@ class ClaudeSDKClient:
         await self._query.start()
         await self._query.initialize()
         # If we have an initial prompt stream, start streaming it
-        if prompt is not None and isinstance(prompt, AsyncIterable) and self._query._tg:
+        if isinstance(prompt, AsyncIterable) and self._query._tg:
             self._query._tg.start_soon(self._query.stream_input, prompt)
 
     async def receive_messages(self) -> AsyncIterator[Message]:
@@ -171,7 +171,6 @@ class ClaudeSDKClient:
         self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
-
         # Handle string prompts
         if isinstance(prompt, str):
             message = UserPromptMessage(
