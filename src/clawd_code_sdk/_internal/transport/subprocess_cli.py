@@ -110,18 +110,7 @@ class SubprocessCLITransport(Transport):
             # Check if settings is a JSON string or a file path
             if settings_str.startswith("{") and settings_str.endswith("}"):
                 # Parse JSON string
-                try:
-                    settings_obj = anyenv.load_json(settings_str)
-                except anyenv.JsonLoadError:
-                    # If parsing fails, treat as file path
-                    logger.warning(
-                        f"Failed to parse settings as JSON, treating as file path: {settings_str}"
-                    )
-                    # Read the file
-                    settings_path = Path(settings_str)
-                    if settings_path.exists():
-                        with settings_path.open(encoding="utf-8") as f:
-                            settings_obj = json.load(f)
+                settings_obj = anyenv.load_json(settings_str)
             else:
                 # It's a file path - read and parse
                 settings_path = Path(settings_str)
