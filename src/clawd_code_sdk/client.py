@@ -326,6 +326,27 @@ class ClaudeSDKClient:
             wire_servers[name] = server_dict
         return await self._query.set_mcp_servers(wire_servers)
 
+    async def mcp_reconnect(self, server_name: str) -> None:
+        """Reconnect to an MCP server.
+
+        Args:
+            server_name: Name of the MCP server to reconnect
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        await self._query.mcp_reconnect(server_name)
+
+    async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
+        """Enable or disable an MCP server.
+
+        Args:
+            server_name: Name of the MCP server to toggle
+            enabled: Whether the server should be enabled
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        await self._query.mcp_toggle(server_name, enabled=enabled)
+
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking.
 
