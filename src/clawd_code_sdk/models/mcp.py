@@ -43,6 +43,8 @@ class McpSdkServerConfig(TypedDict):
     instance: McpServer
 
 
+ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
+
 McpServerConfig = (
     McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfig
 )

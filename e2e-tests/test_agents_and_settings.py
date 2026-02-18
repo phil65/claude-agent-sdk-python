@@ -533,5 +533,128 @@ async def test_agent_definition_without_memory_no_cross_session_recall():
         )
 
 
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_agent_definition_with_mcp_servers():
+    """Test that a subagent with mcpServers has access to the MCP server's tools.
+
+    This test verifies that the mcp_servers field on AgentDefinition correctly
+    provides MCP tools to the subagent:
+
+    1. Define a subagent with mcp_servers pointing to mcp-server-git
+    2. Ask the main agent to call the subagent and have it list or use git tools
+    3. Verify the response mentions git-related tools/functionality
+    """
+    from clawd_code_sdk import AssistantMessage, TextBlock
+
+    options = ClaudeAgentOptions(
+        agents={
+            "git-agent": AgentDefinition(
+                description="An agent with git MCP tools",
+                prompt=(
+                    "You are a git helper agent with access to git MCP tools. "
+                    "When asked about your tools, list the git-related tools you have available."
+                ),
+                mcp_servers=[
+                    {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+                ],
+            )
+        },
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(
+            "Use the git-agent subagent and ask it what git-related tools it has available. "
+            "Include the tool names in your response."
+        )
+
+        response_text = ""
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        response_text += block.text
+
+        response_lower = response_text.lower()
+        # mcp-server-git exposes tools like git_status, git_log, git_diff, etc.
+        git_tool_names = [
+            "git_status",
+            "git_log",
+            "git_diff",
+            "git_commit",
+            "git_add",
+            "git_branch",
+            "git_checkout",
+            "git_show",
+        ]
+        found_tools = [name for name in git_tool_names if name in response_lower]
+        assert found_tools, (
+            f"Expected the response to mention at least one git MCP tool "
+            f"({', '.join(git_tool_names)}), but got: {response_text[:500]}"
+        )
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_agent_definition_without_mcp_servers_no_git_tools():
+    """Test that a subagent WITHOUT mcpServers does NOT have git MCP tools.
+
+    This is the negative control for test_agent_definition_with_mcp_servers.
+    Without the mcp_servers field, the subagent should not have access to
+    git MCP tools.
+    """
+    from clawd_code_sdk import AssistantMessage, TextBlock
+
+    options = ClaudeAgentOptions(
+        agents={
+            "plain-agent": AgentDefinition(
+                description="An agent without any MCP servers",
+                prompt=(
+                    "You are a plain agent with no MCP servers configured. "
+                    "When asked about git MCP tools, be honest that you do not "
+                    "have any git MCP tools available."
+                ),
+                # NOTE: no mcp_servers field set
+            )
+        },
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(
+            "Use the plain-agent subagent and ask it whether it has any git MCP tools "
+            "like git_log, git_status, git_diff, or git_commit available. "
+            "Report honestly whether it does or does not have these tools."
+        )
+
+        response_text = ""
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        response_text += block.text
+
+        response_lower = response_text.lower()
+        # mcp-server-git tool names — none of these should appear
+        git_tool_names = [
+            "git_status",
+            "git_log",
+            "git_diff",
+            "git_commit",
+            "git_add",
+            "git_branch",
+            "git_checkout",
+            "git_show",
+        ]
+        found_tools = [name for name in git_tool_names if name in response_lower]
+        assert not found_tools, (
+            f"The agent should NOT have git MCP tools, but the response mentions: "
+            f"{found_tools}. Response was: {response_text[:500]}"
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-vv"])

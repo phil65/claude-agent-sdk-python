@@ -960,8 +960,6 @@ class TestSubprocessCLITransport:
         When set, it should appear in the serialized dict sent via initialize.
         When None (default), it should be omitted.
         """
-        from dataclasses import asdict
-
         from clawd_code_sdk.models import AgentDefinition
 
         # memory=None (default) should be omitted from serialized output
@@ -969,7 +967,7 @@ class TestSubprocessCLITransport:
             description="Agent without memory",
             prompt="You are a test agent",
         )
-        serialized = {k: v for k, v in asdict(agent_no_memory).items() if v is not None}
+        serialized = agent_no_memory.to_dict()
         assert "memory" not in serialized
         assert serialized == {
             "description": "Agent without memory",
@@ -982,7 +980,7 @@ class TestSubprocessCLITransport:
             prompt="You remember things per-user",
             memory="user",
         )
-        serialized = {k: v for k, v in asdict(agent_user_memory).items() if v is not None}
+        serialized = agent_user_memory.to_dict()
         assert serialized["memory"] == "user"
 
         # memory="project" should be included
@@ -991,7 +989,7 @@ class TestSubprocessCLITransport:
             prompt="You remember things per-project",
             memory="project",
         )
-        serialized = {k: v for k, v in asdict(agent_project_memory).items() if v is not None}
+        serialized = agent_project_memory.to_dict()
         assert serialized["memory"] == "project"
 
         # memory="local" should be included
@@ -1000,13 +998,11 @@ class TestSubprocessCLITransport:
             prompt="You remember things locally",
             memory="local",
         )
-        serialized = {k: v for k, v in asdict(agent_local_memory).items() if v is not None}
+        serialized = agent_local_memory.to_dict()
         assert serialized["memory"] == "local"
 
     def test_agent_definition_memory_field_with_all_fields(self):
         """Test that memory field works alongside all other AgentDefinition fields."""
-        from dataclasses import asdict
-
         from clawd_code_sdk.models import AgentDefinition
 
         agent = AgentDefinition(
@@ -1016,7 +1012,7 @@ class TestSubprocessCLITransport:
             model="sonnet",
             memory="project",
         )
-        serialized = {k: v for k, v in asdict(agent).items() if v is not None}
+        serialized = agent.to_dict()
         assert serialized == {
             "description": "Full agent",
             "prompt": "You are a full agent",
@@ -1028,11 +1024,9 @@ class TestSubprocessCLITransport:
     def test_agent_definition_memory_passed_to_query_initialize(self):
         """Test that memory field is included in the initialize request agents dict.
 
-        The Query class serializes agents using asdict() and filters out None values.
+        The Query class serializes agents using to_dict() and filters out None values.
         This test verifies the same logic produces the correct output.
         """
-        from dataclasses import asdict
-
         from clawd_code_sdk.models import AgentDefinition
 
         agents = {
@@ -1048,10 +1042,130 @@ class TestSubprocessCLITransport:
         }
 
         # Replicate the serialization logic from Query.__init__
-        agents_dict = {
-            name: {k: v for k, v in asdict(agent_def).items() if v is not None}
-            for name, agent_def in agents.items()
-        }
+        agents_dict = {name: agent_def.to_dict() for name, agent_def in agents.items()}
 
         assert agents_dict["memory-agent"]["memory"] == "user"
         assert "memory" not in agents_dict["no-memory-agent"]
+
+    def test_agent_definition_mcp_servers_field_serialization(self):
+        """Test that AgentDefinition mcp_servers field serializes as 'mcpServers'.
+
+        The CLI expects 'mcpServers' as an array of AgentMcpServerSpec.
+        When mcp_servers is None (default), it should be omitted entirely.
+        A dict input is converted to [{name: config}, ...] array format.
+        """
+        from clawd_code_sdk.models import AgentDefinition
+
+        # mcp_servers=None (default) should be omitted from serialized output
+        agent_no_mcp = AgentDefinition(
+            description="Agent without MCP servers",
+            prompt="You are a test agent",
+        )
+        serialized = agent_no_mcp.to_dict()
+        assert "mcpServers" not in serialized
+        assert "mcp_servers" not in serialized
+
+        # Dict-style mcp_servers should serialize as mcpServers array
+        agent_with_mcp = AgentDefinition(
+            description="Agent with MCP servers",
+            prompt="You have MCP tools",
+            mcp_servers={
+                "git": {"command": "uvx", "args": ["mcp-server-git"]},
+            },
+        )
+        serialized = agent_with_mcp.to_dict()
+        assert "mcpServers" in serialized
+        assert "mcp_servers" not in serialized
+        assert serialized["mcpServers"] == [
+            {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+        ]
+
+    def test_agent_definition_mcp_servers_list_passthrough(self):
+        """Test that list-style mcp_servers is passed through as-is.
+
+        Users can provide the raw CLI format (array of string | {name: config})
+        directly, and it should be serialized without conversion.
+        """
+        from clawd_code_sdk.models import AgentDefinition
+
+        # List with string references
+        agent_str = AgentDefinition(
+            description="Agent with server references",
+            prompt="You have tools",
+            mcp_servers=["my-server"],
+        )
+        serialized = agent_str.to_dict()
+        assert serialized["mcpServers"] == ["my-server"]
+
+        # List with dict configs
+        agent_dict = AgentDefinition(
+            description="Agent with server configs",
+            prompt="You have tools",
+            mcp_servers=[{"git": {"command": "uvx", "args": ["mcp-server-git"]}}],
+        )
+        serialized = agent_dict.to_dict()
+        assert serialized["mcpServers"] == [
+            {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+        ]
+
+        # Mixed list
+        agent_mixed = AgentDefinition(
+            description="Agent with mixed servers",
+            prompt="You have tools",
+            mcp_servers=[
+                "shared-server",
+                {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+            ],
+        )
+        serialized = agent_mixed.to_dict()
+        assert serialized["mcpServers"] == [
+            "shared-server",
+            {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+        ]
+
+    def test_agent_definition_mcp_servers_with_all_fields(self):
+        """Test that mcp_servers works alongside all other AgentDefinition fields."""
+        from clawd_code_sdk.models import AgentDefinition
+
+        agent = AgentDefinition(
+            description="Full agent",
+            prompt="You are a full agent",
+            tools=["Read"],
+            model="sonnet",
+            memory="project",
+            mcp_servers={
+                "git": {"command": "uvx", "args": ["mcp-server-git"]},
+            },
+        )
+        serialized = agent.to_dict()
+        assert serialized == {
+            "description": "Full agent",
+            "prompt": "You are a full agent",
+            "tools": ["Read"],
+            "model": "sonnet",
+            "memory": "project",
+            "mcpServers": [
+                {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
+            ],
+        }
+
+    def test_agent_definition_mcp_servers_multiple_servers(self):
+        """Test that multiple MCP servers serialize as array entries."""
+        from clawd_code_sdk.models import AgentDefinition
+
+        agent = AgentDefinition(
+            description="Multi-MCP agent",
+            prompt="You have many tools",
+            mcp_servers={
+                "git": {"command": "uvx", "args": ["mcp-server-git"]},
+                "remote": {"type": "sse", "url": "http://localhost:8080/sse"},
+            },
+        )
+        serialized = agent.to_dict()
+        assert "mcpServers" in serialized
+        assert len(serialized["mcpServers"]) == 2
+        # Each dict entry becomes a separate array element
+        assert {"git": {"command": "uvx", "args": ["mcp-server-git"]}} in serialized["mcpServers"]
+        assert {"remote": {"type": "sse", "url": "http://localhost:8080/sse"}} in serialized[
+            "mcpServers"
+        ]

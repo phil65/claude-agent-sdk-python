@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import asdict
 import logging
 import math
 import os
@@ -108,10 +107,7 @@ class Query:
         # Convert agents to dict format for initialize request
         agents_dict: dict[str, dict[str, Any]] | None = None
         if agents:
-            agents_dict = {
-                name: {k: v for k, v in asdict(agent_def).items() if v is not None}
-                for name, agent_def in agents.items()
-            }
+            agents_dict = {name: agent_def.to_dict() for name, agent_def in agents.items()}
         self._agents = agents_dict
 
         # Control protocol state
