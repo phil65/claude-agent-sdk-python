@@ -207,7 +207,7 @@ class TestHookCallbacks:
 
         transport = MockTransport()
         # Create hooks configuration
-        hooks = {"tool_use_start": [{"matcher": {"tool": "TestTool"}, "hooks": [test_hook]}]}
+        hooks = {"tool_use_start": [HookMatcher(matcher="TestTool", hooks=[test_hook])]}
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
         # Manually register the hook callback to avoid needing the full initialize flow
         callback_id = "test_hook_0"
@@ -258,7 +258,7 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [{"matcher": {"tool": "TestTool"}, "hooks": [comprehensive_hook]}]}
+        hooks = {"PreToolUse": [HookMatcher(matcher="TestTool", hooks=[comprehensive_hook])]}
 
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
@@ -308,7 +308,7 @@ class TestHookCallbacks:
             return {"async_": True, "asyncTimeout": 5000}
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [{"matcher": None, "hooks": [async_hook]}]}
+        hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[async_hook])]}
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
@@ -350,7 +350,7 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [{"matcher": None, "hooks": [conversion_test_hook]}]}
+        hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[conversion_test_hook])]}
 
         query = Query(transport=transport, is_streaming_mode=True, can_use_tool=None, hooks=hooks)
 
