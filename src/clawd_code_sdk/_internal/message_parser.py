@@ -17,7 +17,10 @@ from clawd_code_sdk.models import (
     parse_system_message,
 )
 from clawd_code_sdk.models.messages import (
+    AuthStatusMessage,
     RateLimitMessage,
+    ToolProgressMessage,
+    ToolUseSummaryMessage,
 )
 
 
@@ -87,6 +90,11 @@ def parse_message(data: dict[str, Any]) -> Message:
             return ToolProgressMessage(**progress_data)
         case {"type": "tool_use_summary", **summary_data}:
             return ToolUseSummaryMessage(**summary_data)
+        case {"type": "auth_status", **auth_data}:
+            # Convert camelCase isAuthenticating to snake_case
+            if "isAuthenticating" in auth_data:
+                auth_data["is_authenticating"] = auth_data.pop("isAuthenticating")
+            return AuthStatusMessage(**auth_data)
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():

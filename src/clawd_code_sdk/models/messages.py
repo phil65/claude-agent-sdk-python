@@ -275,6 +275,19 @@ class FilesPersistedSystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
+class HookProgressSystemMessage(BaseMessage):
+    """Progress update from a running hook."""
+
+    subtype: Literal["hook_progress"] = "hook_progress"
+    hook_id: str = ""
+    hook_name: str = ""
+    hook_event: str = ""
+    stdout: str = ""
+    stderr: str = ""
+    output: str = ""
+
+
+@dataclass(kw_only=True)
 class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
 
@@ -371,11 +384,21 @@ class ToolUseSummaryMessage(BaseMessage):
     preceding_tool_use_ids: list[str] | None = None
 
 
+@dataclass
+class AuthStatusMessage(BaseMessage):
+    """Authentication status update."""
+
+    is_authenticating: bool = False
+    output: list[str] | None = None
+    error: str | None = None
+
+
 SystemMessageUnion = Annotated[
     SystemMessage
     | HookStartedSystemMessage
     | StatusSystemMessage
     | CompactBoundarySystemMessage
+    | HookProgressSystemMessage
     | HookResponseSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
@@ -407,4 +430,5 @@ Message = (
     | FilesPersistedSystemMessage
     | ToolProgressMessage
     | ToolUseSummaryMessage
+    | AuthStatusMessage
 )
