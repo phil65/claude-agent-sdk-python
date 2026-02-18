@@ -11,19 +11,18 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-##### Hook types
-HookEvent = (
-    Literal["PreToolUse"]
-    | Literal["PostToolUse"]
-    | Literal["PostToolUseFailure"]
-    | Literal["UserPromptSubmit"]
-    | Literal["Stop"]
-    | Literal["SubagentStop"]
-    | Literal["PreCompact"]
-    | Literal["Notification"]
-    | Literal["SubagentStart"]
-    | Literal["PermissionRequest"]
-)
+HookEvent = Literal[
+    "PreToolUse",
+    "PostToolUse",
+    "PostToolUseFailure",
+    "UserPromptSubmit",
+    "Stop",
+    "SubagentStop",
+    "PreCompact",
+    "Notification",
+    "SubagentStart",
+    "PermissionRequest",
+]
 
 
 # Hook input types - strongly typed for each hook event
