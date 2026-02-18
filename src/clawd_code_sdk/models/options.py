@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
@@ -82,6 +84,51 @@ class ClaudeAgentOptions:
     strict_mcp_config: bool = False
     # Enable 1M token context window (Sonnet 4/4.5 only).
     context_1m: bool = False
+
+    def build_settings_value(self) -> str | None:
+        """Build settings value, merging sandbox settings if provided.
+
+        Returns the settings value as either:
+        - A JSON string (if sandbox is provided or settings is JSON)
+        - A file path (if only settings path is provided without sandbox)
+        - None if neither settings nor sandbox is provided
+        """
+        import anyenv
+
+        has_settings = self.settings is not None
+        has_sandbox = self.sandbox is not None
+
+        if not has_settings and not has_sandbox:
+            return None
+
+        # If only settings path and no sandbox, pass through as-is
+        if has_settings and not has_sandbox:
+            return self.settings
+
+        # If we have sandbox settings, we need to merge into a JSON object
+        settings_obj: dict[str, Any] = {}
+
+        if has_settings:
+            assert self.settings is not None
+            settings_str = self.settings.strip()
+            # Check if settings is a JSON string or a file path
+            if settings_str.startswith("{") and settings_str.endswith("}"):
+                settings_obj = anyenv.load_json(settings_str)
+            else:
+                settings_path = Path(settings_str)
+                if settings_path.exists():
+                    with settings_path.open(encoding="utf-8") as f:
+                        settings_obj = json.load(f)
+                else:
+                    logging.getLogger(__name__).warning(
+                        "Settings file not found: %s", settings_path
+                    )
+
+        # Merge sandbox settings
+        if has_sandbox:
+            settings_obj["sandbox"] = self.sandbox
+
+        return anyenv.dump_json(settings_obj)
 
     def validate(self) -> None:
         """Validate option constraints.

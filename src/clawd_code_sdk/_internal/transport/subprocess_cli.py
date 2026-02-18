@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import suppress
-import json
 import logging
 import os
 from pathlib import Path
@@ -11,7 +10,6 @@ import platform
 import re
 import shutil
 import subprocess
-from subprocess import PIPE
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -72,56 +70,9 @@ class SubprocessCLITransport(Transport):
         self._stderr_task_group: anyio.abc.TaskGroup | None = None
         self._ready = False
         self._exit_error: Exception | None = None  # Track process exit errors
-        self._max_buffer_size = (
-            options.max_buffer_size
-            if options.max_buffer_size is not None
-            else _DEFAULT_MAX_BUFFER_SIZE
-        )
+        self._max_buffer_size = options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
         self._stderr_lines: list[str] = []
         self._write_lock: anyio.Lock = anyio.Lock()
-
-    def _build_settings_value(self) -> str | None:
-        """Build settings value, merging sandbox settings if provided.
-
-        Returns the settings value as either:
-        - A JSON string (if sandbox is provided or settings is JSON)
-        - A file path (if only settings path is provided without sandbox)
-        - None if neither settings nor sandbox is provided
-        """
-        has_settings = self._options.settings is not None
-        has_sandbox = self._options.sandbox is not None
-
-        if not has_settings and not has_sandbox:
-            return None
-
-        # If only settings path and no sandbox, pass through as-is
-        if has_settings and not has_sandbox:
-            return self._options.settings
-
-        # If we have sandbox settings, we need to merge into a JSON object
-        settings_obj: dict[str, Any] = {}
-
-        if has_settings:
-            assert self._options.settings is not None
-            settings_str = self._options.settings.strip()
-            # Check if settings is a JSON string or a file path
-            if settings_str.startswith("{") and settings_str.endswith("}"):
-                # Parse JSON string
-                settings_obj = anyenv.load_json(settings_str)
-            else:
-                # It's a file path - read and parse
-                settings_path = Path(settings_str)
-                if settings_path.exists():
-                    with settings_path.open(encoding="utf-8") as f:
-                        settings_obj = json.load(f)
-                else:
-                    logger.warning(f"Settings file not found: {settings_path}")
-
-        # Merge sandbox settings
-        if has_sandbox:
-            settings_obj["sandbox"] = self._options.sandbox
-
-        return anyenv.dump_json(settings_obj)
 
     def _build_command(self) -> list[str]:
         """Build CLI command with arguments."""
@@ -135,7 +86,6 @@ class SubprocessCLITransport(Transport):
             case {"type": "preset", "append": str() as append}:
                 cmd.extend(["--append-system-prompt", append])
 
-        # Handle tools option (base set of tools)
         match self._options.tools:
             case []:
                 cmd.extend(["--tools", ""])
@@ -181,7 +131,7 @@ class SubprocessCLITransport(Transport):
             cmd.extend(["--session-id", self._options.session_id])
 
         # Handle settings and sandbox: merge sandbox into settings if both are provided
-        if settings_value := self._build_settings_value():
+        if settings_value := self._options.build_settings_value():
             cmd.extend(["--settings", settings_value])
 
         if self._options.add_dirs:
@@ -226,42 +176,31 @@ class SubprocessCLITransport(Transport):
         if self._options.strict_mcp_config:
             cmd.append("--strict-mcp-config")
 
-        # Agents are always sent via initialize request (matching TypeScript SDK)
-        # No --agents CLI flag needed
-
-        sources_value = (
-            ",".join(self._options.setting_sources)
-            if self._options.setting_sources is not None
-            else ""
-        )
+        sources_value = ",".join(self._options.setting_sources or [])
         cmd.extend(["--setting-sources", sources_value])
 
         # Add plugin directories
-        if self._options.plugins:
-            for plugin in self._options.plugins:
-                if plugin["type"] == "local":
-                    cmd.extend(["--plugin-dir", plugin["path"]])
-                else:
-                    raise ValueError(f"Unsupported plugin type: {plugin['type']}")
+        for plugin in self._options.plugins:
+            if plugin["type"] == "local":
+                cmd.extend(["--plugin-dir", plugin["path"]])
+            else:
+                raise ValueError(f"Unsupported plugin type: {plugin['type']}")
 
         # Add extra args for future CLI flags
         for flag, value in self._options.extra_args.items():
-            if value is None:
-                # Boolean flag without value
+            if value is None:  # Boolean flag without value
                 cmd.append(f"--{flag}")
-            else:
-                # Flag with value
+            else:  # Flag with value
                 cmd.extend([f"--{flag}", str(value)])
 
         # Resolve thinking config → --max-thinking-tokens
-        if self._options.thinking is not None:
-            match self._options.thinking:
-                case {"type": "adaptive"}:
-                    cmd.extend(["--max-thinking-tokens", "32000"])
-                case {"type": "enabled", "budget_tokens": budget}:
-                    cmd.extend(["--max-thinking-tokens", str(budget)])
-                case {"type": "disabled"}:
-                    cmd.extend(["--max-thinking-tokens", "0"])
+        match self._options.thinking:
+            case {"type": "adaptive"}:
+                cmd.extend(["--max-thinking-tokens", "32000"])
+            case {"type": "enabled", "budget_tokens": budget}:
+                cmd.extend(["--max-thinking-tokens", str(budget)])
+            case {"type": "disabled"}:
+                cmd.extend(["--max-thinking-tokens", "0"])
 
         if self._options.effort is not None:
             cmd.extend(["--effort", self._options.effort])
@@ -269,18 +208,14 @@ class SubprocessCLITransport(Transport):
         # Extract schema from output_format structure if provided
         # Expected: {"type": "json_schema", "schema": {...}}
         if (
-            self._options.output_format is not None
-            and isinstance(self._options.output_format, dict)
+            isinstance(self._options.output_format, dict)
             and self._options.output_format.get("type") == "json_schema"
-        ):
-            schema = self._options.output_format.get("schema")
-            if schema is not None:
-                cmd.extend(["--json-schema", anyenv.dump_json(schema)])
+        ) and (schema := self._options.output_format.get("schema")):
+            cmd.extend(["--json-schema", anyenv.dump_json(schema)])
 
         # Always use streaming mode with stdin (matching TypeScript SDK)
         # This allows agents and other large configs to be sent via initialize request
         cmd.extend(["--input-format", "stream-json"])
-
         return cmd
 
     async def connect(self) -> None:
@@ -310,13 +245,9 @@ class SubprocessCLITransport(Transport):
         # Always pipe stderr so we can capture it for error reporting.
         # The callback and debug mode flags control whether lines are
         # forwarded in real-time, but we always collect them.
-        stderr_dest = PIPE
         try:
             self._process = await anyio.open_process(
                 cmd,
-                stdin=PIPE,
-                stdout=PIPE,
-                stderr=stderr_dest,
                 cwd=self._cwd,
                 env=process_env,
                 user=self._options.user,
@@ -570,15 +501,13 @@ def _find_bundled_cli() -> str | None:
     if bundled_path.exists() and bundled_path.is_file():
         logger.info(f"Using bundled Claude Code CLI: {bundled_path}")
         return str(bundled_path)
-
     return None
 
 
 def _find_cli() -> str:
     """Find Claude Code CLI binary."""
     # First, check for bundled CLI
-    bundled_cli = _find_bundled_cli()
-    if bundled_cli:
+    if bundled_cli := _find_bundled_cli():
         return bundled_cli
 
     # Fall back to system-wide search
