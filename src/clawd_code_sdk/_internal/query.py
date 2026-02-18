@@ -507,7 +507,8 @@ class Query:
                     result = await handler(call_request)
                     # Convert MCP result to JSONRPC response
                     content: list[dict[str, Any]] = []
-                    for item in result.root.content:  # type: ignore[union-attr]
+                    assert isinstance(result.root, CallToolResult)
+                    for item in result.root.content:
                         match item:
                             case TextContent(text=text):
                                 content.append({"type": "text", "text": text})
@@ -545,7 +546,7 @@ class Query:
                                     content.append({"type": "document", "source": dct})
 
                     response_data: dict[str, Any] = {"content": content}
-                    if isinstance(result.root, CallToolResult) and result.root.isError:  # pyright: ignore[reportAttributeAccessIssue]
+                    if result.root.isError:
                         response_data["is_error"] = True
 
                     return {"jsonrpc": "2.0", "id": message.get("id"), "result": response_data}
