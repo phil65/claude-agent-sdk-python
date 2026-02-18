@@ -40,6 +40,7 @@ from .control import (
     SDKControlResponse,
     SDKControlRewindFilesRequest,
     SDKControlSetPermissionModeRequest,
+    SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
     parse_control_request,
 )
@@ -312,6 +313,7 @@ __all__ = [
     "SDKControlResponse",
     "SDKControlRewindFilesRequest",
     "SDKControlSetPermissionModeRequest",
+    "SDKControlStopTaskRequest",
     "SDKHookCallbackRequest",
     "parse_control_request",
     "ToolInput",

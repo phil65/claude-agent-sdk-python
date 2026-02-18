@@ -216,6 +216,16 @@ class ClaudeSDKClient:
             raise CLIConnectionError("Not connected. Call connect() first.")
         await self._query.set_model(model)
 
+    async def stop_task(self, task_id: str) -> None:
+        """Stop a running task.
+
+        Args:
+            task_id: ID of the task to stop
+        """
+        if not self._query:
+            raise CLIConnectionError("Not connected. Call connect() first.")
+        await self._query.stop_task(task_id)
+
     async def rewind_files(self, user_message_id: str) -> None:
         """Rewind tracked files to their state at a specific user message.
 

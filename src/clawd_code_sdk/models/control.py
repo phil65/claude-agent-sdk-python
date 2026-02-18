@@ -63,6 +63,12 @@ class SDKControlRewindFilesRequest:
     user_message_id: str
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlStopTaskRequest:
+    subtype: Literal["stop_task"] = "stop_task"
+    task_id: str
+
+
 ControlRequestUnion = Annotated[
     SDKControlInterruptRequest
     | SDKControlPermissionRequest
@@ -70,7 +76,8 @@ ControlRequestUnion = Annotated[
     | SDKControlSetPermissionModeRequest
     | SDKHookCallbackRequest
     | SDKControlMcpMessageRequest
-    | SDKControlRewindFilesRequest,
+    | SDKControlRewindFilesRequest
+    | SDKControlStopTaskRequest,
     Discriminator("subtype"),
 ]
 

@@ -21,6 +21,7 @@ from clawd_code_sdk.models import (
     SDKControlPermissionRequest,
     SDKControlRewindFilesRequest,
     SDKControlSetPermissionModeRequest,
+    SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
     ToolPermissionContext,
 )
@@ -299,6 +300,8 @@ class Query:
                 case SDKControlSetPermissionModeRequest():
                     pass  # Handled elsewhere
                 case SDKControlRewindFilesRequest():
+                    pass  # Handled elsewhere
+                case SDKControlStopTaskRequest():
                     pass  # Handled elsewhere
 
             success_response: SDKControlResponse = {
@@ -595,6 +598,14 @@ class Query:
     async def set_model(self, model: str | None) -> None:
         """Change the AI model."""
         await self._send_control_request({"subtype": "set_model", "model": model})
+
+    async def stop_task(self, task_id: str) -> None:
+        """Stop a running task.
+
+        Args:
+            task_id: ID of the task to stop
+        """
+        await self._send_control_request({"subtype": "stop_task", "task_id": task_id})
 
     async def rewind_files(self, user_message_id: str) -> None:
         """Rewind tracked files to their state at a specific user message.
