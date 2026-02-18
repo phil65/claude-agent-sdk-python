@@ -12,7 +12,7 @@ import anyenv
 import anyio
 from pydantic import BaseModel
 
-from ..models import (
+from clawd_code_sdk.models import (
     PermissionResultAllow,
     PermissionResultDeny,
     SDKControlInitializeRequest,
@@ -32,11 +32,14 @@ if TYPE_CHECKING:
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
 
-    from clawd_code_sdk.models import ToolInput
-
-    from ..models import ControlRequestUnion, PermissionMode, SDKControlResponse
-    from ..models.messages import UserPromptMessage
-    from .transport import Transport
+    from clawd_code_sdk._internal.transport import Transport
+    from clawd_code_sdk.models import (
+        ControlRequestUnion,
+        PermissionMode,
+        SDKControlResponse,
+        ToolInput,
+    )
+    from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +211,7 @@ class Query:
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
-        from ..models import parse_control_request
+        from clawd_code_sdk.models import parse_control_request
 
         try:
             async for message in self.transport.read_messages():

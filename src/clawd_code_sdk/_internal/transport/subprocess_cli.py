@@ -20,14 +20,14 @@ import anyio
 import anyio.abc
 from anyio.streams.text import TextReceiveStream, TextSendStream
 
-from ..._errors import (
+from clawd_code_sdk._errors import (
     CLIConnectionError,
     CLIJSONDecodeError as SDKJSONDecodeError,
     CLINotFoundError,
     ProcessError,
 )
-from ..._version import __version__
-from . import Transport
+from clawd_code_sdk._internal.transport import Transport
+from clawd_code_sdk._version import __version__
 
 
 if TYPE_CHECKING:
@@ -35,8 +35,8 @@ if TYPE_CHECKING:
 
     from anyio.abc import Process
 
-    from ...models import ClaudeAgentOptions
-    from ...models.messages import UserPromptMessage
+    from clawd_code_sdk.models import ClaudeAgentOptions
+    from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
 
