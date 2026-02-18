@@ -227,6 +227,28 @@ class RateLimitMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
+class TaskStartedSystemMessage(BaseMessage):
+    """System message emitted when a subagent task starts."""
+
+    subtype: Literal["task_started"] = "task_started"
+    task_id: str = ""
+    tool_use_id: str | None = None
+    description: str = ""
+    task_type: str | None = None
+
+
+@dataclass(kw_only=True)
+class TaskNotificationSystemMessage(BaseMessage):
+    """System message emitted when a subagent task completes, fails, or stops."""
+
+    subtype: Literal["task_notification"] = "task_notification"
+    task_id: str = ""
+    status: Literal["completed", "failed", "stopped"] = "completed"
+    output_file: str = ""
+    summary: str = ""
+
+
+@dataclass(kw_only=True)
 class HookResponseSystemMessage(BaseMessage):
     """System message with metadata."""
 
@@ -305,12 +327,32 @@ class StreamEvent(BaseMessage):
     parent_tool_use_id: str | None = None
 
 
+@dataclass
+class ToolProgressMessage(BaseMessage):
+    """Progress update for a running tool."""
+
+    tool_use_id: str = ""
+    tool_name: str = ""
+    parent_tool_use_id: str | None = None
+    elapsed_time_seconds: float = 0.0
+
+
+@dataclass
+class ToolUseSummaryMessage(BaseMessage):
+    """Summary of preceding tool uses."""
+
+    summary: str = ""
+    preceding_tool_use_ids: list[str] | None = None
+
+
 SystemMessageUnion = Annotated[
     SystemMessage
     | HookStartedSystemMessage
     | StatusSystemMessage
     | CompactBoundarySystemMessage
-    | HookResponseSystemMessage,
+    | HookResponseSystemMessage
+    | TaskStartedSystemMessage
+    | TaskNotificationSystemMessage,
     Discriminator("subtype"),
 ]
 
@@ -333,4 +375,8 @@ Message = (
     | HookResponseSystemMessage
     | CompactBoundarySystemMessage
     | StatusSystemMessage
+    | TaskStartedSystemMessage
+    | TaskNotificationSystemMessage
+    | ToolProgressMessage
+    | ToolUseSummaryMessage
 )

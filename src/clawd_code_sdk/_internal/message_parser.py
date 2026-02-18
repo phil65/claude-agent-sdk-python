@@ -16,7 +16,9 @@ from clawd_code_sdk.models import (
     parse_content_block,
     parse_system_message,
 )
-from clawd_code_sdk.models.messages import RateLimitMessage
+from clawd_code_sdk.models.messages import (
+    RateLimitMessage,
+)
 
 
 if TYPE_CHECKING:
@@ -81,6 +83,10 @@ def parse_message(data: dict[str, Any]) -> Message:
             except TypeError as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
+        case {"type": "tool_progress", **progress_data}:
+            return ToolProgressMessage(**progress_data)
+        case {"type": "tool_use_summary", **summary_data}:
+            return ToolUseSummaryMessage(**summary_data)
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():
