@@ -46,32 +46,21 @@ class ClaudeAgentOptions:
     extra_args: dict[str, str | None] = field(default_factory=dict)  # Pass arbitrary CLI flags
     max_buffer_size: int | None = None  # Max bytes when buffering CLI stdout
     stderr: Callable[[str], None] | None = None  # Callback for stderr output from CLI
-
-    # Tool permission callback
-    can_use_tool: CanUseTool | None = None
-
-    # Hook configurations
-    hooks: dict[HookEvent, list[HookMatcher]] | None = None
-
+    can_use_tool: CanUseTool | None = None  # Tool permission callback
+    hooks: dict[HookEvent, list[HookMatcher]] | None = None  # Hook configurations
     user: str | None = None
-
     # When true resumed sessions will fork to a new session ID rather than
     # continuing the previous session.
     fork_session: bool = False
-    # Agent definitions for custom agents
-    agents: dict[str, AgentDefinition] | None = None
-    # Setting sources to load (user, project, local)
-    setting_sources: list[SettingSource] | None = None
+    agents: dict[str, AgentDefinition] | None = None  # Agent definitions for custom agents
+    setting_sources: list[SettingSource] | None = None  # Setting sources to load
     # Sandbox configuration for bash command isolation.
     # Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
     # not from these sandbox settings.
     sandbox: SandboxSettings | None = None
-    # Plugin configurations for custom plugins
-    plugins: list[SdkPluginConfig] = field(default_factory=list)
-    # Controls extended thinking behavior.
-    thinking: ThinkingConfig | None = None
-    # Effort level for thinking depth.
-    effort: ReasoningEffort | None = None
+    plugins: list[SdkPluginConfig] = field(default_factory=list)  # Plugin configurations
+    thinking: ThinkingConfig | None = None  # Controls extended thinking behavior.
+    effort: ReasoningEffort | None = None  # Effort level for thinking depth.
     # Output format for structured outputs (matches Messages API structure)
     # Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
     output_format: dict[str, Any] | None = None
