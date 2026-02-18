@@ -213,11 +213,20 @@ class TestHookCallbacks:
         callback_id = "test_hook_0"
         query.hook_callbacks[callback_id] = test_hook
         # Simulate hook callback request
+        hook_input = {
+            "session_id": "sess-1",
+            "transcript_path": "/tmp/t",
+            "cwd": "/home",
+            "hook_event_name": "PreToolUse",
+            "tool_name": "TestTool",
+            "tool_input": {},
+            "tool_use_id": "tool-123",
+        }
         request_data = parse_control_request(
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
-                "input": {"test": "data"},
+                "input": hook_input,
                 "tool_use_id": "tool-123",
             }
         )
@@ -225,7 +234,7 @@ class TestHookCallbacks:
         await query._handle_control_request("test-hook-1", request_data)
         # Check hook was called
         assert len(hook_calls) == 1
-        assert hook_calls[0]["input"] == {"test": "data"}
+        assert hook_calls[0]["input"] == hook_input
         assert hook_calls[0]["tool_use_id"] == "tool-123"
         # Check response
         assert len(transport.written_messages) > 0
@@ -269,7 +278,15 @@ class TestHookCallbacks:
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
-                "input": {"test": "data"},
+                "input": {
+                    "session_id": "sess-1",
+                    "transcript_path": "/tmp/t",
+                    "cwd": "/home",
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "TestTool",
+                    "tool_input": {},
+                    "tool_use_id": "tool-456",
+                },
                 "tool_use_id": "tool-456",
             }
         )
@@ -316,7 +333,15 @@ class TestHookCallbacks:
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
-                "input": {"test": "async_data"},
+                "input": {
+                    "session_id": "sess-1",
+                    "transcript_path": "/tmp/t",
+                    "cwd": "/home",
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "TestTool",
+                    "tool_input": {},
+                    "tool_use_id": "tool-0",
+                },
                 "tool_use_id": None,
             }
         )
@@ -361,7 +386,15 @@ class TestHookCallbacks:
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
-                "input": {"test": "data"},
+                "input": {
+                    "session_id": "sess-1",
+                    "transcript_path": "/tmp/t",
+                    "cwd": "/home",
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "TestTool",
+                    "tool_input": {},
+                    "tool_use_id": "tool-0",
+                },
                 "tool_use_id": None,
             }
         )
