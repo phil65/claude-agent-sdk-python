@@ -154,11 +154,19 @@ from .tool_use_results import (
     ToolUseResult,
     WriteToolUseResult,
 )
+from .content_blocks import (
+    ContentBlock,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    parse_content_block,
+)
+
 from .messages import (
     AssistantMessage,
     AssistantMessageError,
     CompactBoundarySystemMessage,
-    ContentBlock,
     HookResponseSystemMessage,
     HookStartedSystemMessage,
     McpServerStatus,
@@ -169,16 +177,11 @@ from .messages import (
     StatusSystemMessage,
     StreamEvent,
     SystemMessage,
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
     TriggerMetadata,
     Usage,
     UserMessage,
     UserPromptMessage,
     UserPromptMessageContent,
-    parse_content_block,
     parse_system_message,
 )
 from .options import ClaudeAgentOptions
