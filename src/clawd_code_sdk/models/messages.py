@@ -255,6 +255,7 @@ class TaskNotificationSystemMessage(BaseMessage):
     status: Literal["completed", "failed", "stopped"] = "completed"
     output_file: str = ""
     summary: str = ""
+    tool_use_id: str | None = None
 
 
 class FilePersistedEntry(TypedDict):
