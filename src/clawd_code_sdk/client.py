@@ -115,10 +115,8 @@ class ClaudeSDKClient:
             options = self.options
 
         # Use provided custom transport or create subprocess transport
-        if self._custom_transport:
-            self._transport = self._custom_transport
-        else:
-            self._transport = SubprocessCLITransport(prompt=actual_prompt, options=options)
+        tp = self._custom_transport or SubprocessCLITransport(prompt=actual_prompt, options=options)
+        self._transport = tp
         await self._transport.connect()
 
         # Extract SDK MCP servers from options
@@ -164,13 +162,7 @@ class ClaudeSDKClient:
         prompt: str | AsyncIterable[UserPromptMessage],
         session_id: str = "default",
     ) -> None:
-        """
-        Send a new request in streaming mode.
-
-        Args:
-            prompt: Either a string message or an async iterable of message dictionaries
-            session_id: Session identifier for the conversation
-        """
+        """Send a new request in streaming mode."""
         self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
@@ -218,11 +210,7 @@ class ClaudeSDKClient:
         await query.set_model(model)
 
     async def stop_task(self, task_id: str) -> None:
-        """Stop a running task.
-
-        Args:
-            task_id: ID of the task to stop
-        """
+        """Stop a running task."""
         query = self._ensure_connected()
         await query.stop_task(task_id)
 
@@ -269,14 +257,6 @@ class ClaudeSDKClient:
             - 'name': Server name (str)
             - 'status': Connection status ('connected', 'pending', 'failed',
               'needs-auth', 'disabled')
-
-        Example:
-            ```python
-            async with ClaudeSDKClient(options) as client:
-                status = await client.get_mcp_status()
-                for server in status.get("mcpServers", []):
-                    print(f"{server['name']}: {server['status']}")
-            ```
         """
         query = self._ensure_connected()
         result = await query.get_mcp_status()
@@ -301,19 +281,6 @@ class ClaudeSDKClient:
             - 'added': List of server names that were added
             - 'removed': List of server names that were removed
             - 'errors': Dict mapping server names to error messages (if any)
-
-        Example:
-            ```python
-            async with ClaudeSDKClient(options) as client:
-                # Add a stdio MCP server
-                result = await client.set_mcp_servers({
-                    "my-server": {"type": "stdio", "command": "my-cmd"}
-                })
-                print(f"Added: {result['added']}")
-
-                # Remove all dynamic servers
-                await client.set_mcp_servers({})
-            ```
         """
         query = self._ensure_connected()
         wire_servers: dict[str, dict[str, Any]] = {}

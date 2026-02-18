@@ -9,9 +9,6 @@ from __future__ import annotations
 from typing import Literal, NotRequired, TypedDict
 
 
-# --- Task (Agent) ---
-
-
 class AgentInput(TypedDict):
     """Input for the Task tool. Launches a new agent to handle complex, multi-step tasks."""
 
@@ -21,9 +18,6 @@ class AgentInput(TypedDict):
     """The task for the agent to perform."""
     subagent_type: str
     """The type of specialized agent to use for this task."""
-
-
-# --- AskUserQuestion ---
 
 
 class AskUserQuestionOption(TypedDict):
@@ -61,9 +55,6 @@ class AskUserQuestionInput(TypedDict):
     """
 
 
-# --- Bash ---
-
-
 class BashInput(TypedDict):
     """Input for the Bash tool. Executes bash commands in a persistent shell session."""
 
@@ -77,9 +68,6 @@ class BashInput(TypedDict):
     """Set to true to run this command in the background."""
 
 
-# --- BashOutput ---
-
-
 class BashOutputInput(TypedDict):
     """Input for the BashOutput tool. Retrieves output from a background bash shell."""
 
@@ -87,9 +75,6 @@ class BashOutputInput(TypedDict):
     """The ID of the background shell to retrieve output from."""
     filter: NotRequired[str]
     """Optional regex to filter output lines."""
-
-
-# --- Edit ---
 
 
 class FileEditInput(TypedDict):
@@ -105,9 +90,6 @@ class FileEditInput(TypedDict):
     """Replace all occurrences of old_string (default false)."""
 
 
-# --- Read ---
-
-
 class FileReadInput(TypedDict):
     """Input for the Read tool. Reads files including text, images, PDFs, and notebooks."""
 
@@ -119,9 +101,6 @@ class FileReadInput(TypedDict):
     """The number of lines to read."""
 
 
-# --- Write ---
-
-
 class FileWriteInput(TypedDict):
     """Input for the Write tool. Writes a file to the local filesystem."""
 
@@ -131,9 +110,6 @@ class FileWriteInput(TypedDict):
     """The content to write to the file."""
 
 
-# --- Glob ---
-
-
 class GlobInput(TypedDict):
     """Input for the Glob tool. Fast file pattern matching."""
 
@@ -141,9 +117,6 @@ class GlobInput(TypedDict):
     """The glob pattern to match files against."""
     path: NotRequired[str]
     """The directory to search in (defaults to cwd)."""
-
-
-# --- Grep ---
 
 
 # GrepInput uses the functional TypedDict form because the TypeScript interface
@@ -169,17 +142,11 @@ GrepInput = TypedDict(
 """Input for the Grep tool. Powerful search built on ripgrep with regex support."""
 
 
-# --- KillBash ---
-
-
 class KillShellInput(TypedDict):
     """Input for the KillBash tool. Kills a running background bash shell."""
 
     shell_id: str
     """The ID of the background shell to kill."""
-
-
-# --- NotebookEdit ---
 
 
 class NotebookEditInput(TypedDict):
@@ -197,9 +164,6 @@ class NotebookEditInput(TypedDict):
     """The type of edit (replace, insert, delete)."""
 
 
-# --- WebFetch ---
-
-
 class WebFetchInput(TypedDict):
     """Input for the WebFetch tool. Fetches content from a URL and processes it with AI."""
 
@@ -207,9 +171,6 @@ class WebFetchInput(TypedDict):
     """The URL to fetch content from."""
     prompt: str
     """The prompt to run on the fetched content."""
-
-
-# --- WebSearch ---
 
 
 class WebSearchInput(TypedDict):
@@ -221,9 +182,6 @@ class WebSearchInput(TypedDict):
     """Only include results from these domains."""
     blocked_domains: NotRequired[list[str]]
     """Never include results from these domains."""
-
-
-# --- TodoWrite ---
 
 
 class TodoItem(TypedDict):
@@ -244,9 +202,6 @@ class TodoWriteInput(TypedDict):
     """The updated todo list."""
 
 
-# --- ExitPlanMode ---
-
-
 class ExitPlanModeInput(TypedDict):
     """Input for the ExitPlanMode tool. Exits planning mode for user approval."""
 
@@ -254,17 +209,11 @@ class ExitPlanModeInput(TypedDict):
     """The plan to run by the user for approval."""
 
 
-# --- ListMcpResources ---
-
-
 class ListMcpResourcesInput(TypedDict):
     """Input for the ListMcpResources tool. Lists available MCP resources."""
 
     server: NotRequired[str]
     """Optional server name to filter resources by."""
-
-
-# --- ReadMcpResource ---
 
 
 class ReadMcpResourceInput(TypedDict):
@@ -275,8 +224,6 @@ class ReadMcpResourceInput(TypedDict):
     uri: str
     """The resource URI to read."""
 
-
-# --- Union type ---
 
 ToolInput = (
     AgentInput
