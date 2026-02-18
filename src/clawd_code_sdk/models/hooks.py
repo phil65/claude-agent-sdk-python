@@ -22,6 +22,11 @@ HookEvent = Literal[
     "Notification",
     "SubagentStart",
     "PermissionRequest",
+    "SessionStart",
+    "SessionEnd",
+    "Setup",
+    "TeammateIdle",
+    "TaskCompleted",
 ]
 
 
@@ -123,6 +128,48 @@ class PermissionRequestHookInput(BaseHookInput):
     permission_suggestions: NotRequired[list[Any]]
 
 
+class SessionStartHookInput(BaseHookInput):
+    """Input data for SessionStart hook events."""
+
+    hook_event_name: Literal["SessionStart"]
+    source: Literal["startup", "resume", "clear", "compact"]
+    agent_type: NotRequired[str]
+    model: NotRequired[str]
+
+
+class SessionEndHookInput(BaseHookInput):
+    """Input data for SessionEnd hook events."""
+
+    hook_event_name: Literal["SessionEnd"]
+    reason: Literal["clear", "logout", "prompt_input_exit", "other", "bypass_permissions_disabled"]
+
+
+class SetupHookInput(BaseHookInput):
+    """Input data for Setup hook events."""
+
+    hook_event_name: Literal["Setup"]
+    trigger: Literal["init", "maintenance"]
+
+
+class TeammateIdleHookInput(BaseHookInput):
+    """Input data for TeammateIdle hook events."""
+
+    hook_event_name: Literal["TeammateIdle"]
+    teammate_name: str
+    team_name: str
+
+
+class TaskCompletedHookInput(BaseHookInput):
+    """Input data for TaskCompleted hook events."""
+
+    hook_event_name: Literal["TaskCompleted"]
+    task_id: str
+    task_subject: str
+    task_description: NotRequired[str]
+    teammate_name: NotRequired[str]
+    team_name: NotRequired[str]
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -135,6 +182,11 @@ HookInput = (
     | NotificationHookInput
     | SubagentStartHookInput
     | PermissionRequestHookInput
+    | SessionStartHookInput
+    | SessionEndHookInput
+    | SetupHookInput
+    | TeammateIdleHookInput
+    | TaskCompletedHookInput
 )
 
 
