@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from dataclasses import asdict
 import logging
 import math
 import os
@@ -12,6 +13,7 @@ import anyenv
 import anyio
 from pydantic import BaseModel
 
+from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk.models import (
     PermissionResultAllow,
     PermissionResultDeny,
@@ -39,6 +41,8 @@ if TYPE_CHECKING:
         SDKControlResponse,
         ToolInput,
     )
+    from clawd_code_sdk.models.agents import AgentDefinition
+    from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
     from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
@@ -83,10 +87,10 @@ class Query:
             Awaitable[PermissionResultAllow | PermissionResultDeny],
         ]
         | None = None,
-        hooks: dict[str, list[dict[str, Any]]] | None = None,
+        hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,
-        agents: dict[str, dict[str, Any]] | None = None,
+        agents: dict[str, AgentDefinition] | None = None,
     ):
         """Initialize Query with transport and callbacks.
 
@@ -103,9 +107,16 @@ class Query:
         self.transport = transport
         self.is_streaming_mode = is_streaming_mode
         self.can_use_tool = can_use_tool
-        self.hooks = hooks or {}
+        self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
-        self._agents = agents
+        # Convert agents to dict format for initialize request
+        agents_dict: dict[str, dict[str, Any]] | None = None
+        if agents:
+            agents_dict = {
+                name: {k: v for k, v in asdict(agent_def).items() if v is not None}
+                for name, agent_def in agents.items()
+            }
+        self._agents = agents_dict
 
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}

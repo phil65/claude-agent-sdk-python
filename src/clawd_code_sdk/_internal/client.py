@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterable
 from contextlib import aclosing
-from dataclasses import asdict, replace
+from dataclasses import replace
 import logging
 from typing import TYPE_CHECKING
 
 import anyenv
 
-from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
@@ -71,11 +70,6 @@ class InternalClient:
                 if config.get("type") == "sdk":
                     sdk_mcp_servers[name] = config["instance"]  # type: ignore[typeddict-item]
 
-        # Convert agents to dict format for initialize request
-        agents_dict = {
-            name: {k: v for k, v in asdict(agent_def).items() if v is not None}
-            for name, agent_def in (configured_options.agents or {}).items()
-        }
         # Create Query to handle control protocol
         # Always use streaming mode internally (matching TypeScript SDK)
         # This ensures agents are always sent via initialize request
@@ -83,11 +77,9 @@ class InternalClient:
             transport=chosen_transport,
             is_streaming_mode=True,  # Always streaming internally
             can_use_tool=configured_options.can_use_tool,
-            hooks=convert_hooks_to_internal_format(configured_options.hooks)
-            if configured_options.hooks
-            else None,
+            hooks=configured_options.hooks,
             sdk_mcp_servers=sdk_mcp_servers,
-            agents=agents_dict,
+            agents=configured_options.agents,
         )
 
         try:

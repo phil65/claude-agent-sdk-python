@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterable
-from dataclasses import asdict, replace
+from dataclasses import replace
 import os
 from typing import TYPE_CHECKING, Any
 
 import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
-from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage
 from clawd_code_sdk.server_info_models import ClaudeCodeServerInfo
 
@@ -128,42 +127,29 @@ class ClaudeSDKClient:
         # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
         initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
         initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
-
-        # Convert agents to dict format for initialize request
-        agents_dict: dict[str, dict[str, Any]] | None = None
-        if self.options.agents:
-            agents_dict = {
-                name: {k: v for k, v in asdict(agent_def).items() if v is not None}
-                for name, agent_def in self.options.agents.items()
-            }
-
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
             is_streaming_mode=True,  # ClaudeSDKClient always uses streaming mode
             can_use_tool=self.options.can_use_tool,
-            hooks=convert_hooks_to_internal_format(self.options.hooks)
-            if self.options.hooks
-            else None,
+            hooks=self.options.hooks,
             sdk_mcp_servers=sdk_mcp_servers,
             initialize_timeout=initialize_timeout,
-            agents=agents_dict,
+            agents=self.options.agents,
         )
-
         # Start reading messages and initialize
         await self._query.start()
         await self._query.initialize()
-
         # If we have an initial prompt stream, start streaming it
         if prompt is not None and isinstance(prompt, AsyncIterable) and self._query._tg:
             self._query._tg.start_soon(self._query.stream_input, prompt)
 
     async def receive_messages(self) -> AsyncIterator[Message]:
         """Receive all messages from Claude."""
+        from clawd_code_sdk._internal.message_parser import parse_message
+
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
-
-        from clawd_code_sdk._internal.message_parser import parse_message
 
         async for data in self._query.receive_messages():
             yield parse_message(data)
