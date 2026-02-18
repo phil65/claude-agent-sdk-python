@@ -422,6 +422,7 @@ Message = (
     | StreamEvent
     | RateLimitMessage
     | HookStartedSystemMessage
+    | HookProgressSystemMessage
     | HookResponseSystemMessage
     | CompactBoundarySystemMessage
     | StatusSystemMessage

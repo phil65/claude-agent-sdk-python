@@ -421,7 +421,7 @@ async def test_agent_definition_with_memory_cross_session():
             "Use the memory-agent subagent and ask it to generate a random code word "
             "and remember it for later."
         )
-        async for message in client.receive_response():
+        async for _message in client.receive_response():
             pass  # Consume all messages
 
     # Session 2: Ask the subagent to recall, then validate
