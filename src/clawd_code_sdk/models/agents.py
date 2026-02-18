@@ -16,6 +16,9 @@ AgentMcpServerSpec = str | dict[str, Any]
 # Fields on AgentDefinition that need snake_case -> camelCase conversion
 _FIELD_RENAMES: dict[str, str] = {
     "mcp_servers": "mcpServers",
+    "disallowed_tools": "disallowedTools",
+    "critical_system_reminder_experimental": "criticalSystemReminder_EXPERIMENTAL",
+    "max_turns": "maxTurns",
 }
 
 
@@ -44,6 +47,10 @@ class AgentDefinition:
     model: Literal["sonnet", "opus", "haiku", "inherit"] | None = None
     memory: Literal["user", "project", "local"] | None = None
     mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
+    disallowed_tools: list[str] | None = None
+    critical_system_reminder_experimental: str | None = None
+    skills: list[str] | None = None
+    max_turns: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dict suitable for the CLI wire format.
