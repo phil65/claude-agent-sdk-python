@@ -29,3 +29,4 @@ class AgentDefinition:
     prompt: str
     tools: list[str] | None = None
     model: Literal["sonnet", "opus", "haiku", "inherit"] | None = None
+    memory: Literal["user", "project", "local"] | None = None

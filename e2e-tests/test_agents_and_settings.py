@@ -384,5 +384,154 @@ async def test_large_agent_definitions_via_initialize():
                 break
 
 
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_agent_definition_with_memory_cross_session():
+    """Test that a subagent with memory persists information across separate sessions.
+
+    This test verifies that the memory field on AgentDefinition enables
+    persistent cross-session learning:
+
+    1. Session 1: Define a subagent with memory='local', tell it to remember a code word
+    2. Session 2: New client with same subagent definition, ask it to recall the code word
+    3. Verify the subagent remembered the code word across sessions
+    """
+    import uuid as uuid_mod
+
+    from clawd_code_sdk import AssistantMessage, TextBlock
+
+    # Use a unique code word so there's no way the model guesses it
+    code_word = f"ZEPHYR{uuid_mod.uuid4().hex[:8].upper()}"
+
+    agents = {
+        "memory-agent": AgentDefinition(
+            description="A note-taking agent that remembers things across sessions",
+            prompt=(
+                "You are a note-taking agent. When told to remember something, "
+                "commit it to memory. When asked to recall, retrieve it from memory. "
+                "Always include the exact text you were asked to remember in your response."
+            ),
+            memory="local",
+        )
+    }
+
+    # Session 1: Store the code word via the memory-agent subagent
+    options1 = ClaudeAgentOptions(
+        agents=agents,
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options1) as client:
+        await client.query(
+            f"Use the memory-agent subagent to remember this code word: {code_word}. "
+            "Tell it to store this in its memory for later recall."
+        )
+        async for message in client.receive_response():
+            pass  # Consume all messages
+
+    # Session 2: New client, ask the memory-agent to recall the code word
+    options2 = ClaudeAgentOptions(
+        agents=agents,
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options2) as client:
+        await client.query(
+            "Use the memory-agent subagent and ask it to recall the code word "
+            "it was asked to remember in a previous session. "
+            "Include the exact code word in your response."
+        )
+
+        response_text = ""
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        response_text += block.text
+
+        assert code_word in response_text, (
+            f"Expected the code word '{code_word}' to appear in the response, "
+            f"indicating the subagent remembered it across sessions. "
+            f"Response was: {response_text[:500]}"
+        )
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_agent_definition_without_memory_no_cross_session_recall():
+    """Test that a subagent WITHOUT memory does NOT persist info across sessions.
+
+    This is the negative control for test_agent_definition_with_memory_cross_session.
+    Without the memory field, the subagent should have no way to recall a code word
+    from a previous session.
+
+    1. Session 1: Define a subagent WITHOUT memory, tell it to remember a code word
+    2. Session 2: New client with same subagent definition, ask it to recall
+    3. Verify the code word does NOT appear in the response
+    """
+    import uuid as uuid_mod
+
+    from clawd_code_sdk import AssistantMessage, TextBlock
+
+    # Use a unique code word so there's no way the model guesses it
+    code_word = f"QUASAR{uuid_mod.uuid4().hex[:8].upper()}"
+
+    agents = {
+        "forgetful-agent": AgentDefinition(
+            description="A note-taking agent (no persistent memory)",
+            prompt=(
+                "You are a note-taking agent. When told to remember something, "
+                "acknowledge it. When asked to recall something from a previous session, "
+                "be honest that you have no memory of previous sessions."
+            ),
+            # NOTE: no memory field set
+        )
+    }
+
+    # Session 1: Tell the agent to remember the code word
+    options1 = ClaudeAgentOptions(
+        agents=agents,
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options1) as client:
+        await client.query(
+            f"Use the forgetful-agent subagent to remember this code word: {code_word}. "
+            "Tell it to store this for later recall."
+        )
+        async for message in client.receive_response():
+            pass  # Consume all messages
+
+    # Session 2: New client, ask the agent to recall the code word
+    options2 = ClaudeAgentOptions(
+        agents=agents,
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options2) as client:
+        await client.query(
+            "Use the forgetful-agent subagent and ask it to recall the code word "
+            "it was asked to remember in a previous session. "
+            "Include the exact code word in your response if you remember it."
+        )
+
+        response_text = ""
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        response_text += block.text
+
+        assert code_word not in response_text, (
+            f"The code word '{code_word}' should NOT appear in the response "
+            f"because the subagent has no persistent memory. "
+            f"Response was: {response_text[:500]}"
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-vv"])

@@ -952,3 +952,106 @@ class TestSubprocessCLITransport:
         # No @filepath references should exist
         cmd_str = " ".join(cmd)
         assert "@" not in cmd_str
+
+    def test_agent_definition_memory_field_serialization(self):
+        """Test that AgentDefinition memory field is included in serialization.
+
+        The memory field controls persistent cross-session learning for subagents.
+        When set, it should appear in the serialized dict sent via initialize.
+        When None (default), it should be omitted.
+        """
+        from dataclasses import asdict
+
+        from clawd_code_sdk.models import AgentDefinition
+
+        # memory=None (default) should be omitted from serialized output
+        agent_no_memory = AgentDefinition(
+            description="Agent without memory",
+            prompt="You are a test agent",
+        )
+        serialized = {k: v for k, v in asdict(agent_no_memory).items() if v is not None}
+        assert "memory" not in serialized
+        assert serialized == {
+            "description": "Agent without memory",
+            "prompt": "You are a test agent",
+        }
+
+        # memory="user" should be included
+        agent_user_memory = AgentDefinition(
+            description="Agent with user memory",
+            prompt="You remember things per-user",
+            memory="user",
+        )
+        serialized = {k: v for k, v in asdict(agent_user_memory).items() if v is not None}
+        assert serialized["memory"] == "user"
+
+        # memory="project" should be included
+        agent_project_memory = AgentDefinition(
+            description="Agent with project memory",
+            prompt="You remember things per-project",
+            memory="project",
+        )
+        serialized = {k: v for k, v in asdict(agent_project_memory).items() if v is not None}
+        assert serialized["memory"] == "project"
+
+        # memory="local" should be included
+        agent_local_memory = AgentDefinition(
+            description="Agent with local memory",
+            prompt="You remember things locally",
+            memory="local",
+        )
+        serialized = {k: v for k, v in asdict(agent_local_memory).items() if v is not None}
+        assert serialized["memory"] == "local"
+
+    def test_agent_definition_memory_field_with_all_fields(self):
+        """Test that memory field works alongside all other AgentDefinition fields."""
+        from dataclasses import asdict
+
+        from clawd_code_sdk.models import AgentDefinition
+
+        agent = AgentDefinition(
+            description="Full agent",
+            prompt="You are a full agent",
+            tools=["Read", "Write"],
+            model="sonnet",
+            memory="project",
+        )
+        serialized = {k: v for k, v in asdict(agent).items() if v is not None}
+        assert serialized == {
+            "description": "Full agent",
+            "prompt": "You are a full agent",
+            "tools": ["Read", "Write"],
+            "model": "sonnet",
+            "memory": "project",
+        }
+
+    def test_agent_definition_memory_passed_to_query_initialize(self):
+        """Test that memory field is included in the initialize request agents dict.
+
+        The Query class serializes agents using asdict() and filters out None values.
+        This test verifies the same logic produces the correct output.
+        """
+        from dataclasses import asdict
+
+        from clawd_code_sdk.models import AgentDefinition
+
+        agents = {
+            "memory-agent": AgentDefinition(
+                description="Agent with memory",
+                prompt="You remember things",
+                memory="user",
+            ),
+            "no-memory-agent": AgentDefinition(
+                description="Agent without memory",
+                prompt="You forget things",
+            ),
+        }
+
+        # Replicate the serialization logic from Query.__init__
+        agents_dict = {
+            name: {k: v for k, v in asdict(agent_def).items() if v is not None}
+            for name, agent_def in agents.items()
+        }
+
+        assert agents_dict["memory-agent"]["memory"] == "user"
+        assert "memory" not in agents_dict["no-memory-agent"]
