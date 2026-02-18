@@ -354,9 +354,6 @@ async def test_error_handling_through_jsonrpc():
         async def close(self) -> None:
             pass
 
-        def is_ready(self) -> bool:
-            return True
-
         async def end_input(self) -> None:
             pass
 

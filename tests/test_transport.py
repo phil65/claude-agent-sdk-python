@@ -303,7 +303,6 @@ class TestSubprocessCLITransport:
 
                 await transport.connect()
                 assert transport._process is not None
-                assert transport.is_ready()
 
                 await transport.close()
                 mock_process.terminate.assert_called_once()
