@@ -9,8 +9,10 @@ from pydantic import Discriminator, TypeAdapter
 
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 
+from .agents import AgentDefinition  # noqa: TC001
 from .base import PermissionMode  # noqa: TC001
-from .hooks import HookEvent  # noqa: TC001
+from .hooks import HookEvent, HookInput  # noqa: TC001
+from .mcp import JSONRPCMessage  # noqa: TC001
 
 
 # SDK Control Protocol
@@ -33,7 +35,7 @@ class SDKControlPermissionRequest:
 class SDKControlInitializeRequest:
     subtype: Literal["initialize"] = "initialize"
     hooks: dict[HookEvent, Any] | None = None
-    agents: dict[str, dict[str, Any]] | None = None
+    agents: dict[str, AgentDefinition] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46,7 +48,7 @@ class SDKControlSetPermissionModeRequest:
 class SDKHookCallbackRequest:
     subtype: Literal["hook_callback"] = "hook_callback"
     callback_id: str
-    input: Any
+    input: HookInput
     tool_use_id: str | None = None
 
 
@@ -54,7 +56,7 @@ class SDKHookCallbackRequest:
 class SDKControlMcpMessageRequest:
     subtype: Literal["mcp_message"] = "mcp_message"
     server_name: str
-    message: Any
+    message: JSONRPCMessage
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

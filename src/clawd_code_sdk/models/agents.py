@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
+from .mcp import ExternalMcpServerConfig  # noqa: TC001
 
-if TYPE_CHECKING:
-    from .mcp import ExternalMcpServerConfig
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
 # Matches the TypeScript type: AgentMcpServerSpec = string | Record<string, McpServerConfigForProcessTransport>

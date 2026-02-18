@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     )
     from clawd_code_sdk.models.agents import AgentDefinition
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
+    from clawd_code_sdk.models.mcp import JSONRPCMessage
     from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
@@ -240,11 +241,10 @@ class Query:
 
                 elif msg_type == "control_request":
                     if tg := self._tg:
-                        request_data = parse_control_request(message["request"])
                         tg.start_soon(
                             self._handle_control_request,
                             message["request_id"],
-                            request_data,
+                            parse_control_request(message["request"]),
                         )
                     continue
 
@@ -414,7 +414,7 @@ class Query:
             raise Exception(f"Control request timeout: {request.get('subtype')}") from e
 
     async def _handle_sdk_mcp_request(
-        self, server_name: str, message: dict[str, Any]
+        self, server_name: str, message: JSONRPCMessage
     ) -> dict[str, Any]:
         """Handle an MCP request for an SDK server.
 
@@ -438,7 +438,7 @@ class Query:
             }
 
         server = self.sdk_mcp_servers[server_name]
-        return await process_mcp_tool_call(message, server)
+        return await process_mcp_request(message, server)
 
     async def get_mcp_status(self) -> dict[str, Any]:
         """Get current MCP server connection status."""
@@ -628,7 +628,7 @@ class Query:
         raise StopAsyncIteration
 
 
-async def process_mcp_tool_call(message: dict[str, Any], server: McpServer) -> dict[str, Any]:
+async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> dict[str, Any]:
     from mcp.types import (
         AudioContent,
         BlobResourceContents,
@@ -667,7 +667,7 @@ async def process_mcp_tool_call(message: dict[str, Any], server: McpServer) -> d
             }
 
         elif method == "tools/list":
-            request = ListToolsRequest(method=method)
+            request = ListToolsRequest()
             if handler := server.request_handlers.get(ListToolsRequest):
                 result = await handler(request)
                 # Convert MCP result to JSONRPC response
@@ -693,8 +693,9 @@ async def process_mcp_tool_call(message: dict[str, Any], server: McpServer) -> d
 
         elif method == "tools/call":
             params = message.get("params", {})
-            call_params = CallToolRequestParams(**params)
-            call_request = CallToolRequest(method=method, params=call_params)
+            assert isinstance(params, dict)
+            call_params = CallToolRequestParams(**params)  # pyright: ignore[reportArgumentType]
+            call_request = CallToolRequest(params=call_params)
             if handler := server.request_handlers.get(CallToolRequest):
                 result = await handler(call_request)
                 # Convert MCP result to JSONRPC response

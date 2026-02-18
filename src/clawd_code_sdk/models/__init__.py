@@ -104,11 +104,20 @@ from .input_types import (
     WebSearchInput,
 )
 from .mcp import (
+    JSONRPC_VERSION,
+    JSONRPCError,
+    JSONRPCErrorResponse,
+    JSONRPCMessage,
+    JSONRPCNotification,
+    JSONRPCRequest,
+    JSONRPCResponse,
+    JSONRPCResultResponse,
     McpHttpServerConfig,
     McpSdkServerConfig,
     McpServerConfig,
     McpSSEServerConfig,
     McpStdioServerConfig,
+    RequestId,
     SdkPluginConfig,
 )
 from .output_types import (
@@ -272,11 +281,20 @@ __all__ = [
     "UserPromptSubmitHookInput",
     "UserPromptSubmitHookSpecificOutput",
     # mcp
+    "JSONRPC_VERSION",
+    "JSONRPCError",
+    "JSONRPCErrorResponse",
+    "JSONRPCMessage",
+    "JSONRPCNotification",
+    "JSONRPCRequest",
+    "JSONRPCResponse",
+    "JSONRPCResultResponse",
     "McpHttpServerConfig",
     "McpSdkServerConfig",
     "McpServerConfig",
     "McpSSEServerConfig",
     "McpStdioServerConfig",
+    "RequestId",
     "SdkPluginConfig",
     # sandbox
     "SandboxIgnoreViolations",
