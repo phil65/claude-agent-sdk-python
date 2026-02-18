@@ -130,16 +130,13 @@ class SubprocessCLITransport(Transport):
         """Build CLI command with arguments."""
         cmd = [self._cli_path, "--output-format", "stream-json", "--verbose"]
 
-        if self._options.system_prompt is None:
-            cmd.extend(["--system-prompt", ""])
-        elif isinstance(self._options.system_prompt, str):
-            cmd.extend(["--system-prompt", self._options.system_prompt])
-        else:
-            if (
-                self._options.system_prompt.get("type") == "preset"
-                and "append" in self._options.system_prompt
-            ):
-                cmd.extend(["--append-system-prompt", self._options.system_prompt["append"]])
+        match self._options.system_prompt:
+            case None:
+                cmd.extend(["--system-prompt", ""])
+            case str() as prompt:
+                cmd.extend(["--system-prompt", prompt])
+            case {"type": "preset", "append": str() as append}:
+                cmd.extend(["--append-system-prompt", append])
 
         # Handle tools option (base set of tools)
         if self._options.tools is not None:
