@@ -5,7 +5,7 @@ These tests verify end-to-end functionality with mocked CLI responses.
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -26,7 +26,6 @@ def create_mock_transport(messages: list[dict]):
     mock_transport.connect = AsyncMock()
     mock_transport.close = AsyncMock()
     mock_transport.end_input = AsyncMock()
-    mock_transport.is_ready = Mock(return_value=True)
 
     written_messages: list[str] = []
 

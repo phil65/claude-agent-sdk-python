@@ -62,9 +62,6 @@ class SubprocessCLITransport(Transport):
         options: ClaudeAgentOptions,
     ):
         self._prompt = prompt
-        # Always use streaming mode internally (matching TypeScript SDK)
-        # This allows agents and other large configs to be sent via initialize request
-        self._is_streaming = True
         self._options = options
         self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
         self._cwd = str(options.cwd) if options.cwd else None
@@ -549,10 +546,6 @@ class SubprocessCLITransport(Transport):
                 stderr=stderr_output,
             )
             raise self._exit_error
-
-    def is_ready(self) -> bool:
-        """Check if transport is ready for communication."""
-        return self._ready
 
 
 async def _check_claude_version(cli_path: str) -> None:

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -35,7 +35,6 @@ def create_mock_transport(with_init_response=True):
     mock_transport.close = AsyncMock()
     mock_transport.end_input = AsyncMock()
     mock_transport.write = AsyncMock()
-    mock_transport.is_ready = Mock(return_value=True)
 
     # Track written messages to simulate control protocol responses
     written_messages = []

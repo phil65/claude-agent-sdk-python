@@ -55,15 +55,6 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    def is_ready(self) -> bool:
-        """Check if transport is ready for communication.
-
-        Returns:
-            True if transport is ready to send/receive messages
-        """
-        pass
-
-    @abstractmethod
     async def end_input(self) -> None:
         """End the input stream (close stdin for process transports)."""
         pass

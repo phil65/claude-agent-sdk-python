@@ -11,7 +11,6 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
-from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import Message, PermissionMode
     from clawd_code_sdk.models.mcp import McpServerConfig
+    from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 class ClaudeSDKClient:
@@ -363,13 +363,10 @@ class ClaudeSDKClient:
         - Server capabilities
 
         Returns:
-            Dictionary with server info, or None if not in streaming mode
+            Parsed server info, or None if not yet initialized
         """
         query = self._ensure_connected()
-        # Return the initialization result that was already obtained during connect
-        if raw_info := query._initialization_result:
-            return ClaudeCodeServerInfo.model_validate(raw_info)
-        return None
+        return query._initialization_result
 
     async def receive_response(self) -> AsyncIterator[Message]:
         """

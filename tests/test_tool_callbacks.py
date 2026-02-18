@@ -56,9 +56,6 @@ class MockTransport(Transport):
 
         return _read()
 
-    def is_ready(self) -> bool:
-        return self._connected
-
 
 class TestToolPermissionCallbacks:
     """Test tool permission callback functionality."""

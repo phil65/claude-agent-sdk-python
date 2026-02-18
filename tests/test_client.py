@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import anyio
 import pytest
@@ -29,7 +29,6 @@ def create_mock_transport_with_messages(messages: list[dict]):
     mock_transport.connect = AsyncMock()
     mock_transport.close = AsyncMock()
     mock_transport.end_input = AsyncMock()
-    mock_transport.is_ready = Mock(return_value=True)
 
     # Track written messages to simulate control protocol responses
     written_messages: list[str] = []

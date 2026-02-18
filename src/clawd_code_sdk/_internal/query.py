@@ -25,6 +25,7 @@ from clawd_code_sdk.models import (
     SDKHookCallbackRequest,
     ToolPermissionContext,
 )
+from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -114,19 +115,13 @@ class Query:
         self.can_use_tool = can_use_tool
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
-        # Convert agents to dict format for initialize request
-        agents_dict: dict[str, dict[str, Any]] | None = None
-        if agents:
-            agents_dict = {name: agent_def.to_dict() for name, agent_def in agents.items()}
-        self._agents = agents_dict
-
+        self._agents = {name: agent_def.to_dict() for name, agent_def in (agents or {}).items()}
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}
         self.pending_control_results: dict[str, dict[str, Any] | Exception] = {}
         self.hook_callbacks: dict[str, Callable[..., Any]] = {}
         self.next_callback_id = 0
         self._request_counter = 0
-
         # Message stream
         self._message_send, self._message_receive = anyio.create_memory_object_stream[
             dict[str, Any]
@@ -134,8 +129,7 @@ class Query:
         self._tg: TaskGroup | None = None
         self._initialized = False
         self._closed = False
-        self._initialization_result: dict[str, Any] | None = None
-
+        self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
         self._stream_close_timeout = (
@@ -151,11 +145,11 @@ class Query:
         # Used to determine if we can safely call __aexit__()
         self._tg_entered_in_current_task = False
 
-    async def initialize(self) -> dict[str, Any] | None:
+    async def initialize(self) -> ClaudeCodeServerInfo:
         """Initialize control protocol.
 
         Returns:
-            Initialize response with supported commands
+            Parsed server info with supported commands and capabilities
         """
         # Build hooks configuration for initialization
         hooks_config: dict[str, Any] = {}
@@ -187,8 +181,8 @@ class Query:
         # Use longer timeout for initialize since MCP servers may take time to start
         response = await self._send_control_request(request, timeout=self._initialize_timeout)
         self._initialized = True
-        self._initialization_result = response  # Store for later access
-        return response
+        self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
+        return self._initialization_result
 
     async def start(self) -> None:
         """Start reading messages from transport.
