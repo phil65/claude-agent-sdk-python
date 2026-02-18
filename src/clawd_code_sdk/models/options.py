@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
-    from .base import PermissionMode, ReasoningEffort, SdkBeta, SettingSource, ThinkingConfig
+    from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
     from .hooks import HookEvent, HookMatcher
     from .mcp import McpServerConfig, SdkPluginConfig
     from .permissions import CanUseTool
@@ -35,8 +35,6 @@ class ClaudeAgentOptions:
     disallowed_tools: list[str] = field(default_factory=list)
     model: str | None = None
     fallback_model: str | None = None
-    # Beta features - see https://docs.anthropic.com/en/api/beta-headers
-    betas: list[SdkBeta] = field(default_factory=list)
     permission_prompt_tool_name: str | None = None
     cwd: str | Path | None = None
     cli_path: str | Path | None = None
@@ -82,6 +80,8 @@ class ClaudeAgentOptions:
     debug_file: str | None = None
     # Enforce strict validation of MCP server configurations.
     strict_mcp_config: bool = False
+    # Enable 1M token context window (Sonnet 4/4.5 only).
+    context_1m: bool = False
 
     def validate(self) -> None:
         """Validate option constraints.

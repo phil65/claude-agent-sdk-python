@@ -168,8 +168,8 @@ class SubprocessCLITransport(Transport):
         if self._options.fallback_model:
             cmd.extend(["--fallback-model", self._options.fallback_model])
 
-        if self._options.betas:
-            cmd.extend(["--betas", ",".join(self._options.betas)])
+        if self._options.context_1m:
+            cmd.extend(["--betas", "context-1m-2025-08-07"])
 
         if self._options.permission_prompt_tool_name:
             cmd.extend(["--permission-prompt-tool", self._options.permission_prompt_tool_name])

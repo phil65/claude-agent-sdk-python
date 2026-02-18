@@ -198,18 +198,29 @@ class TestSubprocessCLITransport:
         assert "--effort" in cmd
         assert "high" in cmd
 
-    def test_build_command_with_betas(self):
-        """Test building CLI command with betas option."""
+    def test_build_command_with_context_1m(self):
+        """Test building CLI command with context_1m option."""
 
         transport = SubprocessCLITransport(
             prompt="test",
-            options=make_options(betas=["context-1m-2025-08-07", "clear-thinking-20250115"]),
+            options=make_options(context_1m=True),
         )
 
         cmd = transport._build_command()
         assert "--betas" in cmd
         betas_index = cmd.index("--betas")
-        assert cmd[betas_index + 1] == "context-1m-2025-08-07,clear-thinking-20250115"
+        assert cmd[betas_index + 1] == "context-1m-2025-08-07"
+
+    def test_build_command_without_context_1m(self):
+        """Test that --betas is not added when context_1m is False."""
+
+        transport = SubprocessCLITransport(
+            prompt="test",
+            options=make_options(),
+        )
+
+        cmd = transport._build_command()
+        assert "--betas" not in cmd
 
     def test_build_command_with_add_dirs(self):
         """Test building CLI command with add_dirs option."""
