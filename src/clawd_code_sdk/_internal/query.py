@@ -13,7 +13,6 @@ import anyenv
 import anyio
 from pydantic import BaseModel
 
-from clawd_code_sdk._internal.hooks import convert_hooks_to_internal_format
 from clawd_code_sdk.models import (
     PermissionResultAllow,
     PermissionResultDeny,
@@ -48,23 +47,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _convert_hook_output_for_cli(hook_output: dict[str, Any]) -> dict[str, Any]:
-    """Convert Python-safe field names to CLI-expected field names.
-
-    The Python SDK uses `async_` and `continue_` to avoid keyword conflicts,
-    but the CLI expects `async` and `continue`. This function performs the
-    necessary conversion.
-    """
-    converted = {}
-    for key, value in hook_output.items():
-        # Convert Python-safe names to JavaScript names
-        if key == "async_":
-            converted["async"] = value
-        elif key == "continue_":
-            converted["continue"] = value
-        else:
-            converted[key] = value
-    return converted
+def convert_hooks_to_internal_format(
+    hooks: dict[HookEvent, list[HookMatcher]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Convert HookMatcher format to internal Query format."""
+    internal_hooks: dict[str, list[dict[str, Any]]] = {}
+    for event, matchers in hooks.items():
+        internal_hooks[event] = []
+        for matcher in matchers:
+            # Convert HookMatcher to internal dict format
+            internal_matcher: dict[str, Any] = {"matcher": matcher.matcher, "hooks": matcher.hooks}
+            if matcher.timeout is not None:
+                internal_matcher["timeout"] = matcher.timeout
+            internal_hooks[event].append(internal_matcher)
+    return internal_hooks
 
 
 class Query:
@@ -377,7 +373,8 @@ class Query:
             raise RuntimeError(msg)
 
         hook_output = await callback(req.input, req.tool_use_id, {"signal": None})
-        return _convert_hook_output_for_cli(hook_output)
+        # Strip trailing underscores from Python-safe names (async_, continue_) for CLI
+        return {k.rstrip("_"): v for k, v in hook_output.items()}
 
     async def _send_control_request(
         self, request: dict[str, Any], timeout: float = 60.0
