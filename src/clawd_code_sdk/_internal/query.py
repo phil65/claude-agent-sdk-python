@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from clawd_code_sdk.models import (
     ControlResponse,
+    PermissionResultAllow,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlMcpMessageRequest,
@@ -39,7 +40,6 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import (
         ControlRequestUnion,
         PermissionMode,
-        PermissionResultAllow,
         PermissionResultDeny,
         ToolInput,
     )
