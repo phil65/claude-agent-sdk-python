@@ -11,6 +11,7 @@ import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
+from clawd_code_sdk.models.messages import AssistantMessage
 
 
 if TYPE_CHECKING:
@@ -392,6 +393,8 @@ class ClaudeSDKClient:
             The final message in the list will always be a ResultMessage.
         """
         async for message in self.receive_messages():
+            if isinstance(message, AssistantMessage):
+                message.raise_if_api_error()
             yield message
             if isinstance(message, ResultMessage):
                 return
