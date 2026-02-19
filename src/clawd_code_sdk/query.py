@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 from clawd_code_sdk.client import ClaudeSDKClient
-from clawd_code_sdk.models import AssistantMessage, ClaudeAgentOptions
+from clawd_code_sdk.models import ClaudeAgentOptions
 
 
 if TYPE_CHECKING:
@@ -43,14 +42,10 @@ async def query(
         ```
     """
     options = options or ClaudeAgentOptions()
-    os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py"
-
     client = ClaudeSDKClient(options=options, transport=transport)
     try:
         await client.connect(prompt)
         async for message in client.receive_messages():
-            if isinstance(message, AssistantMessage):
-                message.raise_if_api_error()
             yield message
     finally:
         await client.disconnect()

@@ -174,7 +174,10 @@ class ClaudeSDKClient:
 
         query = self._ensure_connected()
         async for data in query.receive_messages():
-            yield parse_message(data)
+            message = parse_message(data)
+            if isinstance(message, AssistantMessage):
+                message.raise_if_api_error()
+            yield message
 
     async def query(
         self,
@@ -393,8 +396,6 @@ class ClaudeSDKClient:
             The final message in the list will always be a ResultMessage.
         """
         async for message in self.receive_messages():
-            if isinstance(message, AssistantMessage):
-                message.raise_if_api_error()
             yield message
             if isinstance(message, ResultMessage):
                 return
