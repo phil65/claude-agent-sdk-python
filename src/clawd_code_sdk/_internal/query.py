@@ -31,7 +31,7 @@ from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Awaitable, Callable
+    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable
 
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
@@ -40,14 +40,12 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import (
         ControlRequestUnion,
         PermissionMode,
-        PermissionResultDeny,
-        ToolInput,
     )
     from clawd_code_sdk.models.agents import AgentDefinition
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
     from clawd_code_sdk.models.messages import UserPromptMessage
-    from clawd_code_sdk.models.permissions import PermissionResult
+    from clawd_code_sdk.models.permissions import CanUseTool, PermissionResult
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +91,7 @@ class Query:
     def __init__(
         self,
         transport: Transport,
-        can_use_tool: Callable[
-            [str, ToolInput, ToolPermissionContext],
-            Awaitable[PermissionResultAllow | PermissionResultDeny],
-        ]
-        | None = None,
+        can_use_tool: CanUseTool | None = None,
         hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,

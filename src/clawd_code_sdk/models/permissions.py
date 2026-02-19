@@ -127,7 +127,7 @@ class PermissionResultAllow:
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
-    updated_input: ToolInput | dict[str, Any] | None = None
+    updated_input: dict[str, Any] | None = None  # ToolInput?
     updated_permissions: list[PermissionUpdate] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -155,4 +155,6 @@ class PermissionResultDeny:
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny
 
-CanUseTool = Callable[[str, ToolInput, ToolPermissionContext], Awaitable[PermissionResult]]
+CanUseTool = Callable[
+    [str, ToolInput | dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]
+]

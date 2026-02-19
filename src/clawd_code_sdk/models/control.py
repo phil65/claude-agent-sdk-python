@@ -7,8 +7,6 @@ from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import Discriminator, TypeAdapter
 
-from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
-
 from .agents import AgentDefinition  # noqa: TC001
 from .base import PermissionMode  # noqa: TC001
 from .hooks import HookEvent, HookInput  # noqa: TC001
@@ -25,7 +23,7 @@ class SDKControlInterruptRequest:
 class SDKControlPermissionRequest:
     subtype: Literal["can_use_tool"] = "can_use_tool"
     tool_name: str
-    input: ToolInput
+    input: dict[str, Any]  # TODO: Should be ToolInput, but with total=False?
     tool_use_id: str
     permission_suggestions: list[Any] | None = None
     blocked_path: str | None = None
