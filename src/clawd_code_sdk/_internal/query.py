@@ -594,6 +594,7 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
 
     method = message.get("method")
     assert isinstance(method, str)
+    msg_id = get_jsonrpc_request_id(message)
     try:
         # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
         # TypeScript: server.connect(transport) allows custom transports
@@ -604,17 +605,12 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
         match method:
             case "initialize":
                 # Handle MCP initialization - hardcoded for tools only, no listChanged
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0",
-                    id=get_jsonrpc_request_id(message),
-                    result={
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {
-                            "tools": {}  # Tools capability without listChanged
-                        },
-                        "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
-                    },
-                )
+                result = {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},  # Tools capability without listChanged
+                    "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
+                }
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=result)
 
             case "tools/list" if handler := server.request_handlers.get(ListToolsRequest):
                 request = ListToolsRequest()
@@ -634,11 +630,7 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                     if annots := tool.annotations:
                         tool_data["annotations"] = annots.model_dump(exclude_none=True)
                     tools_data.append(tool_data)
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0",
-                    id=get_jsonrpc_request_id(message),
-                    result={"tools": tools_data},
-                )
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": tools_data})
 
             case "tools/call" if handler := server.request_handlers.get(CallToolRequest):
                 params = message.get("params", {})
@@ -652,34 +644,19 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 response_data: dict[str, Any] = {"content": content}
                 if result.root.isError:
                     response_data["is_error"] = True
-
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0",
-                    id=get_jsonrpc_request_id(message),
-                    result=response_data,
-                )
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=response_data)
             case "notifications/initialized":
                 # Handle initialized notification - just acknowledge it
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0",
-                    id=get_jsonrpc_request_id(message),
-                    result={},
-                )
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={})
             # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
             # This is the limitation Ashwin pointed out - we have to manually update
             case _:
-                return JSONRPCErrorResponse(
-                    jsonrpc="2.0",
-                    id=get_jsonrpc_request_id(message),
-                    error=JSONRPCError(code=-32601, message=f"Method '{method}' not found"),
-                )
+                error = JSONRPCError(code=-32601, message=f"Method '{method}' not found")
+                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
 
     except Exception as e:
-        return JSONRPCErrorResponse(
-            jsonrpc="2.0",
-            id=get_jsonrpc_request_id(message),
-            error=JSONRPCError(code=-32603, message=str(e)),
-        )
+        error = JSONRPCError(code=-32603, message=str(e))
+        return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
 
 
 def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, Any]]:
@@ -697,20 +674,17 @@ def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, An
         match item:
             case TextContent(text=text):
                 yield {"type": "text", "text": text}
-            case (
-                ImageContent(data=data, mimeType=mime_type)
-                | AudioContent(data=data, mimeType=mime_type)
-            ):
-                yield {"type": "image", "data": data, "mimeType": mime_type}
+            case ImageContent(data=data, mimeType=mime) | AudioContent(data=data, mimeType=mime):
+                yield {"type": "image", "data": data, "mimeType": mime}
             case ResourceLink():
                 pass
             case EmbeddedResource(
-                resource=BlobResourceContents(mimeType=mime_type, uri=uri)
-                | TextResourceContents(mimeType=mime_type, uri=uri) as resource
+                resource=BlobResourceContents(mimeType=mime, uri=uri)
+                | TextResourceContents(mimeType=mime, uri=uri) as resource
             ):
                 # EmbeddedResource - check if it's a document (PDF, etc.)
                 uri_str = str(uri)
-                if uri_str.startswith("document://") or mime_type == "application/pdf":
+                if uri_str.startswith("document://") or mime == "application/pdf":
                     # Convert EmbeddedResource to Anthropic document format
                     typ = (
                         uri_str.removeprefix("document://")
@@ -718,5 +692,5 @@ def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, An
                         else "base64"
                     )
                     data = resource.blob if isinstance(resource, BlobResourceContents) else ""
-                    dct = {"type": typ, "media_type": mime_type, "data": data}
+                    dct = {"type": typ, "media_type": mime, "data": data}
                     yield {"type": "document", "source": dct}
