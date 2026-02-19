@@ -101,6 +101,9 @@ class Query:
         sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,
         agents: dict[str, AgentDefinition] | None = None,
+        system_prompt: str | None = None,
+        append_system_prompt: str | None = None,
+        json_schema: dict[str, Any] | None = None,
     ):
         """Initialize Query with transport and callbacks.
 
@@ -111,6 +114,9 @@ class Query:
             sdk_mcp_servers: Optional SDK MCP server instances
             initialize_timeout: Timeout in seconds for the initialize request
             agents: Optional agent definitions to send via initialize
+            system_prompt: Optional system prompt to send via initialize
+            append_system_prompt: Optional text to append to preset system prompt
+            json_schema: Optional JSON schema for structured output
         """
         self._initialize_timeout = initialize_timeout
         self.transport = transport
@@ -118,6 +124,9 @@ class Query:
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
         self._agents = {name: agent_def.to_dict() for name, agent_def in (agents or {}).items()}
+        self._system_prompt = system_prompt
+        self._append_system_prompt = append_system_prompt
+        self._json_schema = json_schema
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}
         self.pending_control_results: dict[str, dict[str, Any] | Exception] = {}
@@ -173,6 +182,14 @@ class Query:
         request: dict[str, Any] = {"subtype": "initialize", "hooks": hooks_config or None}
         if self._agents:
             request["agents"] = self._agents
+        if self.sdk_mcp_servers:
+            request["sdkMcpServers"] = list(self.sdk_mcp_servers.keys())
+        if self._system_prompt is not None:
+            request["systemPrompt"] = self._system_prompt
+        if self._append_system_prompt is not None:
+            request["appendSystemPrompt"] = self._append_system_prompt
+        if self._json_schema is not None:
+            request["jsonSchema"] = self._json_schema
 
         # Use longer timeout for initialize since MCP servers may take time to start
         response = await self._send_control_request(request, timeout=self._initialize_timeout)

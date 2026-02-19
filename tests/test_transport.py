@@ -52,9 +52,8 @@ class TestSubprocessCLITransport:
         # Always use streaming mode (matching TypeScript SDK)
         assert "--input-format" in cmd
         assert "--print" not in cmd  # Never use --print anymore
-        # Prompt is sent via stdin, not CLI args
-        assert "--system-prompt" in cmd
-        assert cmd[cmd.index("--system-prompt") + 1] == ""
+        # system_prompt is now sent via initialize request, not CLI args
+        assert "--system-prompt" not in cmd
 
     def test_cli_path_accepts_pathlib_path(self):
         """Test that cli_path accepts pathlib.Path objects."""
@@ -69,49 +68,20 @@ class TestSubprocessCLITransport:
         # Path object is converted to string, compare with str(path)
         assert transport._cli_path == str(path)
 
-    def test_build_command_with_system_prompt_string(self):
-        """Test building CLI command with system prompt as string."""
-        transport = SubprocessCLITransport(
-            prompt="test",
-            options=make_options(
-                system_prompt="Be helpful",
-            ),
-        )
-
-        cmd = transport._build_command()
-        assert "--system-prompt" in cmd
-        assert "Be helpful" in cmd
-
-    def test_build_command_with_system_prompt_preset(self):
-        """Test building CLI command with system prompt preset."""
-        transport = SubprocessCLITransport(
-            prompt="test",
-            options=make_options(
-                system_prompt={"type": "preset", "preset": "claude_code"},
-            ),
-        )
-
-        cmd = transport._build_command()
-        assert "--system-prompt" not in cmd
-        assert "--append-system-prompt" not in cmd
-
-    def test_build_command_with_system_prompt_preset_and_append(self):
-        """Test building CLI command with system prompt preset and append."""
-        transport = SubprocessCLITransport(
-            prompt="test",
-            options=make_options(
-                system_prompt={
-                    "type": "preset",
-                    "preset": "claude_code",
-                    "append": "Be concise.",
-                },
-            ),
-        )
-
-        cmd = transport._build_command()
-        assert "--system-prompt" not in cmd
-        assert "--append-system-prompt" in cmd
-        assert "Be concise." in cmd
+    def test_build_command_system_prompt_not_in_cli_args(self):
+        """Test that system prompt is not passed as CLI arg (sent via initialize request)."""
+        for system_prompt in [
+            "Be helpful",
+            {"type": "preset", "preset": "claude_code"},
+            {"type": "preset", "preset": "claude_code", "append": "Be concise."},
+        ]:
+            transport = SubprocessCLITransport(
+                prompt="test",
+                options=make_options(system_prompt=system_prompt),
+            )
+            cmd = transport._build_command()
+            assert "--system-prompt" not in cmd
+            assert "--append-system-prompt" not in cmd
 
     def test_build_command_with_options(self):
         """Test building CLI command with options."""

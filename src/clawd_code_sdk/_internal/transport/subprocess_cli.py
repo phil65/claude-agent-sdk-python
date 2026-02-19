@@ -78,13 +78,7 @@ class SubprocessCLITransport(Transport):
         """Build CLI command with arguments."""
         cmd = [self._cli_path, "--output-format", "stream-json", "--verbose"]
 
-        match self._options.system_prompt:
-            case None:
-                cmd.extend(["--system-prompt", ""])
-            case str() as prompt:
-                cmd.extend(["--system-prompt", prompt])
-            case {"type": "preset", "append": str() as append}:
-                cmd.extend(["--append-system-prompt", append])
+        # system_prompt is now sent via initialize request
 
         match self._options.tools:
             case []:
@@ -205,13 +199,7 @@ class SubprocessCLITransport(Transport):
         if self._options.effort is not None:
             cmd.extend(["--effort", self._options.effort])
 
-        # Extract schema from output_format structure if provided
-        # Expected: {"type": "json_schema", "schema": {...}}
-        if (
-            isinstance(self._options.output_format, dict)
-            and self._options.output_format.get("type") == "json_schema"
-        ) and (schema := self._options.output_format.get("schema")):
-            cmd.extend(["--json-schema", anyenv.dump_json(schema)])
+        # json_schema is now sent via initialize request
 
         # Always use streaming mode with stdin (matching TypeScript SDK)
         # This allows agents and other large configs to be sent via initialize request

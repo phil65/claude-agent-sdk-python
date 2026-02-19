@@ -118,7 +118,6 @@ class ClaudeSDKClient:
         tp = self._custom_transport or SubprocessCLITransport(prompt=actual_prompt, options=options)
         self._transport = tp
         await self._transport.connect()
-
         # Extract SDK MCP servers from options
         sdk_mcp_servers = {}
         if isinstance(self.options.mcp_servers, dict):
@@ -130,6 +129,22 @@ class ClaudeSDKClient:
         # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
         initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
         initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
+        # Extract system prompt for initialize request
+        system_prompt: str | None = None
+        append_system_prompt: str | None = None
+        match self.options.system_prompt:
+            case None:
+                system_prompt = ""  # Explicitly clear default system prompt
+            case str() as prompt_str:
+                system_prompt = prompt_str
+            case {"type": "preset", "append": str() as append}:
+                append_system_prompt = append
+
+        # Extract JSON schema for initialize request
+        json_schema: dict[str, Any] | None = None
+        if isinstance((f := self.options.output_format), dict) and f.get("type") == "json_schema":
+            json_schema = f.get("schema")
+
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
@@ -138,6 +153,9 @@ class ClaudeSDKClient:
             sdk_mcp_servers=sdk_mcp_servers,
             initialize_timeout=initialize_timeout,
             agents=self.options.agents,
+            system_prompt=system_prompt,
+            append_system_prompt=append_system_prompt,
+            json_schema=json_schema,
         )
         # Start reading messages and initialize
         await self._query.start()

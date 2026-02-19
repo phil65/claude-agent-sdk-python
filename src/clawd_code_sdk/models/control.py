@@ -36,6 +36,10 @@ class SDKControlInitializeRequest:
     subtype: Literal["initialize"] = "initialize"
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentDefinition] | None = None
+    sdk_mcp_servers: list[str] | None = None
+    system_prompt: str | None = None
+    append_system_prompt: str | None = None
+    json_schema: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
