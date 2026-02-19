@@ -27,6 +27,7 @@ from clawd_code_sdk.models import (
     ToolPermissionContext,
     parse_control_request,
 )
+from clawd_code_sdk.models.mcp import JSONRPCError
 from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
@@ -331,10 +332,7 @@ class Query:
             result.updated_input = req.input
         return result
 
-    async def _handle_hook_callback(
-        self,
-        req: SDKHookCallbackRequest,
-    ) -> dict[str, Any]:
+    async def _handle_hook_callback(self, req: SDKHookCallbackRequest) -> dict[str, Any]:
         """Handle a hook callback request."""
         callback = self.hook_callbacks.get(req.callback_id)
         if not callback:
@@ -399,11 +397,8 @@ class Query:
         """
 
         if server_name not in self.sdk_mcp_servers:
-            return {
-                "jsonrpc": "2.0",
-                "id": get_jsonrpc_request_id(message),
-                "error": {"code": -32601, "message": f"Server '{server_name}' not found"},
-            }
+            dct = JSONRPCError(code=-32601, message=f"Server '{server_name}' not found")
+            return {"jsonrpc": "2.0", "id": get_jsonrpc_request_id(message), "error": dct}
 
         server = self.sdk_mcp_servers[server_name]
         return await process_mcp_request(message, server)

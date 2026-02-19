@@ -28,33 +28,12 @@ class ClaudeSDKClient:
     """
     Client for bidirectional, interactive conversations with Claude Code.
 
-    This client provides full control over the conversation flow with support
-    for streaming, interrupts, and dynamic message sending. For simple one-shot
-    queries, consider using the query() function instead.
 
     Key features:
     - **Bidirectional**: Send and receive messages at any time
     - **Stateful**: Maintains conversation context across messages
     - **Interactive**: Send follow-ups based on responses
     - **Control flow**: Support for interrupts and session management
-
-    When to use ClaudeSDKClient:
-    - Building chat interfaces or conversational UIs
-    - Interactive debugging or exploration sessions
-    - Multi-turn conversations with context
-    - When you need to react to Claude's responses
-    - Real-time applications with user input
-    - When you need interrupt capabilities
-
-    When to use query() instead:
-    - Simple one-off questions
-    - Batch processing of prompts
-    - Fire-and-forget automation scripts
-    - When all inputs are known upfront
-    - Stateless operations
-
-    See examples/streaming_mode.py for full examples of ClaudeSDKClient in
-    different scenarios.
 
     Caveat: As of v0.0.21, you cannot use a ClaudeSDKClient instance across
     different async runtime contexts (e.g., different trio nurseries or asyncio
@@ -268,10 +247,7 @@ class ClaudeSDKClient:
         await query.rewind_files(user_message_id)
 
     async def get_mcp_status(self) -> dict[str, Any]:
-        """Get current MCP server connection status (only works with streaming mode).
-
-        Queries the Claude Code CLI for the live connection status of all
-        configured MCP servers.
+        """Get current MCP server connection status.
 
         Returns:
             Dictionary with MCP server status information. Contains a
@@ -313,35 +289,17 @@ class ClaudeSDKClient:
         return await query.set_mcp_servers(wire_servers)
 
     async def mcp_reconnect(self, server_name: str) -> None:
-        """Reconnect to an MCP server.
-
-        Args:
-            server_name: Name of the MCP server to reconnect
-        """
+        """Reconnect to an MCP server."""
         query = self._ensure_connected()
         await query.mcp_reconnect(server_name)
 
     async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
-        """Enable or disable an MCP server.
-
-        Args:
-            server_name: Name of the MCP server to toggle
-            enabled: Whether the server should be enabled
-        """
+        """Enable or disable an MCP server."""
         query = self._ensure_connected()
         await query.mcp_toggle(server_name, enabled=enabled)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
-        """Set the maximum number of thinking tokens for extended thinking.
-
-        Controls how many tokens Claude can use for its internal reasoning
-        process when extended thinking is enabled.
-
-        Args:
-            max_thinking_tokens: Maximum number of tokens for thinking.
-                Higher values allow more thorough reasoning but increase
-                response time and token usage.
-        """
+        """Set the maximum number of thinking tokens for extended thinking."""
         query = self._ensure_connected()
         await query.set_max_thinking_tokens(max_thinking_tokens)
 
