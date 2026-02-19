@@ -217,42 +217,35 @@ class Query:
                 if self._closed:
                     break
 
-                msg_type = message.get("type")
+                match message.get("type"):
+                    case "control_response":
+                        response = message.get("response", {})
+                        request_id = response.get("request_id")
+                        if request_id in self.pending_control_responses:
+                            event = self.pending_control_responses[request_id]
+                            if response.get("subtype") == "error":
+                                msg = response.get("error", "Unknown error")
+                                self.pending_control_results[request_id] = Exception(msg)
+                            else:
+                                self.pending_control_results[request_id] = response
+                            event.set()
 
-                # Route control messages
-                if msg_type == "control_response":
-                    response = message.get("response", {})
-                    request_id = response.get("request_id")
-                    if request_id in self.pending_control_responses:
-                        event = self.pending_control_responses[request_id]
-                        if response.get("subtype") == "error":
-                            msg = response.get("error", "Unknown error")
-                            self.pending_control_results[request_id] = Exception(msg)
-                        else:
-                            self.pending_control_results[request_id] = response
-                        event.set()
-                    continue
+                    case "control_request":
+                        if tg := self._tg:
+                            tg.start_soon(
+                                self._handle_control_request,
+                                message["request_id"],
+                                parse_control_request(message["request"]),
+                            )
+                    case "control_cancel_request":  # TODO: Implement cancellation support
+                        pass
 
-                elif msg_type == "control_request":
-                    if tg := self._tg:
-                        tg.start_soon(
-                            self._handle_control_request,
-                            message["request_id"],
-                            parse_control_request(message["request"]),
-                        )
-                    continue
-
-                elif msg_type == "control_cancel_request":
-                    # Handle cancel requests
-                    # TODO: Implement cancellation support
-                    continue
-
-                # Track results for proper stream closure
-                if msg_type == "result":
-                    self._first_result_event.set()
-
-                # Regular SDK messages go to the stream
-                await self._message_send.send(message)
+                    case "result":  # Track results for proper stream closure
+                        self._first_result_event.set()
+                        await self._message_send.send(message)
+                    case _:
+                        # Regular SDK messages go to the stream
+                        await self._message_send.send(message)
 
         except anyio.get_cancelled_exc_class():
             # Task was cancelled - this is expected behavior
