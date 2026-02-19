@@ -1,5 +1,7 @@
 """Tests for Claude SDK transport layer."""
 
+from __future__ import annotations
+
 import os
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -13,7 +15,10 @@ from clawd_code_sdk.models import ClaudeAgentOptions
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterable
+
     from clawd_code_sdk import SandboxSettings
+    from clawd_code_sdk.models.messages import UserPromptMessage
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
@@ -875,7 +880,7 @@ class TestSubprocessCLITransport:
         assert "stream-json" in cmd
 
         # Test with async iterable prompt
-        async def fake_stream():
+        async def fake_stream() -> AsyncIterable[UserPromptMessage]:
             yield {"type": "user", "message": {"role": "user", "content": "test"}}
 
         transport2 = SubprocessCLITransport(

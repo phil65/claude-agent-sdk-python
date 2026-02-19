@@ -62,16 +62,12 @@ class TestSubprocessBuffering:
         async def _test() -> None:
             json_obj1 = {"type": "message", "id": "msg1", "content": "First message"}
             json_obj2 = {"type": "result", "id": "res1", "status": "completed"}
-
             buffered_line = json.dumps(json_obj1) + "\n" + json.dumps(json_obj2)
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # type: ignore[assignment]
             transport._stderr_stream = MockTextReceiveStream([])  # type: ignore[assignment]
 
@@ -95,18 +91,14 @@ class TestSubprocessBuffering:
         async def _test() -> None:
             json_obj1 = {"type": "message", "content": "Line 1\nLine 2\nLine 3"}
             json_obj2 = {"type": "result", "data": "Some\nMultiline\nContent"}
-
             buffered_line = json.dumps(json_obj1) + "\n" + json.dumps(json_obj2)
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
             messages: list[Any] = []
             async for msg in transport.read_messages():
                 messages.append(msg)
@@ -123,19 +115,15 @@ class TestSubprocessBuffering:
         async def _test() -> None:
             json_obj1 = {"type": "message", "id": "msg1"}
             json_obj2 = {"type": "result", "id": "res1"}
-
             buffered_line = json.dumps(json_obj1) + "\n\n\n" + json.dumps(json_obj2)
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
-            messages: list[Any] = []
+            messages: list[dict[str, Any]] = []
             async for msg in transport.read_messages():
                 messages.append(msg)
 
@@ -165,13 +153,10 @@ class TestSubprocessBuffering:
             }
 
             complete_json = json.dumps(json_obj)
-
             part1 = complete_json[:100]
             part2 = complete_json[100:250]
             part3 = complete_json[250:]
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -207,16 +192,12 @@ class TestSubprocessBuffering:
                     ],
                 },
             }
-
             complete_json = json.dumps(json_obj)
-
             chunk_size = 64 * 1024
             chunks = [
                 complete_json[i : i + chunk_size] for i in range(0, len(complete_json), chunk_size)
             ]
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -242,16 +223,13 @@ class TestSubprocessBuffering:
 
         async def _test() -> None:
             huge_incomplete = '{"data": "' + "x" * (_DEFAULT_MAX_BUFFER_SIZE + 1000)
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
             with pytest.raises(Exception) as exc_info:
                 messages: list[Any] = []
                 async for msg in transport.read_messages():
@@ -268,12 +246,8 @@ class TestSubprocessBuffering:
         async def _test() -> None:
             custom_limit = 512
             huge_incomplete = '{"data": "' + "x" * (custom_limit + 10)
-
-            transport = SubprocessCLITransport(
-                prompt="test",
-                options=make_options(max_buffer_size=custom_limit),
-            )
-
+            opts = make_options(max_buffer_size=custom_limit)
+            transport = SubprocessCLITransport(prompt="test", options=opts)
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -294,31 +268,25 @@ class TestSubprocessBuffering:
 
         async def _test() -> None:
             msg1 = json.dumps({"type": "system", "subtype": "start"})
-
             large_msg = {
                 "type": "assistant",
                 "message": {"content": [{"type": "text", "text": "y" * 5000}]},
             }
             large_json = json.dumps(large_msg)
-
             msg3 = json.dumps({"type": "system", "subtype": "end"})
-
             lines = [
                 msg1 + "\n",
                 large_json[:1000],
                 large_json[1000:3000],
                 large_json[3000:] + "\n" + msg3,
             ]
-
             transport = SubprocessCLITransport(prompt="test", options=make_options())
-
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream(lines)  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
             messages: list[Any] = []
             async for msg in transport.read_messages():
                 messages.append(msg)

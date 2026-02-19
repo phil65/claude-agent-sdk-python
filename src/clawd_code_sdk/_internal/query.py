@@ -24,6 +24,7 @@ from clawd_code_sdk.models import (
     SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
     ToolPermissionContext,
+    parse_control_request,
 )
 from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
@@ -227,8 +228,6 @@ class Query:
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
-        from clawd_code_sdk.models import parse_control_request
-
         try:
             async for message in self.transport.read_messages():
                 if self._closed:
