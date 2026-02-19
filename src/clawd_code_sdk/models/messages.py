@@ -134,9 +134,9 @@ class AssistantMessage:
                 raise InvalidRequestError(error_message, self.model)
             case "server_error":
                 raise ServerError(error_message, self.model)
-            case _:
+            case _ as unknown:
                 # Handle "unknown" or any future error types
-                raise APIError(error_message, self.error or "unknown", self.model)
+                raise APIError(error_message, unknown, self.model)
 
 
 @dataclass(kw_only=True)
