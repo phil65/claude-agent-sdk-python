@@ -119,41 +119,24 @@ class AssistantMessage:
         """
         if self.error is None:
             return
-        error_type = self.error
-        error_message = self._extract_error_message()
-        model = self.model
-
-        match error_type:
-            case "authentication_failed":
-                raise AuthenticationError(error_message, model)
-            case "billing_error":
-                raise BillingError(error_message, model)
-            case "rate_limit":
-                raise RateLimitError(error_message, model)
-            case "invalid_request":
-                raise InvalidRequestError(error_message, model)
-            case "server_error":
-                raise ServerError(error_message, model)
-            case _:
-                # Handle "unknown" or any future error types
-                raise APIError(error_message, error_type or "unknown", model)
-
-    def _extract_error_message(self) -> str:
-        """Extract the error message text from an AssistantMessage.
-
-        When the API returns an error, the error text is typically in the
-        first TextBlock of the message content.
-
-        Args:
-            message: The AssistantMessage containing the error.
-
-        Returns:
-            The error message text, or a default message if none found.
-        """
-        return next(
+        error_message = next(
             (block.text for block in self.content if isinstance(block, TextBlock)),
             "An API error occurred",
         )
+        match self.error:
+            case "authentication_failed":
+                raise AuthenticationError(error_message, self.model)
+            case "billing_error":
+                raise BillingError(error_message, self.model)
+            case "rate_limit":
+                raise RateLimitError(error_message, self.model)
+            case "invalid_request":
+                raise InvalidRequestError(error_message, self.model)
+            case "server_error":
+                raise ServerError(error_message, self.model)
+            case _:
+                # Handle "unknown" or any future error types
+                raise APIError(error_message, self.error or "unknown", self.model)
 
 
 @dataclass(kw_only=True)
