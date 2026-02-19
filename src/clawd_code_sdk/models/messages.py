@@ -91,7 +91,7 @@ class UserMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class AssistantMessage(BaseMessage):
+class AssistantMessage:
     """Assistant message with content blocks."""
 
     type: Literal["assistant"] = "assistant"
@@ -99,6 +99,8 @@ class AssistantMessage(BaseMessage):
     model: str
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
+    session_id: str | None = None  # not sure these two are needed.
+    uuid: str | None = None
 
     def raise_if_api_error(self) -> None:
         """Raise the appropriate API exception if error is set.
