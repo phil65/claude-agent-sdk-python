@@ -100,8 +100,8 @@ class AssistantMessage:
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
 
-    def raise_api_error(self) -> None:
-        """Raise the appropriate API exception for an AssistantMessage with an error.
+    def raise_if_api_error(self) -> None:
+        """Raise the appropriate API exception if error is set.
 
         This function converts the error field on an AssistantMessage into a proper
         Python exception that can be caught and handled programmatically.
@@ -117,6 +117,8 @@ class AssistantMessage:
             ServerError: For server_error errors (500/529).
             APIError: For unknown error types.
         """
+        if self.error is None:
+            return
         error_type = self.error
         error_message = self._extract_error_message()
         model = self.model

@@ -49,8 +49,8 @@ async def query(
     try:
         await client.connect(prompt)
         async for message in client.receive_messages():
-            if isinstance(message, AssistantMessage) and message.error is not None:
-                message.raise_api_error()
+            if isinstance(message, AssistantMessage):
+                message.raise_if_api_error()
             yield message
     finally:
         await client.disconnect()
