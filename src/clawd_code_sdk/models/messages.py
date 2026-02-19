@@ -91,7 +91,7 @@ class UserMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class AssistantMessage:
+class AssistantMessage(BaseMessage):
     """Assistant message with content blocks."""
 
     type: Literal["assistant"] = "assistant"
