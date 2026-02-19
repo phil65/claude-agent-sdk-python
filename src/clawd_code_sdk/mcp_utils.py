@@ -62,27 +62,8 @@ def tool(
         A decorator function that wraps the tool implementation and returns
         an SdkMcpTool instance ready for use with create_sdk_mcp_server().
 
-    Example:
-        Basic tool with simple schema:
-        >>> @tool("greet", "Greet a user", {"name": str})
-        ... async def greet(args):
-        ...     return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
-
-        Tool with multiple parameters:
-        >>> @tool("add", "Add two numbers", {"a": float, "b": float})
-        ... async def add_numbers(args):
-        ...     result = args["a"] + args["b"]
-        ...     return {"content": [{"type": "text", "text": f"Result: {result}"}]}
-
-        Tool with error handling:
-        >>> @tool("divide", "Divide two numbers", {"a": float, "b": float})
-        ... async def divide(args):
-        ...     if args["b"] == 0:
-        ...         return {"content": [{"type": "text", "text": "Error: Division by zero"}], "is_error": True}
-        ...     return {"content": [{"type": "text", "text": f"Result: {args['a'] / args['b']}"}]}
-
     Notes:
-        - The tool function must be async (defined with async def)
+        - The tool function must be async
         - The function receives a single dict argument with the input parameters
         - The function should return a dict with a "content" key containing the response
         - Errors can be indicated by including "is_error": True in the response
@@ -107,6 +88,7 @@ def create_sdk_mcp_server(
 ) -> McpSdkServerConfig:
     """Create an in-process MCP server that runs within your Python application.
 
+    Server lifecycle is managed automatically by the SDK
     Unlike external MCP servers that run as separate processes, SDK MCP servers
     run directly in your application's process. This provides:
     - Better performance (no IPC overhead)
@@ -163,25 +145,9 @@ def create_sdk_mcp_server(
         ...     return {"content": [{"type": "text", "text": f"Added: {args['item']}"}]}
         >>>
         >>> server = create_sdk_mcp_server("store", tools=[add_item])
-
-    Notes:
-        - The server runs in the same process as your Python application
-        - Tools have direct access to your application's variables and state
-        - No subprocess or IPC overhead for tool calls
-        - Server lifecycle is managed automatically by the SDK
-
-    See Also:
-        - tool(): Decorator for creating tool functions
-        - ClaudeAgentOptions: Configuration for using servers with query()
     """
     from mcp.server import Server
-    from mcp.types import (
-        BlobResourceContents,
-        EmbeddedResource,
-        ImageContent,
-        TextContent,
-        Tool,
-    )
+    from mcp.types import BlobResourceContents, EmbeddedResource, ImageContent, TextContent, Tool
 
     # Create MCP server instance
     server = Server(name, version=version)
@@ -207,11 +173,8 @@ def create_sdk_mcp_server(
                         properties = {}
                         for param_name, param_type in tool_def.input_schema.items():
                             properties[param_name] = MMAPPING.get(param_type, {"type": "string"})
-                        schema = {
-                            "type": "object",
-                            "properties": properties,
-                            "required": list(properties.keys()),
-                        }
+                        required = list(properties.keys())
+                        schema = {"type": "object", "properties": properties, "required": required}
                 else:
                     # For TypedDict or other types, create basic schema
                     schema = {"type": "object", "properties": {}}
