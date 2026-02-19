@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 import json
 import os
 from pathlib import Path
-from subprocess import PIPE
 import sys
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -304,7 +303,6 @@ class TestSubprocessCLITransport:
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
         mcp_config_value = cmd[mcp_idx + 1]
-
         # Parse the JSON and verify structure
         config = json.loads(mcp_config_value)
         assert "mcpServers" in config
@@ -399,7 +397,6 @@ class TestSubprocessCLITransport:
                 mock_version_process.stdout.receive = AsyncMock(return_value=b"2.0.0 (Claude Code)")
                 mock_version_process.terminate = MagicMock()
                 mock_version_process.wait = AsyncMock()
-
                 # Mock main process
                 mock_process = MagicMock()
                 mock_process.stdout = MagicMock()
@@ -562,27 +559,20 @@ class TestSubprocessCLITransport:
 
         async def _test():
             # Create a real subprocess that consumes stdin (cross-platform)
-            process = await anyio.open_process(
-                [sys.executable, "-c", "import sys; sys.stdin.read()"],
-                stdin=PIPE,
-                stdout=PIPE,
-                stderr=PIPE,
-            )
+            cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
+            process = await anyio.open_process(cmd)
+            opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
+            transport = SubprocessCLITransport(prompt="test", options=opts)
 
+            # Same setup as production: TextSendStream wrapping process.stdin
+            transport._ready = True
+            transport._process = MagicMock(returncode=None)
+            assert process.stdin
+            transport._stdin_stream = TextSendStream(process.stdin)
+            # Spawn concurrent writes - the lock should serialize them
+            num_writes = 10
+            errors: list[Exception] = []
             try:
-                transport = SubprocessCLITransport(
-                    prompt="test",
-                    options=ClaudeAgentOptions(cli_path="/usr/bin/claude"),
-                )
-
-                # Same setup as production: TextSendStream wrapping process.stdin
-                transport._ready = True
-                transport._process = MagicMock(returncode=None)
-                assert process.stdin
-                transport._stdin_stream = TextSendStream(process.stdin)
-                # Spawn concurrent writes - the lock should serialize them
-                num_writes = 10
-                errors: list[Exception] = []
 
                 async def do_write(i: int):
                     try:
@@ -611,22 +601,17 @@ class TestSubprocessCLITransport:
         async def _test():
 
             # Create a real subprocess that consumes stdin (cross-platform)
-            process = await anyio.open_process(
-                [sys.executable, "-c", "import sys; sys.stdin.read()"],
-                stdin=PIPE,
-                stdout=PIPE,
-                stderr=PIPE,
-            )
+            cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
+            process = await anyio.open_process(cmd)
+            opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
+            transport = SubprocessCLITransport(prompt="test", options=opts)
+            # Same setup as production
+            transport._ready = True
+            transport._process = MagicMock(returncode=None)
+            assert process.stdin
+            transport._stdin_stream = TextSendStream(process.stdin)
 
             try:
-                opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
-                transport = SubprocessCLITransport(prompt="test", options=opts)
-                # Same setup as production
-                transport._ready = True
-                transport._process = MagicMock(returncode=None)
-                assert process.stdin
-                transport._stdin_stream = TextSendStream(process.stdin)
-
                 # Replace lock with no-op to trigger the race condition
                 class NoOpLock:
                     @asynccontextmanager
@@ -810,10 +795,8 @@ class TestSubprocessCLITransport:
                 prompt="You forget things",
             ),
         }
-
         # Replicate the serialization logic from Query.__init__
         agents_dict = {name: agent_def.to_dict() for name, agent_def in agents.items()}
-
         assert agents_dict["memory-agent"]["memory"] == "user"
         assert "memory" not in agents_dict["no-memory-agent"]
 
@@ -832,7 +815,6 @@ class TestSubprocessCLITransport:
         serialized = agent_no_mcp.to_dict()
         assert "mcpServers" not in serialized
         assert "mcp_servers" not in serialized
-
         # Dict-style mcp_servers should serialize as mcpServers array
         agent_with_mcp = AgentDefinition(
             description="Agent with MCP servers",
@@ -862,7 +844,6 @@ class TestSubprocessCLITransport:
         )
         serialized = agent_str.to_dict()
         assert serialized["mcpServers"] == ["my-server"]
-
         # List with dict configs
         agent_dict = AgentDefinition(
             description="Agent with server configs",
