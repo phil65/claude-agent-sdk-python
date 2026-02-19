@@ -16,6 +16,14 @@ if TYPE_CHECKING:
     from mcp.types import ToolAnnotations
 
 
+MMAPPING = {
+    str: {"type": "string"},
+    int: {"type": "integer"},
+    float: {"type": "number"},
+    bool: {"type": "boolean"},
+}
+
+
 @dataclass
 class SdkMcpTool[T]:
     """Definition for an SDK MCP tool."""
@@ -80,9 +88,7 @@ def tool(
         - Errors can be indicated by including "is_error": True in the response
     """
 
-    def decorator(
-        handler: Callable[[Any], Awaitable[dict[str, Any]]],
-    ) -> SdkMcpTool[Any]:
+    def decorator(handler: Callable[[Any], Awaitable[dict[str, Any]]]) -> SdkMcpTool[Any]:
         return SdkMcpTool(
             name=name,
             description=description,
@@ -95,7 +101,9 @@ def tool(
 
 
 def create_sdk_mcp_server(
-    name: str, version: str = "1.0.0", tools: list[SdkMcpTool[Any]] | None = None
+    name: str,
+    version: str = "1.0.0",
+    tools: list[SdkMcpTool[Any]] | None = None,
 ) -> McpSdkServerConfig:
     """Create an in-process MCP server that runs within your Python application.
 
@@ -198,16 +206,7 @@ def create_sdk_mcp_server(
                         # Simple dict mapping names to types - convert to JSON schema
                         properties = {}
                         for param_name, param_type in tool_def.input_schema.items():
-                            if param_type is str:
-                                properties[param_name] = {"type": "string"}
-                            elif param_type is int:
-                                properties[param_name] = {"type": "integer"}
-                            elif param_type is float:
-                                properties[param_name] = {"type": "number"}
-                            elif param_type is bool:
-                                properties[param_name] = {"type": "boolean"}
-                            else:
-                                properties[param_name] = {"type": "string"}  # Default
+                            properties[param_name] = MMAPPING.get(param_type, {"type": "string"})
                         schema = {
                             "type": "object",
                             "properties": properties,
@@ -216,15 +215,13 @@ def create_sdk_mcp_server(
                 else:
                     # For TypedDict or other types, create basic schema
                     schema = {"type": "object", "properties": {}}
-
-                tool_list.append(
-                    Tool(
-                        name=tool_def.name,
-                        description=tool_def.description,
-                        inputSchema=schema,
-                        annotations=tool_def.annotations,
-                    )
+                mcp_tool = Tool(
+                    name=tool_def.name,
+                    description=tool_def.description,
+                    inputSchema=schema,
+                    annotations=tool_def.annotations,
                 )
+                tool_list.append(mcp_tool)
             return tool_list
 
         # Register call_tool handler to execute tools
@@ -235,40 +232,28 @@ def create_sdk_mcp_server(
                 raise ValueError(f"Tool '{name}' not found")
 
             tool_def = tool_map[name]
-            # Call the tool's handler with arguments
             result = await tool_def.handler(arguments)
-
             # Convert result to MCP format
             # The decorator expects us to return the content, not a CallToolResult
             # It will wrap our return value in CallToolResult
             content: list[TextContent | ImageContent | EmbeddedResource] = []
-            if "content" in result:
-                for item in result["content"]:
-                    if item.get("type") == "text":
-                        content.append(TextContent(type="text", text=item["text"]))
-                    elif item.get("type") == "image":
-                        content.append(
-                            ImageContent(
-                                type="image",
-                                data=item["data"],
-                                mimeType=item["mimeType"],
-                            )
-                        )
-                    elif item.get("type") == "document":
+            for item in result.get("content", []):
+                match item:
+                    case {"type": "text", "text": text}:
+                        content.append(TextContent(type="text", text=text))
+                    case {"type": "image", "data": data, "mimeType": mimeType}:
+                        content.append(ImageContent(type="image", data=data, mimeType=mimeType))
+                    case {"type": "document"}:
                         # Convert document to EmbeddedResource with BlobResourceContents
                         # This preserves document data through MCP for conversion to
                         # Anthropic document format in query.py
                         source = item.get("source", {})
-                        content.append(
-                            EmbeddedResource(
-                                type="resource",
-                                resource=BlobResourceContents(
-                                    uri=AnyUrl(f"document://{source.get('type', 'base64')}"),
-                                    mimeType=source.get("media_type", "application/pdf"),
-                                    blob=source.get("data", ""),
-                                ),
-                            )
+                        blob = BlobResourceContents(
+                            uri=AnyUrl(f"document://{source.get('type', 'base64')}"),
+                            mimeType=source.get("media_type", "application/pdf"),
+                            blob=source.get("data", ""),
                         )
+                        content.append(EmbeddedResource(type="resource", resource=blob))
 
             # Return just the content list - the decorator wraps it
             return content
