@@ -13,8 +13,6 @@ import anyio
 from pydantic import BaseModel
 
 from clawd_code_sdk.models import (
-    PermissionResultAllow,
-    PermissionResultDeny,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlMcpMessageRequest,
@@ -38,6 +36,8 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import (
         ControlRequestUnion,
         PermissionMode,
+        PermissionResultAllow,
+        PermissionResultDeny,
         SDKControlResponse,
         ToolInput,
     )
@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
     from clawd_code_sdk.models.messages import UserPromptMessage
+    from clawd_code_sdk.models.permissions import PermissionResult
 
 logger = logging.getLogger(__name__)
 
@@ -286,7 +287,8 @@ class Query:
         try:
             match request_data:
                 case SDKControlPermissionRequest() as req:
-                    response_data = await self._handle_permission_request(req)
+                    result = await self._handle_permission_request(req)
+                    response_data = result.to_dict()
                 case SDKHookCallbackRequest() as req:
                     response_data = await self._handle_hook_callback(req)
                 case SDKControlMcpMessageRequest(server_name=server_name, message=message):
@@ -301,15 +303,8 @@ class Query:
                     | SDKControlStopTaskRequest()
                 ):
                     pass  # Handled elsewhere
-
-            success_response: SDKControlResponse = {
-                "type": "control_response",
-                "response": {
-                    "subtype": "success",
-                    "request_id": request_id,
-                    "response": response_data,
-                },
-            }
+            dct = {"subtype": "success", "request_id": request_id, "response": response_data}
+            success_response: SDKControlResponse = {"type": "control_response", "response": dct}
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
         except Exception as e:
@@ -323,7 +318,9 @@ class Query:
             }
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
-    async def _handle_permission_request(self, req: SDKControlPermissionRequest) -> dict[str, Any]:
+    async def _handle_permission_request(
+        self, req: SDKControlPermissionRequest
+    ) -> PermissionResult:
         """Handle a tool permission request."""
         if not self.can_use_tool:
             msg = "canUseTool callback is not provided"
@@ -336,8 +333,7 @@ class Query:
             blocked_path=req.blocked_path,
         )
 
-        response = await self.can_use_tool(req.tool_name, req.input, context)
-        return response.to_dict()
+        return await self.can_use_tool(req.tool_name, req.input, context)
 
     async def _handle_hook_callback(
         self,
