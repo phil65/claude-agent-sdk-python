@@ -323,10 +323,7 @@ class Query:
             }
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
-    async def _handle_permission_request(
-        self,
-        req: SDKControlPermissionRequest,
-    ) -> dict[str, Any]:
+    async def _handle_permission_request(self, req: SDKControlPermissionRequest) -> dict[str, Any]:
         """Handle a tool permission request."""
         if not self.can_use_tool:
             msg = "canUseTool callback is not provided"
@@ -340,24 +337,7 @@ class Query:
         )
 
         response = await self.can_use_tool(req.tool_name, req.input, context)
-
-        if isinstance(response, PermissionResultAllow):
-            result: dict[str, Any] = {
-                "behavior": "allow",
-                "updatedInput": (
-                    response.updated_input if response.updated_input is not None else req.input
-                ),
-            }
-            if response.updated_permissions is not None:
-                result["updatedPermissions"] = [
-                    permission.to_dict() for permission in response.updated_permissions
-                ]
-            return result
-        assert isinstance(response, PermissionResultDeny)
-        result = {"behavior": "deny", "message": response.message}
-        if response.interrupt:
-            result["interrupt"] = response.interrupt
-        return result
+        return response.to_dict()
 
     async def _handle_hook_callback(
         self,

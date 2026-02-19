@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from clawd_code_sdk.models import ToolInput
@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
 
 # Permission Update types (matching TypeScript SDK)
-PermissionUpdateDestination = Literal["userSettings", "projectSettings", "localSettings", "session"]
+PermissionUpdateDestination = Literal[
+    "userSettings",
+    "projectSettings",
+    "localSettings",
+    "session",
+    "cliArg",
+]
 
 PermissionBehavior = Literal["allow", "deny", "ask"]
 
@@ -26,52 +32,64 @@ class PermissionRuleValue:
     tool_name: str
     rule_content: str | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionRuleValue to dictionary format matching TypeScript control protocol."""
+        return {"toolName": self.tool_name, "ruleContent": self.rule_content}
 
-@dataclass
+
+@dataclass(kw_only=True)
 class PermissionUpdate:
     """Permission update configuration."""
 
-    type: Literal[
-        "addRules",
-        "replaceRules",
-        "removeRules",
-        "setMode",
-        "addDirectories",
-        "removeDirectories",
-    ]
-    rules: list[PermissionRuleValue] | None = None
+    type: str
+    destination: PermissionUpdateDestination
+
+
+@dataclass(kw_only=True)
+class RulePermissionUpdate(PermissionUpdate):
+    """Permission update configuration."""
+
+    type: Literal["addRules", "replaceRules", "removeRules"]
+    rules: list[PermissionRuleValue]
     behavior: PermissionBehavior | None = None
-    mode: PermissionMode | None = None
-    directories: list[str] | None = None
-    destination: PermissionUpdateDestination | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
         result: dict[str, Any] = {"type": self.type}
         # Add destination for all variants
-        if self.destination is not None:
-            result["destination"] = self.destination
+        result["destination"] = self.destination
+        result["rules"] = [r.to_dict() for r in self.rules]
+        result["behavior"] = self.behavior
+        return result
 
-        # Handle different type variants
-        if self.type in ["addRules", "replaceRules", "removeRules"]:
-            # Rules-based variants require rules and behavior
-            if self.rules is not None:
-                result["rules"] = [
-                    {"toolName": r.tool_name, "ruleContent": r.rule_content} for r in self.rules
-                ]
-            if self.behavior is not None:
-                result["behavior"] = self.behavior
 
-        elif self.type == "setMode":
-            # Mode variant requires mode
-            if self.mode is not None:
-                result["mode"] = self.mode
+@dataclass(kw_only=True)
+class DirectoryPermissionUpdate(PermissionUpdate):
+    """Permission update configuration."""
 
-        elif self.type in ["addDirectories", "removeDirectories"]:
-            # Directory variants require directories
-            if self.directories is not None:
-                result["directories"] = self.directories
+    type: Literal["addDirectories", "removeDirectories"]
+    directories: list[str]
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
+        result: dict[str, Any] = {"type": self.type}
+        result["destination"] = self.destination
+        result["directories"] = self.directories
+        return result
+
+
+@dataclass(kw_only=True)
+class ModePermissionUpdate(PermissionUpdate):
+    """Permission update configuration."""
+
+    type: Literal["setMode"]
+    mode: PermissionMode
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
+        result: dict[str, Any] = {"type": self.type}
+        result["destination"] = self.destination
+        result["mode"] = self.mode
         return result
 
 
@@ -106,8 +124,17 @@ class PermissionResultAllow:
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
-    updated_input: ToolInput | None = None
+    updated_input: dict[str, Any] | None = None
     updated_permissions: list[PermissionUpdate] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionResultAllow to dictionary format matching TypeScript control protocol."""
+        result: dict[str, Any] = {"behavior": self.behavior}
+        if self.updated_input is not None:
+            result["updatedInput"] = self.updated_input
+        if self.updated_permissions is not None:
+            result["updatedPermissions"] = [p.to_dict() for p in self.updated_permissions]
+        return result
 
 
 @dataclass
@@ -117,6 +144,10 @@ class PermissionResultDeny:
     behavior: Literal["deny"] = "deny"
     message: str = ""
     interrupt: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert PermissionResultDeny to dictionary format matching TypeScript control protocol."""
+        return asdict(self)
 
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny
