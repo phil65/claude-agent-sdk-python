@@ -303,11 +303,9 @@ class Query:
             success_response = SDKControlResponse(type="control_response", response=dct)
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
-        except Exception as e:
-            error_response = SDKControlResponse(
-                type="control_response",
-                response={"subtype": "error", "request_id": request_id, "error": str(e)},
-            )
+        except Exception:
+            response = {"subtype": "error", "request_id": request_id, "error": str(e)}
+            error_response = SDKControlResponse(type="control_response", response=response)
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
     async def _handle_permission_request(
@@ -315,8 +313,7 @@ class Query:
     ) -> PermissionResult:
         """Handle a tool permission request."""
         if not self.can_use_tool:
-            msg = "canUseTool callback is not provided"
-            raise RuntimeError(msg)
+            raise RuntimeError("canUseTool callback is not provided")
 
         context = ToolPermissionContext(
             tool_use_id=req.tool_use_id,
@@ -332,10 +329,8 @@ class Query:
 
     async def _handle_hook_callback(self, req: SDKHookCallbackRequest) -> dict[str, Any]:
         """Handle a hook callback request."""
-        callback = self.hook_callbacks.get(req.callback_id)
-        if not callback:
-            msg = f"No hook callback found for ID: {req.callback_id}"
-            raise RuntimeError(msg)
+        if not (callback := self.hook_callbacks.get(req.callback_id)):
+            raise RuntimeError(f"No hook callback found for ID: {req.callback_id}")
 
         hook_output = await callback(req.input, req.tool_use_id, {"signal": None})
         # Strip trailing underscores from Python-safe names (async_, continue_) for CLI
@@ -418,12 +413,7 @@ class Query:
         await self._send_control_request({"subtype": "mcp_reconnect", "serverName": server_name})
 
     async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
-        """Enable or disable an MCP server.
-
-        Args:
-            server_name: Name of the MCP server to toggle
-            enabled: Whether the server should be enabled
-        """
+        """Enable or disable an MCP server."""
         await self._send_control_request(
             {"subtype": "mcp_toggle", "serverName": server_name, "enabled": enabled}
         )

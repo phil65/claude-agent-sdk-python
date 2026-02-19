@@ -6,16 +6,13 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import anyenv
 from pydantic import TypeAdapter, ValidationError
 
 from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -70,28 +67,16 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
                 entry = adapter.validate_python(data)
                 entries.append(entry)
             except anyenv.JsonLoadError as e:
-                logger.warning(
-                    "Failed to parse JSONL line (path: %s, error: %s, raw_line: %s)",
-                    str(session_path),
-                    str(e),
-                    raw_line,
-                )
+                msg = "Failed to parse JSONL line (path: %s, error: %s, raw_line: %s)"
+                logger.warning(msg, str(session_path), str(e), raw_line)
             except ValidationError as e:
-                logger.warning(
-                    "Failed to validate JSONL entry (path: %s, error: %s)",
-                    str(session_path),
-                    str(e),
-                )
+                msg = "Failed to validate JSONL entry (path: %s, error: %s)"
+                logger.warning(msg, str(session_path), str(e))
     return entries
 
 
 def get_claude_data_dir() -> Path:
-    """Get the Claude Code data directory path.
-
-    Claude Code stores data in ~/.claude rather than the XDG data directory.
-    """
-    from pathlib import Path
-
+    """Get the Claude Code data directory path (~/.claude)."""
     return Path.home() / ".claude"
 
 
@@ -115,27 +100,13 @@ def path_to_claude_dir_name(project_path: str) -> str:
 
 
 def get_latest_session(project_path: str) -> Path | None:
-    """Get the most recent session file for a project.
-
-    Args:
-        project_path: The project path
-
-    Returns:
-        Path to the latest session file, or None if no sessions exist
-    """
+    """Get the path for the most recent session file for given project if existing."""
     sessions = list_project_sessions(project_path)
     return sessions[0] if sessions else None
 
 
 def list_project_sessions(project_path: str) -> list[Path]:
-    """List all session files for a project.
-
-    Args:
-        project_path: The project path (will be converted to Claude's format)
-
-    Returns:
-        List of session file paths, sorted by modification time (newest first)
-    """
+    """List all session files for given project path, sorted by modification time (newest first)."""
     projects_dir = get_claude_projects_dir()
     project_dir_name = path_to_claude_dir_name(project_path)
     project_dir = projects_dir / project_dir_name

@@ -286,7 +286,6 @@ class SubprocessCLITransport(Transport):
 
                 # Always collect stderr lines for error reporting
                 self._stderr_lines.append(line_str)
-
                 # Call the stderr callback if provided
                 if self._options.stderr:
                     self._options.stderr(line_str)
@@ -401,13 +400,11 @@ class SubprocessCLITransport(Transport):
                         json_buffer = ""
                         raise SDKJSONDecodeError(
                             f"JSON message exceeded maximum buffer size of {self._max_buffer_size} bytes",
-                            ValueError(
-                                f"Buffer size {buffer_length} exceeds limit {self._max_buffer_size}"
-                            ),
+                            ValueError(f"{buffer_length=} exceeds {self._max_buffer_size=}"),
                         )
 
                     try:
-                        data = anyenv.load_json(json_buffer)
+                        data = anyenv.load_json(json_buffer, return_type=dict)
                         json_buffer = ""
                         yield data
                     except anyenv.JsonLoadError:
@@ -439,11 +436,8 @@ class SubprocessCLITransport(Transport):
         # Use exit code for error detection
         if returncode is not None and returncode != 0:
             stderr_output = "\n".join(self._stderr_lines) if self._stderr_lines else None
-            self._exit_error = ProcessError(
-                f"Command failed with exit code {returncode}",
-                exit_code=returncode,
-                stderr=stderr_output,
-            )
+            msg = f"Command failed with exit code {returncode}"
+            self._exit_error = ProcessError(msg, exit_code=returncode, stderr=stderr_output)
             raise self._exit_error
 
 
