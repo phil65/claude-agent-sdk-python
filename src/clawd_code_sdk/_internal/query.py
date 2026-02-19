@@ -332,7 +332,10 @@ class Query:
             blocked_path=req.blocked_path,
         )
 
-        return await self.can_use_tool(req.tool_name, req.input, context)
+        result = await self.can_use_tool(req.tool_name, req.input, context)
+        if isinstance(result, PermissionResultAllow) and result.updated_input is None:
+            result.updated_input = req.input
+        return result
 
     async def _handle_hook_callback(
         self,

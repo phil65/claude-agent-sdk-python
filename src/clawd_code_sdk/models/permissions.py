@@ -127,7 +127,7 @@ class PermissionResultAllow:
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
-    updated_input: dict[str, Any] | None = None
+    updated_input: ToolInput | dict[str, Any] | None = None
     updated_permissions: list[PermissionUpdate] | None = None
 
     def to_dict(self) -> dict[str, Any]:
