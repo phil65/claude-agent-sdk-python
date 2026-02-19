@@ -38,7 +38,7 @@ class PermissionRuleValue:
 
 
 @dataclass(kw_only=True)
-class PermissionUpdate:
+class BasePermissionUpdate:
     """Permission update configuration."""
 
     type: str
@@ -46,7 +46,7 @@ class PermissionUpdate:
 
 
 @dataclass(kw_only=True)
-class RulePermissionUpdate(PermissionUpdate):
+class RulePermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
     type: Literal["addRules", "replaceRules", "removeRules"]
@@ -64,7 +64,7 @@ class RulePermissionUpdate(PermissionUpdate):
 
 
 @dataclass(kw_only=True)
-class DirectoryPermissionUpdate(PermissionUpdate):
+class DirectoryPermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
     type: Literal["addDirectories", "removeDirectories"]
@@ -79,7 +79,7 @@ class DirectoryPermissionUpdate(PermissionUpdate):
 
 
 @dataclass(kw_only=True)
-class ModePermissionUpdate(PermissionUpdate):
+class ModePermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
     type: Literal["setMode"]
@@ -91,6 +91,9 @@ class ModePermissionUpdate(PermissionUpdate):
         result["destination"] = self.destination
         result["mode"] = self.mode
         return result
+
+
+PermissionUpdate = RulePermissionUpdate | DirectoryPermissionUpdate | ModePermissionUpdate
 
 
 # Tool callback types

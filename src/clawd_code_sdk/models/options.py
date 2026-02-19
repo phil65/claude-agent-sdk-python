@@ -59,7 +59,7 @@ class ClaudeAgentOptions:
     # not from these sandbox settings.
     sandbox: SandboxSettings | None = None
     plugins: list[SdkPluginConfig] = field(default_factory=list)  # Plugin configurations
-    thinking: ThinkingConfig | None = None  # Controls extended thinking behavior.
+    thinking: ThinkingConfig | None = None  # Controls thinking behavior.
     effort: ReasoningEffort | None = None  # Effort level for thinking depth.
     # Output format for structured outputs (matches Messages API structure)
     # Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}

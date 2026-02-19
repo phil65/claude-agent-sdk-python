@@ -13,10 +13,12 @@ import anyio
 from pydantic import BaseModel
 
 from clawd_code_sdk.models import (
+    ControlResponse,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlMcpMessageRequest,
     SDKControlPermissionRequest,
+    SDKControlResponse,
     SDKControlRewindFilesRequest,
     SDKControlSetPermissionModeRequest,
     SDKControlStopTaskRequest,
@@ -38,7 +40,6 @@ if TYPE_CHECKING:
         PermissionMode,
         PermissionResultAllow,
         PermissionResultDeny,
-        SDKControlResponse,
         ToolInput,
     )
     from clawd_code_sdk.models.agents import AgentDefinition
@@ -136,12 +137,10 @@ class Query:
         self._stream_close_timeout = (
             float(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000")) / 1000.0
         )  # Convert ms to seconds
-
         # Cancel scope for the reader task - can be cancelled from any task context
         # This fixes the RuntimeError when async generator cleanup happens in a different task
         self._reader_cancel_scope: CancelScope | None = None
         self._reader_task_started = anyio.Event()
-
         # Track whether we entered the task group in this task
         # Used to determine if we can safely call __aexit__()
         self._tg_entered_in_current_task = False
@@ -154,25 +153,21 @@ class Query:
         """
         # Build hooks configuration for initialization
         hooks_config: dict[str, Any] = {}
-        if self.hooks:
-            for event, matchers in self.hooks.items():
-                if not matchers:
-                    continue
-                hooks_config[event] = []
-                for matcher in matchers:
-                    callback_ids = []
-                    for callback in matcher.get("hooks", []):
-                        callback_id = f"hook_{self.next_callback_id}"
-                        self.next_callback_id += 1
-                        self.hook_callbacks[callback_id] = callback
-                        callback_ids.append(callback_id)
-                    hook_matcher_config: dict[str, Any] = {
-                        "matcher": matcher.get("matcher"),
-                        "hookCallbackIds": callback_ids,
-                    }
-                    if matcher.get("timeout") is not None:
-                        hook_matcher_config["timeout"] = matcher.get("timeout")
-                    hooks_config[event].append(hook_matcher_config)
+        for event, matchers in self.hooks.items():
+            if not matchers:
+                continue
+            hooks_config[event] = []
+            for matcher in matchers:
+                callback_ids = []
+                for callback in matcher.get("hooks", []):
+                    callback_id = f"hook_{self.next_callback_id}"
+                    self.next_callback_id += 1
+                    self.hook_callbacks[callback_id] = callback
+                    callback_ids.append(callback_id)
+                matcher_cfg = {"matcher": matcher.get("matcher"), "hookCallbackIds": callback_ids}
+                if matcher.get("timeout") is not None:
+                    matcher_cfg["timeout"] = matcher.get("timeout")
+                hooks_config[event].append(matcher_cfg)
 
         # Send initialize request
         request: dict[str, Any] = {"subtype": "initialize", "hooks": hooks_config or None}
@@ -198,7 +193,6 @@ class Query:
             self._tg = anyio.create_task_group()
             await self._tg.__aenter__()
             self._tg_entered_in_current_task = True
-
             # Start the reader with its own cancel scope that can be cancelled safely
             self._tg.start_soon(self._read_messages_with_cancel_scope)
 
@@ -303,19 +297,15 @@ class Query:
                     | SDKControlStopTaskRequest()
                 ):
                     pass  # Handled elsewhere
-            dct = {"subtype": "success", "request_id": request_id, "response": response_data}
-            success_response: SDKControlResponse = {"type": "control_response", "response": dct}
+            dct = ControlResponse(subtype="success", request_id=request_id, response=response_data)
+            success_response = SDKControlResponse(type="control_response", response=dct)
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
         except Exception as e:
-            error_response: SDKControlResponse = {
-                "type": "control_response",
-                "response": {
-                    "subtype": "error",
-                    "request_id": request_id,
-                    "error": str(e),
-                },
-            }
+            error_response = SDKControlResponse(
+                type="control_response",
+                response={"subtype": "error", "request_id": request_id, "error": str(e)},
+            )
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
     async def _handle_permission_request(
