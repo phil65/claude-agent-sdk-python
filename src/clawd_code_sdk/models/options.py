@@ -76,8 +76,6 @@ class ClaudeAgentOptions:
     allow_dangerously_skip_permissions: bool = False
     # Resume from a specific message UUID (use with `resume`).
     resume_session_at: str | None = None
-    # Enable debug mode for the Claude Code process.
-    debug: bool = False
     # Write debug logs to a specific file path. Implicitly enables debug mode.
     debug_file: str | None = None
     # Enforce strict validation of MCP server configurations.

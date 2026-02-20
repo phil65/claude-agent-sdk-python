@@ -161,9 +161,6 @@ class SubprocessCLITransport(Transport):
         if self._options.resume_session_at:
             cmd.extend(["--resume-session-at", self._options.resume_session_at])
 
-        if self._options.debug or self._options.debug_file:
-            cmd.append("--debug")
-
         if self._options.debug_file:
             cmd.extend(["--debug-file", self._options.debug_file])
 
