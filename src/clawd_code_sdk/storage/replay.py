@@ -171,7 +171,7 @@ def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
         model=model,
         uuid=entry.uuid,
         session_id=entry.session_id,
-        error=None,
+        error="unknown" if entry.is_api_error_message else None,
     )
 
 
