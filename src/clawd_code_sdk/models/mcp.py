@@ -36,7 +36,7 @@ class JSONRPCRequest(TypedDict):
     jsonrpc: str
     id: RequestId
     method: str
-    params: NotRequired[dict[str, object]]
+    params: NotRequired[dict[str, Any]]
 
 
 class JSONRPCNotification(TypedDict):
@@ -44,7 +44,7 @@ class JSONRPCNotification(TypedDict):
 
     jsonrpc: str
     method: str
-    params: NotRequired[dict[str, object]]
+    params: NotRequired[dict[str, Any]]
 
 
 class JSONRPCResultResponse(TypedDict):
@@ -52,7 +52,7 @@ class JSONRPCResultResponse(TypedDict):
 
     jsonrpc: str
     id: RequestId
-    result: dict[str, object]
+    result: dict[str, Any]
 
 
 class JSONRPCErrorResponse(TypedDict):
@@ -122,11 +122,32 @@ class SdkPluginConfig(TypedDict):
 # Pydantic models for MCP status responses
 
 
+class ToolAnnotations(ClaudeCodeBaseModel):
+    """
+    Additional properties describing a Tool to clients.
+    """
+
+    title: str | None = None
+    """A human-readable title for the tool."""
+
+    read_only_hint: bool | None = None
+    """Read-only hint."""
+
+    destructive_hint: bool | None = None
+    """Destructive hint."""
+
+    idempotent_hint: bool | None = None
+    """Idempodent hint."""
+
+    open_world_hint: bool | None = None
+    """Open-world hint."""
+
+
 class McpToolStatus(ClaudeCodeBaseModel):
     """Status information for a single MCP tool."""
 
     name: str
-    annotations: dict[str, Any] = Field(default_factory=dict)
+    annotations: ToolAnnotations = Field(default_factory=ToolAnnotations)
 
 
 class McpServerVersionInfo(ClaudeCodeBaseModel):

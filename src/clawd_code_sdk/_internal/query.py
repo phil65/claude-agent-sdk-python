@@ -28,6 +28,7 @@ from clawd_code_sdk.models import (
     ToolPermissionContext,
     parse_control_request,
 )
+from clawd_code_sdk.models.control import ControlErrorResponse
 from clawd_code_sdk.models.mcp import JSONRPCError, JSONRPCErrorResponse, JSONRPCResultResponse
 from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
@@ -312,7 +313,7 @@ class Query:
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
         except Exception as e:
-            response = {"subtype": "error", "request_id": request_id, "error": str(e)}
+            response = ControlErrorResponse(subtype="error", request_id=request_id, error=str(e))
             error_response = SDKControlResponse(type="control_response", response=response)
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
 
@@ -606,12 +607,12 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
         match method:
             case "initialize":
                 # Handle MCP initialization - hardcoded for tools only, no listChanged
-                result = {
+                init_result = {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},  # Tools capability without listChanged
                     "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
                 }
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=result)
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=init_result)
 
             case "tools/list" if handler := server.request_handlers.get(ListToolsRequest):
                 request = ListToolsRequest()
