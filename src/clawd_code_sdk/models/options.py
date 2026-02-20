@@ -84,6 +84,7 @@ class ClaudeAgentOptions:
     context_1m: bool = False
     prompt_suggestions: bool | None = None
     worktree: bool | str = False
+    chrome: bool = False
 
     def build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.

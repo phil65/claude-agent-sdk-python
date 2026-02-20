@@ -173,6 +173,9 @@ class SubprocessCLITransport(Transport):
             case str():
                 cmd.extend(["--worktree", self._options.worktree])
 
+        if self._options.chrome:
+            cmd.append("--chrome")
+
         sources_value = ",".join(self._options.setting_sources or [])
         cmd.extend(["--setting-sources", sources_value])
 
