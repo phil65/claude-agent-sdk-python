@@ -114,7 +114,7 @@ def _convert_content_block(block: ClaudeContentBlock) -> ContentBlock | None:
 
 
 def _convert_content_blocks(
-    content: str | list[ClaudeContentBlock],
+    content: str | Sequence[ClaudeContentBlock],
 ) -> str | Sequence[ContentBlock]:
     """Convert message content, handling both string and block-list forms."""
     if isinstance(content, str):

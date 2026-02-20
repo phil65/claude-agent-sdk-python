@@ -15,6 +15,7 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Annotated, Any, Literal, assert_never
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
@@ -200,7 +201,7 @@ class ClaudeApiMessage(BaseModel):
     id: str
     type: Literal["message"] = "message"
     role: Literal["assistant"]
-    content: str | list[ClaudeContentBlock]
+    content: str | Sequence[ClaudeContentBlock]
     stop_reason: StopReason = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
@@ -210,7 +211,7 @@ class ClaudeUserMessage(BaseModel):
     """User message content."""
 
     role: Literal["user"]
-    content: str | list[ClaudeContentBlock]
+    content: str | Sequence[ClaudeContentBlock]
     usage: ClaudeUsage | None = None
     """Usage info (for type compatibility with ClaudeApiMessage)."""
 
