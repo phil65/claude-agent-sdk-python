@@ -71,6 +71,7 @@ from clawd_code_sdk.storage.models import (
     ClaudeContentBlock,
     ClaudeImageBlock,
     ClaudeProgressEntry,
+    ClaudeSummaryEntry,
     ClaudeTextBlock,
     ClaudeThinkingBlock,
     ClaudeToolProgressData,
@@ -187,6 +188,16 @@ def _convert_progress_entry(entry: ClaudeProgressEntry) -> ToolProgressMessage |
         tool_name=entry.data.tool_name or "",
         parent_tool_use_id=entry.data.parent_tool_use_id,
         elapsed_time_seconds=entry.data.elapsed_time_seconds or 0.0,
+    )
+
+
+def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
+    """Convert a summary entry to a synthetic UserMessage."""
+    return UserMessage(
+        uuid=entry.leaf_uuid,
+        session_id=entry.session_id or "",
+        content=entry.summary,
+        isSynthetic=True,
     )
 
 
@@ -379,6 +390,7 @@ def _replay_basic(
     entries: Iterable[ClaudeJSONLEntry],
     *,
     include_progress: bool,
+    include_summaries: bool = False,
 ) -> Iterator[Message]:
     """Replay entries without stream events (basic mode)."""
     for entry in entries:
@@ -390,6 +402,8 @@ def _replay_basic(
             case ClaudeProgressEntry() if include_progress:
                 if (msg := _convert_progress_entry(entry)) is not None:
                     yield msg
+            case ClaudeSummaryEntry() if include_summaries:
+                yield _convert_summary_entry(entry)
 
 
 def _get_assistant_msg_id(entry: ClaudeAssistantEntry) -> str | None:
@@ -423,6 +437,7 @@ def _replay_with_stream_events(
     entries: Iterable[ClaudeJSONLEntry],
     *,
     include_progress: bool,
+    include_summaries: bool = False,
 ) -> Iterator[Message]:
     """Replay entries with synthetic StreamEvent injection.
 
@@ -546,8 +561,12 @@ def _replay_with_stream_events(
                 yield msg
             i += 1
 
+        elif isinstance(entry, ClaudeSummaryEntry) and include_summaries:
+            yield _convert_summary_entry(entry)
+            i += 1
+
         else:
-            i += 1  # Skip non-message entries (queue ops, summaries, etc.)
+            i += 1  # Skip non-message entries (queue ops, etc.)
 
 
 # Entry types that carry a uuid for parent-chain traversal
@@ -617,6 +636,7 @@ def replay_entries(
     *,
     include_progress: bool = False,
     include_stream_events: bool = False,
+    include_summaries: bool = False,
     exclude_sidechains: bool = False,
     leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
@@ -634,6 +654,9 @@ def replay_entries(
             around each content block. Each text/thinking block gets a
             single delta with the full content. Useful for consumers that
             expect the full stream envelope structure.
+        include_summaries: If True, yield summary entries as synthetic
+            UserMessage instances (with ``isSynthetic=True``) at their
+            file-order position.
         exclude_sidechains: If True, skip entries marked as sidechain
             (internal Claude Code context-retrieval calls).
         leaf_uuid: If set, resolve the conversation thread by walking
@@ -649,9 +672,13 @@ def replay_entries(
     if exclude_sidechains:
         entries = _filter_sidechains(entries)
     if include_stream_events:
-        yield from _replay_with_stream_events(entries, include_progress=include_progress)
+        yield from _replay_with_stream_events(
+            entries, include_progress=include_progress, include_summaries=include_summaries
+        )
     else:
-        yield from _replay_basic(entries, include_progress=include_progress)
+        yield from _replay_basic(
+            entries, include_progress=include_progress, include_summaries=include_summaries
+        )
 
 
 def replay_session(
@@ -659,6 +686,7 @@ def replay_session(
     *,
     include_progress: bool = False,
     include_stream_events: bool = False,
+    include_summaries: bool = False,
     exclude_sidechains: bool = False,
     leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
@@ -674,6 +702,7 @@ def replay_session(
         include_progress: If True, also yield ToolProgressMessage entries.
         include_stream_events: If True, inject synthetic StreamEvent
             messages around each content block (see :func:`replay_entries`).
+        include_summaries: If True, include summary entries.
         exclude_sidechains: If True, skip sidechain entries.
         leaf_uuid: If set, resolve the thread from this leaf UUID.
 
@@ -685,6 +714,7 @@ def replay_session(
         entries,
         include_progress=include_progress,
         include_stream_events=include_stream_events,
+        include_summaries=include_summaries,
         exclude_sidechains=exclude_sidechains,
         leaf_uuid=leaf_uuid,
     )
