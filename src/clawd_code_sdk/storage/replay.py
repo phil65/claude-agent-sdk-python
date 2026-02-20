@@ -68,9 +68,14 @@ from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
     ClaudeAssistantEntry,
-    ClaudeMessageContent,
+    ClaudeContentBlock,
+    ClaudeImageBlock,
     ClaudeProgressEntry,
+    ClaudeTextBlock,
+    ClaudeThinkingBlock,
     ClaudeToolProgressData,
+    ClaudeToolResultBlock,
+    ClaudeToolUseBlock,
     ClaudeUserEntry,
 )
 
@@ -88,39 +93,39 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-def _convert_content_block(block: ClaudeMessageContent) -> ContentBlock | None:
+def _convert_content_block(block: ClaudeContentBlock) -> ContentBlock | None:
     """Convert a stored content block to a wire-format ContentBlock.
 
     Returns None for block types with no wire-format equivalent (e.g. images).
     """
-    match block.type:
-        case "text":
-            return TextBlock(text=block.text or "")
-        case "thinking":
+    match block:
+        case ClaudeTextBlock():
+            return TextBlock(text=block.text)
+        case ClaudeThinkingBlock():
             return ThinkingBlock(
-                thinking=block.thinking or "",
+                thinking=block.thinking,
                 signature=block.signature or "",
             )
-        case "tool_use":
+        case ClaudeToolUseBlock():
             return ToolUseBlock(
-                id=block.id or "",
-                name=block.name or "",
-                input=block.input or {},
+                id=block.id,
+                name=block.name,
+                input=block.input,
             )
-        case "tool_result":
+        case ClaudeToolResultBlock():
             return ToolResultBlock(
-                tool_use_id=block.tool_use_id or "",
+                tool_use_id=block.tool_use_id,
                 content=block.content,
                 is_error=block.is_error,
             )
-        case "image":
+        case ClaudeImageBlock():
             # No wire-format ContentBlock for images; they typically appear
             # inside tool_result content as nested dicts, not as top-level blocks.
             return None
 
 
 def _convert_content_blocks(
-    content: str | list[ClaudeMessageContent],
+    content: str | list[ClaudeContentBlock],
 ) -> str | Sequence[ContentBlock]:
     """Convert message content, handling both string and block-list forms."""
     if isinstance(content, str):
@@ -286,7 +291,7 @@ def _make_message_stop(*, session_id: str, uuid: str) -> StreamEvent:
 
 
 def _make_block_start(
-    block: ClaudeMessageContent,
+    block: ClaudeContentBlock,
     *,
     index: int,
     session_id: str,
@@ -301,15 +306,13 @@ def _make_block_start(
     )
 
     content_block: ATextBlock | AToolUseBlock | AThinkingBlock
-    match block.type:
-        case "text":
+    match block:
+        case ClaudeTextBlock():
             content_block = ATextBlock(type="text", text="")
-        case "thinking":
+        case ClaudeThinkingBlock():
             content_block = AThinkingBlock(type="thinking", thinking="", signature="")
-        case "tool_use":
-            content_block = AToolUseBlock(
-                type="tool_use", id=block.id or "", name=block.name or "", input={}
-            )
+        case ClaudeToolUseBlock():
+            content_block = AToolUseBlock(type="tool_use", id=block.id, name=block.name, input={})
         case _:
             # No stream event for tool_result or image blocks
             content_block = ATextBlock(type="text", text="")
@@ -324,7 +327,7 @@ def _make_block_start(
 
 
 def _make_block_delta(
-    block: ClaudeMessageContent,
+    block: ClaudeContentBlock,
     *,
     index: int,
     session_id: str,
@@ -334,15 +337,13 @@ def _make_block_delta(
     from anthropic.types import InputJSONDelta, RawContentBlockDeltaEvent, TextDelta, ThinkingDelta
 
     delta: TextDelta | InputJSONDelta | ThinkingDelta
-    match block.type:
-        case "text":
-            delta = TextDelta(type="text_delta", text=block.text or "")
-        case "thinking":
-            delta = ThinkingDelta(type="thinking_delta", thinking=block.thinking or "")
-        case "tool_use":
-            delta = InputJSONDelta(
-                type="input_json_delta", partial_json=_json.dumps(block.input or {})
-            )
+    match block:
+        case ClaudeTextBlock():
+            delta = TextDelta(type="text_delta", text=block.text)
+        case ClaudeThinkingBlock():
+            delta = ThinkingDelta(type="thinking_delta", thinking=block.thinking)
+        case ClaudeToolUseBlock():
+            delta = InputJSONDelta(type="input_json_delta", partial_json=_json.dumps(block.input))
         case _:
             delta = TextDelta(type="text_delta", text="")
 
@@ -412,7 +413,7 @@ def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> str | None:
     return msg.stop_reason if isinstance(msg, ClaudeApiMessage) else None
 
 
-def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ClaudeMessageContent | None:
+def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ClaudeContentBlock | None:
     """Get the first content block from a stored assistant entry."""
     msg = entry.message
     content = msg.content

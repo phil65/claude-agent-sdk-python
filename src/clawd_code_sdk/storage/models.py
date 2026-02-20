@@ -200,7 +200,7 @@ class ClaudeApiMessage(BaseModel):
     id: str
     type: Literal["message"] = "message"
     role: Literal["assistant"]
-    content: str | list[ClaudeMessageContent]
+    content: str | list[ClaudeContentBlock]
     stop_reason: StopReason = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
@@ -210,7 +210,7 @@ class ClaudeUserMessage(BaseModel):
     """User message content."""
 
     role: Literal["user"]
-    content: str | list[ClaudeMessageContent]
+    content: str | list[ClaudeContentBlock]
     usage: ClaudeUsage | None = None
     """Usage info (for type compatibility with ClaudeApiMessage)."""
 
