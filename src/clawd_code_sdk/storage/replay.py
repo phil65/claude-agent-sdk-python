@@ -101,23 +101,12 @@ def _convert_content_block(block: ClaudeContentBlock) -> ContentBlock | None:
     match block:
         case ClaudeTextBlock():
             return TextBlock(text=block.text)
-        case ClaudeThinkingBlock():
-            return ThinkingBlock(
-                thinking=block.thinking,
-                signature=block.signature or "",
-            )
-        case ClaudeToolUseBlock():
-            return ToolUseBlock(
-                id=block.id,
-                name=block.name,
-                input=block.input,
-            )
-        case ClaudeToolResultBlock():
-            return ToolResultBlock(
-                tool_use_id=block.tool_use_id,
-                content=block.content,
-                is_error=block.is_error,
-            )
+        case ClaudeThinkingBlock(thinking=thinking, signature=signature):
+            return ThinkingBlock(thinking=thinking, signature=signature or "")
+        case ClaudeToolUseBlock(id=block_id, name=name, input=tool_input):
+            return ToolUseBlock(id=block_id, name=name, input=tool_input)
+        case ClaudeToolResultBlock(tool_use_id=tool_use_id, content=content, is_error=is_error):
+            return ToolResultBlock(tool_use_id=tool_use_id, content=content, is_error=is_error)
         case ClaudeImageBlock():
             # No wire-format ContentBlock for images; they typically appear
             # inside tool_result content as nested dicts, not as top-level blocks.
@@ -156,15 +145,11 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
 
 def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
     """Convert a stored assistant entry to a wire-format AssistantMessage."""
-    msg = entry.message
-    model = msg.model if isinstance(msg, ClaudeApiMessage) else "unknown"
-    content = _convert_content_blocks(msg.content)
+    content = _convert_content_blocks(entry.message.content)
     # AssistantMessage.content must be Sequence[ContentBlock], not str.
-    if isinstance(content, str):
-        content = [TextBlock(text=content)]
     return AssistantMessage(
-        content=content,
-        model=model,
+        content=[TextBlock(text=content)] if isinstance(content, str) else content,
+        model=entry.message.model if isinstance(entry.message, ClaudeApiMessage) else "unknown",
         uuid=entry.uuid,
         session_id=entry.session_id,
         error="unknown" if entry.is_api_error_message else None,
@@ -204,23 +189,12 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
 # =============================================================================
 
 
-def _make_stream_event(
-    event: RawMessageStreamEvent,
-    *,
-    session_id: str,
-    uuid: str,
-) -> StreamEvent:
+def _make_stream_event(event: RawMessageStreamEvent, *, session_id: str, uuid: str) -> StreamEvent:
     """Wrap an Anthropic raw stream event into a wire-format StreamEvent."""
     return StreamEvent(event=event, session_id=session_id, uuid=uuid)
 
 
-def _make_message_start(
-    *,
-    msg_id: str,
-    model: str,
-    session_id: str,
-    uuid: str,
-) -> StreamEvent:
+def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic message_start StreamEvent."""
     from anthropic.types import (
         Message as AnthropicMessage,
@@ -228,23 +202,16 @@ def _make_message_start(
         Usage as AnthropicUsage,
     )
 
-    return _make_stream_event(
-        RawMessageStartEvent(
-            type="message_start",
-            message=AnthropicMessage(
-                id=msg_id,
-                type="message",
-                role="assistant",
-                content=[],
-                model=model,
-                stop_reason=None,
-                stop_sequence=None,
-                usage=AnthropicUsage(input_tokens=0, output_tokens=0),
-            ),
-        ),
-        session_id=session_id,
-        uuid=uuid,
+    message = AnthropicMessage(
+        id=msg_id,
+        type="message",
+        role="assistant",
+        content=[],
+        model=model,
+        usage=AnthropicUsage(input_tokens=0, output_tokens=0),
     )
+    start_event = RawMessageStartEvent(type="message_start", message=message)
+    return _make_stream_event(start_event, session_id=session_id, uuid=uuid)
 
 
 # Anthropic SDK stop reason literal type
@@ -274,26 +241,18 @@ def _make_message_delta(
     from anthropic.types import MessageDeltaUsage, RawMessageDeltaEvent
     from anthropic.types.raw_message_delta_event import Delta as RawMessageDelta
 
-    return _make_stream_event(
-        RawMessageDeltaEvent(
-            type="message_delta",
-            delta=RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None),
-            usage=MessageDeltaUsage(output_tokens=0),
-        ),
-        session_id=session_id,
-        uuid=uuid,
-    )
+    usage = MessageDeltaUsage(output_tokens=0)
+    delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
+    delta_event = RawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
+    return _make_stream_event(delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_message_stop(*, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic message_stop StreamEvent."""
     from anthropic.types import RawMessageStopEvent
 
-    return _make_stream_event(
-        RawMessageStopEvent(type="message_stop"),
-        session_id=session_id,
-        uuid=uuid,
-    )
+    stop_event = RawMessageStopEvent(type="message_stop")
+    return _make_stream_event(stop_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_start(
@@ -317,19 +276,15 @@ def _make_block_start(
             content_block = ATextBlock(type="text", text="")
         case ClaudeThinkingBlock():
             content_block = AThinkingBlock(type="thinking", thinking="", signature="")
-        case ClaudeToolUseBlock():
-            content_block = AToolUseBlock(type="tool_use", id=block.id, name=block.name, input={})
+        case ClaudeToolUseBlock(id=block_id, name=name):
+            content_block = AToolUseBlock(type="tool_use", id=block_id, name=name, input={})
         case _:
             # No stream event for tool_result or image blocks
             content_block = ATextBlock(type="text", text="")
-
-    return _make_stream_event(
-        RawContentBlockStartEvent(
-            type="content_block_start", index=index, content_block=content_block
-        ),
-        session_id=session_id,
-        uuid=uuid,
+    start_event = RawContentBlockStartEvent(
+        type="content_block_start", index=index, content_block=content_block
     )
+    return _make_stream_event(start_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_delta(
@@ -352,23 +307,16 @@ def _make_block_delta(
             delta = InputJSONDelta(type="input_json_delta", partial_json=_json.dumps(block.input))
         case _:
             delta = TextDelta(type="text_delta", text="")
-
-    return _make_stream_event(
-        RawContentBlockDeltaEvent(type="content_block_delta", index=index, delta=delta),
-        session_id=session_id,
-        uuid=uuid,
-    )
+    delta_event = RawContentBlockDeltaEvent(type="content_block_delta", index=index, delta=delta)
+    return _make_stream_event(delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic content_block_stop StreamEvent."""
     from anthropic.types import RawContentBlockStopEvent
 
-    return _make_stream_event(
-        RawContentBlockStopEvent(type="content_block_stop", index=index),
-        session_id=session_id,
-        uuid=uuid,
-    )
+    stop_event = RawContentBlockStopEvent(type="content_block_stop", index=index)
+    return _make_stream_event(stop_event, session_id=session_id, uuid=uuid)
 
 
 # =============================================================================
@@ -378,10 +326,9 @@ def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
 
 def _is_tool_result_entry(entry: ClaudeUserEntry) -> bool:
     """Check if a user entry is a synthetic tool_result (vs. an actual user prompt)."""
-    content = entry.message.content
-    if isinstance(content, str):
+    if isinstance(entry.message.content, str):
         return False
-    return all(b.type == "tool_result" for b in content)
+    return all(b.type == "tool_result" for b in entry.message.content)
 
 
 def _replay_basic(
@@ -406,29 +353,22 @@ def _replay_basic(
 
 def _get_assistant_msg_id(entry: ClaudeAssistantEntry) -> str | None:
     """Extract the API message ID from an assistant entry."""
-    msg = entry.message
-    return msg.id if isinstance(msg, ClaudeApiMessage) else None
+    return entry.message.id if isinstance(entry.message, ClaudeApiMessage) else None
 
 
 def _get_assistant_model(entry: ClaudeAssistantEntry) -> str:
     """Extract the model name from an assistant entry."""
-    msg = entry.message
-    return msg.model if isinstance(msg, ClaudeApiMessage) else "unknown"
+    return entry.message.model if isinstance(entry.message, ClaudeApiMessage) else "unknown"
 
 
 def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> str | None:
     """Extract the stop reason from an assistant entry."""
-    msg = entry.message
-    return msg.stop_reason if isinstance(msg, ClaudeApiMessage) else None
+    return entry.message.stop_reason if isinstance(entry.message, ClaudeApiMessage) else None
 
 
 def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ClaudeContentBlock | None:
     """Get the first content block from a stored assistant entry."""
-    msg = entry.message
-    content = msg.content
-    if isinstance(content, list) and content:
-        return content[0]
-    return None
+    return content[0] if isinstance((content := entry.message.content), list) and content else None
 
 
 def _replay_with_stream_events(
@@ -480,12 +420,10 @@ def _replay_with_stream_events(
                 else:
                     break
             group = entry_list[group_start:i]
-
             # Get stop_reason from the last entry in the group
             last_assistant = group[-1]
             assert isinstance(last_assistant, ClaudeAssistantEntry)
             stop_reason = _get_assistant_stop_reason(last_assistant)
-
             # → message_start
             yield _make_message_start(
                 msg_id=msg_id,
@@ -531,24 +469,21 @@ def _replay_with_stream_events(
 
             # Collect tool_result user entries that follow this group
             while i < len(entry_list):
-                e = entry_list[i]
-                if isinstance(e, ClaudeUserEntry) and _is_tool_result_entry(e):
-                    yield _convert_user_entry(e)
-                    i += 1
-                elif isinstance(e, ClaudeProgressEntry) and include_progress:
-                    if (msg := _convert_progress_entry(e)) is not None:
-                        yield msg
-                    i += 1
-                elif isinstance(e, ClaudeProgressEntry):
-                    i += 1  # Skip progress entries when not included
-                else:
-                    break
+                match entry_list[i]:
+                    case ClaudeUserEntry() as e if _is_tool_result_entry(e):
+                        yield _convert_user_entry(e)
+                        i += 1
+                    case ClaudeProgressEntry() as e if include_progress:
+                        if (msg := _convert_progress_entry(e)) is not None:
+                            yield msg
+                        i += 1
+                    case ClaudeProgressEntry():
+                        i += 1
+                    case _:
+                        break
 
             # → message_stop
-            yield _make_message_stop(
-                session_id=last_assistant.session_id,
-                uuid=last_assistant.uuid,
-            )
+            yield _make_message_stop(session_id=last_assistant.session_id, uuid=last_assistant.uuid)
 
         elif isinstance(entry, ClaudeUserEntry):
             yield _convert_user_entry(entry)
@@ -723,9 +658,7 @@ def replay_session(
 # =============================================================================
 
 
-def extract_usage(
-    entries: Iterable[ClaudeJSONLEntry],
-) -> ClaudeUsage:
+def extract_usage(entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
     """Extract deduplicated aggregate token usage from stored entries.
 
     Storage duplicates usage data across all content-block entries that
