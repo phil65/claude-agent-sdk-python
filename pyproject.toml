@@ -171,3 +171,8 @@ invalid-type-form = "ignore"
 not-subscriptable = "ignore"
 possibly-missing-import = "warn"
 division-by-zero = "warn"
+
+[dependency-groups]
+dev = [
+    "fastmcp>=3.0.0",
+]
