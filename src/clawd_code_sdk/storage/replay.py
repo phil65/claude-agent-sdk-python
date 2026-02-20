@@ -549,6 +549,54 @@ def _replay_with_stream_events(
             i += 1  # Skip non-message entries (queue ops, summaries, etc.)
 
 
+# Entry types that carry a uuid for parent-chain traversal
+_UuidEntry = ClaudeUserEntry | ClaudeAssistantEntry | ClaudeProgressEntry
+
+
+def _resolve_thread(
+    entries: list[ClaudeJSONLEntry],
+    leaf_uuid: str | None = None,
+) -> list[ClaudeJSONLEntry]:
+    """Resolve a conversation thread by walking the parent_uuid chain.
+
+    Given a list of entries and an optional leaf UUID, returns only the entries
+    that form a single conversation thread from root to leaf. Entries without
+    a uuid (summaries, queue ops, file history) are excluded.
+
+    If ``leaf_uuid`` is None, the last entry with a uuid in the list is used.
+    """
+    by_uuid: dict[str, ClaudeJSONLEntry] = {}
+    last_uuid: str | None = None
+    for entry in entries:
+        match entry:
+            case ClaudeUserEntry() | ClaudeAssistantEntry() | ClaudeProgressEntry():
+                by_uuid[entry.uuid] = entry
+                last_uuid = entry.uuid
+
+    target = leaf_uuid or last_uuid
+    if target is None:
+        return []
+
+    # Walk backwards from leaf to root
+    chain: list[ClaudeJSONLEntry] = []
+    current: str | None = target
+    seen: set[str] = set()
+    while current is not None and current not in seen:
+        seen.add(current)
+        entry = by_uuid.get(current)
+        if entry is None:
+            break
+        chain.append(entry)
+        match entry:
+            case ClaudeUserEntry() | ClaudeAssistantEntry() | ClaudeProgressEntry():
+                current = entry.parent_uuid
+            case _:
+                current = None
+
+    chain.reverse()
+    return chain
+
+
 def _filter_sidechains(
     entries: Iterable[ClaudeJSONLEntry],
 ) -> Iterator[ClaudeJSONLEntry]:
@@ -569,6 +617,7 @@ def replay_entries(
     include_progress: bool = False,
     include_stream_events: bool = False,
     exclude_sidechains: bool = False,
+    leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
     """Replay stored JSONL entries as wire-format Messages.
 
@@ -586,11 +635,16 @@ def replay_entries(
             expect the full stream envelope structure.
         exclude_sidechains: If True, skip entries marked as sidechain
             (internal Claude Code context-retrieval calls).
+        leaf_uuid: If set, resolve the conversation thread by walking
+            parent_uuid chains from this leaf to the root. Only entries
+            on that chain are replayed. If None, file order is used.
 
     Yields:
         Wire-format Message objects (UserMessage, AssistantMessage,
         StreamEvent, and optionally ToolProgressMessage).
     """
+    if leaf_uuid is not None:
+        entries = _resolve_thread(list(entries), leaf_uuid=leaf_uuid)
     if exclude_sidechains:
         entries = _filter_sidechains(entries)
     if include_stream_events:
@@ -605,6 +659,7 @@ def replay_session(
     include_progress: bool = False,
     include_stream_events: bool = False,
     exclude_sidechains: bool = False,
+    leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
     """Replay a stored session file as wire-format Messages.
 
@@ -619,6 +674,7 @@ def replay_session(
         include_stream_events: If True, inject synthetic StreamEvent
             messages around each content block (see :func:`replay_entries`).
         exclude_sidechains: If True, skip sidechain entries.
+        leaf_uuid: If set, resolve the thread from this leaf UUID.
 
     Yields:
         Wire-format Message objects in conversation order.
@@ -629,4 +685,5 @@ def replay_session(
         include_progress=include_progress,
         include_stream_events=include_stream_events,
         exclude_sidechains=exclude_sidechains,
+        leaf_uuid=leaf_uuid,
     )
