@@ -404,102 +404,103 @@ def _replay_with_stream_events(
     i = 0
 
     while i < len(entry_list):
-        entry = entry_list[i]
+        match entry_list[i]:
+            case ClaudeAssistantEntry() as entry:
+                # Start of an API response group — collect all entries with same msg_id
+                msg_id = _get_assistant_msg_id(entry) or entry.uuid
+                model = _get_assistant_model(entry)
 
-        if isinstance(entry, ClaudeAssistantEntry):
-            # Start of an API response group — collect all entries with same msg_id
-            msg_id = _get_assistant_msg_id(entry) or entry.uuid
-            model = _get_assistant_model(entry)
-
-            # Find extent of this group (consecutive assistant entries with same msg_id)
-            group_start = i
-            while i < len(entry_list):
-                e = entry_list[i]
-                if isinstance(e, ClaudeAssistantEntry) and _get_assistant_msg_id(e) == msg_id:
-                    i += 1
-                else:
-                    break
-            group = entry_list[group_start:i]
-            # Get stop_reason from the last entry in the group
-            last_assistant = group[-1]
-            assert isinstance(last_assistant, ClaudeAssistantEntry)
-            stop_reason = _get_assistant_stop_reason(last_assistant)
-            # → message_start
-            yield _make_message_start(
-                msg_id=msg_id,
-                model=model,
-                session_id=entry.session_id,
-                uuid=entry.uuid,
-            )
-
-            # → per-block events
-            for block_index, assistant_entry in enumerate(group):
-                assert isinstance(assistant_entry, ClaudeAssistantEntry)
-                stored_block = _get_first_stored_block(assistant_entry)
-
-                if stored_block is not None:
-                    yield _make_block_start(
-                        stored_block,
-                        index=block_index,
-                        session_id=assistant_entry.session_id,
-                        uuid=assistant_entry.uuid,
-                    )
-                    yield _make_block_delta(
-                        stored_block,
-                        index=block_index,
-                        session_id=assistant_entry.session_id,
-                        uuid=assistant_entry.uuid,
-                    )
-
-                yield _convert_assistant_entry(assistant_entry)
-
-                if stored_block is not None:
-                    yield _make_block_stop(
-                        index=block_index,
-                        session_id=assistant_entry.session_id,
-                        uuid=assistant_entry.uuid,
-                    )
-
-            # → message_delta
-            yield _make_message_delta(
-                stop_reason=stop_reason,
-                session_id=last_assistant.session_id,
-                uuid=last_assistant.uuid,
-            )
-
-            # Collect tool_result user entries that follow this group
-            while i < len(entry_list):
-                match entry_list[i]:
-                    case ClaudeUserEntry() as e if _is_tool_result_entry(e):
-                        yield _convert_user_entry(e)
+                # Find extent of this group (consecutive assistant entries with same msg_id)
+                group_start = i
+                while i < len(entry_list):
+                    e = entry_list[i]
+                    if isinstance(e, ClaudeAssistantEntry) and _get_assistant_msg_id(e) == msg_id:
                         i += 1
-                    case ClaudeProgressEntry() as e if include_progress:
-                        if (msg := _convert_progress_entry(e)) is not None:
-                            yield msg
-                        i += 1
-                    case ClaudeProgressEntry():
-                        i += 1
-                    case _:
+                    else:
                         break
+                group = entry_list[group_start:i]
+                # Get stop_reason from the last entry in the group
+                last_assistant = group[-1]
+                assert isinstance(last_assistant, ClaudeAssistantEntry)
+                stop_reason = _get_assistant_stop_reason(last_assistant)
+                # → message_start
+                yield _make_message_start(
+                    msg_id=msg_id,
+                    model=model,
+                    session_id=entry.session_id,
+                    uuid=entry.uuid,
+                )
 
-            # → message_stop
-            yield _make_message_stop(session_id=last_assistant.session_id, uuid=last_assistant.uuid)
+                # → per-block events
+                for block_index, assistant_entry in enumerate(group):
+                    assert isinstance(assistant_entry, ClaudeAssistantEntry)
+                    stored_block = _get_first_stored_block(assistant_entry)
 
-        elif isinstance(entry, ClaudeUserEntry):
-            yield _convert_user_entry(entry)
-            i += 1
+                    if stored_block is not None:
+                        yield _make_block_start(
+                            stored_block,
+                            index=block_index,
+                            session_id=assistant_entry.session_id,
+                            uuid=assistant_entry.uuid,
+                        )
+                        yield _make_block_delta(
+                            stored_block,
+                            index=block_index,
+                            session_id=assistant_entry.session_id,
+                            uuid=assistant_entry.uuid,
+                        )
 
-        elif isinstance(entry, ClaudeProgressEntry) and include_progress:
-            if (msg := _convert_progress_entry(entry)) is not None:
-                yield msg
-            i += 1
+                    yield _convert_assistant_entry(assistant_entry)
 
-        elif isinstance(entry, ClaudeSummaryEntry) and include_summaries:
-            yield _convert_summary_entry(entry)
-            i += 1
+                    if stored_block is not None:
+                        yield _make_block_stop(
+                            index=block_index,
+                            session_id=assistant_entry.session_id,
+                            uuid=assistant_entry.uuid,
+                        )
 
-        else:
-            i += 1  # Skip non-message entries (queue ops, etc.)
+                # → message_delta
+                yield _make_message_delta(
+                    stop_reason=stop_reason,
+                    session_id=last_assistant.session_id,
+                    uuid=last_assistant.uuid,
+                )
+
+                # Collect tool_result user entries that follow this group
+                while i < len(entry_list):
+                    match entry_list[i]:
+                        case ClaudeUserEntry() as e if _is_tool_result_entry(e):
+                            yield _convert_user_entry(e)
+                            i += 1
+                        case ClaudeProgressEntry() as e if include_progress:
+                            if (msg := _convert_progress_entry(e)) is not None:
+                                yield msg
+                            i += 1
+                        case ClaudeProgressEntry():
+                            i += 1
+                        case _:
+                            break
+
+                # → message_stop
+                yield _make_message_stop(
+                    session_id=last_assistant.session_id, uuid=last_assistant.uuid
+                )
+
+            case ClaudeUserEntry() as entry:
+                yield _convert_user_entry(entry)
+                i += 1
+
+            case ClaudeProgressEntry() as entry if include_progress:
+                if (msg := _convert_progress_entry(entry)) is not None:
+                    yield msg
+                i += 1
+
+            case ClaudeSummaryEntry() as entry if include_summaries:
+                yield _convert_summary_entry(entry)
+                i += 1
+
+            case _:
+                i += 1  # Skip non-message entries (queue ops, etc.)
 
 
 # Entry types that carry a uuid for parent-chain traversal
