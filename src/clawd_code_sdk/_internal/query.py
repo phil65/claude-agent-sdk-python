@@ -308,7 +308,7 @@ class Query:
             success_response = SDKControlResponse(type="control_response", response=dct)
             await self.transport.write(anyenv.dump_json(success_response) + "\n")
 
-        except Exception:
+        except Exception as e:
             response = {"subtype": "error", "request_id": request_id, "error": str(e)}
             error_response = SDKControlResponse(type="control_response", response=response)
             await self.transport.write(anyenv.dump_json(error_response) + "\n")
