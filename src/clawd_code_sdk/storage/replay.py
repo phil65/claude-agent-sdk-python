@@ -76,6 +76,7 @@ from clawd_code_sdk.storage.models import (
     ClaudeToolProgressData,
     ClaudeToolResultBlock,
     ClaudeToolUseBlock,
+    ClaudeUsage,
     ClaudeUserEntry,
 )
 
@@ -687,3 +688,42 @@ def replay_session(
         exclude_sidechains=exclude_sidechains,
         leaf_uuid=leaf_uuid,
     )
+
+
+# =============================================================================
+# Usage extraction
+# =============================================================================
+
+
+def extract_usage(
+    entries: Iterable[ClaudeJSONLEntry],
+) -> ClaudeUsage:
+    """Extract deduplicated aggregate token usage from stored entries.
+
+    Storage duplicates usage data across all content-block entries that
+    share the same API ``message.id``. This function deduplicates by
+    ``message.id`` and sums across all unique API calls.
+
+    Args:
+        entries: JSONL entries (from ``read_session`` or similar).
+
+    Returns:
+        Aggregate :class:`~clawd_code_sdk.storage.models.ClaudeUsage`
+        with deduplicated totals.
+    """
+    seen_ids: set[str] = set()
+    total = ClaudeUsage()
+    for entry in entries:
+        if not isinstance(entry, ClaudeAssistantEntry):
+            continue
+        msg = entry.message
+        if not isinstance(msg, ClaudeApiMessage):
+            continue
+        if msg.id in seen_ids:
+            continue
+        seen_ids.add(msg.id)
+        total.input_tokens += msg.usage.input_tokens
+        total.output_tokens += msg.usage.output_tokens
+        total.cache_creation_input_tokens += msg.usage.cache_creation_input_tokens
+        total.cache_read_input_tokens += msg.usage.cache_read_input_tokens
+    return total
