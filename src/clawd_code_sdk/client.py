@@ -10,7 +10,13 @@ from typing import TYPE_CHECKING, Any
 import anyenv
 
 from clawd_code_sdk._errors import CLIConnectionError
-from clawd_code_sdk.models import ClaudeAgentOptions, ResultMessage, UserPromptMessage
+from clawd_code_sdk.models import (
+    ClaudeAgentOptions,
+    McpStdioServerConfig,
+    ResultMessage,
+    UserPromptMessage,
+)
+from clawd_code_sdk.models.mcp import McpStatusResponse
 from clawd_code_sdk.models.messages import AssistantMessage
 
 
@@ -247,19 +253,16 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         await query.rewind_files(user_message_id)
 
-    async def get_mcp_status(self) -> dict[str, Any]:
+    async def get_mcp_status(self) -> McpStatusResponse:
         """Get current MCP server connection status.
 
         Returns:
-            Dictionary with MCP server status information. Contains a
-            'mcpServers' key with a list of server status objects, each having:
-            - 'name': Server name (str)
-            - 'status': Connection status ('connected', 'pending', 'failed',
-              'needs-auth', 'disabled')
+            Validated MCP status response containing server statuses,
+            configurations, tools, and connection information.
         """
         query = self._ensure_connected()
         result = await query.get_mcp_status()
-        return result
+        return McpStatusResponse.model_validate(result)
 
     async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> dict[str, Any]:
         """Add, replace, or remove MCP servers dynamically mid-session.

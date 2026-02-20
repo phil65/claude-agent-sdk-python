@@ -4,20 +4,15 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic.alias_generators import to_camel
+from pydantic import Field
+
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 
 
 EffortLevel = Literal["low", "medium", "high", "max"]
 
 
-class ClaudeCodeBasemodel(BaseModel):
-    """Base model."""
-
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
-
-
-class ClaudeCodeModelInfo(ClaudeCodeBasemodel):
+class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     """Information about an available AI model from Claude Code."""
 
     value: str
@@ -39,7 +34,7 @@ class ClaudeCodeModelInfo(ClaudeCodeBasemodel):
     """Whether the model supports adaptive thinking."""
 
 
-class ClaudeCodeCommandInfo(ClaudeCodeBasemodel):
+class ClaudeCodeCommandInfo(ClaudeCodeBaseModel):
     """Information about an available slash command from Claude Code."""
 
     name: str
@@ -52,7 +47,7 @@ class ClaudeCodeCommandInfo(ClaudeCodeBasemodel):
     """Usage hint for command arguments (may be empty string)."""
 
 
-class ClaudeCodeAccountInfo(ClaudeCodeBasemodel):
+class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
     """Account information from Claude Code."""
 
     email: str | None = None
@@ -68,7 +63,7 @@ class ClaudeCodeAccountInfo(ClaudeCodeBasemodel):
     """Where API key comes from (e.g., "ANTHROPIC_API_KEY")."""
 
 
-class ClaudeCodeServerInfo(ClaudeCodeBasemodel):
+class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     """Complete server initialization info from Claude Code.
 
     This is returned by the Claude Code server during initialization and contains

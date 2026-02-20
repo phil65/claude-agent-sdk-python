@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+
+from pydantic import Field
+
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 
 
 if TYPE_CHECKING:
@@ -11,6 +15,8 @@ if TYPE_CHECKING:
 
 RequestId = str | int
 JSONRPC_VERSION = "2.0"
+
+McpConnectionStatus = Literal["connected", "pending", "failed", "needs-auth", "disabled"]
 
 
 # JSON-RPC types (from MCP specification)
@@ -111,3 +117,37 @@ class SdkPluginConfig(TypedDict):
 
     type: Literal["local"]
     path: str
+
+
+# Pydantic models for MCP status responses
+
+
+class McpToolStatus(ClaudeCodeBaseModel):
+    """Status information for a single MCP tool."""
+
+    name: str
+    annotations: dict[str, Any] = Field(default_factory=dict)
+
+
+class McpServerVersionInfo(ClaudeCodeBaseModel):
+    """Server version information returned in MCP status."""
+
+    name: str
+    version: str
+
+
+class McpServerStatusEntry(ClaudeCodeBaseModel):
+    """Status information for a single MCP server."""
+
+    name: str
+    status: McpConnectionStatus
+    server_info: McpServerVersionInfo | None = None
+    config: dict[str, Any] = Field(default_factory=dict)
+    scope: str | None = None
+    tools: list[McpToolStatus] = Field(default_factory=list)
+
+
+class McpStatusResponse(ClaudeCodeBaseModel):
+    """Response from get_mcp_status() containing all MCP server statuses."""
+
+    mcp_servers: list[McpServerStatusEntry] = Field(default_factory=list)
