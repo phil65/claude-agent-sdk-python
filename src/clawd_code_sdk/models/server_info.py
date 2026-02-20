@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+
+EffortLevel = Literal["low", "medium", "high", "max"]
 
 
 class ClaudeCodeBasemodel(BaseModel):
@@ -23,6 +28,15 @@ class ClaudeCodeModelInfo(ClaudeCodeBasemodel):
 
     description: str
     """Full description including capabilities and pricing."""
+
+    supports_effort: bool | None = None
+    """Whether the model supports effort setting."""
+
+    supported_effort_levels: list[EffortLevel] | None = None
+    """Supported effort levels."""
+
+    supports_adaptive_thinking: bool | None = None
+    """Whether the model supports adaptive thinking."""
 
 
 class ClaudeCodeCommandInfo(ClaudeCodeBasemodel):
@@ -76,3 +90,6 @@ class ClaudeCodeServerInfo(ClaudeCodeBasemodel):
 
     account: ClaudeCodeAccountInfo | None = Field(default=None)
     """Account and authentication information."""
+
+    pid: int
+    """Process id."""
