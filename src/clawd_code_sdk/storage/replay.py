@@ -145,15 +145,11 @@ def _convert_content_blocks(
 def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
     """Convert a stored user entry to a wire-format UserMessage."""
     content = _convert_content_blocks(entry.message.content)
-    # Wire tool_use_result is dict | None; storage can also be list | str.
-    tool_use_result: dict[str, object] | None = None
-    if isinstance(entry.tool_use_result, dict):
-        tool_use_result = entry.tool_use_result
     return UserMessage(
         uuid=entry.uuid,
         session_id=entry.session_id,
         content=content,
-        tool_use_result=tool_use_result,
+        tool_use_result=entry.tool_use_result,
         isReplay=True,
     )
 
