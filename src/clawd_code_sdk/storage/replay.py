@@ -549,11 +549,26 @@ def _replay_with_stream_events(
             i += 1  # Skip non-message entries (queue ops, summaries, etc.)
 
 
+def _filter_sidechains(
+    entries: Iterable[ClaudeJSONLEntry],
+) -> Iterator[ClaudeJSONLEntry]:
+    """Filter out sidechain entries."""
+    for entry in entries:
+        match entry:
+            case ClaudeUserEntry(is_sidechain=True) | ClaudeAssistantEntry(is_sidechain=True):
+                continue
+            case ClaudeProgressEntry(is_sidechain=True):
+                continue
+            case _:
+                yield entry
+
+
 def replay_entries(
     entries: Iterable[ClaudeJSONLEntry],
     *,
     include_progress: bool = False,
     include_stream_events: bool = False,
+    exclude_sidechains: bool = False,
 ) -> Iterator[Message]:
     """Replay stored JSONL entries as wire-format Messages.
 
@@ -569,11 +584,15 @@ def replay_entries(
             around each content block. Each text/thinking block gets a
             single delta with the full content. Useful for consumers that
             expect the full stream envelope structure.
+        exclude_sidechains: If True, skip entries marked as sidechain
+            (internal Claude Code context-retrieval calls).
 
     Yields:
         Wire-format Message objects (UserMessage, AssistantMessage,
         StreamEvent, and optionally ToolProgressMessage).
     """
+    if exclude_sidechains:
+        entries = _filter_sidechains(entries)
     if include_stream_events:
         yield from _replay_with_stream_events(entries, include_progress=include_progress)
     else:
@@ -585,6 +604,7 @@ def replay_session(
     *,
     include_progress: bool = False,
     include_stream_events: bool = False,
+    exclude_sidechains: bool = False,
 ) -> Iterator[Message]:
     """Replay a stored session file as wire-format Messages.
 
@@ -598,6 +618,7 @@ def replay_session(
         include_progress: If True, also yield ToolProgressMessage entries.
         include_stream_events: If True, inject synthetic StreamEvent
             messages around each content block (see :func:`replay_entries`).
+        exclude_sidechains: If True, skip sidechain entries.
 
     Yields:
         Wire-format Message objects in conversation order.
@@ -607,4 +628,5 @@ def replay_session(
         entries,
         include_progress=include_progress,
         include_stream_events=include_stream_events,
+        exclude_sidechains=exclude_sidechains,
     )
