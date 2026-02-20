@@ -83,6 +83,7 @@ class ClaudeAgentOptions:
     # Enable 1M token context window (Sonnet 4/4.5 only).
     context_1m: bool = False
     prompt_suggestions: bool | None = None
+    worktree: bool | str = False
 
     def build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.

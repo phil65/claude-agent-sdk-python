@@ -167,6 +167,12 @@ class SubprocessCLITransport(Transport):
         if self._options.strict_mcp_config:
             cmd.append("--strict-mcp-config")
 
+        match self._options.worktree:
+            case True:
+                cmd.append("--worktree")
+            case str():
+                cmd.extend(["--worktree", self._options.worktree])
+
         sources_value = ",".join(self._options.setting_sources or [])
         cmd.extend(["--setting-sources", sources_value])
 
