@@ -86,5 +86,5 @@ class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     account: ClaudeCodeAccountInfo | None = Field(default=None)
     """Account and authentication information."""
 
-    pid: int
+    pid: int | None = None
     """Process id."""
