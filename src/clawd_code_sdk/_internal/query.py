@@ -12,6 +12,7 @@ import anyenv
 import anyio
 from pydantic import BaseModel
 
+from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
 from clawd_code_sdk.models import (
     ControlResponse,
     PermissionResultAllow,
@@ -239,7 +240,9 @@ class Query:
                             event = self.pending_control_responses[request_id]
                             if response.get("subtype") == "error":
                                 msg = response.get("error", "Unknown error")
-                                self.pending_control_results[request_id] = Exception(msg)
+                                self.pending_control_results[request_id] = ControlRequestError(
+                                    msg, subtype=response.get("subtype")
+                                )
                             else:
                                 self.pending_control_results[request_id] = response
                             event.set()
@@ -375,7 +378,10 @@ class Query:
         except TimeoutError as e:
             self.pending_control_responses.pop(request_id, None)
             self.pending_control_results.pop(request_id, None)
-            raise Exception(f"Control request timeout: {request.get('subtype')}") from e
+            subtype = request.get("subtype")
+            raise ControlRequestTimeoutError(
+                f"Control request timeout: {subtype}", subtype=subtype
+            ) from e
 
     async def _handle_sdk_mcp_request(
         self, server_name: str, message: JSONRPCMessage

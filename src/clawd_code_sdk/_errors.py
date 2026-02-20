@@ -142,3 +142,36 @@ class ServerError(APIError):
 
     def __init__(self, message: str, model: str | None = None):
         super().__init__(message, "server_error", model)
+
+
+class ControlRequestError(ClaudeSDKError):
+    """Raised when a control protocol request fails."""
+
+    def __init__(self, message: str, subtype: str | None = None):
+        self.subtype = subtype
+        super().__init__(message)
+
+
+class ControlRequestTimeoutError(ControlRequestError):
+    """Raised when a control protocol request times out."""
+
+
+class McpError(ControlRequestError):
+    """Raised when an MCP-related control request fails.
+
+    Attributes:
+        error_code: The JSON-RPC error code from the MCP server.
+        server_name: The name of the MCP server, if known.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: int | None = None,
+        server_name: str | None = None,
+        subtype: str | None = None,
+    ):
+        self.error_code = error_code
+        self.server_name = server_name
+        super().__init__(message, subtype=subtype)
