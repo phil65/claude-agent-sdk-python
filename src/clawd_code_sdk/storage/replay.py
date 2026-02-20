@@ -242,7 +242,7 @@ def _make_message_delta(
     from anthropic.types.raw_message_delta_event import Delta as RawMessageDelta
 
     usage = MessageDeltaUsage(output_tokens=0)
-    delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason))
+    delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
     delta_event = RawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
     return _make_stream_event(delta_event, session_id=session_id, uuid=uuid)
 
@@ -485,16 +485,21 @@ def _replay_with_stream_events(
             # → message_stop
             yield _make_message_stop(session_id=last_assistant.session_id, uuid=last_assistant.uuid)
 
-        else:
-            match entry:
-                case ClaudeUserEntry():
-                    yield _convert_user_entry(entry)
-                case ClaudeProgressEntry() if include_progress:
-                    if (msg := _convert_progress_entry(entry)) is not None:
-                        yield msg
-                case ClaudeSummaryEntry() if include_summaries:
-                    yield _convert_summary_entry(entry)
+        elif isinstance(entry, ClaudeUserEntry):
+            yield _convert_user_entry(entry)
             i += 1
+
+        elif isinstance(entry, ClaudeProgressEntry) and include_progress:
+            if (msg := _convert_progress_entry(entry)) is not None:
+                yield msg
+            i += 1
+
+        elif isinstance(entry, ClaudeSummaryEntry) and include_summaries:
+            yield _convert_summary_entry(entry)
+            i += 1
+
+        else:
+            i += 1  # Skip non-message entries (queue ops, etc.)
 
 
 # Entry types that carry a uuid for parent-chain traversal
