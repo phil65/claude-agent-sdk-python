@@ -136,6 +136,7 @@ class ClaudeSDKClient:
             system_prompt=system_prompt,
             append_system_prompt=append_system_prompt,
             json_schema=json_schema,
+            prompt_suggestions=self.options.prompt_suggestions,
         )
         # Start reading messages and initialize
         await self._query.start()

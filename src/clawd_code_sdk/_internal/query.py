@@ -98,6 +98,7 @@ class Query:
         system_prompt: str | None = None,
         append_system_prompt: str | None = None,
         json_schema: dict[str, Any] | None = None,
+        prompt_suggestions: bool | None = None,
     ):
         """Initialize Query with transport and callbacks.
 
@@ -111,6 +112,7 @@ class Query:
             system_prompt: Optional system prompt to send via initialize
             append_system_prompt: Optional text to append to preset system prompt
             json_schema: Optional JSON schema for structured output
+            prompt_suggestions: Optional flag to enable prompt suggestions
         """
         self._initialize_timeout = initialize_timeout
         self.transport = transport
@@ -121,6 +123,7 @@ class Query:
         self._system_prompt = system_prompt
         self._append_system_prompt = append_system_prompt
         self._json_schema = json_schema
+        self._prompt_suggestions = prompt_suggestions
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}
         self.pending_control_results: dict[str, dict[str, Any] | Exception] = {}
@@ -184,6 +187,8 @@ class Query:
             request["appendSystemPrompt"] = self._append_system_prompt
         if self._json_schema is not None:
             request["jsonSchema"] = self._json_schema
+        if self._prompt_suggestions is not None:
+            request["promptSuggestions"] = self._prompt_suggestions
 
         # Use longer timeout for initialize since MCP servers may take time to start
         response = await self._send_control_request(request, timeout=self._initialize_timeout)
