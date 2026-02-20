@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, assert_never
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
 from pydantic.alias_generators import to_camel
 
 
@@ -335,8 +335,15 @@ ClaudeQueueOperationEntry = Annotated[
 
 
 # =============================================================================
-# System entries
+# System entries (discriminated by "subtype")
 # =============================================================================
+
+
+class ClaudeSystemEntryBase(ClaudeEntryBase):
+    """Common fields shared across all system entry subtypes."""
+
+    type: Literal["system"]
+    slug: str | None = None
 
 
 class ClaudeHookInfo(ClaudeBaseModel):
@@ -345,23 +352,46 @@ class ClaudeHookInfo(ClaudeBaseModel):
     command: str
 
 
-class ClaudeSystemEntry(ClaudeEntryBase):
-    """System entry covering all subtypes.
+class ClaudeCompactBoundaryEntry(ClaudeSystemEntryBase):
+    """System entry emitted when conversation is compacted."""
 
-    Claude Code emits many system entry subtypes (stop_hook_summary,
-    local_command, turn_duration, etc.) and keeps adding new ones.
-    This model uses optional fields to handle all variants.
-    """
-
-    type: Literal["system"]
-
-    # Content (present on most subtypes)
+    subtype: Literal["compact_boundary"]
     content: str | None = None
-    subtype: str | None = None
+    level: str | None = None
+    logical_parent_uuid: str | None = None
+    compact_metadata: dict[str, Any] | None = None
+
+
+class ClaudeTurnDurationEntry(ClaudeSystemEntryBase):
+    """System entry recording the duration of a turn."""
+
+    subtype: Literal["turn_duration"]
+    duration_ms: int | None = None
+
+
+class ClaudeApiErrorEntry(ClaudeSystemEntryBase):
+    """System entry for API errors with retry information."""
+
+    subtype: Literal["api_error"]
+    level: str | None = None
+    error: dict[str, Any] | None = None
+    retry_in_ms: float | None = None
+    retry_attempt: int | None = None
+    max_retries: int | None = None
+
+
+class ClaudeLocalCommandEntry(ClaudeSystemEntryBase):
+    """System entry for local slash commands."""
+
+    subtype: Literal["local_command"]
+    content: str | None = None
     level: str | None = None
 
-    # stop_hook_summary fields
-    slug: str | None = None
+
+class ClaudeStopHookSummaryEntry(ClaudeSystemEntryBase):
+    """System entry summarizing hook execution at turn end."""
+
+    subtype: Literal["stop_hook_summary"]
     hook_count: int | None = None
     hook_infos: list[ClaudeHookInfo] | None = None
     hook_errors: list[Any] | None = None
@@ -369,17 +399,82 @@ class ClaudeSystemEntry(ClaudeEntryBase):
     stop_reason: str | None = None
     has_output: bool | None = None
 
-    # turn_duration fields
-    duration_ms: int | None = None
 
-    # Compaction fields
+class ClaudeGenericSystemEntry(ClaudeSystemEntryBase):
+    """Fallback for unknown or future system entry subtypes.
+
+    Claude Code keeps adding new system subtypes. This model captures
+    any subtype not explicitly modeled, preserving all data as optional fields.
+    """
+
+    subtype: str | None = None
+    content: str | None = None
+    level: str | None = None
+
+    # Fields that may appear on various subtypes
+    duration_ms: int | None = None
     is_compact_summary: bool | None = None
     logical_parent_uuid: str | None = None
     compact_metadata: dict[str, Any] | None = None
-
-    # Misc
+    hook_count: int | None = None
+    hook_infos: list[ClaudeHookInfo] | None = None
+    hook_errors: list[Any] | None = None
+    prevented_continuation: bool | None = None
+    stop_reason: str | None = None
+    has_output: bool | None = None
+    error: dict[str, Any] | None = None
+    retry_in_ms: float | None = None
+    retry_attempt: int | None = None
+    max_retries: int | None = None
     tool_use_id: str | None = Field(default=None, alias="toolUseID")
     tool_use_result: list[dict[str, Any]] | dict[str, Any] | str | None = None
+
+
+def _system_entry_discriminator(data: Any) -> str:  # noqa: ANN401
+    """Discriminator function for system entry subtypes.
+
+    Routes known subtypes to their typed models, falls back to generic.
+    Pydantic calls this with a dict (from JSON) or a model instance (re-validation).
+    """
+    subtype: str | None = None
+    match data:
+        case dict():
+            subtype = data.get("subtype") or data.get("sub_type")
+        case (
+            ClaudeCompactBoundaryEntry()
+            | ClaudeTurnDurationEntry()
+            | ClaudeApiErrorEntry()
+            | ClaudeLocalCommandEntry()
+            | ClaudeStopHookSummaryEntry()
+        ) as entry:
+            subtype = entry.subtype
+        case ClaudeGenericSystemEntry() as entry:
+            subtype = entry.subtype
+    if subtype in _KNOWN_SYSTEM_SUBTYPES:
+        return subtype
+    return "__generic__"
+
+
+_KNOWN_SYSTEM_SUBTYPES: frozenset[str] = frozenset(
+    {
+        "compact_boundary",
+        "turn_duration",
+        "api_error",
+        "local_command",
+        "stop_hook_summary",
+    }
+)
+
+ClaudeSystemEntry = Annotated[
+    Annotated[ClaudeCompactBoundaryEntry, Tag("compact_boundary")]
+    | Annotated[ClaudeTurnDurationEntry, Tag("turn_duration")]
+    | Annotated[ClaudeApiErrorEntry, Tag("api_error")]
+    | Annotated[ClaudeLocalCommandEntry, Tag("local_command")]
+    | Annotated[ClaudeStopHookSummaryEntry, Tag("stop_hook_summary")]
+    | Annotated[ClaudeGenericSystemEntry, Tag("__generic__")],
+    Discriminator(_system_entry_discriminator),
+]
+"""Discriminated union of system entry subtypes with generic fallback."""
 
 
 # =============================================================================
