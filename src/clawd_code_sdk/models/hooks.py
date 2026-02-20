@@ -27,6 +27,7 @@ HookEvent = Literal[
     "Setup",
     "TeammateIdle",
     "TaskCompleted",
+    "ConfigChange",
 ]
 
 
@@ -170,6 +171,16 @@ class TaskCompletedHookInput(BaseHookInput):
     team_name: NotRequired[str]
 
 
+class ConfigChangeHookInput(BaseHookInput):
+    """Input data for ConfigChange hook events."""
+
+    hook_event_name: Literal["ConfigChange"]
+    source: Literal[
+        "user_settings", "project_settings", "local_settings", "policy_settings", "skills"
+    ]
+    file_path: NotRequired[str]
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -187,6 +198,7 @@ HookInput = (
     | SetupHookInput
     | TeammateIdleHookInput
     | TaskCompletedHookInput
+    | ConfigChangeHookInput
 )
 
 
