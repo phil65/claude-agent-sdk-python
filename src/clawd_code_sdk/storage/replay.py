@@ -45,13 +45,10 @@ Example::
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
 import json as _json
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from clawd_code_sdk.models.content_blocks import (
-    ContentBlock,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -59,7 +56,6 @@ from clawd_code_sdk.models.content_blocks import (
 )
 from clawd_code_sdk.models.messages import (
     AssistantMessage,
-    Message,
     StreamEvent,
     ToolProgressMessage,
     UserMessage,
@@ -68,7 +64,6 @@ from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
     ClaudeAssistantEntry,
-    ClaudeContentBlock,
     ClaudeImageBlock,
     ClaudeProgressEntry,
     ClaudeSummaryEntry,
@@ -83,11 +78,14 @@ from clawd_code_sdk.storage.models import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator, Sequence
+    from pathlib import Path
 
     from anthropic.types import RawMessageStreamEvent
 
-    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+    from clawd_code_sdk.models.content_blocks import ContentBlock
+    from clawd_code_sdk.models.messages import Message
+    from clawd_code_sdk.storage.models import ClaudeContentBlock, ClaudeJSONLEntry
 
 
 # =============================================================================
@@ -587,11 +585,11 @@ def _resolve_thread(
     """
     by_uuid: dict[str, ClaudeJSONLEntry] = {}
     last_uuid: str | None = None
-    for entry in entries:
-        match entry:
+    for jsonl_entry in entries:
+        match jsonl_entry:
             case ClaudeUserEntry() | ClaudeAssistantEntry() | ClaudeProgressEntry():
-                by_uuid[entry.uuid] = entry
-                last_uuid = entry.uuid
+                by_uuid[jsonl_entry.uuid] = jsonl_entry
+                last_uuid = jsonl_entry.uuid
 
     target = leaf_uuid or last_uuid
     if target is None:

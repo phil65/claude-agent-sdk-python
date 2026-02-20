@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -20,7 +20,10 @@ from clawd_code_sdk import (
     UserMessage,
 )
 from clawd_code_sdk.models.content_blocks import ToolResultBlock, ToolUseBlock
-from clawd_code_sdk.models.messages import Message
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models.messages import Message
 
 
 @pytest.mark.e2e

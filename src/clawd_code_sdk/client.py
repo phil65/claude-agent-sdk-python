@@ -12,7 +12,6 @@ import anyenv
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
     ClaudeAgentOptions,
-    McpStdioServerConfig,
     ResultMessage,
     UserPromptMessage,
 )
