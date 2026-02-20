@@ -12,11 +12,13 @@ from clawd_code_sdk import (
     AssistantMessage,
     AuthenticationError,
     ClaudeAgentOptions,
+    ClaudeSDKClient,
     InvalidRequestError,
     RateLimitError,
     ServerError,
     query,
 )
+from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
 
 
 def create_mock_transport_with_messages(messages: list[dict]):
@@ -55,8 +57,11 @@ def create_mock_transport_with_messages(messages: list[dict]):
                         "response": {
                             "request_id": msg.get("request_id"),
                             "subtype": "success",
-                            "commands": [],
-                            "output_style": "default",
+                            "response": {
+                                "commands": [],
+                                "outputStyle": "default",
+                                "pid": 12345,
+                            },
                         },
                     }
                     break
@@ -363,5 +368,148 @@ class TestAPIErrorRaising:
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert messages[0].content[0].text == "Hello!"
+
+        anyio.run(_test)
+
+
+def _create_control_protocol_transport(
+    control_responses: dict[str, dict],
+) -> AsyncMock:
+    """Create a mock transport that handles initialization and responds to control requests.
+
+    Args:
+        control_responses: Mapping of control request subtype to response payload.
+            The "initialize" subtype is handled automatically.
+    """
+    mock_transport = AsyncMock()
+    mock_transport.connect = AsyncMock()
+    mock_transport.close = AsyncMock()
+    mock_transport.end_input = AsyncMock()
+
+    written_messages: list[str] = []
+
+    async def mock_write(data: str) -> None:
+        written_messages.append(data)
+
+    mock_transport.write = AsyncMock(side_effect=mock_write)
+
+    init_response = {
+        "subtype": "success",
+        "response": {
+            "commands": [],
+            "outputStyle": "default",
+            "pid": 12345,
+        },
+    }
+    all_responses = {"initialize": init_response, **control_responses}
+
+    async def mock_receive():
+        last_check = 0
+        timeout_counter = 0
+        while timeout_counter < 200:
+            await asyncio.sleep(0.01)
+            timeout_counter += 1
+
+            for msg_str in written_messages[last_check:]:
+                try:
+                    msg = json.loads(msg_str.strip())
+                    if msg.get("type") != "control_request":
+                        continue
+                    subtype = msg.get("request", {}).get("subtype")
+                    if subtype in all_responses:
+                        yield {
+                            "type": "control_response",
+                            "response": {
+                                "request_id": msg.get("request_id"),
+                                **all_responses[subtype],
+                            },
+                        }
+                except (json.JSONDecodeError, KeyError, AttributeError):
+                    pass
+            last_check = len(written_messages)
+
+    mock_transport.read_messages = mock_receive
+    return mock_transport
+
+
+class TestGetMcpStatus:
+    """Test get_mcp_status returns validated McpStatusResponse."""
+
+    def test_get_mcp_status_parses_response(self):
+        """Test that get_mcp_status returns a validated McpStatusResponse."""
+
+        async def _test():
+            mcp_status_payload = {
+                "subtype": "success",
+                "response": {
+                    "mcpServers": [
+                        {
+                            "name": "git",
+                            "status": "connected",
+                            "serverInfo": {"name": "mcp-git", "version": "1.26.0"},
+                            "config": {
+                                "type": "stdio",
+                                "command": "uvx",
+                                "args": ["mcp-server-git"],
+                            },
+                            "scope": "dynamic",
+                            "tools": [
+                                {"name": "git_status", "annotations": {}},
+                                {"name": "git_log", "annotations": {}},
+                            ],
+                        }
+                    ]
+                },
+            }
+            mock_transport = _create_control_protocol_transport({"mcp_status": mcp_status_payload})
+
+            client = ClaudeSDKClient(transport=mock_transport)
+            await client.connect()
+            try:
+                status = await client.get_mcp_status()
+
+                assert isinstance(status, McpStatusResponse)
+                assert len(status.mcp_servers) == 1
+
+                server = status.mcp_servers[0]
+                assert isinstance(server, McpServerStatusEntry)
+                assert server.name == "git"
+                assert server.status == "connected"
+                assert server.scope == "dynamic"
+                assert server.server_info is not None
+                assert server.server_info.name == "mcp-git"
+                assert server.server_info.version == "1.26.0"
+                assert server.config == {
+                    "type": "stdio",
+                    "command": "uvx",
+                    "args": ["mcp-server-git"],
+                }
+                assert len(server.tools) == 2
+                assert server.tools[0].name == "git_status"
+                assert server.tools[1].name == "git_log"
+            finally:
+                await client.disconnect()
+
+        anyio.run(_test)
+
+    def test_get_mcp_status_empty_servers(self):
+        """Test get_mcp_status with no MCP servers configured."""
+
+        async def _test():
+            mcp_status_payload = {
+                "subtype": "success",
+                "response": {"mcpServers": []},
+            }
+            mock_transport = _create_control_protocol_transport({"mcp_status": mcp_status_payload})
+
+            client = ClaudeSDKClient(transport=mock_transport)
+            await client.connect()
+            try:
+                status = await client.get_mcp_status()
+
+                assert isinstance(status, McpStatusResponse)
+                assert len(status.mcp_servers) == 0
+            finally:
+                await client.disconnect()
 
         anyio.run(_test)
