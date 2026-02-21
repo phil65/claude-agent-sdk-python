@@ -81,8 +81,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
-    from anthropic.types import RawMessageStreamEvent
-
     from clawd_code_sdk.models.content_blocks import ContentBlock
     from clawd_code_sdk.models.messages import Message
     from clawd_code_sdk.storage.models import ClaudeContentBlock, ClaudeJSONLEntry
@@ -189,11 +187,6 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
 # =============================================================================
 
 
-def _make_stream_event(event: RawMessageStreamEvent, *, session_id: str, uuid: str) -> StreamEvent:
-    """Wrap an Anthropic raw stream event into a wire-format StreamEvent."""
-    return StreamEvent(event=event, session_id=session_id, uuid=uuid)
-
-
 def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic message_start StreamEvent."""
     from anthropic.types import (
@@ -211,7 +204,7 @@ def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) 
         usage=AnthropicUsage(input_tokens=0, output_tokens=0),
     )
     start_event = RawMessageStartEvent(type="message_start", message=message)
-    return _make_stream_event(start_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
 
 # Anthropic SDK stop reason literal type
@@ -244,7 +237,7 @@ def _make_message_delta(
     usage = MessageDeltaUsage(output_tokens=0)
     delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
     delta_event = RawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
-    return _make_stream_event(delta_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_message_stop(*, session_id: str, uuid: str) -> StreamEvent:
@@ -252,7 +245,7 @@ def _make_message_stop(*, session_id: str, uuid: str) -> StreamEvent:
     from anthropic.types import RawMessageStopEvent
 
     stop_event = RawMessageStopEvent(type="message_stop")
-    return _make_stream_event(stop_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_start(
@@ -284,7 +277,7 @@ def _make_block_start(
     start_event = RawContentBlockStartEvent(
         type="content_block_start", index=index, content_block=content_block
     )
-    return _make_stream_event(start_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_delta(
@@ -308,7 +301,7 @@ def _make_block_delta(
         case _:
             delta = TextDelta(type="text_delta", text="")
     delta_event = RawContentBlockDeltaEvent(type="content_block_delta", index=index, delta=delta)
-    return _make_stream_event(delta_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
@@ -316,7 +309,7 @@ def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
     from anthropic.types import RawContentBlockStopEvent
 
     stop_event = RawContentBlockStopEvent(type="content_block_stop", index=index)
-    return _make_stream_event(stop_event, session_id=session_id, uuid=uuid)
+    return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
 
 # =============================================================================
