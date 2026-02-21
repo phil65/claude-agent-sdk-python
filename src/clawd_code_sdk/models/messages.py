@@ -321,6 +321,11 @@ class ModelUsage(TypedDict):
     inputTokens: int
     outputTokens: int
     cacheReadInputTokens: int
+    cacheCreationInputTokens: int
+    webSearchRequests: int
+    costUSD: float
+    contextWindow: int
+    maxOutputTokens: int
     server_tool_use: ServerToolUse
 
 
