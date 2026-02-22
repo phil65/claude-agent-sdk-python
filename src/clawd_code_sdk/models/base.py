@@ -30,6 +30,10 @@ SdkBeta = Literal[
     "context-1m-2025-08-07",  # Extended 1M context window
 ]
 
+
+ModelName = Literal["sonnet", "opus", "haiku"]
+PermissionMode = Literal["acceptEdits", "bypassPermissions", "default", "dontAsk", "plan"]
+
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 StopReason = Literal[
     "end_turn",

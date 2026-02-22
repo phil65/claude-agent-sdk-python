@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any, Literal, NotRequired, TypedDict
 
+from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
+
 from .mcp import ExternalMcpServerConfig  # noqa: TC001
 
 
@@ -43,8 +45,8 @@ class AgentDefinition:
     description: str
     prompt: str
     tools: list[str] | None = None
-    model: Literal["sonnet", "opus", "haiku", "inherit"] | None = None
-    memory: Literal["user", "project", "local"] | None = None
+    model: ModelName | Literal["inherit"] | None = None
+    memory: SettingSource | None = None
     mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
     disallowed_tools: list[str] | None = None
     critical_system_reminder_experimental: str | None = None

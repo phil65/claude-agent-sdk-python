@@ -10,11 +10,10 @@ from typing import Literal, NotRequired, TypedDict
 
 from pydantic import ConfigDict, with_config
 
+from clawd_code_sdk.models.base import ModelName, PermissionMode  # noqa: TC001
+
 
 _extra_allow = with_config(ConfigDict(extra="allow"))
-
-ModelName = Literal["sonnet", "opus", "haiku"]
-PermissionMode = Literal["acceptEdits", "bypassPermissions", "default", "dontAsk", "plan"]
 
 
 @_extra_allow
