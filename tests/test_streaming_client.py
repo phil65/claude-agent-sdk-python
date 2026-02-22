@@ -1,10 +1,13 @@
 """Tests for ClaudeSDKClient streaming functionality and query() with async iterables."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
 import sys
 import tempfile
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import anyio
@@ -22,6 +25,14 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterable
+
+    from clawd_code_sdk import (
+        UserPromptMessage,
+    )
 
 
 def create_mock_transport(with_init_response=True):
@@ -183,7 +194,7 @@ class TestClaudeSDKClientStreaming:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
-                async def message_stream():
+                async def message_stream() -> AsyncIterable[UserPromptMessage]:
                     yield {"type": "user", "message": {"role": "user", "content": "Hi"}}
                     yield {
                         "type": "user",
@@ -399,6 +410,12 @@ class TestClaudeSDKClientStreaming:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "usage": {
+                            "input_tokens": 100,
+                            "output_tokens": 50,
+                            "cache_creation_input_tokens": 0,
+                            "cache_read_input_tokens": 0,
+                        },
                     }
                     # This should not be yielded
                     yield {
@@ -549,6 +566,12 @@ class TestClaudeSDKClientStreaming:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "usage": {
+                            "input_tokens": 100,
+                            "output_tokens": 50,
+                            "cache_creation_input_tokens": 0,
+                            "cache_read_input_tokens": 0,
+                        },
                     }
 
                 mock_transport.read_messages = mock_receive
@@ -629,7 +652,7 @@ assert '"First"' in stdin_messages[0]
 assert '"Second"' in stdin_messages[1]
 
 # Output a valid result
-print('{"type": "result", "uuid": "msg-004", "subtype": "success", "duration_ms": 100, "duration_api_ms": 50, "is_error": false, "num_turns": 1, "session_id": "test", "total_cost_usd": 0.001}')
+print('{"type": "result", "uuid": "msg-004", "subtype": "success", "duration_ms": 100, "duration_api_ms": 50, "is_error": false, "num_turns": 1, "session_id": "test", "total_cost_usd": 0.001, "usage": {"input_tokens": 100, "output_tokens": 50, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}}')
 """)
 
             # Make script executable (Unix-style systems)
@@ -812,6 +835,12 @@ class TestClaudeSDKClientEdgeCases:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "usage": {
+                            "input_tokens": 100,
+                            "output_tokens": 50,
+                            "cache_creation_input_tokens": 0,
+                            "cache_read_input_tokens": 0,
+                        },
                     }
 
                 mock_transport.read_messages = mock_receive
