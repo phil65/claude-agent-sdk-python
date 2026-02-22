@@ -148,6 +148,12 @@ class McpServerStatus:
 
 
 @dataclass(kw_only=True)
+class Plugin:
+    name: str
+    path: str
+
+
+@dataclass(kw_only=True)
 class SystemMessage(BaseMessage):
     """System message with metadata."""
 
@@ -164,7 +170,7 @@ class SystemMessage(BaseMessage):
     claude_code_version: str
     agents: list[str]
     skills: list[str]
-    plugins: list[str]
+    plugins: list[Plugin]
     fast_mode_state: bool
 
 
