@@ -17,6 +17,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
+from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
 from .base import ApiKeySource, PermissionMode, StopReason  # noqa: TC001
 
@@ -85,7 +86,7 @@ class UserMessage(BaseMessage):
     type: Literal["user"] = "user"
     content: str | Sequence[ContentBlock]
     parent_tool_use_id: str | None = None
-    tool_use_result: list[dict[str, Any]] | dict[str, Any] | str | None = None
+    tool_use_result: ToolUseResult | list[dict[str, Any]] | dict[str, Any] | str | None = None
     isReplay: bool | None = None  # noqa: N815
     isSynthetic: bool | None = None  # noqa: N815
 
