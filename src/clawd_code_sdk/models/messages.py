@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TC003
 from dataclasses import dataclass
 import re
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
@@ -23,8 +24,6 @@ from .base import ApiKeySource, PermissionMode, StopReason  # noqa: TC001
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from anthropic.types import RawMessageStreamEvent
 
     from clawd_code_sdk.models import ToolInput
@@ -87,7 +86,7 @@ class UserMessage(BaseMessage):
     content: str | Sequence[ContentBlock]
     parent_tool_use_id: str | None = None
     tool_use_result: (
-        list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
+        Sequence[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
     isReplay: bool | None = None  # noqa: N815
     isSynthetic: bool | None = None  # noqa: N815

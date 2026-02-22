@@ -32,7 +32,6 @@ SdkBeta = Literal[
 
 
 ModelName = Literal["sonnet", "opus", "haiku"]
-PermissionMode = Literal["acceptEdits", "bypassPermissions", "default", "dontAsk", "plan"]
 
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 StopReason = Literal[
