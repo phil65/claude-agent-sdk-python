@@ -19,6 +19,7 @@ from clawd_code_sdk.models.input_types import AskUserQuestionOption, TodoItem  #
 # ---------------------------------------------------------------------------
 # Agent (Task tool)
 # ---------------------------------------------------------------------------
+ServiceTier = Literal["standard", "priority", "batch"]
 
 
 class AgentOutputTextContent(TypedDict):
@@ -50,7 +51,7 @@ class AgentOutputUsage(TypedDict):
     cache_creation_input_tokens: int | None
     cache_read_input_tokens: int | None
     server_tool_use: AgentServerToolUse | None
-    service_tier: Literal["standard", "priority", "batch"] | None
+    service_tier: ServiceTier | None
     cache_creation: AgentCacheCreation | None
 
 
