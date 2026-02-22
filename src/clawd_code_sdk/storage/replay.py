@@ -677,8 +677,5 @@ def extract_usage(entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
         if msg.id in seen_ids:
             continue
         seen_ids.add(msg.id)
-        total.input_tokens += msg.usage.input_tokens
-        total.output_tokens += msg.usage.output_tokens
-        total.cache_creation_input_tokens += msg.usage.cache_creation_input_tokens
-        total.cache_read_input_tokens += msg.usage.cache_read_input_tokens
+        total.add(msg.usage)
     return total

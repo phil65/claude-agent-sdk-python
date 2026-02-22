@@ -188,6 +188,12 @@ class ClaudeUsage(BaseModel):
     service_tier: str | None = None
     server_tool_use: dict[str, Any] | None = None
 
+    def add(self, other: ClaudeUsage) -> None:
+        self.input_tokens += other.input_tokens
+        self.output_tokens += other.output_tokens
+        self.cache_creation_input_tokens += other.cache_creation_input_tokens
+        self.cache_read_input_tokens += other.cache_read_input_tokens
+
 
 # =============================================================================
 # Message models (role-based)
