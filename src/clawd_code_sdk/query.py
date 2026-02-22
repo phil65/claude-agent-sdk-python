@@ -44,8 +44,7 @@ async def query(
     options = options or ClaudeAgentOptions()
     client = ClaudeSDKClient(options=options, transport=transport)
     try:
-        await client.connect()
-        await client.query(prompt)
+        await client.connect(prompt)
         async for message in client.receive_response():
             yield message
     finally:
