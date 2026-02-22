@@ -30,19 +30,12 @@ async def test_simple_structured_output():
         },
         "required": ["file_count", "has_tests"],
     }
-
-    options = ClaudeAgentOptions(
-        output_format={"type": "json_schema", "schema": schema},
-        permission_mode="acceptEdits",
-        cwd=".",  # Use current directory
-    )
-
+    output_fmt = {"type": "json_schema", "schema": schema}
+    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=".")
     # Agent must use Glob/Bash to count files
     result_message = None
-    async for message in query(
-        prompt="Count how many Python files are in src/clawd_code_sdk/ and check if there are any test files. Use tools to explore the filesystem.",
-        options=options,
-    ):
+    prompt = "Count how many Python files are in src/clawd_code_sdk/ and check if there are any test files. Use tools to explore the filesystem."
+    async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -50,14 +43,12 @@ async def test_simple_structured_output():
     assert result_message is not None, "No result message received"
     assert not result_message.is_error, f"Query failed: {result_message.result}"
     assert result_message.subtype == "success"
-
     # Verify structured output is present and valid
     assert result_message.structured_output is not None, "No structured output in result"
     assert "file_count" in result_message.structured_output
     assert "has_tests" in result_message.structured_output
     assert isinstance(result_message.structured_output["file_count"], (int, float))
     assert isinstance(result_message.structured_output["has_tests"], bool)
-
     # Should find Python files in src/
     assert result_message.structured_output["file_count"] > 0
 
@@ -86,17 +77,13 @@ async def test_nested_structured_output():
         },
         "required": ["analysis", "words"],
     }
-
-    options = ClaudeAgentOptions(
-        output_format={"type": "json_schema", "schema": schema},
-        permission_mode="acceptEdits",
+    output_fmt = {"type": "json_schema", "schema": schema}
+    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits")
+    prompt = (
+        "Analyze this text: 'Hello world'. Provide word count, character count, and list of words."
     )
-
     result_message = None
-    async for message in query(
-        prompt="Analyze this text: 'Hello world'. Provide word count, character count, and list of words.",
-        options=options,
-    ):
+    async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -131,18 +118,11 @@ async def test_structured_output_with_enum():
         },
         "required": ["has_tests", "test_framework"],
     }
-
-    options = ClaudeAgentOptions(
-        output_format={"type": "json_schema", "schema": schema},
-        permission_mode="acceptEdits",
-        cwd=".",
-    )
-
+    output_fmt = {"type": "json_schema", "schema": schema}
+    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=".")
     result_message = None
-    async for message in query(
-        prompt="Search for test files in the tests/ directory. Determine which test framework is being used (pytest/unittest/nose) and count how many test files exist. Use Grep to search for framework imports.",
-        options=options,
-    ):
+    prompt = "Search for test files in the tests/ directory. Determine which test framework is being used (pytest/unittest/nose) and count how many test files exist. Use Grep to search for framework imports."
+    async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -150,12 +130,10 @@ async def test_structured_output_with_enum():
     assert result_message is not None
     assert not result_message.is_error
     assert result_message.structured_output is not None
-
     # Check enum values are valid
     output = result_message.structured_output
     assert output["test_framework"] in ["pytest", "unittest", "nose", "unknown"]
     assert isinstance(output["has_tests"], bool)
-
     # This repo uses pytest
     assert output["has_tests"] is True
     assert output["test_framework"] == "pytest"
@@ -175,18 +153,12 @@ async def test_structured_output_with_tools():
         },
         "required": ["file_count", "has_readme"],
     }
-
-    options = ClaudeAgentOptions(
-        output_format={"type": "json_schema", "schema": schema},
-        permission_mode="acceptEdits",
-        cwd=tempfile.gettempdir(),  # Cross-platform temp directory
-    )
-
+    output_fmt = {"type": "json_schema", "schema": schema}
+    cwd = tempfile.gettempdir()
+    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=cwd)
     result_message = None
-    async for message in query(
-        prompt="Count how many files are in the current directory and check if there's a README file. Use tools as needed.",
-        options=options,
-    ):
+    prompt = "Count how many files are in the current directory and check if there's a README file. Use tools as needed."
+    async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -194,7 +166,6 @@ async def test_structured_output_with_tools():
     assert result_message is not None
     assert not result_message.is_error
     assert result_message.structured_output is not None
-
     # Check structure
     output = result_message.structured_output
     assert "file_count" in output
