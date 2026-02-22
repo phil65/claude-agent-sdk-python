@@ -9,33 +9,109 @@ from __future__ import annotations
 from typing import Any, Literal, NotRequired, TypedDict
 
 
-# --- Task (Agent) ---
+# --- Agent (Task) ---
 
 
-class TaskOutputUsage(TypedDict):
-    """Token usage statistics from a subagent task."""
+class AgentOutputTextContent(TypedDict):
+    """A text content block in agent output."""
+
+    type: Literal["text"]
+    """Content type, always 'text'."""
+    text: str
+    """The text content."""
+
+
+class AgentServerToolUse(TypedDict):
+    """Server-side tool usage statistics."""
+
+    web_search_requests: int
+    """Number of web search requests made."""
+    web_fetch_requests: int
+    """Number of web fetch requests made."""
+
+
+class AgentCacheCreation(TypedDict):
+    """Cache creation token statistics."""
+
+    ephemeral_1h_input_tokens: int
+    """Tokens for 1-hour ephemeral cache entries."""
+    ephemeral_5m_input_tokens: int
+    """Tokens for 5-minute ephemeral cache entries."""
+
+
+class AgentOutputUsage(TypedDict):
+    """Token usage statistics from an agent task."""
 
     input_tokens: int
     """Number of input tokens consumed."""
     output_tokens: int
     """Number of output tokens generated."""
-    cache_creation_input_tokens: NotRequired[int]
+    cache_creation_input_tokens: int | None
     """Tokens used to create cache entries."""
-    cache_read_input_tokens: NotRequired[int]
+    cache_read_input_tokens: int | None
     """Tokens read from cache."""
+    server_tool_use: AgentServerToolUse | None
+    """Server-side tool usage statistics."""
+    service_tier: Literal["standard", "priority", "batch"] | None
+    """Service tier used for the request."""
+    cache_creation: AgentCacheCreation | None
+    """Cache creation statistics."""
 
 
-class TaskOutput(TypedDict):
-    """Output from the Task tool."""
+class AgentCompletedOutput(TypedDict):
+    """Output from the Task tool when the agent completed successfully."""
 
-    result: str
-    """Final result message from the subagent."""
-    usage: NotRequired[TaskOutputUsage]
-    """Token usage statistics."""
-    total_cost_usd: NotRequired[float]
-    """Total cost in USD."""
-    duration_ms: NotRequired[int]
-    """Execution duration in milliseconds."""
+    status: Literal["completed"]
+    """Agent completion status."""
+    agentId: str
+    """ID of the agent that ran."""
+    content: list[AgentOutputTextContent]
+    """Text content blocks produced by the agent."""
+    totalToolUseCount: int
+    """Total number of tool calls made."""
+    totalDurationMs: int
+    """Total execution duration in milliseconds."""
+    totalTokens: int
+    """Total tokens used."""
+    usage: AgentOutputUsage
+    """Detailed token usage statistics."""
+    prompt: str
+    """The prompt that was given to the agent."""
+
+
+class AgentAsyncLaunchedOutput(TypedDict):
+    """Output from the Task tool when an agent was launched asynchronously."""
+
+    status: Literal["async_launched"]
+    """Indicates the agent was launched in the background."""
+    agentId: str
+    """The ID of the async agent."""
+    description: str
+    """The description of the task."""
+    prompt: str
+    """The prompt for the agent."""
+    outputFile: str
+    """Path to the output file for checking agent progress."""
+    canReadOutputFile: NotRequired[bool]
+    """Whether the calling agent has Read/Bash tools to check progress."""
+
+
+class AgentSubAgentEnteredOutput(TypedDict):
+    """Output from the Task tool when entering a sub-agent context."""
+
+    status: Literal["sub_agent_entered"]
+    """Indicates a sub-agent context was entered."""
+    description: str
+    """Description of the sub-agent task."""
+    message: str
+    """Status message."""
+
+
+AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput | AgentSubAgentEnteredOutput
+
+#: Backwards-compatible aliases.
+TaskOutputUsage = AgentOutputUsage
+TaskOutput = AgentCompletedOutput
 
 
 # --- AskUserQuestion ---
@@ -421,20 +497,120 @@ class ReadMcpResourceOutput(TypedDict):
     """Server that provided the resource."""
 
 
+# --- TaskStop ---
+
+
+class TaskStopOutput(TypedDict):
+    """Output from stopping a background task."""
+
+    message: str
+    """Status message about the operation."""
+    task_id: str
+    """The ID of the task that was stopped."""
+    task_type: str
+    """The type of the task that was stopped."""
+    command: NotRequired[str]
+    """The command or description of the stopped task."""
+
+
+# --- MCP ---
+
+McpOutput = str
+"""Output from a generic MCP tool call (plain string)."""
+
+
+class SubscribeMcpResourceOutput(TypedDict):
+    """Output from subscribing to an MCP resource."""
+
+    subscribed: bool
+    """Whether the subscription was successful."""
+    subscriptionId: str
+    """Unique identifier for this subscription."""
+
+
+class UnsubscribeMcpResourceOutput(TypedDict):
+    """Output from unsubscribing from an MCP resource."""
+
+    unsubscribed: bool
+    """Whether the unsubscription was successful."""
+
+
+# --- Polling ---
+
+
+class SubscribePollingOutput(TypedDict):
+    """Output from subscribing to a polling resource."""
+
+    subscribed: bool
+    """Whether the subscription was successful."""
+    subscriptionId: str
+    """Unique identifier for this subscription."""
+
+
+class UnsubscribePollingOutput(TypedDict):
+    """Output from unsubscribing from a polling resource."""
+
+    unsubscribed: bool
+    """Whether the unsubscription was successful."""
+
+
+# --- Config ---
+
+
+class ConfigOutput(TypedDict):
+    """Output from the Config tool."""
+
+    success: bool
+    """Whether the operation succeeded."""
+    operation: NotRequired[Literal["get", "set"]]
+    """The config operation that was performed."""
+    setting: NotRequired[str]
+    """The setting name."""
+    value: NotRequired[Any]
+    """The current or requested value."""
+    previousValue: NotRequired[Any]
+    """The previous value (for set operations)."""
+    newValue: NotRequired[Any]
+    """The new value (for set operations)."""
+    error: NotRequired[str]
+    """Error message if the operation failed."""
+
+
+# --- EnterWorktree ---
+
+
+class EnterWorktreeOutput(TypedDict):
+    """Output from entering a git worktree."""
+
+    worktreePath: str
+    """Path to the worktree."""
+    worktreeBranch: NotRequired[str]
+    """Branch of the worktree."""
+    message: str
+    """Status message."""
+
+
 # --- Union type ---
 
 ToolOutput = (
-    TaskOutput
+    AgentOutput
     | AskUserQuestionOutput
     | BashOutput
     | BashOutputToolOutput
+    | ConfigOutput
     | EditOutput
+    | EnterWorktreeOutput
     | ReadOutput
     | WriteOutput
     | GlobOutput
     | GrepOutput
     | KillBashOutput
     | NotebookEditOutput
+    | SubscribeMcpResourceOutput
+    | UnsubscribeMcpResourceOutput
+    | SubscribePollingOutput
+    | UnsubscribePollingOutput
+    | TaskStopOutput
     | WebFetchOutput
     | WebSearchOutput
     | TodoWriteOutput
@@ -445,17 +621,24 @@ ToolOutput = (
 
 #: Mapping from tool name to its output type.
 TOOL_OUTPUT_TYPES: dict[str, type[ToolOutput]] = {
-    "Task": TaskOutput,
+    "Task": AgentCompletedOutput,
     "AskUserQuestion": AskUserQuestionOutput,
     "Bash": BashOutput,
     "BashOutput": BashOutputToolOutput,
+    "Config": ConfigOutput,
     "Edit": EditOutput,
+    "EnterWorktree": EnterWorktreeOutput,
     "Read": TextFileOutput,
     "Write": WriteOutput,
     "Glob": GlobOutput,
     "Grep": GrepContentOutput,
     "KillBash": KillBashOutput,
     "NotebookEdit": NotebookEditOutput,
+    "SubscribeMcpResource": SubscribeMcpResourceOutput,
+    "UnsubscribeMcpResource": UnsubscribeMcpResourceOutput,
+    "SubscribePolling": SubscribePollingOutput,
+    "UnsubscribePolling": UnsubscribePollingOutput,
+    "TaskStop": TaskStopOutput,
     "WebFetch": WebFetchOutput,
     "WebSearch": WebSearchOutput,
     "TodoWrite": TodoWriteOutput,
