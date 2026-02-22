@@ -101,11 +101,11 @@ def path_to_claude_dir_name(project_path: str) -> str:
 
 def get_latest_session(project_path: str) -> Path | None:
     """Get the path for the most recent session file for given project if existing."""
-    sessions = list_project_sessions(project_path)
+    sessions = list_project_session_files(project_path)
     return sessions[0] if sessions else None
 
 
-def list_project_sessions(project_path: str) -> list[Path]:
+def list_project_session_files(project_path: str) -> list[Path]:
     """List all session files for given project path, sorted by modification time (newest first)."""
     projects_dir = get_claude_projects_dir()
     project_dir_name = path_to_claude_dir_name(project_path)
