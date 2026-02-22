@@ -1,6 +1,7 @@
 """Tests for Claude SDK client functionality."""
 
 import asyncio
+from dataclasses import asdict
 import json
 from unittest.mock import AsyncMock
 
@@ -15,10 +16,45 @@ from clawd_code_sdk import (
     ClaudeSDKClient,
     InvalidRequestError,
     RateLimitError,
+    ResultMessage,
     ServerError,
     query,
 )
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
+from clawd_code_sdk.models.messages import Usage
+
+
+def _make_result(
+    *,
+    uuid: str = "msg-001",
+    session_id: str = "test-session",
+    subtype: str = "success",
+    duration_ms: int = 1000,
+    duration_api_ms: int = 800,
+    is_error: bool = False,
+    num_turns: int = 1,
+    total_cost_usd: float = 0.001,
+    usage: Usage | None = None,
+) -> dict[str, object]:
+    """Build a wire-format result message dict from a ResultMessage."""
+    msg = ResultMessage(
+        uuid=uuid,
+        session_id=session_id,
+        subtype=subtype,
+        duration_ms=duration_ms,
+        duration_api_ms=duration_api_ms,
+        is_error=is_error,
+        num_turns=num_turns,
+        total_cost_usd=total_cost_usd,
+        usage=usage
+        or Usage(
+            input_tokens=100,
+            output_tokens=50,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+        ),
+    )
+    return asdict(msg)
 
 
 def create_mock_transport_with_messages(messages: list[dict]):
@@ -92,17 +128,7 @@ class TestQueryFunction:
                         "model": "claude-opus-4-1-20250805",
                     },
                 },
-                {
-                    "type": "result",
-                    "uuid": "msg-001",
-                    "subtype": "success",
-                    "duration_ms": 1000,
-                    "duration_api_ms": 800,
-                    "is_error": False,
-                    "num_turns": 1,
-                    "session_id": "test-session",
-                    "total_cost_usd": 0.001,
-                },
+                _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
 
@@ -129,17 +155,7 @@ class TestQueryFunction:
                         "model": "claude-opus-4-1-20250805",
                     },
                 },
-                {
-                    "type": "result",
-                    "uuid": "msg-001",
-                    "subtype": "success",
-                    "duration_ms": 1000,
-                    "duration_api_ms": 800,
-                    "is_error": False,
-                    "num_turns": 1,
-                    "session_id": "test-session",
-                    "total_cost_usd": 0.001,
-                },
+                _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
 
@@ -173,17 +189,7 @@ class TestQueryFunction:
                         "model": "claude-opus-4-1-20250805",
                     },
                 },
-                {
-                    "type": "result",
-                    "uuid": "msg-001",
-                    "subtype": "success",
-                    "duration_ms": 1000,
-                    "duration_api_ms": 800,
-                    "is_error": False,
-                    "num_turns": 1,
-                    "session_id": "test-session",
-                    "total_cost_usd": 0.001,
-                },
+                _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
 
@@ -347,17 +353,7 @@ class TestAPIErrorRaising:
                         "model": "claude-sonnet-4-5-20250514",
                     },
                 },
-                {
-                    "type": "result",
-                    "uuid": "msg-002",
-                    "subtype": "success",
-                    "duration_ms": 1000,
-                    "duration_api_ms": 800,
-                    "is_error": False,
-                    "num_turns": 1,
-                    "session_id": "test-session",
-                    "total_cost_usd": 0.001,
-                },
+                _make_result(uuid="msg-002"),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
 

@@ -1,4 +1,6 @@
-"""Tests for message parser error handling."""
+"""Tests for message parser — content block dispatch, error extraction, error wrapping."""
+
+from __future__ import annotations
 
 import pytest
 
@@ -15,302 +17,187 @@ from clawd_code_sdk.models import (
 )
 
 
-class TestMessageParser:
-    """Test message parsing with the new exception behavior."""
+class TestContentBlockDispatch:
+    """parse_message routes content blocks to the correct typed dataclasses."""
 
-    def test_parse_valid_user_message(self):
-        """Test parsing a valid user message."""
+    def test_user_message_mixed_content(self):
+        """All four content block types parse into their typed classes."""
         data = {
             "type": "user",
-            "uuid": "msg-001",
-            "message": {"content": [{"type": "text", "text": "Hello"}]},
-            "session_id": "session-123",
-        }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert len(message.content) == 1
-        assert isinstance(message.content[0], TextBlock)
-        assert message.content[0].text == "Hello"
-
-    def test_parse_user_message_with_uuid(self):
-        """Test parsing a user message with uuid field (issue #414).
-
-        The uuid field is needed for file checkpointing with rewind_files().
-        """
-        data = {
-            "type": "user",
-            "session_id": "session-123",
-            "uuid": "msg-abc123-def456",
-            "message": {"content": [{"type": "text", "text": "Hello"}]},
-        }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert message.uuid == "msg-abc123-def456"
-        assert len(message.content) == 1
-
-    def test_parse_user_message_with_tool_use(self):
-        """Test parsing a user message with tool_use block."""
-        data = {
-            "type": "user",
-            "uuid": "msg-002",
-            "session_id": "session-123",
+            "uuid": "u1",
+            "session_id": "s1",
             "message": {
                 "content": [
-                    {"type": "text", "text": "Let me read this file"},
-                    {
-                        "type": "tool_use",
-                        "id": "tool_456",
-                        "name": "Read",
-                        "input": {"file_path": "/example.txt"},
-                    },
-                ]
-            },
-        }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert len(message.content) == 2
-        assert isinstance(message.content[0], TextBlock)
-        assert isinstance(message.content[1], ToolUseBlock)
-        assert message.content[1].id == "tool_456"
-        assert message.content[1].name == "Read"
-        assert message.content[1].input == {"file_path": "/example.txt"}
-
-    def test_parse_user_message_with_tool_result(self):
-        """Test parsing a user message with tool_result block."""
-        data = {
-            "type": "user",
-            "uuid": "msg-003",
-            "session_id": "session-123",
-            "message": {
-                "content": [
+                    {"type": "text", "text": "intro"},
+                    {"type": "tool_use", "id": "t1", "name": "Read", "input": {"path": "/x"}},
+                    {"type": "tool_result", "tool_use_id": "t1", "content": "file contents"},
                     {
                         "type": "tool_result",
-                        "tool_use_id": "tool_789",
-                        "content": "File contents here",
-                    }
-                ]
-            },
-        }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert len(message.content) == 1
-        assert isinstance(message.content[0], ToolResultBlock)
-        assert message.content[0].tool_use_id == "tool_789"
-        assert message.content[0].content == "File contents here"
-
-    def test_parse_user_message_with_tool_result_error(self):
-        """Test parsing a user message with error tool_result block."""
-        data = {
-            "type": "user",
-            "uuid": "msg-004",
-            "session_id": "session-123",
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "tool_error",
-                        "content": "File not found",
+                        "tool_use_id": "t2",
+                        "content": "not found",
                         "is_error": True,
-                    }
-                ]
+                    },
+                ],
             },
         }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert len(message.content) == 1
-        assert isinstance(message.content[0], ToolResultBlock)
-        assert message.content[0].tool_use_id == "tool_error"
-        assert message.content[0].content == "File not found"
-        assert message.content[0].is_error is True
+        msg = parse_message(data)
+        assert isinstance(msg, UserMessage)
+        text, tool_use, tool_result, tool_err = msg.content
+        assert isinstance(text, TextBlock) and text.text == "intro"
+        assert isinstance(tool_use, ToolUseBlock)
+        assert tool_use.id == "t1" and tool_use.name == "Read"
+        assert tool_use.input == {"path": "/x"}
+        assert isinstance(tool_result, ToolResultBlock)
+        assert tool_result.tool_use_id == "t1" and tool_result.content == "file contents"
+        assert isinstance(tool_err, ToolResultBlock)
+        assert tool_err.is_error is True
 
-    def test_parse_user_message_with_mixed_content(self):
-        """Test parsing a user message with mixed content blocks."""
+    def test_assistant_message_with_thinking(self):
+        """Thinking blocks parse with signature preserved."""
+        data = {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "thinking", "thinking": "hmm...", "signature": "sig-abc"},
+                    {"type": "text", "text": "answer"},
+                ],
+                "model": "claude-opus-4-1-20250805",
+            },
+        }
+        msg = parse_message(data)
+        assert isinstance(msg, AssistantMessage)
+        thinking, text = msg.content
+        assert isinstance(thinking, ThinkingBlock)
+        assert thinking.thinking == "hmm..." and thinking.signature == "sig-abc"
+        assert isinstance(text, TextBlock) and text.text == "answer"
+
+    def test_user_message_string_content(self):
+        """String content is passed through without block parsing."""
         data = {
             "type": "user",
-            "uuid": "msg-005",
-            "session_id": "session-123",
-            "message": {
-                "content": [
-                    {"type": "text", "text": "Here's what I found:"},
-                    {
-                        "type": "tool_use",
-                        "id": "use_1",
-                        "name": "Search",
-                        "input": {"query": "test"},
-                    },
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "use_1",
-                        "content": "Search results",
-                    },
-                    {"type": "text", "text": "What do you think?"},
-                ]
-            },
+            "uuid": "u1",
+            "session_id": "s1",
+            "message": {"content": "plain text"},
         }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert len(message.content) == 4
-        assert isinstance(message.content[0], TextBlock)
-        assert isinstance(message.content[1], ToolUseBlock)
-        assert isinstance(message.content[2], ToolResultBlock)
-        assert isinstance(message.content[3], TextBlock)
+        msg = parse_message(data)
+        assert isinstance(msg, UserMessage) and msg.content == "plain text"
 
-    def test_parse_user_message_inside_subagent(self):
-        """Test parsing a valid user message."""
+
+class TestParentToolUseId:
+    """parent_tool_use_id is forwarded for subagent messages."""
+
+    def test_user_message(self):
         data = {
             "type": "user",
-            "uuid": "msg-006",
-            "session_id": "session-123",
-            "message": {"content": [{"type": "text", "text": "Hello"}]},
-            "parent_tool_use_id": "toolu_01Xrwd5Y13sEHtzScxR77So8",
+            "uuid": "u1",
+            "session_id": "s1",
+            "message": {"content": [{"type": "text", "text": "hi"}]},
+            "parent_tool_use_id": "toolu_abc",
         }
-        message = parse_message(data)
-        assert isinstance(message, UserMessage)
-        assert message.parent_tool_use_id == "toolu_01Xrwd5Y13sEHtzScxR77So8"
+        msg = parse_message(data)
+        assert isinstance(msg, UserMessage) and msg.parent_tool_use_id == "toolu_abc"
 
-    def test_parse_valid_assistant_message(self):
-        """Test parsing a valid assistant message."""
+    def test_assistant_message(self):
         data = {
             "type": "assistant",
             "message": {
-                "content": [
-                    {"type": "text", "text": "Hello"},
-                    {
-                        "type": "tool_use",
-                        "id": "tool_123",
-                        "name": "Read",
-                        "input": {"file_path": "/test.txt"},
-                    },
-                ],
+                "content": [{"type": "text", "text": "hi"}],
                 "model": "claude-opus-4-1-20250805",
             },
+            "parent_tool_use_id": "toolu_xyz",
         }
-        message = parse_message(data)
-        assert isinstance(message, AssistantMessage)
-        assert len(message.content) == 2
-        assert isinstance(message.content[0], TextBlock)
-        assert isinstance(message.content[1], ToolUseBlock)
+        msg = parse_message(data)
+        assert isinstance(msg, AssistantMessage) and msg.parent_tool_use_id == "toolu_xyz"
 
-    def test_parse_assistant_message_with_thinking(self):
-        """Test parsing an assistant message with thinking block."""
+
+class TestAssistantErrorExtraction:
+    """Error field is extracted from both top-level and nested message."""
+
+    def test_error_from_message_level(self):
         data = {
             "type": "assistant",
             "message": {
-                "content": [
-                    {
-                        "type": "thinking",
-                        "thinking": "I'm thinking about the answer...",
-                        "signature": "sig-123",
-                    },
-                    {"type": "text", "text": "Here's my response"},
-                ],
+                "content": [{"type": "text", "text": "API Error: bad key"}],
+                "model": "claude-opus-4-1-20250805",
+                "error": "authentication_failed",
+            },
+        }
+        msg = parse_message(data)
+        assert isinstance(msg, AssistantMessage) and msg.error == "authentication_failed"
+
+    def test_error_from_top_level(self):
+        data = {
+            "type": "assistant",
+            "error": "rate_limit",
+            "message": {
+                "content": [{"type": "text", "text": "Rate limited"}],
                 "model": "claude-opus-4-1-20250805",
             },
         }
-        message = parse_message(data)
-        assert isinstance(message, AssistantMessage)
-        assert len(message.content) == 2
-        assert isinstance(message.content[0], ThinkingBlock)
-        assert message.content[0].thinking == "I'm thinking about the answer..."
-        assert message.content[0].signature == "sig-123"
-        assert isinstance(message.content[1], TextBlock)
-        assert message.content[1].text == "Here's my response"
+        msg = parse_message(data)
+        assert isinstance(msg, AssistantMessage) and msg.error == "rate_limit"
 
-    # def test_parse_valid_system_message(self):
-    #     """Test parsing a valid system message."""
-    #     data = {"type": "system", "subtype": "start"}
-    #     message = parse_message(data)
-    #     assert isinstance(message, SystemMessage)
-    #     assert message.subtype == "start"
-
-    def test_parse_assistant_message_inside_subagent(self):
-        """Test parsing a valid assistant message."""
+    def test_no_error(self):
         data = {
             "type": "assistant",
             "message": {
-                "content": [
-                    {"type": "text", "text": "Hello"},
-                    {
-                        "type": "tool_use",
-                        "id": "tool_123",
-                        "name": "Read",
-                        "input": {"file_path": "/test.txt"},
-                    },
-                ],
+                "content": [{"type": "text", "text": "ok"}],
                 "model": "claude-opus-4-1-20250805",
             },
-            "parent_tool_use_id": "toolu_01Xrwd5Y13sEHtzScxR77So8",
         }
-        message = parse_message(data)
-        assert isinstance(message, AssistantMessage)
-        assert message.parent_tool_use_id == "toolu_01Xrwd5Y13sEHtzScxR77So8"
+        msg = parse_message(data)
+        assert isinstance(msg, AssistantMessage) and msg.error is None
 
-    def test_parse_valid_result_message(self):
-        """Test parsing a valid result message."""
+
+class TestResultMessage:
+    """ResultMessage parses with all required fields."""
+
+    def test_round_trip(self):
         data = {
             "type": "result",
-            "uuid": "msg-007",
+            "uuid": "r1",
+            "session_id": "s1",
             "subtype": "success",
             "duration_ms": 1000,
             "duration_api_ms": 500,
             "is_error": False,
             "num_turns": 2,
-            "session_id": "session_123",
+            "total_cost_usd": 0.003,
+            "usage": {
+                "input_tokens": 200,
+                "output_tokens": 80,
+                "cache_creation_input_tokens": 1000,
+                "cache_read_input_tokens": 500,
+            },
         }
-        message = parse_message(data)
-        assert isinstance(message, ResultMessage)
-        assert message.subtype == "success"
+        msg = parse_message(data)
+        assert isinstance(msg, ResultMessage)
+        assert msg.subtype == "success" and msg.num_turns == 2
+        assert msg.usage["input_tokens"] == 200
+        assert msg.total_cost_usd == 0.003
 
-    def test_parse_invalid_data_type(self):
-        """Test that non-dict data raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
-            parse_message("not a dict")  # type: ignore
-        assert "Invalid message data type" in str(exc_info.value)
-        assert "expected dict, got str" in str(exc_info.value)
 
-    def test_parse_missing_type_field(self):
-        """Test that missing 'type' field raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
+class TestErrorWrapping:
+    """parse_message wraps errors as MessageParseError with original data."""
+
+    def test_non_dict_input(self):
+        with pytest.raises(MessageParseError, match="Invalid message data type"):
+            parse_message("not a dict")  # type: ignore[arg-type]
+
+    def test_missing_type_field(self):
+        with pytest.raises(MessageParseError, match="missing 'type' field"):
             parse_message({"message": {"content": []}})
-        assert "Message missing 'type' field" in str(exc_info.value)
 
-    def test_parse_unknown_message_type(self):
-        """Test that unknown message type raises MessageParseError."""
-        with pytest.raises(MessageParseError) as exc_info:
-            parse_message({"type": "unknown_type"})
-        assert "Unknown message type: unknown_type" in str(exc_info.value)
+    def test_unknown_message_type(self):
+        with pytest.raises(MessageParseError, match="Unknown message type"):
+            parse_message({"type": "banana"})
 
-    def test_parse_user_message_missing_fields(self):
-        """Test that user message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError):
-            parse_message({"type": "user"})
-        # assert "Missing required field in user message" in str(exc_info.value)
-
-    def test_parse_assistant_message_missing_fields(self):
-        """Test that assistant message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError):
-            parse_message({"type": "assistant"})
-        # assert "Missing required field in assistant message" in str(exc_info.value)
-
-    def test_parse_system_message_missing_fields(self):
-        """Test that system message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError):
-            parse_message({"type": "system"})
-        # assert "Missing required field in system message" in str(exc_info.value)
-
-    def test_parse_result_message_missing_fields(self):
-        """Test that result message with missing fields raises MessageParseError."""
-        with pytest.raises(MessageParseError):
-            parse_message({"type": "result", "subtype": "success"})
-        # assert "Missing required field in result message" in str(exc_info.value)
-
-    def test_message_parse_error_contains_data(self):
-        """Test that MessageParseError contains the original data."""
-        data = {"type": "unknown", "some": "data"}
+    def test_error_preserves_original_data(self):
+        data = {"type": "banana", "extra": 42}
         with pytest.raises(MessageParseError) as exc_info:
             parse_message(data)
         assert exc_info.value.data == data
 
-
-if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    def test_result_missing_required_fields(self):
+        with pytest.raises(MessageParseError, match="Missing required field"):
+            parse_message({"type": "result", "subtype": "success"})

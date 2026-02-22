@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
 import json
 from unittest.mock import AsyncMock
 
@@ -96,17 +97,24 @@ TOOL_USE_MSG = {
     },
 }
 
-RESULT_MSG = {
-    "type": "result",
-    "uuid": "msg-001",
-    "subtype": "success",
-    "duration_ms": 1500,
-    "duration_api_ms": 1200,
-    "is_error": False,
-    "num_turns": 1,
-    "session_id": "test-session",
-    "total_cost_usd": 0.005,
-}
+RESULT_MSG = asdict(
+    ResultMessage(
+        uuid="msg-001",
+        session_id="test-session",
+        subtype="success",
+        duration_ms=1500,
+        duration_api_ms=1200,
+        is_error=False,
+        num_turns=1,
+        total_cost_usd=0.005,
+        usage={
+            "input_tokens": 200,
+            "output_tokens": 100,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+        },
+    )
+)
 
 
 class TestToolCallSummary:
@@ -134,6 +142,12 @@ class TestConversationTurn:
             is_error=False,
             num_turns=1,
             total_cost_usd=0.01,
+            usage={
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+            },
         )
         turn = ConversationTurn(
             messages=(),
@@ -288,7 +302,7 @@ class TestSession:
         """total_cost_usd sums across turns."""
 
         async def _test():
-            result2 = dict(RESULT_MSG, total_cost_usd=0.010, uuid="msg-002")
+            result2 = {**RESULT_MSG, "total_cost_usd": 0.010, "uuid": "msg-002"}
             # Transport that returns two rounds of messages
             transport1 = _create_mock_transport_with_messages(
                 [ASSISTANT_MSG, RESULT_MSG, ASSISTANT_MSG, result2]
@@ -516,7 +530,7 @@ class TestSessionManager:
 
         async def _test():
             t1 = _create_mock_transport_with_messages([ASSISTANT_MSG, RESULT_MSG])
-            result2 = dict(RESULT_MSG, total_cost_usd=0.010, uuid="msg-002")
+            result2 = {**RESULT_MSG, "total_cost_usd": 0.010, "uuid": "msg-002"}
             t2 = _create_mock_transport_with_messages([ASSISTANT_MSG, result2])
 
             async with SessionManager() as mgr:

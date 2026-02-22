@@ -89,6 +89,12 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session",
                     "total_cost_usd": 0.001,
+                    "usage": {
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                    },
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
@@ -138,6 +144,12 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session-2",
                     "total_cost_usd": 0.002,
+                    "usage": {
+                        "input_tokens": 150,
+                        "output_tokens": 75,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                    },
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
@@ -201,6 +213,12 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session",
                     "total_cost_usd": 0.001,
+                    "usage": {
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                    },
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
