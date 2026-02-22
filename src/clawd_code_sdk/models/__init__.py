@@ -19,6 +19,7 @@ from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
 from .base import (
     ApiKeySource,
     PermissionMode,
+    PermissionBehavior,
     ReasoningEffort,
     SdkBeta,
     SettingSource,
@@ -227,7 +228,6 @@ from .messages import (
 from .options import ClaudeAgentOptions
 from .permissions import (
     CanUseTool,
-    PermissionBehavior,
     PermissionResult,
     PermissionResultAllow,
     PermissionResultDeny,

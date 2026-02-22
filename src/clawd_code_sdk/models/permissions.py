@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from clawd_code_sdk.models import ToolInput
+from clawd_code_sdk.models.base import PermissionBehavior  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -21,8 +22,6 @@ PermissionUpdateDestination = Literal[
     "session",
     "cliArg",
 ]
-
-PermissionBehavior = Literal["allow", "deny", "ask"]
 
 
 @dataclass
@@ -55,12 +54,12 @@ class RulePermissionUpdate(BasePermissionUpdate):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        result: dict[str, Any] = {"type": self.type}
-        # Add destination for all variants
-        result["destination"] = self.destination
-        result["rules"] = [r.to_dict() for r in self.rules]
-        result["behavior"] = self.behavior
-        return result
+        return {
+            "type": self.type,
+            "destination": self.destination,
+            "rules": [r.to_dict() for r in self.rules],
+            "behavior": self.behavior,
+        }
 
 
 @dataclass(kw_only=True)
@@ -72,10 +71,7 @@ class DirectoryPermissionUpdate(BasePermissionUpdate):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        result: dict[str, Any] = {"type": self.type}
-        result["destination"] = self.destination
-        result["directories"] = self.directories
-        return result
+        return {"type": self.type, "destination": self.destination, "directories": self.directories}
 
 
 @dataclass(kw_only=True)
@@ -87,10 +83,7 @@ class ModePermissionUpdate(BasePermissionUpdate):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        result: dict[str, Any] = {"type": self.type}
-        result["destination"] = self.destination
-        result["mode"] = self.mode
-        return result
+        return {"type": self.type, "destination": self.destination, "mode": self.mode}
 
 
 PermissionUpdate = RulePermissionUpdate | DirectoryPermissionUpdate | ModePermissionUpdate

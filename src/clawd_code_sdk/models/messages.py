@@ -18,6 +18,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
+from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
 from .base import ApiKeySource, PermissionMode, StopReason  # noqa: TC001
@@ -153,7 +154,7 @@ class AssistantMessage:
 @dataclass(kw_only=True)
 class McpServerStatus:
     name: str
-    status: str
+    status: McpConnectionStatus
 
 
 @dataclass(kw_only=True)
