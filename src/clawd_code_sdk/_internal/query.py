@@ -416,50 +416,52 @@ class Query:
         """Add, replace, or remove MCP servers dynamically."""
         return await self._send_control_request({"subtype": "mcp_set_servers", "servers": servers})
 
-    async def mcp_reconnect(self, server_name: str) -> None:
+    async def mcp_reconnect(self, server_name: str) -> dict[str, Any]:
         """Reconnect to an MCP server.
 
         Args:
             server_name: Name of the MCP server to reconnect
         """
-        await self._send_control_request({"subtype": "mcp_reconnect", "serverName": server_name})
+        return await self._send_control_request(
+            {"subtype": "mcp_reconnect", "serverName": server_name}
+        )
 
-    async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
+    async def mcp_toggle(self, server_name: str, *, enabled: bool) -> dict[str, Any]:
         """Enable or disable an MCP server."""
-        await self._send_control_request(
+        return await self._send_control_request(
             {"subtype": "mcp_toggle", "serverName": server_name, "enabled": enabled}
         )
 
-    async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
+    async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> dict[str, Any]:
         """Set the maximum number of thinking tokens."""
-        await self._send_control_request(
+        return await self._send_control_request(
             {
                 "subtype": "set_max_thinking_tokens",
                 "max_thinking_tokens": max_thinking_tokens,
             }
         )
 
-    async def interrupt(self) -> None:
+    async def interrupt(self) -> dict[str, Any]:
         """Send interrupt control request."""
-        await self._send_control_request({"subtype": "interrupt"})
+        return await self._send_control_request({"subtype": "interrupt"})
 
-    async def set_permission_mode(self, mode: PermissionMode) -> None:
+    async def set_permission_mode(self, mode: PermissionMode) -> dict[str, Any]:
         """Change permission mode."""
-        await self._send_control_request({"subtype": "set_permission_mode", "mode": mode})
+        return await self._send_control_request({"subtype": "set_permission_mode", "mode": mode})
 
-    async def set_model(self, model: str | None) -> None:
+    async def set_model(self, model: str | None) -> dict[str, Any]:
         """Change the AI model."""
-        await self._send_control_request({"subtype": "set_model", "model": model})
+        return await self._send_control_request({"subtype": "set_model", "model": model})
 
-    async def stop_task(self, task_id: str) -> None:
+    async def stop_task(self, task_id: str) -> dict[str, Any]:
         """Stop a running task.
 
         Args:
             task_id: ID of the task to stop
         """
-        await self._send_control_request({"subtype": "stop_task", "task_id": task_id})
+        return await self._send_control_request({"subtype": "stop_task", "task_id": task_id})
 
-    async def rewind_files(self, user_message_id: str) -> None:
+    async def rewind_files(self, user_message_id: str) -> dict[str, Any]:
         """Rewind tracked files to their state at a specific user message.
 
         Requires file checkpointing to be enabled via the `enable_file_checkpointing` option.
@@ -467,7 +469,7 @@ class Query:
         Args:
             user_message_id: UUID of the user message to rewind to
         """
-        await self._send_control_request(
+        return await self._send_control_request(
             {"subtype": "rewind_files", "user_message_id": user_message_id}
         )
 
