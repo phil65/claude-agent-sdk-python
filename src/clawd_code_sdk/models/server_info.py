@@ -62,6 +62,9 @@ class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
     api_key_source: str | None = None
     """Where API key comes from (e.g., "ANTHROPIC_API_KEY")."""
 
+    organization: str | None = None
+    """Organization name."""
+
 
 class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     """Complete server initialization info from Claude Code.
