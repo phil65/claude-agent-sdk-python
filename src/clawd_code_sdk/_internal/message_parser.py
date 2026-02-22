@@ -13,8 +13,8 @@ from clawd_code_sdk.models import (
     ResultMessage,
     StreamEvent,
     UserMessage,
-    parse_content_block,
-    parse_system_message,
+    content_block_adapter,
+    system_message_adapter,
 )
 from clawd_code_sdk.models.messages import (
     AuthStatusMessage,
@@ -46,13 +46,15 @@ def parse_message(data: dict[str, Any]) -> Message:
     match data:
         case {"type": "user", "message": {"content": content}, **user_data}:
             content_ = (
-                [parse_content_block(i) for i in content] if isinstance(content, list) else content
+                [content_block_adapter.validate_python(i) for i in content]
+                if isinstance(content, list)
+                else content
             )
             return UserMessage(content=content_, **user_data)
         case {"type": "assistant", "message": message}:
             # Check for error at top level first, then inside message
             return AssistantMessage(
-                content=[parse_content_block(i) for i in message["content"]],
+                content=[content_block_adapter.validate_python(i) for i in message["content"]],
                 model=message["model"],
                 parent_tool_use_id=data.get("parent_tool_use_id"),
                 error=data.get("error") or message.get("error"),
@@ -60,7 +62,7 @@ def parse_message(data: dict[str, Any]) -> Message:
 
         case {"type": "system", **system_data}:
             try:
-                return parse_system_message(system_data)
+                return system_message_adapter.validate_python(system_data)
             except Exception as e:
                 raise MessageParseError(f"Failed to parse system message: {e}", data) from e
 

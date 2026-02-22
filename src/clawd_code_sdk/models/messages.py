@@ -429,12 +429,7 @@ SystemMessageUnion = Annotated[
     Discriminator("subtype"),
 ]
 
-_system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMessageUnion)
-
-
-def parse_system_message(data: dict[str, Any]) -> SystemMessageUnion:
-    """Parse a raw dict into a typed system message dataclass."""
-    return _system_message_adapter.validate_python(data)
+system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMessageUnion)
 
 
 Message = (

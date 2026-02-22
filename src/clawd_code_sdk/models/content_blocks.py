@@ -64,9 +64,4 @@ ContentBlock = Annotated[
     Discriminator("type"),
 ]
 
-_content_block_adapter: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
-
-
-def parse_content_block(data: dict[str, Any]) -> ContentBlock:
-    """Parse a raw dict into a typed ContentBlock dataclass."""
-    return _content_block_adapter.validate_python(data)
+content_block_adapter: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)

@@ -180,7 +180,7 @@ from .content_blocks import (
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
-    parse_content_block,
+    content_block_adapter,
 )
 
 from .messages import (
@@ -209,7 +209,7 @@ from .messages import (
     UserMessage,
     UserPromptMessage,
     UserPromptMessageContent,
-    parse_system_message,
+    system_message_adapter,
 )
 from .options import ClaudeAgentOptions
 from .permissions import (
@@ -341,8 +341,8 @@ __all__ = [
     "UserMessage",
     "UserPromptMessage",
     "UserPromptMessageContent",
-    "parse_content_block",
-    "parse_system_message",
+    "content_block_adapter",
+    "system_message_adapter",
     # options
     "ClaudeAgentOptions",
     # control
