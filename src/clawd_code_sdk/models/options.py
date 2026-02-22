@@ -127,7 +127,8 @@ class ClaudeAgentOptions:
 
         # Merge sandbox settings
         if has_sandbox:
-            settings_obj["sandbox"] = self.sandbox
+            assert self.sandbox is not None
+            settings_obj["sandbox"] = self.sandbox.model_dump(by_alias=True, exclude_none=True)
 
         return anyenv.dump_json(settings_obj)
 

@@ -18,12 +18,12 @@ import pytest
 from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import AgentDefinition, ClaudeAgentOptions
+from clawd_code_sdk.models.sandbox import SandboxNetworkConfig, SandboxSettings
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable
 
-    from clawd_code_sdk import SandboxSettings
     from clawd_code_sdk.models.messages import UserPromptMessage
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
@@ -527,14 +527,14 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox settings (no existing settings)."""
         import json
 
-        sandbox: SandboxSettings = {
-            "enabled": True,
-            "autoAllowBashIfSandboxed": True,
-            "network": {
-                "allowLocalBinding": True,
-                "allowUnixSockets": ["/var/run/docker.sock"],
-            },
-        }
+        sandbox = SandboxSettings(
+            enabled=True,
+            auto_allow_bash_if_sandboxed=True,
+            network=SandboxNetworkConfig(
+                allow_local_binding=True,
+                allow_unix_sockets=["/var/run/docker.sock"],
+            ),
+        )
         opts = make_options(sandbox=sandbox)
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
@@ -554,7 +554,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox merged into existing settings JSON."""
         # Existing settings as JSON string
         existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
-        sandbox: SandboxSettings = {"enabled": True, "excludedCommands": ["git", "docker"]}
+        sandbox = SandboxSettings(enabled=True, excluded_commands=["git", "docker"])
         opts = make_options(settings=existing_settings, sandbox=sandbox)
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
@@ -583,7 +583,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_sandbox_minimal(self):
         """Test sandbox with minimal configuration."""
-        sandbox: SandboxSettings = {"enabled": True}
+        sandbox = SandboxSettings(enabled=True)
         opts = make_options(sandbox=sandbox)
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
@@ -595,16 +595,16 @@ class TestSubprocessCLITransport:
 
     def test_sandbox_network_config(self):
         """Test sandbox with full network configuration."""
-        sandbox: SandboxSettings = {
-            "enabled": True,
-            "network": {
-                "allowUnixSockets": ["/tmp/ssh-agent.sock"],
-                "allowAllUnixSockets": False,
-                "allowLocalBinding": True,
-                "httpProxyPort": 8080,
-                "socksProxyPort": 8081,
-            },
-        }
+        sandbox = SandboxSettings(
+            enabled=True,
+            network=SandboxNetworkConfig(
+                allow_unix_sockets=["/tmp/ssh-agent.sock"],
+                allow_all_unix_sockets=False,
+                allow_local_binding=True,
+                http_proxy_port=8080,
+                socks_proxy_port=8081,
+            ),
+        )
         opts = make_options(sandbox=sandbox)
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()

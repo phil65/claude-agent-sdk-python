@@ -2,41 +2,39 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from .base import ClaudeCodeBaseModel
 
 
-# Sandbox configuration types
-class SandboxNetworkConfig(TypedDict, total=False):
-    """Network configuration for sandbox.
+class SandboxNetworkConfig(ClaudeCodeBaseModel):
+    """Network configuration for sandbox."""
 
-    Attributes:
-        allowUnixSockets: Unix socket paths accessible in sandbox (e.g., SSH agents).
-        allowAllUnixSockets: Allow all Unix sockets (less secure).
-        allowLocalBinding: Allow binding to localhost ports (macOS only).
-        httpProxyPort: HTTP proxy port if bringing your own proxy.
-        socksProxyPort: SOCKS5 proxy port if bringing your own proxy.
-    """
+    allow_unix_sockets: list[str] | None = None
+    """Unix socket paths accessible in sandbox (e.g., SSH agents)."""
 
-    allowUnixSockets: list[str]
-    allowAllUnixSockets: bool
-    allowLocalBinding: bool
-    httpProxyPort: int
-    socksProxyPort: int
+    allow_all_unix_sockets: bool | None = None
+    """Allow all Unix sockets (less secure)."""
 
+    allow_local_binding: bool | None = None
+    """Allow binding to localhost ports (macOS only)."""
 
-class SandboxIgnoreViolations(TypedDict, total=False):
-    """Violations to ignore in sandbox.
+    http_proxy_port: int | None = None
+    """HTTP proxy port if bringing your own proxy."""
 
-    Attributes:
-        file: File paths for which violations should be ignored.
-        network: Network hosts for which violations should be ignored.
-    """
-
-    file: list[str]
-    network: list[str]
+    socks_proxy_port: int | None = None
+    """SOCKS5 proxy port if bringing your own proxy."""
 
 
-class SandboxSettings(TypedDict, total=False):
+class SandboxIgnoreViolations(ClaudeCodeBaseModel):
+    """Violations to ignore in sandbox."""
+
+    file: list[str] | None = None
+    """File paths for which violations should be ignored."""
+
+    network: list[str] | None = None
+    """Network hosts for which violations should be ignored."""
+
+
+class SandboxSettings(ClaudeCodeBaseModel):
     """Sandbox settings configuration.
 
     This controls how Claude Code sandboxes bash commands for filesystem
@@ -48,35 +46,43 @@ class SandboxSettings(TypedDict, total=False):
     - Filesystem write restrictions: Use Edit allow/deny rules
     - Network restrictions: Use WebFetch allow/deny rules
 
-    Attributes:
-        enabled: Enable bash sandboxing (macOS/Linux only). Default: False
-        autoAllowBashIfSandboxed: Auto-approve bash commands when sandboxed. Default: True
-        excludedCommands: Commands that should run outside the sandbox (e.g., ["git", "docker"])
-        allowUnsandboxedCommands: Allow commands to bypass sandbox via dangerouslyDisableSandbox.
-            When False, all commands must run sandboxed (or be in excludedCommands). Default: True
-        network: Network configuration for sandbox.
-        ignoreViolations: Violations to ignore.
-        enableWeakerNestedSandbox: Enable weaker sandbox for unprivileged Docker environments
-            (Linux only). Reduces security. Default: False
-
     Example:
         ```python
-        sandbox_settings: SandboxSettings = {
-            "enabled": True,
-            "autoAllowBashIfSandboxed": True,
-            "excludedCommands": ["docker"],
-            "network": {
-                "allowUnixSockets": ["/var/run/docker.sock"],
-                "allowLocalBinding": True
-            }
-        }
+        sandbox_settings = SandboxSettings(
+            enabled=True,
+            auto_allow_bash_if_sandboxed=True,
+            excluded_commands=["docker"],
+            network=SandboxNetworkConfig(
+                allow_unix_sockets=["/var/run/docker.sock"],
+                allow_local_binding=True,
+            ),
+        )
         ```
     """
 
-    enabled: bool
-    autoAllowBashIfSandboxed: bool
-    excludedCommands: list[str]
-    allowUnsandboxedCommands: bool
-    network: SandboxNetworkConfig
-    ignoreViolations: SandboxIgnoreViolations
-    enableWeakerNestedSandbox: bool
+    enabled: bool | None = None
+    """Enable bash sandboxing (macOS/Linux only)."""
+
+    auto_allow_bash_if_sandboxed: bool | None = None
+    """Auto-approve bash commands when sandboxed."""
+
+    excluded_commands: list[str] | None = None
+    """Commands that should run outside the sandbox (e.g., ``["git", "docker"]``)."""
+
+    allow_unsandboxed_commands: bool | None = None
+    """Allow commands to bypass sandbox via ``dangerouslyDisableSandbox``.
+
+    When False, all commands must run sandboxed (or be in ``excluded_commands``).
+    """
+
+    network: SandboxNetworkConfig | None = None
+    """Network configuration for sandbox."""
+
+    ignore_violations: SandboxIgnoreViolations | None = None
+    """Violations to ignore."""
+
+    enable_weaker_nested_sandbox: bool | None = None
+    """Enable weaker sandbox for unprivileged Docker environments (Linux only).
+
+    Reduces security.
+    """
