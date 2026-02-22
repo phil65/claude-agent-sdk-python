@@ -39,6 +39,13 @@ AssistantMessageError = Literal[
     "unknown",
 ]
 
+ErrorSubType = Literal[
+    "error_during_execution",
+    "error_max_turns",
+    "error_max_budget_usd",
+    "error_max_structured_output_retries",
+]
+
 
 class UserPromptMessageContent(TypedDict):
     """Inner message content for a user prompt."""
@@ -355,13 +362,13 @@ class ResultMessage(BaseMessage):
     """Result message with cost and usage information."""
 
     type: Literal["result"] = "result"
-    subtype: str
+    subtype: Literal["success"] | ErrorSubType
     duration_ms: int
     duration_api_ms: int
     is_error: bool
     num_turns: int
-    total_cost_usd: float | None = None
-    usage: Usage | None = None
+    total_cost_usd: float
+    usage: Usage
     result: str | None = None
     structured_output: Any = None
     errors: list[str] | None = None

@@ -364,12 +364,12 @@ def _make_synthetic_result(
     return ResultMessage(
         uuid=last_uuid or "synthetic",
         session_id=session_id,
-        subtype="error" if is_error else "success",
+        subtype="error_during_execution" if is_error else "success",
         duration_ms=0,
         duration_api_ms=0,
         is_error=is_error,
         num_turns=len(seen_msg_ids),
-        total_cost_usd=None,
+        total_cost_usd=0.0,
         usage=Usage(
             input_tokens=total_usage.input_tokens,
             output_tokens=total_usage.output_tokens,
