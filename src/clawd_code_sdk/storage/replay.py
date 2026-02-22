@@ -347,19 +347,20 @@ def _make_synthetic_result(
     stop_reason: str | None = None
 
     for entry in turn_entries:
-        if not isinstance(entry, ClaudeAssistantEntry):
-            continue
-        last_uuid = entry.uuid
-        session_id = entry.session_id
-        if entry.is_api_error_message:
-            is_error = True
-        msg = entry.message
-        if isinstance(msg, ClaudeApiMessage):
-            if msg.id not in seen_msg_ids:
-                seen_msg_ids.add(msg.id)
-                total_usage.add(msg.usage)
-            if msg.stop_reason is not None:
-                stop_reason = msg.stop_reason
+        match entry:
+            case ClaudeAssistantEntry(
+                message=ClaudeApiMessage(id=msg_id, stop_reason=stop_reason, usage=usage),
+                uuid=last_uuid,
+                session_id=session_id,
+                is_api_error_message=is_api_error_message,
+            ):
+                if is_api_error_message:
+                    is_error = True
+                if msg_id not in seen_msg_ids:
+                    seen_msg_ids.add(msg_id)
+                    total_usage.add(usage)
+                if stop_reason is not None:
+                    stop_reason = stop_reason
 
     return ResultMessage(
         uuid=last_uuid or "synthetic",
@@ -485,9 +486,9 @@ def _replay_with_stream_events(
 
     while i < len(entry_list):
         match entry_list[i]:
-            case ClaudeAssistantEntry() as entry:
+            case ClaudeAssistantEntry(uuid=uuid, session_id=session_id) as entry:
                 # Start of an API response group — collect all entries with same msg_id
-                msg_id = _get_assistant_msg_id(entry) or entry.uuid
+                msg_id = _get_assistant_msg_id(entry) or uuid
                 model = _get_assistant_model(entry)
 
                 # Find extent of this group (consecutive assistant entries with same msg_id)
@@ -508,8 +509,8 @@ def _replay_with_stream_events(
                 yield _make_message_start(
                     msg_id=msg_id,
                     model=model,
-                    session_id=entry.session_id,
-                    uuid=entry.uuid,
+                    session_id=session_id,
+                    uuid=uuid,
                 )
 
                 # → per-block events
