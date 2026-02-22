@@ -77,6 +77,14 @@ from .models import (
 )
 from .query import query
 from .mcp_utils import SdkMcpTool, tool, create_sdk_mcp_server
+from .session import (
+    ConversationTurn,
+    Session,
+    SessionManager,
+    SessionSnapshot,
+    SessionState,
+    ToolCallSummary,
+)
 
 # MCP Server Support
 
@@ -169,4 +177,11 @@ __all__ = [
     "RateLimitError",
     "InvalidRequestError",
     "ServerError",
+    # Session management
+    "SessionManager",
+    "Session",
+    "SessionState",
+    "SessionSnapshot",
+    "ConversationTurn",
+    "ToolCallSummary",
 ]
