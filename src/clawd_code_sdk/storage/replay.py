@@ -17,9 +17,14 @@ full content (since token-level deltas are not preserved in storage).
 
 Not reconstructible from storage:
     - Token-level streaming granularity (deltas are synthetic, one per block).
-    - ResultMessage: Cost, aggregated usage, and duration data are not stored.
     - SystemMessage(init): Session initialization metadata (tools, model, etc.).
     - RateLimitMessage: Rate limit events are transient.
+
+Partially reconstructible (with ``include_result=True``):
+    - ResultMessage: Synthetic messages are emitted at each turn boundary.
+      Token usage (deduplicated) and error status are available. Cost
+      (``total_cost_usd``), duration (``duration_ms``, ``duration_api_ms``),
+      and ``modelUsage`` are not stored and are set to zero/None.
 
 Example::
 
@@ -56,8 +61,10 @@ from clawd_code_sdk.models.content_blocks import (
 )
 from clawd_code_sdk.models.messages import (
     AssistantMessage,
+    ResultMessage,
     StreamEvent,
     ToolProgressMessage,
+    Usage,
     UserMessage,
 )
 from clawd_code_sdk.storage.helpers import read_session
@@ -313,6 +320,67 @@ def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
 
 
 # =============================================================================
+# Synthetic ResultMessage
+# =============================================================================
+
+
+def _make_synthetic_result(
+    turn_entries: Sequence[ClaudeJSONLEntry],
+) -> ResultMessage:
+    """Create a synthetic ResultMessage from a turn's stored entries.
+
+    Reconstructs what is available from storage:
+    - ``usage``: Deduplicated token counts from ``ClaudeApiMessage.usage``.
+    - ``is_error`` / ``subtype``: From ``is_api_error_message``.
+    - ``stop_reason``: From the last assistant entry's API stop_reason
+      (often ``None`` in practice — storage rarely preserves it).
+    - ``num_turns``: Number of distinct API calls (unique ``message.id``).
+
+    Fields that cannot be reconstructed are set to zero or ``None``:
+    ``duration_ms``, ``duration_api_ms``, ``total_cost_usd``, ``modelUsage``.
+    """
+    seen_msg_ids: set[str] = set()
+    total_usage = ClaudeUsage()
+    last_uuid = ""
+    session_id = ""
+    is_error = False
+    stop_reason: str | None = None
+
+    for entry in turn_entries:
+        if not isinstance(entry, ClaudeAssistantEntry):
+            continue
+        last_uuid = entry.uuid
+        session_id = entry.session_id
+        if entry.is_api_error_message:
+            is_error = True
+        msg = entry.message
+        if isinstance(msg, ClaudeApiMessage):
+            if msg.id not in seen_msg_ids:
+                seen_msg_ids.add(msg.id)
+                total_usage.add(msg.usage)
+            if msg.stop_reason is not None:
+                stop_reason = msg.stop_reason
+
+    return ResultMessage(
+        uuid=last_uuid or "synthetic",
+        session_id=session_id,
+        subtype="error" if is_error else "success",
+        duration_ms=0,
+        duration_api_ms=0,
+        is_error=is_error,
+        num_turns=len(seen_msg_ids),
+        total_cost_usd=None,
+        usage=Usage(
+            input_tokens=total_usage.input_tokens,
+            output_tokens=total_usage.output_tokens,
+            cache_creation_input_tokens=total_usage.cache_creation_input_tokens,
+            cache_read_input_tokens=total_usage.cache_read_input_tokens,
+        ),
+        stop_reason=stop_reason,  # type: ignore[arg-type]
+    )
+
+
+# =============================================================================
 # Replay iterators
 # =============================================================================
 
@@ -329,19 +397,35 @@ def _replay_basic(
     *,
     include_progress: bool,
     include_summaries: bool = False,
+    include_result: bool = False,
 ) -> Iterator[Message]:
     """Replay entries without stream events (basic mode)."""
+    turn_entries: list[ClaudeJSONLEntry] = []
+
     for entry in entries:
         match entry:
+            case ClaudeUserEntry() if not _is_tool_result_entry(entry):
+                # Non-tool-result user entry = new turn boundary
+                if include_result and turn_entries:
+                    yield _make_synthetic_result(turn_entries)
+                turn_entries = []
+                yield _convert_user_entry(entry)
             case ClaudeUserEntry():
+                # Tool-result user entry — part of current turn
+                turn_entries.append(entry)
                 yield _convert_user_entry(entry)
             case ClaudeAssistantEntry():
+                turn_entries.append(entry)
                 yield _convert_assistant_entry(entry)
             case ClaudeProgressEntry() if include_progress:
                 if (msg := _convert_progress_entry(entry)) is not None:
                     yield msg
             case ClaudeSummaryEntry() if include_summaries:
                 yield _convert_summary_entry(entry)
+
+    # Emit result for the final turn
+    if include_result and turn_entries:
+        yield _make_synthetic_result(turn_entries)
 
 
 def _get_assistant_msg_id(entry: ClaudeAssistantEntry) -> str | None:
@@ -369,6 +453,7 @@ def _replay_with_stream_events(
     *,
     include_progress: bool,
     include_summaries: bool = False,
+    include_result: bool = False,
 ) -> Iterator[Message]:
     """Replay entries with synthetic StreamEvent injection.
 
@@ -392,9 +477,11 @@ def _replay_with_stream_events(
         message_delta (with stop_reason)
         UserMessage (tool_result, if any)
         message_stop
+        ResultMessage (synthetic, if include_result)
     """
     entry_list = list(entries)
     i = 0
+    turn_entries: list[ClaudeJSONLEntry] = []
 
     while i < len(entry_list):
         match entry_list[i]:
@@ -412,6 +499,7 @@ def _replay_with_stream_events(
                     else:
                         break
                 group = entry_list[group_start:i]
+                turn_entries.extend(group)
                 # Get stop_reason from the last entry in the group
                 last_assistant = group[-1]
                 assert isinstance(last_assistant, ClaudeAssistantEntry)
@@ -480,6 +568,11 @@ def _replay_with_stream_events(
                 )
 
             case ClaudeUserEntry() as entry:
+                # Non-tool-result user entry = new turn boundary
+                # (tool_result entries are consumed inside the assistant group above)
+                if include_result and turn_entries:
+                    yield _make_synthetic_result(turn_entries)
+                turn_entries = []
                 yield _convert_user_entry(entry)
                 i += 1
 
@@ -494,6 +587,10 @@ def _replay_with_stream_events(
 
             case _:
                 i += 1  # Skip non-message entries (queue ops, etc.)
+
+    # Emit result for the final turn
+    if include_result and turn_entries:
+        yield _make_synthetic_result(turn_entries)
 
 
 # Entry types that carry a uuid for parent-chain traversal
@@ -564,6 +661,7 @@ def replay_entries(
     include_progress: bool = False,
     include_stream_events: bool = False,
     include_summaries: bool = False,
+    include_result: bool = False,
     exclude_sidechains: bool = False,
     leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
@@ -584,6 +682,11 @@ def replay_entries(
         include_summaries: If True, yield summary entries as synthetic
             UserMessage instances (with ``isSynthetic=True``) at their
             file-order position.
+        include_result: If True, emit a synthetic ``ResultMessage`` at
+            the end of each conversational turn. The synthetic message
+            includes deduplicated token usage and error status from
+            storage. Fields not available in storage (``total_cost_usd``,
+            ``duration_ms``, ``duration_api_ms``) are set to zero/None.
         exclude_sidechains: If True, skip entries marked as sidechain
             (internal Claude Code context-retrieval calls).
         leaf_uuid: If set, resolve the conversation thread by walking
@@ -592,7 +695,7 @@ def replay_entries(
 
     Yields:
         Wire-format Message objects (UserMessage, AssistantMessage,
-        StreamEvent, and optionally ToolProgressMessage).
+        StreamEvent, ResultMessage, and optionally ToolProgressMessage).
     """
     if leaf_uuid is not None:
         entries = _resolve_thread(list(entries), leaf_uuid=leaf_uuid)
@@ -600,11 +703,17 @@ def replay_entries(
         entries = _filter_sidechains(entries)
     if include_stream_events:
         yield from _replay_with_stream_events(
-            entries, include_progress=include_progress, include_summaries=include_summaries
+            entries,
+            include_progress=include_progress,
+            include_summaries=include_summaries,
+            include_result=include_result,
         )
     else:
         yield from _replay_basic(
-            entries, include_progress=include_progress, include_summaries=include_summaries
+            entries,
+            include_progress=include_progress,
+            include_summaries=include_summaries,
+            include_result=include_result,
         )
 
 
@@ -614,6 +723,7 @@ def replay_session(
     include_progress: bool = False,
     include_stream_events: bool = False,
     include_summaries: bool = False,
+    include_result: bool = False,
     exclude_sidechains: bool = False,
     leaf_uuid: str | None = None,
 ) -> Iterator[Message]:
@@ -622,7 +732,9 @@ def replay_session(
     Reads a JSONL session file and yields its entries converted to
     wire-format Message objects. The sequence matches what a live
     ``receive_messages()`` call would produce, minus token-level deltas
-    and terminal events (ResultMessage, RateLimitMessage).
+    and terminal events (RateLimitMessage). When ``include_result=True``,
+    a synthetic ``ResultMessage`` is emitted at each turn boundary with
+    whatever data is available in storage.
 
     Args:
         session_path: Path to the .jsonl session file.
@@ -630,6 +742,8 @@ def replay_session(
         include_stream_events: If True, inject synthetic StreamEvent
             messages around each content block (see :func:`replay_entries`).
         include_summaries: If True, include summary entries.
+        include_result: If True, emit synthetic ResultMessage at each
+            turn boundary (see :func:`replay_entries`).
         exclude_sidechains: If True, skip sidechain entries.
         leaf_uuid: If set, resolve the thread from this leaf UUID.
 
@@ -642,6 +756,7 @@ def replay_session(
         include_progress=include_progress,
         include_stream_events=include_stream_events,
         include_summaries=include_summaries,
+        include_result=include_result,
         exclude_sidechains=exclude_sidechains,
         leaf_uuid=leaf_uuid,
     )
