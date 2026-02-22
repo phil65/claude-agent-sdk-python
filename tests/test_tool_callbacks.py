@@ -16,12 +16,12 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
-from clawd_code_sdk.models import SDKControlPermissionRequest, parse_control_request
+from clawd_code_sdk.models import SDKControlPermissionRequest, control_request_adapter
 
 
 async def _dispatch(query: Query, request: dict[str, Any]) -> None:
     """Helper to dispatch a raw control request dict to the handler."""
-    request_data = parse_control_request(request["request"])
+    request_data = control_request_adapter.validate_python(request["request"])
     await query._handle_control_request(request["request_id"], request_data)
 
 

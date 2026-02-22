@@ -85,12 +85,7 @@ ControlRequestUnion = Annotated[
     Discriminator("subtype"),
 ]
 
-_control_request_adapter: TypeAdapter[ControlRequestUnion] = TypeAdapter(ControlRequestUnion)
-
-
-def parse_control_request(data: dict[str, Any]) -> ControlRequestUnion:
-    """Parse a raw dict into a typed control request dataclass."""
-    return _control_request_adapter.validate_python(data)
+control_request_adapter: TypeAdapter[ControlRequestUnion] = TypeAdapter(ControlRequestUnion)
 
 
 @dataclass(frozen=True, slots=True)

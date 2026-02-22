@@ -26,7 +26,7 @@ from clawd_code_sdk.models import (
     SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
     ToolPermissionContext,
-    parse_control_request,
+    control_request_adapter,
 )
 from clawd_code_sdk.models.control import ControlErrorResponse
 from clawd_code_sdk.models.mcp import JSONRPCError, JSONRPCErrorResponse, JSONRPCResultResponse
@@ -250,11 +250,8 @@ class Query:
 
                     case "control_request":
                         if tg := self._tg:
-                            tg.start_soon(
-                                self._handle_control_request,
-                                message["request_id"],
-                                parse_control_request(message["request"]),
-                            )
+                            req = control_request_adapter.validate_python(message["request"])
+                            tg.start_soon(self._handle_control_request, message["request_id"], req)
                     case "control_cancel_request":  # TODO: Implement cancellation support
                         pass
 

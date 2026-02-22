@@ -42,7 +42,7 @@ from .control import (
     SDKControlSetPermissionModeRequest,
     SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
-    parse_control_request,
+    control_request_adapter,
 )
 from .hooks import (
     AsyncHookJSONOutput,
@@ -374,7 +374,7 @@ __all__ = [
     "SDKControlSetPermissionModeRequest",
     "SDKControlStopTaskRequest",
     "SDKHookCallbackRequest",
-    "parse_control_request",
+    "control_request_adapter",
     "ToolInput",
     "TOOL_INPUT_TYPES",
     "AgentInput",

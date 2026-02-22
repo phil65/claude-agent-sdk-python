@@ -1,8 +1,11 @@
 """Tests for Claude SDK client functionality."""
 
+from __future__ import annotations
+
 import asyncio
 from dataclasses import asdict
 import json
+from typing import TYPE_CHECKING, Literal
 from unittest.mock import AsyncMock
 
 import anyio
@@ -20,15 +23,20 @@ from clawd_code_sdk import (
     ServerError,
     query,
 )
+from clawd_code_sdk.models import TextBlock
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
 from clawd_code_sdk.models.messages import Usage
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models.messages import ErrorSubType
 
 
 def _make_result(
     *,
     uuid: str = "msg-001",
     session_id: str = "test-session",
-    subtype: str = "success",
+    subtype: Literal["success"] | ErrorSubType = "success",
     duration_ms: int = 1000,
     duration_api_ms: int = 800,
     is_error: bool = False,
@@ -138,6 +146,7 @@ class TestQueryFunction:
 
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "4"
 
         anyio.run(_test)
@@ -172,6 +181,7 @@ class TestQueryFunction:
 
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "Hello!"
 
         anyio.run(_test)
@@ -200,6 +210,7 @@ class TestQueryFunction:
 
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "Done"
 
         anyio.run(_test)
@@ -363,6 +374,7 @@ class TestAPIErrorRaising:
 
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "Hello!"
 
         anyio.run(_test)
