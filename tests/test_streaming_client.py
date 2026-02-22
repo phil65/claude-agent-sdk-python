@@ -601,7 +601,7 @@ class TestQueryWithAsyncIterable:
         """Test query with async iterable of messages."""
 
         async def _test():
-            async def message_stream():
+            async def message_stream() -> AsyncIterable[UserPromptMessage]:
                 yield {"type": "user", "message": {"role": "user", "content": "First"}}
                 yield {"type": "user", "message": {"role": "user", "content": "Second"}}
 
