@@ -108,7 +108,7 @@ class TestToolPermissionCallbacks:
             hooks=None,
         )
 
-        request_data = parse_control_request(
+        request_data = control_request_adapter.validate_python(
             {
                 "subtype": "can_use_tool",
                 "tool_name": "DangerousTool",
@@ -216,7 +216,7 @@ class TestHookCallbacks:
             "tool_input": {},
             "tool_use_id": "tool-123",
         }
-        request_data = parse_control_request(
+        request_data = control_request_adapter.validate_python(
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
@@ -268,7 +268,7 @@ class TestHookCallbacks:
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
 
-        request_data = parse_control_request(
+        request_data = control_request_adapter.validate_python(
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
@@ -323,7 +323,7 @@ class TestHookCallbacks:
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
-        request_data = parse_control_request(
+        request_data = control_request_adapter.validate_python(
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
@@ -376,7 +376,7 @@ class TestHookCallbacks:
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
 
-        request_data = parse_control_request(
+        request_data = control_request_adapter.validate_python(
             {
                 "subtype": "hook_callback",
                 "callback_id": callback_id,
