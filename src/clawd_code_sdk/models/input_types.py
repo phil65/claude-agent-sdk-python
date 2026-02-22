@@ -8,11 +8,16 @@ from __future__ import annotations
 
 from typing import Literal, NotRequired, TypedDict
 
+from pydantic import ConfigDict, with_config
+
+
+_extra_allow = with_config(ConfigDict(extra="allow"))
 
 ModelName = Literal["sonnet", "opus", "haiku"]
 PermissionMode = Literal["acceptEdits", "bypassPermissions", "default", "dontAsk", "plan"]
 
 
+@_extra_allow
 class AgentInput(TypedDict):
     """Input for the Task tool. Launches a new agent to handle complex, multi-step tasks."""
 
@@ -38,6 +43,7 @@ class AgentInput(TypedDict):
     """Permission mode for spawned teammate (e.g., "plan" to require plan approval)."""
 
 
+@_extra_allow
 class AskUserQuestionOption(TypedDict):
     """A single option for a user question."""
 
@@ -47,6 +53,7 @@ class AskUserQuestionOption(TypedDict):
     """Explanation of what this option means."""
 
 
+@_extra_allow
 class AskUserQuestion(TypedDict):
     """A single question to ask the user."""
 
@@ -60,6 +67,7 @@ class AskUserQuestion(TypedDict):
     """Set to true to allow multiple selections."""
 
 
+@_extra_allow
 class AskUserQuestionInput(TypedDict):
     """Input for the AskUserQuestion tool."""
 
@@ -73,6 +81,7 @@ class AskUserQuestionInput(TypedDict):
     """
 
 
+@_extra_allow
 class BashInput(TypedDict):
     """Input for the Bash tool. Executes bash commands in a persistent shell session."""
 
@@ -86,6 +95,7 @@ class BashInput(TypedDict):
     """Set to true to run this command in the background."""
 
 
+@_extra_allow
 class BashOutputInput(TypedDict):
     """Input for the BashOutput tool. Retrieves output from a background bash shell."""
 
@@ -95,6 +105,7 @@ class BashOutputInput(TypedDict):
     """Optional regex to filter output lines."""
 
 
+@_extra_allow
 class FileEditInput(TypedDict):
     """Input for the Edit tool. Performs exact string replacements in files."""
 
@@ -108,6 +119,7 @@ class FileEditInput(TypedDict):
     """Replace all occurrences of old_string (default false)."""
 
 
+@_extra_allow
 class FileReadInput(TypedDict):
     """Input for the Read tool. Reads files including text, images, PDFs, and notebooks."""
 
@@ -121,6 +133,7 @@ class FileReadInput(TypedDict):
     """Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request."""
 
 
+@_extra_allow
 class FileWriteInput(TypedDict):
     """Input for the Write tool. Writes a file to the local filesystem."""
 
@@ -130,6 +143,7 @@ class FileWriteInput(TypedDict):
     """The content to write to the file."""
 
 
+@_extra_allow
 class GlobInput(TypedDict):
     """Input for the Glob tool. Fast file pattern matching."""
 
@@ -160,8 +174,10 @@ GrepInput = TypedDict(
     },
 )
 """Input for the Grep tool. Powerful search built on ripgrep with regex support."""
+GrepInput.__pydantic_config__ = ConfigDict(extra="allow")  # type: ignore[attr-defined]
 
 
+@_extra_allow
 class KillShellInput(TypedDict):
     """Input for the KillBash tool. Kills a running background bash shell."""
 
@@ -169,6 +185,7 @@ class KillShellInput(TypedDict):
     """The ID of the background shell to kill."""
 
 
+@_extra_allow
 class NotebookEditInput(TypedDict):
     """Input for the NotebookEdit tool. Edits cells in Jupyter notebook files."""
 
@@ -184,6 +201,7 @@ class NotebookEditInput(TypedDict):
     """The type of edit (replace, insert, delete)."""
 
 
+@_extra_allow
 class WebFetchInput(TypedDict):
     """Input for the WebFetch tool. Fetches content from a URL and processes it with AI."""
 
@@ -193,6 +211,7 @@ class WebFetchInput(TypedDict):
     """The prompt to run on the fetched content."""
 
 
+@_extra_allow
 class WebSearchInput(TypedDict):
     """Input for the WebSearch tool. Searches the web and returns formatted results."""
 
@@ -204,6 +223,7 @@ class WebSearchInput(TypedDict):
     """Never include results from these domains."""
 
 
+@_extra_allow
 class TodoItem(TypedDict):
     """A single todo item."""
 
@@ -215,6 +235,7 @@ class TodoItem(TypedDict):
     """Active form of the task description."""
 
 
+@_extra_allow
 class TodoWriteInput(TypedDict):
     """Input for the TodoWrite tool. Creates and manages a structured task list."""
 
@@ -222,6 +243,7 @@ class TodoWriteInput(TypedDict):
     """The updated todo list."""
 
 
+@_extra_allow
 class ExitPlanModeInput(TypedDict):
     """Input for the ExitPlanMode tool. Exits planning mode for user approval."""
 
@@ -229,6 +251,7 @@ class ExitPlanModeInput(TypedDict):
     """The plan to run by the user for approval."""
 
 
+@_extra_allow
 class ListMcpResourcesInput(TypedDict):
     """Input for the ListMcpResources tool. Lists available MCP resources."""
 
@@ -236,6 +259,7 @@ class ListMcpResourcesInput(TypedDict):
     """Optional server name to filter resources by."""
 
 
+@_extra_allow
 class ReadMcpResourceInput(TypedDict):
     """Input for the ReadMcpResource tool. Reads a specific MCP resource from a server."""
 
