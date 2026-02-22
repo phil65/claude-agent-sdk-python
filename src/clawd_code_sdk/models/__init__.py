@@ -78,6 +78,8 @@ from .hooks import (
     SyncHookJSONOutput,
     UserPromptSubmitHookInput,
     UserPromptSubmitHookSpecificOutput,
+    WorktreeCreateHookInput,
+    WorktreeRemoveHookInput,
 )
 from .input_types import (
     TOOL_INPUT_TYPES,
@@ -296,6 +298,8 @@ __all__ = [
     "SyncHookJSONOutput",
     "UserPromptSubmitHookInput",
     "UserPromptSubmitHookSpecificOutput",
+    "WorktreeCreateHookInput",
+    "WorktreeRemoveHookInput",
     # mcp
     "JSONRPC_VERSION",
     "JSONRPCError",

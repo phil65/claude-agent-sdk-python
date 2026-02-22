@@ -28,6 +28,8 @@ HookEvent = Literal[
     "TeammateIdle",
     "TaskCompleted",
     "ConfigChange",
+    "WorktreeCreate",
+    "WorktreeRemove",
 ]
 
 
@@ -181,6 +183,20 @@ class ConfigChangeHookInput(BaseHookInput):
     file_path: NotRequired[str]
 
 
+class WorktreeCreateHookInput(BaseHookInput):
+    """Input data for WorktreeCreate hook events."""
+
+    hook_event_name: Literal["WorktreeCreate"]
+    name: str
+
+
+class WorktreeRemoveHookInput(BaseHookInput):
+    """Input data for WorktreeRemove hook events."""
+
+    hook_event_name: Literal["WorktreeRemove"]
+    worktree_path: str
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -199,6 +215,8 @@ HookInput = (
     | TeammateIdleHookInput
     | TaskCompletedHookInput
     | ConfigChangeHookInput
+    | WorktreeCreateHookInput
+    | WorktreeRemoveHookInput
 )
 
 
