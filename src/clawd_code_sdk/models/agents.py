@@ -20,6 +20,7 @@ _FIELD_RENAMES: dict[str, str] = {
     "disallowed_tools": "disallowedTools",
     "critical_system_reminder_experimental": "criticalSystemReminder_EXPERIMENTAL",
     "max_turns": "maxTurns",
+    "permission_mode": "permissionMode",
 }
 
 
@@ -52,6 +53,8 @@ class AgentDefinition:
     critical_system_reminder_experimental: str | None = None
     skills: list[str] | None = None
     max_turns: int | None = None
+    # permission_mode: PermissionMode | None = None
+    # hooks: dict[HookEvent, list[HookMatcher]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dict suitable for the CLI wire format.
