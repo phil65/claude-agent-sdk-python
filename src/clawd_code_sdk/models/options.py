@@ -12,12 +12,16 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from clawd_code_sdk.models.base import ModelName
+
     from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
     from .hooks import HookEvent, HookMatcher
     from .mcp import McpServerConfig, SdkPluginConfig
     from .permissions import CanUseTool
     from .sandbox import SandboxSettings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,20 +41,29 @@ class ClaudeAgentOptions:
     session_id: str | None = None
     """Deterministic session ID for a new session."""
     continue_conversation: bool = False
+    """Continue most recent conversation."""
     resume: str | None = None
+    """Resume a conversation by session id."""
     max_turns: int | None = None
-    """Maximum allowed turns."""
+    """Maximum allowed amount of agentic turns."""
     max_budget_usd: float | None = None
     """Maximum amount of USD budget which may be consumed."""
     disallowed_tools: list[str] = field(default_factory=list)
-    model: str | None = None
-    fallback_model: str | None = None
+    """Tools that are removed from agent context and cant be used."""
+    model: ModelName | None = None
+    """Session model."""
+    fallback_model: ModelName | None = None
+    """Fallback model in case default one is overloaded."""
     permission_prompt_tool_name: str | None = None
+    """MCP tool to handle permission prompts."""
     cwd: str | Path | None = None
     """The working directory for the agent."""
     cli_path: str | Path | None = None
+    """CLI path override (auto-detects by default)."""
     settings: str | None = None
+    """Path to a settings JSON file or a JSON string."""
     add_dirs: list[str | Path] = field(default_factory=list)
+    """Add additional working directories."""
     env: dict[str, str] = field(default_factory=dict)
     """Environment variables for the CLI subprocess."""
     extra_args: dict[str, str | None] = field(default_factory=dict)
@@ -64,42 +77,56 @@ class ClaudeAgentOptions:
     hooks: dict[HookEvent, list[HookMatcher]] | None = None
     """Hook configurations."""
     user: str | None = None
+    """User for the AnyIO process."""
     fork_session: bool = False
     """Make resumed sessions forked to a new session ID instead of continuing."""
     agents: dict[str, AgentDefinition] | None = None
     """SubAgent definitions."""
-    setting_sources: list[SettingSource] | None = None  # Setting sources to load
-    # Sandbox configuration for bash command isolation.
-    # Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
-    # not from these sandbox settings.
+    setting_sources: list[SettingSource] | None = None
+    """List of sources to load settings from."""
     sandbox: SandboxSettings | None = None
-    plugins: list[SdkPluginConfig] = field(default_factory=list)  # Plugin configurations
-    thinking: ThinkingConfig | None = None  # Controls thinking behavior.
-    effort: ReasoningEffort | None = None  # Effort level for thinking depth.
-    # Output format for structured outputs (matches Messages API structure)
-    # Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
+    """Sandbox configuration for bash command isolation.
+
+    Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
+    not from these sandbox settings.
+    """
+    plugins: list[SdkPluginConfig] = field(default_factory=list)
+    """"Plugin configurations to load."""
+    thinking: ThinkingConfig | None = None
+    """Controls thinking behavior."""
+    effort: ReasoningEffort | None = None
+    """Effort level for thinking depth."""
     output_format: dict[str, Any] | None = None
-    # Enable file checkpointing to track file changes during the session.
-    # When enabled, files can be rewound to their state at any user message
-    # using `ClaudeSDKClient.rewind_files()`.
+    """Output format for structured outputs (matches Messages API structure)
+
+    Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
+    """
     enable_file_checkpointing: bool = False
-    # Agent name for the main thread. The agent must be defined in `agents` or settings.
+    """Enable file checkpointing to track file changes during the session.
+
+    When enabled, files can be rewound to their state at any user message
+    using `ClaudeSDKClient.rewind_files()`.
+    """
     agent: str | None = None
-    # When false, disables session persistence to disk.
+    """Agent name for the main thread. The agent must be defined in `agents` or settings."""
     persist_session: bool | None = None
-    # Must be True when using permission_mode='bypassPermissions'.
+    """Whether to persist the session to disk."""
     allow_dangerously_skip_permissions: bool = False
-    # Resume from a specific message UUID (use with `resume`).
+    """Must be True when using permission_mode='bypassPermissions'."""
     resume_session_at: str | None = None
-    # Write debug logs to a specific file path. Implicitly enables debug mode.
+    """Resume from a specific message UUID (use with `resume`)."""
     debug_file: str | None = None
-    # Enforce strict validation of MCP server configurations.
+    """Write debug logs to a specific file path. Implicitly enables debug mode."""
     strict_mcp_config: bool = False
-    # Enable 1M token context window (Sonnet 4/4.5 only).
+    """Enforce strict validation of MCP server configurations."""
     context_1m: bool = False
+    """Enable 1M token context window (Sonnet 4/4.5 only)."""
     prompt_suggestions: bool | None = None
+    """Whether to  create prompt suggestions."""
     worktree: bool | str = False
+    """Create a new git worktree for the session (with optional name)."""
     chrome: bool = False
+    """Add the chrome-tools MCP server (-> Claude Code browser extension) to the agent."""
 
     def build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.
@@ -136,9 +163,7 @@ class ClaudeAgentOptions:
                     with settings_path.open(encoding="utf-8") as f:
                         settings_obj = json.load(f)
                 else:
-                    logging.getLogger(__name__).warning(
-                        "Settings file not found: %s", settings_path
-                    )
+                    logger.warning("Settings file not found: %s", settings_path)
 
         # Merge sandbox settings
         if has_sandbox:
