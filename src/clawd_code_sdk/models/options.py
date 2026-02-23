@@ -25,34 +25,49 @@ class ClaudeAgentOptions:
     """Query options for Claude SDK."""
 
     tools: list[str] | ToolsPreset | None = None
+    """Tools available to the agent."""
     allowed_tools: list[str] = field(default_factory=list)
+    """Tools which execute without prompting for permission."""
     system_prompt: str | SystemPromptPreset | None = None
+    """System prompt for the agent."""
     mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
+    """MCP servers for the agent."""
     permission_mode: PermissionMode | None = None
+    """Permission mode."""
     session_id: str | None = None
+    """Deterministic session ID for a new session."""
     continue_conversation: bool = False
     resume: str | None = None
     max_turns: int | None = None
+    """Maximum allowed turns."""
     max_budget_usd: float | None = None
+    """Maximum amount of USD budget which may be consumed."""
     disallowed_tools: list[str] = field(default_factory=list)
     model: str | None = None
     fallback_model: str | None = None
     permission_prompt_tool_name: str | None = None
     cwd: str | Path | None = None
+    """The working directory for the agent."""
     cli_path: str | Path | None = None
     settings: str | None = None
     add_dirs: list[str | Path] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
-    extra_args: dict[str, str | None] = field(default_factory=dict)  # Pass arbitrary CLI flags
-    max_buffer_size: int | None = None  # Max bytes when buffering CLI stdout
-    stderr: Callable[[str], None] | None = None  # Callback for stderr output from CLI
-    can_use_tool: CanUseTool | None = None  # Tool permission callback
-    hooks: dict[HookEvent, list[HookMatcher]] | None = None  # Hook configurations
+    """Environment variables for the CLI subprocess."""
+    extra_args: dict[str, str | None] = field(default_factory=dict)
+    """Arbitrary extra CLI flags."""
+    max_buffer_size: int | None = None
+    """Max bytes when buffering CLI stdout."""
+    stderr: Callable[[str], None] | None = None
+    """Callback for stderr output from CLI."""
+    can_use_tool: CanUseTool | None = None
+    """Tool permission callback."""
+    hooks: dict[HookEvent, list[HookMatcher]] | None = None
+    """Hook configurations."""
     user: str | None = None
-    # When true resumed sessions will fork to a new session ID rather than
-    # continuing the previous session.
     fork_session: bool = False
-    agents: dict[str, AgentDefinition] | None = None  # Agent definitions for custom agents
+    """Make resumed sessions forked to a new session ID instead of continuing."""
+    agents: dict[str, AgentDefinition] | None = None
+    """SubAgent definitions."""
     setting_sources: list[SettingSource] | None = None  # Setting sources to load
     # Sandbox configuration for bash command isolation.
     # Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
