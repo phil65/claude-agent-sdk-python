@@ -290,7 +290,7 @@ class Query:
             match request_data:
                 case SDKControlPermissionRequest() as req:
                     result = await self._handle_permission_request(req)
-                    response_data = result.to_dict()
+                    response_data = result.model_dump(by_alias=True, exclude_none=True)
                 case SDKHookCallbackRequest() as req:
                     response_data = await self._handle_hook_callback(req)
                 case SDKControlMcpMessageRequest(server_name=server_name, message=message):

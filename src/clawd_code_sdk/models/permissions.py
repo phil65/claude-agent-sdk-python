@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 from clawd_code_sdk.models import ToolInput
-from clawd_code_sdk.models.base import PermissionBehavior  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from .base import PermissionMode
+from clawd_code_sdk.models.base import (
+    ClaudeCodeBaseModel,
+    PermissionBehavior,  # noqa: TC001
+    PermissionMode,  # noqa: TC001
+)
 
 
 # Permission Update types (matching TypeScript SDK)
@@ -24,26 +24,19 @@ PermissionUpdateDestination = Literal[
 ]
 
 
-@dataclass
-class PermissionRuleValue:
+class PermissionRuleValue(ClaudeCodeBaseModel):
     """Permission rule value."""
 
     tool_name: str
     rule_content: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionRuleValue to dictionary format matching TypeScript control protocol."""
-        return {"toolName": self.tool_name, "ruleContent": self.rule_content}
 
-
-@dataclass(kw_only=True)
-class BasePermissionUpdate:
+class BasePermissionUpdate(ClaudeCodeBaseModel):
     """Permission update configuration."""
 
     destination: PermissionUpdateDestination
 
 
-@dataclass(kw_only=True)
 class RulePermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
@@ -51,38 +44,19 @@ class RulePermissionUpdate(BasePermissionUpdate):
     rules: list[PermissionRuleValue]
     behavior: PermissionBehavior | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        return {
-            "type": self.type,
-            "destination": self.destination,
-            "rules": [r.to_dict() for r in self.rules],
-            "behavior": self.behavior,
-        }
 
-
-@dataclass(kw_only=True)
 class DirectoryPermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
     type: Literal["addDirectories", "removeDirectories"]
     directories: list[str]
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        return {"type": self.type, "destination": self.destination, "directories": self.directories}
 
-
-@dataclass(kw_only=True)
 class ModePermissionUpdate(BasePermissionUpdate):
     """Permission update configuration."""
 
     type: Literal["setMode"]
     mode: PermissionMode
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionUpdate to dictionary format matching TypeScript control protocol."""
-        return {"type": self.type, "destination": self.destination, "mode": self.mode}
 
 
 PermissionUpdate = RulePermissionUpdate | DirectoryPermissionUpdate | ModePermissionUpdate
@@ -112,35 +86,20 @@ class ToolPermissionContext:
 
 
 # Match TypeScript's PermissionResult structure
-@dataclass
-class PermissionResultAllow:
+class PermissionResultAllow(ClaudeCodeBaseModel):
     """Allow permission result."""
 
     behavior: Literal["allow"] = "allow"
-    updated_input: dict[str, Any] | None = None  # ToolInput?
+    updated_input: dict[str, Any] | None = None
     updated_permissions: list[PermissionUpdate] | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionResultAllow to dictionary format matching TypeScript control protocol."""
-        result: dict[str, Any] = {"behavior": self.behavior}
-        if self.updated_input is not None:
-            result["updatedInput"] = self.updated_input
-        if self.updated_permissions is not None:
-            result["updatedPermissions"] = [p.to_dict() for p in self.updated_permissions]
-        return result
 
-
-@dataclass
-class PermissionResultDeny:
+class PermissionResultDeny(ClaudeCodeBaseModel):
     """Deny permission result."""
 
     behavior: Literal["deny"] = "deny"
     message: str = ""
     interrupt: bool = False
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert PermissionResultDeny to dictionary format matching TypeScript control protocol."""
-        return asdict(self)
 
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny
