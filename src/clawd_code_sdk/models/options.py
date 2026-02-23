@@ -26,7 +26,7 @@ class ClaudeAgentOptions:
 
     tools: list[str] | ToolsPreset | None = None
     """Tools available to the agent."""
-    allowed_tools: list[str] = field(default_factory=list)
+    allowed_tools: list[str] | None = None
     """Tools which execute without prompting for permission."""
     system_prompt: str | SystemPromptPreset | None = None
     """System prompt for the agent."""

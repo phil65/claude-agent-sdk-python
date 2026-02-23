@@ -88,7 +88,7 @@ class SubprocessCLITransport(Transport):
             case {"type": "preset"}:
                 cmd.extend(["--tools", "default"])
 
-        if self._options.allowed_tools:
+        if self._options.allowed_tools is not None:
             cmd.extend(["--allowedTools", ",".join(self._options.allowed_tools)])
 
         if self._options.max_turns:
