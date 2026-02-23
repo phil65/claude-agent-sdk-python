@@ -40,7 +40,6 @@ class PermissionRuleValue:
 class BasePermissionUpdate:
     """Permission update configuration."""
 
-    type: str
     destination: PermissionUpdateDestination
 
 
@@ -108,9 +107,7 @@ class ToolPermissionContext:
 
     tool_use_id: str
     signal: Any | None = None  # Future: abort signal support
-    suggestions: list[PermissionUpdate] = field(
-        default_factory=list
-    )  # Permission suggestions from CLI
+    suggestions: list[PermissionUpdate] = field(default_factory=list)  # suggestions from CLI
     blocked_path: str | None = None
 
 
