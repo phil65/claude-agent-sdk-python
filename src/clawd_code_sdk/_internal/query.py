@@ -323,7 +323,6 @@ class Query:
 
         context = ToolPermissionContext(
             tool_use_id=req.tool_use_id,
-            signal=None,
             suggestions=req.permission_suggestions or [],
             blocked_path=req.blocked_path,
         )
