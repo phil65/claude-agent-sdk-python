@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from unittest.mock import AsyncMock
 
 import anyio
+from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -26,7 +27,6 @@ from clawd_code_sdk import (
 from clawd_code_sdk.models import TextBlock
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
 from clawd_code_sdk.models.messages import Usage
-from conftest import make_beta_message
 
 
 if TYPE_CHECKING:
@@ -132,8 +132,8 @@ class TestQueryFunction:
                 {
                     "type": "assistant",
                     "message": make_beta_message(
-                    content=[{"type": "text", "text": "4"}],
-                ),
+                        content=[{"type": "text", "text": "4"}],
+                    ),
                 },
                 _make_result(),
             ]
@@ -158,8 +158,8 @@ class TestQueryFunction:
                 {
                     "type": "assistant",
                     "message": make_beta_message(
-                    content=[{"type": "text", "text": "Hello!"}],
-                ),
+                        content=[{"type": "text", "text": "Hello!"}],
+                    ),
                 },
                 _make_result(),
             ]
@@ -191,8 +191,8 @@ class TestQueryFunction:
                 {
                     "type": "assistant",
                     "message": make_beta_message(
-                    content=[{"type": "text", "text": "Done"}],
-                ),
+                        content=[{"type": "text", "text": "Done"}],
+                    ),
                 },
                 _make_result(),
             ]
@@ -349,9 +349,9 @@ class TestAPIErrorRaising:
                 {
                     "type": "assistant",
                     "message": make_beta_message(
-                    content=[{"type": "text", "text": "Hello!"}],
-                    model="claude-sonnet-4-5-20250514",
-                ),
+                        content=[{"type": "text", "text": "Hello!"}],
+                        model="claude-sonnet-4-5-20250514",
+                    ),
                 },
                 _make_result(uuid="msg-002"),
             ]

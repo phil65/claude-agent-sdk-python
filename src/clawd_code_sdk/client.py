@@ -128,10 +128,10 @@ class ClaudeSDKClient:
         # JSON schema for structured output
         json_schema: dict[str, Any] | None
         match self.options.output_schema:
-            case type() as tp:
+            case type() as typ:
                 from pydantic import TypeAdapter
 
-                json_schema = TypeAdapter(tp).json_schema()
+                json_schema = TypeAdapter(typ).json_schema()
             case dict() as schema:
                 json_schema = schema
             case None:
