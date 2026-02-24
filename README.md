@@ -238,7 +238,7 @@ async with ClaudeSDKClient(options=options) as client:
 See [src/clawd_code_sdk/types.py](src/clawd_code_sdk/types.py) for complete type definitions:
 
 - `ClaudeAgentOptions` - Configuration options
-- `AssistantMessage`, `UserMessage`, `SystemMessage`, `ResultMessage` - Message types
+- `AssistantMessage`, `UserMessage`, `InitSystemMessage`, `ResultMessage` - Message types
 - `TextBlock`, `ToolUseBlock`, `ToolResultBlock` - Content blocks
 
 ## Error Handling

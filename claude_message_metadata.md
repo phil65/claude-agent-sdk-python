@@ -10,7 +10,7 @@ This document describes the structure of messages and metadata returned by the C
 
 The SDK streams these message types via `query()`:
 
-- `SystemMessage` - Session initialization
+- `InitSystemMessage` - Session initialization
 - `AssistantMessage` - Claude's responses (text and tool calls)
 - `UserMessage` - Tool results and user input
 - `ResultMessage` - Final session result
@@ -18,12 +18,12 @@ The SDK streams these message types via `query()`:
 
 ---
 
-## SystemMessage
+## InitSystemMessage
 
 Sent at session start with initialization data.
 
 ```typescript
-interface SystemMessage {
+interface InitSystemMessage {
   subtype: "init";
   data: {
     type: "system";
@@ -344,7 +344,7 @@ Common `event.type` values:
 
 ## Example Flow
 
-1. **SystemMessage** (init) - Session starts
+1. **InitSystemMessage** (init) - Session starts
 2. **AssistantMessage** (TextBlock) - Claude explains what it will do
 3. **AssistantMessage** (ToolUseBlock) - Claude calls Write tool
 4. **UserMessage** (ToolResultBlock) - Write result with `tool_use_result`

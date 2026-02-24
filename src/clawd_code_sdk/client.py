@@ -342,7 +342,7 @@ class ClaudeSDKClient:
         - If no ResultMessage is received, the iterator continues indefinitely
 
         Yields:
-            Message: Each message received (UserMessage, AssistantMessage, SystemMessage, ResultMessage)
+            Message: Each message received (UserMessage, AssistantMessage, InitSystemMessage, ResultMessage)
 
         Example:
             ```python

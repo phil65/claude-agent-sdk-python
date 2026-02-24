@@ -14,7 +14,7 @@ from clawd_code_sdk.models import (
     ClaudeAgentOptions,
     ResultMessage,
     StreamEvent,
-    SystemMessage,
+    InitSystemMessage,
     TextBlock,
     ThinkingBlock,
 )
@@ -45,9 +45,9 @@ async def test_include_partial_messages_stream_events():
     # Verify we got the expected message types
     message_types = [type(msg).__name__ for msg in collected_messages]
 
-    # Should have SystemMessage(init) at the start
-    assert message_types[0] == "SystemMessage"
-    assert isinstance(collected_messages[0], SystemMessage)
+    # Should have InitSystemMessage(init) at the start
+    assert message_types[0] == "InitSystemMessage"
+    assert isinstance(collected_messages[0], InitSystemMessage)
     assert collected_messages[0].subtype == "init"
 
     # Should have multiple StreamEvent messages

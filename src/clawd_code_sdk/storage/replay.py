@@ -17,7 +17,7 @@ full content (since token-level deltas are not preserved in storage).
 
 Not reconstructible from storage:
     - Token-level streaming granularity (deltas are synthetic, one per block).
-    - SystemMessage(init): Session initialization metadata (tools, model, etc.).
+    - InitSystemMessage(init): Session initialization metadata (tools, model, etc.).
     - RateLimitMessage: Rate limit events are transient.
 
 Partially reconstructible (with ``include_result=True``):

@@ -80,6 +80,13 @@ class BaseMessage:
 
 
 @dataclass(kw_only=True)
+class BaseSystemMessage(BaseMessage):
+    """Base class for all system messages."""
+
+    type: Literal["system"] = "system"
+
+
+@dataclass(kw_only=True)
 class UserMessage(BaseMessage):
     """User message."""
 
@@ -164,10 +171,9 @@ class Plugin:
 
 
 @dataclass(kw_only=True)
-class SystemMessage(BaseMessage):
-    """System message with metadata."""
+class InitSystemMessage(BaseSystemMessage):
+    """System init message with session metadata."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["init"] = "init"
     apiKeySource: ApiKeySource | None = None  # noqa: N815
     cwd: str
@@ -185,10 +191,9 @@ class SystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class HookStartedSystemMessage(BaseMessage):
-    """System message with metadata."""
+class HookStartedSystemMessage(BaseSystemMessage):
+    """System message emitted when a hook starts."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["hook_started"] = "hook_started"
     hook_id: str | None = None
     hook_name: str | None = None
@@ -196,10 +201,9 @@ class HookStartedSystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class StatusSystemMessage(BaseMessage):
+class StatusSystemMessage(BaseSystemMessage):
     """System status message."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | None
 
@@ -210,10 +214,9 @@ class TriggerMetadata(TypedDict):
 
 
 @dataclass(kw_only=True)
-class CompactBoundarySystemMessage(BaseMessage):
-    """System message with metadata."""
+class CompactBoundarySystemMessage(BaseSystemMessage):
+    """System message emitted at compaction boundaries."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["compact_boundary"] = "compact_boundary"
     compact_metadata: TriggerMetadata
 
@@ -237,10 +240,9 @@ class RateLimitMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class TaskStartedSystemMessage(BaseMessage):
+class TaskStartedSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task starts."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["task_started"] = "task_started"
     task_id: str = ""
     tool_use_id: str | None = None
@@ -249,10 +251,9 @@ class TaskStartedSystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class TaskNotificationSystemMessage(BaseMessage):
+class TaskNotificationSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task completes, fails, or stops."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["task_notification"] = "task_notification"
     task_id: str = ""
     status: Literal["completed", "failed", "stopped"] = "completed"
@@ -270,10 +271,9 @@ class TaskProgressUsage(TypedDict):
 
 
 @dataclass(kw_only=True)
-class TaskProgressSystemMessage(BaseMessage):
+class TaskProgressSystemMessage(BaseSystemMessage):
     """System message emitted periodically with task progress updates."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["task_progress"] = "task_progress"
     task_id: str = ""
     tool_use_id: str | None = None
@@ -297,10 +297,9 @@ class FilePersistedFailure(TypedDict):
 
 
 @dataclass(kw_only=True)
-class FilesPersistedSystemMessage(BaseMessage):
+class FilesPersistedSystemMessage(BaseSystemMessage):
     """System message emitted when files have been persisted."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["files_persisted"] = "files_persisted"
     files: list[FilePersistedEntry] | None = None
     failed: list[FilePersistedFailure] | None = None
@@ -310,10 +309,9 @@ class FilesPersistedSystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class HookProgressSystemMessage(BaseMessage):
+class HookProgressSystemMessage(BaseSystemMessage):
     """Progress update from a running hook."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["hook_progress"] = "hook_progress"
     hook_id: str = ""
     hook_name: str = ""
@@ -324,10 +322,9 @@ class HookProgressSystemMessage(BaseMessage):
 
 
 @dataclass(kw_only=True)
-class HookResponseSystemMessage(BaseMessage):
-    """System message with metadata."""
+class HookResponseSystemMessage(BaseSystemMessage):
+    """System message emitted when a hook completes."""
 
-    type: Literal["system"] = "system"
     subtype: Literal["hook_response"] = "hook_response"
     hook_id: str
     hook_name: str
@@ -441,7 +438,7 @@ class AuthStatusMessage(BaseMessage):
 
 
 SystemMessageUnion = Annotated[
-    SystemMessage
+    InitSystemMessage
     | HookStartedSystemMessage
     | StatusSystemMessage
     | CompactBoundarySystemMessage
@@ -460,7 +457,7 @@ system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMess
 Message = (
     UserMessage
     | AssistantMessage
-    | SystemMessage
+    | InitSystemMessage
     | ResultMessage
     | StreamEvent
     | RateLimitMessage
