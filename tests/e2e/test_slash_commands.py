@@ -7,6 +7,7 @@ import pytest
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, ThinkingConfigAdaptive
 
 
+@pytest.mark.e2e
 async def test_compact() -> None:
     opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive(type="adaptive"))
     client = ClaudeSDKClient(opts)

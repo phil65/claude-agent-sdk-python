@@ -12,7 +12,6 @@ from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, create_sdk_mcp_s
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_sdk_mcp_tool_execution():
     """Test that SDK MCP tools can be called and executed with allowed_tools."""
     executions = []
@@ -23,16 +22,8 @@ async def test_sdk_mcp_tool_execution():
         executions.append("echo")
         return {"content": [{"type": "text", "text": f"Echo: {args['text']}"}]}
 
-    server = create_sdk_mcp_server(
-        name="test",
-        version="1.0.0",
-        tools=[echo_tool],
-    )
-
-    options = ClaudeAgentOptions(
-        mcp_servers={"test": server},
-        allowed_tools=["mcp__test__echo"],
-    )
+    server = create_sdk_mcp_server(name="test", version="1.0.0", tools=[echo_tool])
+    options = ClaudeAgentOptions(mcp_servers={"test": server}, allowed_tools=["mcp__test__echo"])
 
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__test__echo tool with any text")
@@ -45,7 +36,6 @@ async def test_sdk_mcp_tool_execution():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_sdk_mcp_permission_enforcement():
     """Test that disallowed_tools prevents SDK MCP tool execution."""
     executions = []
@@ -62,12 +52,7 @@ async def test_sdk_mcp_permission_enforcement():
         executions.append("greet")
         return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
 
-    server = create_sdk_mcp_server(
-        name="test",
-        version="1.0.0",
-        tools=[echo_tool, greet_tool],
-    )
-
+    server = create_sdk_mcp_server(name="test", version="1.0.0", tools=[echo_tool, greet_tool])
     options = ClaudeAgentOptions(
         mcp_servers={"test": server},
         disallowed_tools=["mcp__test__echo"],  # Block echo tool
@@ -86,7 +71,6 @@ async def test_sdk_mcp_permission_enforcement():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_sdk_mcp_multiple_tools():
     """Test that multiple SDK MCP tools can be called in sequence."""
     executions = []
@@ -103,12 +87,7 @@ async def test_sdk_mcp_multiple_tools():
         executions.append("greet")
         return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
 
-    server = create_sdk_mcp_server(
-        name="multi",
-        version="1.0.0",
-        tools=[echo_tool, greet_tool],
-    )
-
+    server = create_sdk_mcp_server(name="multi", version="1.0.0", tools=[echo_tool, greet_tool])
     options = ClaudeAgentOptions(
         mcp_servers={"multi": server},
         allowed_tools=["mcp__multi__echo", "mcp__multi__greet"],
@@ -128,7 +107,6 @@ async def test_sdk_mcp_multiple_tools():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_sdk_mcp_without_permissions():
     """Test SDK MCP tool behavior without explicit allowed_tools."""
     executions = []
@@ -139,17 +117,9 @@ async def test_sdk_mcp_without_permissions():
         executions.append("echo")
         return {"content": [{"type": "text", "text": f"Echo: {args['text']}"}]}
 
-    server = create_sdk_mcp_server(
-        name="noperm",
-        version="1.0.0",
-        tools=[echo_tool],
-    )
-
+    server = create_sdk_mcp_server(name="noperm", version="1.0.0", tools=[echo_tool])
     # No allowed_tools specified
-    options = ClaudeAgentOptions(
-        mcp_servers={"noperm": server},
-    )
-
+    options = ClaudeAgentOptions(mcp_servers={"noperm": server})
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__noperm__echo tool")
 

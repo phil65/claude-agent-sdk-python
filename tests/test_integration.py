@@ -19,7 +19,7 @@ from clawd_code_sdk import (
     ResultMessage,
     query,
 )
-from clawd_code_sdk.models import ToolUseBlock
+from clawd_code_sdk.models import TextBlock, ToolUseBlock
 
 
 def create_mock_transport(messages: list[dict]):
@@ -163,6 +163,7 @@ class TestIntegration:
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 2
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "Let me read that file for you."
             assert isinstance(messages[0].content[1], ToolUseBlock)
             assert messages[0].content[1].name == "Read"

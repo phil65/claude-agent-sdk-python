@@ -6,7 +6,6 @@ import asyncio
 import json
 from pathlib import Path
 import sys
-import tempfile
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
@@ -31,9 +30,7 @@ from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITrans
 if TYPE_CHECKING:
     from collections.abc import AsyncIterable
 
-    from clawd_code_sdk import (
-        UserPromptMessage,
-    )
+    from clawd_code_sdk import UserPromptMessage
 
 
 def create_mock_transport(with_init_response=True):
@@ -151,14 +148,11 @@ class TestClaudeSDKClientStreaming:
             ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
-
                 client = ClaudeSDKClient()
                 await client.connect()
-
                 # Verify connect was called
                 mock_transport.connect.assert_called_once()
                 assert client._transport is mock_transport
-
                 await client.disconnect()
                 # Verify disconnect was called
                 mock_transport.close.assert_called_once()
@@ -175,10 +169,8 @@ class TestClaudeSDKClientStreaming:
             ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
-
                 client = ClaudeSDKClient()
                 await client.connect("Hello Claude")
-
                 # Verify transport was created with string prompt
                 call_kwargs = mock_transport_class.call_args.kwargs
                 assert call_kwargs["prompt"] == "Hello Claude"
@@ -205,7 +197,6 @@ class TestClaudeSDKClientStreaming:
                 client = ClaudeSDKClient()
                 stream = message_stream()
                 await client.connect(stream)
-
                 # Verify transport was created with async iterable
                 call_kwargs = mock_transport_class.call_args.kwargs
                 # Should be the same async iterator
@@ -225,11 +216,9 @@ class TestClaudeSDKClientStreaming:
 
                 async with ClaudeSDKClient() as client:
                     await client.query("Test message")
-
                     # Verify write was called with correct format
                     # Should have at least 2 writes: init request and user message
                     assert mock_transport.write.call_count >= 2
-
                     # Find the user message in the write calls
                     user_msg_found = False
                     for call in mock_transport.write.call_args_list:
@@ -259,7 +248,6 @@ class TestClaudeSDKClientStreaming:
 
                 async with ClaudeSDKClient() as client:
                     await client.query("Test", session_id="custom-session")
-
                     # Find the user message with custom session ID
                     session_found = False
                     for call in mock_transport.write.call_args_list:
@@ -489,10 +477,8 @@ class TestClaudeSDKClientStreaming:
             ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
-
                 client = ClaudeSDKClient(options=options)
                 await client.connect()
-
                 # Verify options were passed to transport
                 call_kwargs = mock_transport_class.call_args.kwargs
                 assert call_kwargs["options"] is options
@@ -572,10 +558,8 @@ class TestClaudeSDKClientStreaming:
 
                     # Start receiving in background
                     receive_task = asyncio.create_task(get_next_message())
-
                     # Send message while receiving
                     await client.query("Question 1")
-
                     # Wait for first message
                     first_msg = await receive_task
                     assert isinstance(first_msg, AssistantMessage)
@@ -594,91 +578,28 @@ class TestQueryWithAsyncIterable:
                 yield {"type": "user", "message": {"role": "user", "content": "First"}}
                 yield {"type": "user", "message": {"role": "user", "content": "Second"}}
 
-            # Create a simple test script that validates stdin and outputs a result
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-                test_script = f.name
-                f.write("""#!/usr/bin/env python3
-import sys
-import json
+            test_script = str(Path(__file__).parent / "mock_claude_server.py")
 
-# Read stdin messages
-stdin_messages = []
-while True:
-    line = sys.stdin.readline()
-    if not line:
-        break
+            # Mock _find_cli to return the test script path directly
+            with patch.object(subprocess_cli, "_find_cli", return_value=test_script):
+                # Mock _build_command to execute via Python interpreter
+                original_build_command = SubprocessCLITransport._build_command
 
-    try:
-        msg = json.loads(line.strip())
-        # Handle control requests
-        if msg.get("type") == "control_request":
-            request_id = msg.get("request_id")
-            request = msg.get("request", {})
+                def mock_build_command(self):
+                    cmd = original_build_command(self)
+                    cmd[0:1] = [sys.executable, test_script]
+                    return cmd
 
-            # Send control response for initialize
-            if request.get("subtype") == "initialize":
-                response = {
-                    "type": "control_response",
-                    "response": {
-                        "subtype": "success",
-                        "request_id": request_id,
-                        "response": {
-                            "commands": [],
-                            "output_style": "default"
-                        }
-                    }
-                }
-                print(json.dumps(response))
-                sys.stdout.flush()
-        else:
-            stdin_messages.append(line.strip())
-    except:
-        stdin_messages.append(line.strip())
+                with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
+                    # Run query with async iterable
+                    messages = []
+                    async for msg in query(prompt=message_stream()):
+                        messages.append(msg)
 
-# Verify we got 2 user messages
-assert len(stdin_messages) == 2
-assert '"First"' in stdin_messages[0]
-assert '"Second"' in stdin_messages[1]
-
-# Output a valid result
-print('{"type": "result", "uuid": "msg-004", "subtype": "success", "duration_ms": 100, "duration_api_ms": 50, "is_error": false, "num_turns": 1, "session_id": "test", "total_cost_usd": 0.001, "usage": {"input_tokens": 100, "output_tokens": 50, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}}')
-""")
-
-            # Make script executable (Unix-style systems)
-            if sys.platform != "win32":
-                Path(test_script).chmod(0o755)
-
-            try:
-                # Mock _find_cli to return the test script path directly
-                with patch.object(subprocess_cli, "_find_cli", return_value=test_script):
-                    # Mock _build_command to properly execute Python script
-                    original_build_command = SubprocessCLITransport._build_command
-
-                    def mock_build_command(self):
-                        # Get original command
-                        cmd = original_build_command(self)
-                        # On Windows, we need to use python interpreter to run the script
-                        if sys.platform == "win32":
-                            # Replace first element with python interpreter and script
-                            cmd[0:1] = [sys.executable, test_script]
-                        else:
-                            # On Unix, just use the script directly
-                            cmd[0] = test_script
-                        return cmd
-
-                    with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
-                        # Run query with async iterable
-                        messages = []
-                        async for msg in query(prompt=message_stream()):
-                            messages.append(msg)
-
-                        # Should get the result message
-                        assert len(messages) == 1
-                        assert isinstance(messages[0], ResultMessage)
-                        assert messages[0].subtype == "success"
-            finally:
-                # Clean up
-                Path(test_script).unlink()
+                    # Should get the result message
+                    assert len(messages) == 1
+                    assert isinstance(messages[0], ResultMessage)
+                    assert messages[0].subtype == "success"
 
         anyio.run(_test)
 

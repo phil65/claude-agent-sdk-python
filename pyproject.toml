@@ -75,13 +75,14 @@ warn_unreachable = true
 strict_equality = true
 
 [tool.pytest]
-addopts = ["-m", "not slow and not acp_snapshot"]
+addopts = ["-m", "not slow and not acp_snapshot and not e2e"]
 filterwarnings = ["ignore::DeprecationWarning:pydantic.*:"]
 log_cli = true
 log_date_format = "%Y-%m-%d %H:%M:%S"
 log_format = "%(asctime)s %(levelname)s %(message)s"
 log_level = "ERROR"
 markers = [
+  "e2e: marks tests as e2e tests requiring API key",
   "integration: marks tests as integration tests",
   "slow: marks tests as slow",
   "unit: marks tests as unit tests",
