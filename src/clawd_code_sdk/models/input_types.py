@@ -243,6 +243,14 @@ class TodoWriteInput(TypedDict):
 
 
 @_extra_allow
+class EnterWorktreeInput(TypedDict):
+    """Input for the EnterWorktree tool."""
+
+    name: NotRequired[str]
+    """Optional name for the worktree. A random name is generated if not provided."""
+
+
+@_extra_allow
 class ExitPlanModeInput(TypedDict):
     """Input for the ExitPlanMode tool. Exits planning mode for user approval."""
 
@@ -283,6 +291,7 @@ ToolInput = (
     | WebFetchInput
     | WebSearchInput
     | TodoWriteInput
+    | EnterWorktreeInput
     | ExitPlanModeInput
     | ListMcpResourcesInput
     | ReadMcpResourceInput
@@ -304,6 +313,7 @@ TOOL_INPUT_TYPES: dict[str, type[ToolInput]] = {
     "WebFetch": WebFetchInput,
     "WebSearch": WebSearchInput,
     "TodoWrite": TodoWriteInput,
+    "EnterWorktree": EnterWorktreeInput,
     "ExitPlanMode": ExitPlanModeInput,
     "ListMcpResources": ListMcpResourcesInput,
     "ReadMcpResource": ReadMcpResourceInput,

@@ -571,8 +571,11 @@ class EnterWorktreeOutput(TypedDict):
     """``tool_use_result`` for the EnterWorktree tool."""
 
     worktreePath: str
+    """The path to the worktree."""
     worktreeBranch: NotRequired[str]
+    """The branch of the worktree."""
     message: str
+    """A message indicating the result of the operation."""
 
 
 # ---------------------------------------------------------------------------
