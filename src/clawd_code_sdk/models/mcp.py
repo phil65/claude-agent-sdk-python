@@ -127,19 +127,19 @@ class ToolAnnotations(ClaudeCodeBaseModel):
     Additional properties describing a Tool to clients.
     """
 
-    title: str | None = None
-    """A human-readable title for the tool."""
+    # title: str | None = None
+    # """A human-readable title for the tool."""
 
-    read_only_hint: bool | None = None
+    read_only: bool | None = None
     """Read-only hint."""
 
-    destructive_hint: bool | None = None
+    destructive: bool | None = None
     """Destructive hint."""
 
-    idempotent_hint: bool | None = None
-    """Idempodent hint."""
+    # idempotent: bool | None = None
+    # """Idempodent hint."""
 
-    open_world_hint: bool | None = None
+    open_world: bool | None = None
     """Open-world hint."""
 
 
