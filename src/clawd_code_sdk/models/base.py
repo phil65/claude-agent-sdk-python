@@ -33,7 +33,27 @@ StopReason = Literal[
 ]
 ApiKeySource = Literal["none", "env", "config", "ANTHROPIC_API_KEY"]
 SettingSource = Literal["user", "project", "local"]
-
+ToolName = Literal[
+    "Task",
+    "TaskOutput",
+    "Bash",
+    "Glob",
+    "Grep",
+    "ExitPlanMode",
+    "Read",
+    "Edit",
+    "Write",
+    "NotebookEdit",
+    "WebFetch",
+    "TodoWrite",
+    "WebSearch",
+    "TaskStop",
+    "AskUserQuestion",
+    "Skill",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ToolSearch",
+]
 IS_DEV = "pytest" in sys.modules
 
 

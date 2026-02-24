@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from pydantic import ConfigDict, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models import ToolInput  # noqa: TC001
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, ToolName  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class ToolUseBlock:
 
     type: Literal["tool_use"] = field(default="tool_use", repr=False)
     id: str = ""
-    name: str = ""
+    name: ToolName | str = ""
     input: ToolInput | dict[str, Any] = field(default_factory=dict)
     caller: dict[str, str] | None = None
 

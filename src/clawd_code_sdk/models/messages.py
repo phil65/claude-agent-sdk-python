@@ -23,7 +23,7 @@ from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa
 from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
-from .base import ApiKeySource, PermissionMode, StopReason, TaskStatus  # noqa: TC001
+from .base import ApiKeySource, PermissionMode, StopReason, TaskStatus, ToolName  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -281,7 +281,7 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     tool_use_id: str | None = None
     description: str = ""
     usage: TaskProgressUsage | None = None
-    last_tool_name: str | None = None
+    last_tool_name: ToolName | str | None = None
 
 
 class FilePersistedEntry(TypedDict):
@@ -366,7 +366,7 @@ class ModelUsage(TypedDict):
 
 
 class SDKPermissionDenial(TypedDict):
-    tool_name: str
+    tool_name: ToolName | str
     tool_use_id: str
     tool_input: ToolInput
 
