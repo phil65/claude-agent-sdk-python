@@ -48,11 +48,11 @@ class ClaudeAgentOptions:
     """Maximum allowed amount of agentic turns."""
     max_budget_usd: float | None = None
     """Maximum amount of USD budget which may be consumed."""
-    disallowed_tools: list[str] = field(default_factory=list)
+    disallowed_tools: list[str] | None = None
     """Tools that are removed from agent context and cant be used."""
-    model: ModelName | None = None
+    model: ModelName | str | None = None
     """Session model."""
-    fallback_model: ModelName | None = None
+    fallback_model: ModelName | str | None = None
     """Fallback model in case default one is overloaded."""
     permission_prompt_tool_name: str | None = None
     """MCP tool to handle permission prompts."""
