@@ -15,6 +15,8 @@ from clawd_code_sdk.models.base import ModelName, PermissionMode  # noqa: TC001
 
 _extra_allow = with_config(ConfigDict(extra="allow"))
 
+TaskStatus = Literal["pending", "in_progress", "completed"]
+
 
 @_extra_allow
 class AgentInput(TypedDict):
@@ -228,7 +230,7 @@ class TodoItem(TypedDict):
 
     content: str
     """The task description."""
-    status: Literal["pending", "in_progress", "completed"]
+    status: TaskStatus
     """The task status."""
     activeForm: str
     """Active form of the task description."""

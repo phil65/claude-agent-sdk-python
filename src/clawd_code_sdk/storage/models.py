@@ -28,7 +28,7 @@ from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
 
 UserType = Literal["external", "internal"]
-
+MCPToolCallStatus = Literal["started", "completed", "failed"]
 
 
 class ClaudeTextBlock(BaseModel):
@@ -516,7 +516,7 @@ class ClaudeMcpProgressData(ClaudeCodeBaseModel):
     """Progress data for MCP tool operations."""
 
     type: Literal["mcp_progress"]
-    status: Literal["started", "completed", "failed"] | None = None
+    status: MCPToolCallStatus | None = None
     server_name: str | None = None
     tool_name: str | None = None
     elapsed_time_ms: int | None = None
