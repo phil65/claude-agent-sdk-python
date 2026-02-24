@@ -147,6 +147,7 @@ class McpToolStatus(ClaudeCodeBaseModel):
     """Status information for a single MCP tool."""
 
     name: str
+    description: str | None = None
     annotations: ToolAnnotations = Field(default_factory=ToolAnnotations)
 
 
@@ -164,7 +165,7 @@ class McpServerStatusEntry(ClaudeCodeBaseModel):
     status: McpConnectionStatus
     server_info: McpServerVersionInfo | None = None
     config: dict[str, Any] = Field(default_factory=dict)
-    scope: str | None = None
+    scope: Literal["project", "user", "local", "claudeai", "managed"] | str | None = None
     tools: list[McpToolStatus] = Field(default_factory=list)
 
 
