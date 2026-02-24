@@ -28,34 +28,54 @@ logger = logging.getLogger(__name__)
 class ClaudeAgentOptions:
     """Query options for Claude SDK."""
 
+    # Tools
     tools: list[str] | ToolsPreset | None = None
     """Tools available to the agent."""
     allowed_tools: list[str] | None = None
     """Tools which execute without prompting for permission."""
-    system_prompt: str | SystemPromptPreset | None = None
-    """System prompt for the agent."""
+    disallowed_tools: list[str] | None = None
+    """Tools that are removed from agent context and cant be used."""
+    # MCP
     mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
     """MCP servers for the agent."""
+    chrome: bool = False
+    """Add the chrome-tools MCP server (-> Claude Code browser extension) to the agent."""
+    # Permissions
     permission_mode: PermissionMode | None = None
     """Permission mode."""
+    allow_dangerously_skip_permissions: bool = False
+    """Must be True when using permission_mode='bypassPermissions'."""
+    permission_prompt_tool_name: str | None = None
+    """MCP tool to handle permission prompts."""
+    can_use_tool: CanUseTool | None = None
+    """Tool permission callback."""
+    # Session
     session_id: str | None = None
     """Deterministic session ID for a new session."""
     continue_conversation: bool = False
     """Continue most recent conversation."""
     resume: str | None = None
     """Resume a conversation by session id."""
+    fork_session: bool = False
+    """Make resumed sessions forked to a new session ID instead of continuing."""
+    resume_session_at: str | None = None
+    """Resume from a specific message UUID (use with `resume`)."""
+    # Limits
     max_turns: int | None = None
     """Maximum allowed amount of agentic turns."""
     max_budget_usd: float | None = None
     """Maximum amount of USD budget which may be consumed."""
-    disallowed_tools: list[str] | None = None
-    """Tools that are removed from agent context and cant be used."""
+    # Model
     model: ModelName | str | None = None
     """Session model."""
     fallback_model: ModelName | str | None = None
     """Fallback model in case default one is overloaded."""
-    permission_prompt_tool_name: str | None = None
-    """MCP tool to handle permission prompts."""
+    # Thinking
+    thinking: ThinkingConfig | None = None
+    """Controls thinking behavior."""
+    effort: ReasoningEffort | None = None
+    """Effort level for thinking depth."""
+    # Other
     cwd: str | Path | None = None
     """The working directory for the agent."""
     cli_path: str | Path | None = None
@@ -72,14 +92,10 @@ class ClaudeAgentOptions:
     """Max bytes when buffering CLI stdout."""
     stderr: Callable[[str], None] | None = None
     """Callback for stderr output from CLI."""
-    can_use_tool: CanUseTool | None = None
-    """Tool permission callback."""
     hooks: dict[HookEvent, list[HookMatcher]] | None = None
     """Hook configurations."""
     user: str | None = None
     """User for the AnyIO process."""
-    fork_session: bool = False
-    """Make resumed sessions forked to a new session ID instead of continuing."""
     agents: dict[str, AgentDefinition] | None = None
     """SubAgent definitions."""
     setting_sources: list[SettingSource] | None = None
@@ -92,10 +108,6 @@ class ClaudeAgentOptions:
     """
     plugins: list[SdkPluginConfig] = field(default_factory=list)
     """"Plugin configurations to load."""
-    thinking: ThinkingConfig | None = None
-    """Controls thinking behavior."""
-    effort: ReasoningEffort | None = None
-    """Effort level for thinking depth."""
     output_format: dict[str, Any] | None = None
     """Output format for structured outputs (matches Messages API structure)
 
@@ -107,14 +119,12 @@ class ClaudeAgentOptions:
     When enabled, files can be rewound to their state at any user message
     using `ClaudeSDKClient.rewind_files()`.
     """
+    system_prompt: str | SystemPromptPreset | None = None
+    """System prompt for the agent."""
     agent: str | None = None
     """Agent name for the main thread. The agent must be defined in `agents` or settings."""
     persist_session: bool | None = None
     """Whether to persist the session to disk."""
-    allow_dangerously_skip_permissions: bool = False
-    """Must be True when using permission_mode='bypassPermissions'."""
-    resume_session_at: str | None = None
-    """Resume from a specific message UUID (use with `resume`)."""
     debug_file: str | None = None
     """Write debug logs to a specific file path. Implicitly enables debug mode."""
     strict_mcp_config: bool = False
@@ -125,8 +135,6 @@ class ClaudeAgentOptions:
     """Whether to  create prompt suggestions."""
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
-    chrome: bool = False
-    """Add the chrome-tools MCP server (-> Claude Code browser extension) to the agent."""
 
     def build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.
