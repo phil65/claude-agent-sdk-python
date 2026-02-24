@@ -8,6 +8,7 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import anyio
+from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -74,11 +75,9 @@ class TestIntegration:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "2 + 2 equals 4"}],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                        content=[{"type": "text", "text": "2 + 2 equals 4"}]
+                    ),
                 },
                 {
                     "type": "result",
@@ -121,9 +120,8 @@ class TestIntegration:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [
+                    "message": make_beta_message(
+                        content=[
                             {"type": "text", "text": "Let me read that file for you."},
                             {
                                 "type": "tool_use",
@@ -131,9 +129,8 @@ class TestIntegration:
                                 "name": "Read",
                                 "input": {"file_path": "/test.txt"},
                             },
-                        ],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                        ]
+                    ),
                 },
                 {
                     "type": "result",
@@ -196,13 +193,9 @@ class TestIntegration:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [
-                            {"type": "text", "text": "Continuing from previous conversation"}
-                        ],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                        content=[{"type": "text", "text": "Continuing from previous conversation"}]
+                    ),
                 },
                 {
                     "type": "result",
@@ -245,11 +238,9 @@ class TestIntegration:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Starting to read..."}],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                        content=[{"type": "text", "text": "Starting to read..."}]
+                    ),
                 },
                 {
                     "type": "result",

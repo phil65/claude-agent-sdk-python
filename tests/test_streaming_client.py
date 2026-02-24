@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import anyio
+from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -324,11 +325,7 @@ class TestClaudeSDKClientStreaming:
                     # Then yield the actual messages
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Hello!"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
+                        "message": make_beta_message(content=[{"type": "text", "text": "Hello!"}]),
                     }
                     yield {
                         "type": "user",
@@ -394,11 +391,7 @@ class TestClaudeSDKClientStreaming:
                     # Then yield the actual messages
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Answer"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
+                        "message": make_beta_message(content=[{"type": "text", "text": "Answer"}]),
                     }
                     yield {
                         "type": "result",
@@ -420,11 +413,9 @@ class TestClaudeSDKClientStreaming:
                     # This should not be yielded
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Should not see this"}],
-                        },
-                        "model": "claude-opus-4-1-20250805",
+                        "message": make_beta_message(
+                            content=[{"type": "text", "text": "Should not see this"}]
+                        ),
                     }
 
                 mock_transport.read_messages = mock_receive
@@ -549,11 +540,9 @@ class TestClaudeSDKClientStreaming:
                     await asyncio.sleep(0.1)
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Response 1"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
+                        "message": make_beta_message(
+                            content=[{"type": "text", "text": "Response 1"}]
+                        ),
                     }
                     await asyncio.sleep(0.1)
                     yield {
@@ -811,19 +800,11 @@ class TestClaudeSDKClientEdgeCases:
                     # Then yield the actual messages
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "Hello"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
+                        "message": make_beta_message(content=[{"type": "text", "text": "Hello"}]),
                     }
                     yield {
                         "type": "assistant",
-                        "message": {
-                            "role": "assistant",
-                            "content": [{"type": "text", "text": "World"}],
-                            "model": "claude-opus-4-1-20250805",
-                        },
+                        "message": make_beta_message(content=[{"type": "text", "text": "World"}]),
                     }
                     yield {
                         "type": "result",
@@ -911,11 +892,9 @@ class TestAsyncGeneratorCleanup:
                     for i in range(5):
                         yield {
                             "type": "assistant",
-                            "message": {
-                                "role": "assistant",
-                                "content": [{"type": "text", "text": f"Message {i}"}],
-                                "model": "claude-opus-4-1-20250805",
-                            },
+                            "message": make_beta_message(
+                                content=[{"type": "text", "text": f"Message {i}"}]
+                            ),
                         }
 
                 mock_transport.read_messages = mock_receive

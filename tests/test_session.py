@@ -8,6 +8,7 @@ import json
 from unittest.mock import AsyncMock
 
 import anyio
+from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -73,18 +74,15 @@ def _create_mock_transport_with_messages(messages: list[dict]) -> AsyncMock:
 
 ASSISTANT_MSG = {
     "type": "assistant",
-    "message": {
-        "role": "assistant",
-        "content": [{"type": "text", "text": "Hello, world!"}],
-        "model": "claude-sonnet-4-5-20250514",
-    },
+    "message": make_beta_message(
+        content=[{"type": "text", "text": "Hello, world!"}], model="claude-sonnet-4-5-20250514"
+    ),
 }
 
 TOOL_USE_MSG = {
     "type": "assistant",
-    "message": {
-        "role": "assistant",
-        "content": [
+    "message": make_beta_message(
+        content=[
             {"type": "text", "text": "Let me read that."},
             {
                 "type": "tool_use",
@@ -93,8 +91,8 @@ TOOL_USE_MSG = {
                 "input": {"path": "/tmp/test.py"},
             },
         ],
-        "model": "claude-sonnet-4-5-20250514",
-    },
+        model="claude-sonnet-4-5-20250514",
+    ),
 }
 
 RESULT_MSG = asdict(

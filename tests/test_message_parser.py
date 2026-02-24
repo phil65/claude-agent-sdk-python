@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk._errors import MessageParseError
@@ -56,13 +57,12 @@ class TestContentBlockDispatch:
         """Thinking blocks parse with signature preserved."""
         data = {
             "type": "assistant",
-            "message": {
-                "content": [
+            "message": make_beta_message(
+                content=[
                     {"type": "thinking", "thinking": "hmm...", "signature": "sig-abc"},
                     {"type": "text", "text": "answer"},
                 ],
-                "model": "claude-opus-4-1-20250805",
-            },
+            ),
         }
         msg = parse_message(data)
         assert isinstance(msg, AssistantMessage)
@@ -100,10 +100,9 @@ class TestParentToolUseId:
     def test_assistant_message(self):
         data = {
             "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": "hi"}],
-                "model": "claude-opus-4-1-20250805",
-            },
+            "message": make_beta_message(
+                content=[{"type": "text", "text": "hi"}],
+            ),
             "parent_tool_use_id": "toolu_xyz",
         }
         msg = parse_message(data)
@@ -116,11 +115,10 @@ class TestAssistantErrorExtraction:
     def test_error_from_message_level(self):
         data = {
             "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": "API Error: bad key"}],
-                "model": "claude-opus-4-1-20250805",
-                "error": "authentication_failed",
-            },
+            "message": make_beta_message(
+                content=[{"type": "text", "text": "API Error: bad key"}],
+                error="authentication_failed",
+            ),
         }
         msg = parse_message(data)
         assert isinstance(msg, AssistantMessage) and msg.error == "authentication_failed"
@@ -129,10 +127,9 @@ class TestAssistantErrorExtraction:
         data = {
             "type": "assistant",
             "error": "rate_limit",
-            "message": {
-                "content": [{"type": "text", "text": "Rate limited"}],
-                "model": "claude-opus-4-1-20250805",
-            },
+            "message": make_beta_message(
+                content=[{"type": "text", "text": "Rate limited"}],
+            ),
         }
         msg = parse_message(data)
         assert isinstance(msg, AssistantMessage) and msg.error == "rate_limit"
@@ -140,10 +137,9 @@ class TestAssistantErrorExtraction:
     def test_no_error(self):
         data = {
             "type": "assistant",
-            "message": {
-                "content": [{"type": "text", "text": "ok"}],
-                "model": "claude-opus-4-1-20250805",
-            },
+            "message": make_beta_message(
+                content=[{"type": "text", "text": "ok"}],
+            ),
         }
         msg = parse_message(data)
         assert isinstance(msg, AssistantMessage) and msg.error is None

@@ -26,6 +26,7 @@ from clawd_code_sdk import (
 from clawd_code_sdk.models import TextBlock
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
 from clawd_code_sdk.models.messages import Usage
+from conftest import make_beta_message
 
 
 if TYPE_CHECKING:
@@ -130,11 +131,9 @@ class TestQueryFunction:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "4"}],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                    content=[{"type": "text", "text": "4"}],
+                ),
                 },
                 _make_result(),
             ]
@@ -158,11 +157,9 @@ class TestQueryFunction:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Hello!"}],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                    content=[{"type": "text", "text": "Hello!"}],
+                ),
                 },
                 _make_result(),
             ]
@@ -193,11 +190,9 @@ class TestQueryFunction:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Done"}],
-                        "model": "claude-opus-4-1-20250805",
-                    },
+                    "message": make_beta_message(
+                    content=[{"type": "text", "text": "Done"}],
+                ),
                 },
                 _make_result(),
             ]
@@ -225,17 +220,16 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [
+                "message": make_beta_message(
+                    content=[
                         {
                             "type": "text",
                             "text": "API Error: The provided model identifier is invalid.",
                         }
                     ],
-                    "model": "claude-invalid-model",
-                    "error": "invalid_request",
-                },
+                    model="claude-invalid-model",
+                    error="invalid_request",
+                ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
 
@@ -255,17 +249,16 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [
+                "message": make_beta_message(
+                    content=[
                         {
                             "type": "text",
                             "text": "API Error: Rate limit exceeded",
                         }
                     ],
-                    "model": "claude-sonnet-4-5-20250514",
-                    "error": "rate_limit",
-                },
+                    model="claude-sonnet-4-5-20250514",
+                    error="rate_limit",
+                ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
 
@@ -283,12 +276,11 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": "API Error: Invalid API key"}],
-                    "model": "claude-sonnet-4-5-20250514",
-                    "error": "authentication_failed",
-                },
+                "message": make_beta_message(
+                    content=[{"type": "text", "text": "API Error: Invalid API key"}],
+                    model="claude-sonnet-4-5-20250514",
+                    error="authentication_failed",
+                ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
 
@@ -306,17 +298,16 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [
+                "message": make_beta_message(
+                    content=[
                         {
                             "type": "text",
                             "text": "API Error: Repeated 529 Overloaded errors",
                         }
                     ],
-                    "model": "claude-sonnet-4-5-20250514",
-                    "error": "server_error",
-                },
+                    model="claude-sonnet-4-5-20250514",
+                    error="server_error",
+                ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
 
@@ -334,12 +325,11 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
-                "message": {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": "Unknown error"}],
-                    "model": "claude-sonnet-4-5-20250514",
-                    "error": "unknown",
-                },
+                "message": make_beta_message(
+                    content=[{"type": "text", "text": "Unknown error"}],
+                    model="claude-sonnet-4-5-20250514",
+                    error="unknown",
+                ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
 
@@ -358,11 +348,10 @@ class TestAPIErrorRaising:
             test_messages = [
                 {
                     "type": "assistant",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Hello!"}],
-                        "model": "claude-sonnet-4-5-20250514",
-                    },
+                    "message": make_beta_message(
+                    content=[{"type": "text", "text": "Hello!"}],
+                    model="claude-sonnet-4-5-20250514",
+                ),
                 },
                 _make_result(uuid="msg-002"),
             ]
