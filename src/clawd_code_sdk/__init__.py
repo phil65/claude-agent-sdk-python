@@ -22,6 +22,7 @@ from .anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
 from .models import (
     AgentDefinition,
+    ContinueLatest,
     AssistantMessage,
     BaseHookInput,
     CanUseTool,
@@ -74,6 +75,9 @@ from .models import (
     UserPromptMessage,
     UserPromptMessageContent,
     UserPromptSubmitHookInput,
+    NewSession,
+    ResumeSession,
+    SessionConfig,
 )
 from .query import query
 from .mcp_utils import SdkMcpTool, tool, create_sdk_mcp_server
@@ -98,6 +102,11 @@ __all__ = [
     # Transport
     "Transport",
     "ClaudeSDKClient",
+    # Session config
+    "ContinueLatest",
+    "NewSession",
+    "ResumeSession",
+    "SessionConfig",
     # Types
     "PermissionMode",
     "McpServerConfig",

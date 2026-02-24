@@ -181,22 +181,76 @@ class TestSubprocessCLITransport:
         assert dir1 in dirs_in_cmd
         assert str(dir2) in dirs_in_cmd
 
-    def test_session_continuation(self):
-        """Test session continuation options."""
-        opts = make_options(continue_conversation=True, resume="session-123")
+    def test_session_resume(self):
+        """Test resume session options."""
+        from clawd_code_sdk.models.options import ResumeSession
+
+        opts = make_options(session=ResumeSession(session_id="session-123"))
         transport = SubprocessCLITransport(prompt="Continue from before", options=opts)
         cmd = transport._build_command()
-        assert "--continue" in cmd
         assert "--resume" in cmd
         assert "session-123" in cmd
 
-    def test_build_command_with_session_id(self):
-        """Test building CLI command with session_id option."""
-        opts = make_options(session_id="my-session-uuid")
+    def test_session_resume_shortcut(self):
+        """Test resume session with string shortcut."""
+        opts = make_options(session="session-123")
+        transport = SubprocessCLITransport(prompt="Continue from before", options=opts)
+        cmd = transport._build_command()
+        assert "--resume" in cmd
+        assert "session-123" in cmd
+
+    def test_session_continue_latest(self):
+        """Test continue latest session option."""
+        from clawd_code_sdk.models.options import ContinueLatest
+
+        opts = make_options(session=ContinueLatest())
+        transport = SubprocessCLITransport(prompt="Continue", options=opts)
+        cmd = transport._build_command()
+        assert "--continue" in cmd
+
+    def test_session_resume_with_fork(self):
+        """Test resume session with fork."""
+        from clawd_code_sdk.models.options import ResumeSession
+
+        opts = make_options(session=ResumeSession(session_id="prev-id", fork=True))
+        transport = SubprocessCLITransport(prompt="test", options=opts)
+        cmd = transport._build_command()
+        assert "--resume" in cmd
+        assert "prev-id" in cmd
+        assert "--fork-session" in cmd
+
+    def test_session_resume_at_message(self):
+        """Test resume session at a specific message."""
+        from clawd_code_sdk.models.options import ResumeSession
+
+        opts = make_options(
+            session=ResumeSession(session_id="prev-id", at_message="msg-uuid"),
+        )
+        transport = SubprocessCLITransport(prompt="test", options=opts)
+        cmd = transport._build_command()
+        assert "--resume" in cmd
+        assert "prev-id" in cmd
+        assert "--resume-session-at" in cmd
+        assert "msg-uuid" in cmd
+
+    def test_build_command_with_new_session_id(self):
+        """Test building CLI command with explicit new session ID."""
+        from clawd_code_sdk.models.options import NewSession
+
+        opts = make_options(session=NewSession(session_id="my-session-uuid"))
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
         assert "--session-id" in cmd
         assert "my-session-uuid" in cmd
+
+    def test_session_no_persist(self):
+        """Test session with persist=False."""
+        from clawd_code_sdk.models.options import NewSession
+
+        opts = make_options(session=NewSession(persist=False))
+        transport = SubprocessCLITransport(prompt="test", options=opts)
+        cmd = transport._build_command()
+        assert "--no-persist-session" in cmd
 
     def test_connect_close(self):
         """Test connect and close lifecycle."""

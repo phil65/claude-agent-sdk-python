@@ -115,14 +115,40 @@ class SubprocessCLITransport(Transport):
         if self._options.permission_mode:
             cmd.extend(["--permission-mode", self._options.permission_mode])
 
-        if self._options.continue_conversation:
-            cmd.append("--continue")
+        # Session configuration
+        from clawd_code_sdk.models.options import (
+            ContinueLatest,
+            NewSession,
+            ResumeSession,
+            resolve_session_config,
+        )
 
-        if self._options.resume:
-            cmd.extend(["--resume", self._options.resume])
-
-        if self._options.session_id:
-            cmd.extend(["--session-id", self._options.session_id])
+        session = resolve_session_config(self._options.session)
+        match session:
+            case NewSession(session_id=sid, persist=persist):
+                if sid is not None:
+                    cmd.extend(["--session-id", sid])
+                if not persist:
+                    cmd.append("--no-persist-session")
+            case ResumeSession(
+                session_id=sid,
+                fork=fork,
+                at_message=at_msg,
+                persist=persist,
+            ):
+                cmd.extend(["--resume", sid])
+                if fork:
+                    cmd.append("--fork-session")
+                if at_msg is not None:
+                    cmd.extend(["--resume-session-at", at_msg])
+                if not persist:
+                    cmd.append("--no-persist-session")
+            case ContinueLatest(fork=fork, persist=persist):
+                cmd.append("--continue")
+                if fork:
+                    cmd.append("--fork-session")
+                if not persist:
+                    cmd.append("--no-persist-session")
 
         # Handle settings and sandbox: merge sandbox into settings if both are provided
         if settings_value := self._options.build_settings_value():
@@ -149,17 +175,8 @@ class SubprocessCLITransport(Transport):
         if self._options.agent:
             cmd.extend(["--agent", self._options.agent])
 
-        if self._options.fork_session:
-            cmd.append("--fork-session")
-
-        if self._options.persist_session is False:
-            cmd.append("--no-persist-session")
-
         if self._options.allow_dangerously_skip_permissions:
             cmd.append("--dangerously-skip-permissions")
-
-        if self._options.resume_session_at:
-            cmd.extend(["--resume-session-at", self._options.resume_session_at])
 
         if self._options.debug_file:
             cmd.extend(["--debug-file", self._options.debug_file])

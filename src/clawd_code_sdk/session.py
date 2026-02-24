@@ -311,20 +311,21 @@ class SessionManager:
     ) -> Session:
         """Resume a previously persisted session by ID.
 
-        Sets ``continue_conversation=True`` and ``session_id`` on the options,
+        Sets ``session`` to a :class:`ResumeSession` config on the options,
         then connects.
 
         Args:
             session_id: The session ID to resume.
-            options: Session-specific options (``session_id`` and
-                ``continue_conversation`` are set automatically).
+            options: Session-specific options (``session`` is set automatically).
             transport: Optional custom transport.
 
         Raises:
             ValueError: If session_id already exists in this manager.
         """
+        from clawd_code_sdk.models.options import ResumeSession
+
         base = options or Opts()
-        merged = replace(base, session_id=session_id, continue_conversation=True)
+        merged = replace(base, session=ResumeSession(session_id=session_id))
         return await self.create_session(
             session_id=session_id,
             options=merged,

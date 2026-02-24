@@ -14,6 +14,7 @@ from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     CLINotFoundError,
+    ContinueLatest,
     ResultMessage,
     query,
 )
@@ -226,7 +227,7 @@ class TestIntegration:
             messages = []
             async for msg in query(
                 prompt="Continue",
-                options=ClaudeAgentOptions(continue_conversation=True),
+                options=ClaudeAgentOptions(session=ContinueLatest()),
                 transport=mock_transport,
             ):
                 messages.append(msg)

@@ -563,7 +563,8 @@ class TestSessionManager:
         anyio.run(_test)
 
     def test_resume_session(self):
-        """resume_session() sets continue_conversation and session_id."""
+        """resume_session() sets session to ResumeSession."""
+        from clawd_code_sdk.models.options import ResumeSession
 
         async def _test():
             transport = _create_mock_transport_with_messages([])
@@ -571,14 +572,15 @@ class TestSessionManager:
             async with SessionManager() as mgr:
                 session = await mgr.resume_session("prev-session-id", transport=transport)
                 assert session.session_id == "prev-session-id"
-                assert session.client.options.session_id == "prev-session-id"
-                assert session.client.options.continue_conversation is True
+                assert isinstance(session.client.options.session, ResumeSession)
+                assert session.client.options.session.session_id == "prev-session-id"
                 assert session.state == "idle"
 
         anyio.run(_test)
 
     def test_resume_session_with_options(self):
         """resume_session() merges caller options with resume fields."""
+        from clawd_code_sdk.models.options import ResumeSession
 
         async def _test():
             transport = _create_mock_transport_with_messages([])
@@ -587,7 +589,7 @@ class TestSessionManager:
             async with SessionManager() as mgr:
                 session = await mgr.resume_session("prev-id", options=opts, transport=transport)
                 assert session.client.options.model == "claude-sonnet-4-5-20250514"
-                assert session.client.options.session_id == "prev-id"
-                assert session.client.options.continue_conversation is True
+                assert isinstance(session.client.options.session, ResumeSession)
+                assert session.client.options.session.session_id == "prev-id"
 
         anyio.run(_test)

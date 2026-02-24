@@ -228,6 +228,13 @@ from .messages import (
     system_message_adapter,
 )
 from .options import ClaudeAgentOptions
+from .options import (
+    ContinueLatest,
+    NewSession,
+    ResumeSession,
+    SessionConfig,
+    resolve_session_config,
+)
 from .permissions import (
     CanUseTool,
     PermissionResult,
@@ -364,6 +371,11 @@ __all__ = [
     "system_message_adapter",
     # options
     "ClaudeAgentOptions",
+    "ContinueLatest",
+    "NewSession",
+    "ResumeSession",
+    "SessionConfig",
+    "resolve_session_config",
     # control
     "ControlErrorResponse",
     "ControlRequestUnion",

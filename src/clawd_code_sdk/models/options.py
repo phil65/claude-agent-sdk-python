@@ -1,4 +1,4 @@
-"""ClaudeAgentOptions - main options dataclass."""
+"""ClaudeAgentOptions and session configuration types."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 
 if TYPE_CHECKING:
@@ -22,6 +22,89 @@ if TYPE_CHECKING:
     from .sandbox import SandboxSettings
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Session configuration
+# ============================================================================
+
+
+@dataclass(kw_only=True)
+class NewSession:
+    """Start a fresh session.
+
+    Attributes:
+        session_id: Deterministic session ID, or None to auto-generate a UUID.
+        persist: Whether to persist the session to disk.
+    """
+
+    mode: Literal["new"] = "new"
+    session_id: str | None = None
+    persist: bool = True
+
+
+@dataclass(kw_only=True)
+class ResumeSession:
+    """Resume an existing session by ID.
+
+    Attributes:
+        session_id: The session ID to resume.
+        fork: If True, fork to a new session ID instead of continuing in-place.
+        at_message: Resume from a specific message UUID within the session.
+        persist: Whether to persist the session to disk.
+    """
+
+    mode: Literal["resume"] = "resume"
+    session_id: str
+    fork: bool = False
+    at_message: str | None = None
+    persist: bool = True
+
+
+@dataclass(kw_only=True)
+class ContinueLatest:
+    """Continue the most recent conversation.
+
+    Attributes:
+        fork: If True, fork to a new session ID instead of continuing in-place.
+        persist: Whether to persist the session to disk.
+    """
+
+    mode: Literal["continue"] = "continue"
+    fork: bool = False
+    persist: bool = True
+
+
+SessionConfig = NewSession | ResumeSession | ContinueLatest
+"""Union of all session configuration types.
+
+Can also be specified as a plain ``str``, which is a shortcut for
+``ResumeSession(session_id=str)``.
+"""
+
+
+def resolve_session_config(value: str | SessionConfig | None) -> SessionConfig:
+    """Normalize a session config value.
+
+    Args:
+        value: A SessionConfig instance, a session ID string (shortcut for
+            ResumeSession), or None (defaults to NewSession).
+
+    Returns:
+        A concrete SessionConfig instance.
+    """
+    match value:
+        case None:
+            return NewSession()
+        case str() as session_id:
+            return ResumeSession(session_id=session_id)
+        case NewSession() | ResumeSession() | ContinueLatest() as config:
+            return config
+
+
+# ============================================================================
+# Main options
+# ============================================================================
 
 
 @dataclass
@@ -52,16 +135,14 @@ class ClaudeAgentOptions:
     can_use_tool: CanUseTool | None = None
     """Tool permission callback."""
     # Session
-    session_id: str | None = None
-    """Deterministic session ID for a new session."""
-    continue_conversation: bool = False
-    """Continue most recent conversation."""
-    resume: str | None = None
-    """Resume a conversation by session id."""
-    fork_session: bool = False
-    """Make resumed sessions forked to a new session ID instead of continuing."""
-    resume_session_at: str | None = None
-    """Resume from a specific message UUID (use with `resume`)."""
+    session: str | SessionConfig | None = None
+    """Session configuration.
+
+    Controls how the CLI session is started:
+    - ``None`` or ``NewSession()``: Start a fresh session.
+    - ``"session-id"`` or ``ResumeSession(session_id="...")``: Resume by ID.
+    - ``ContinueLatest()``: Continue the most recent conversation.
+    """
     # Limits
     max_turns: int | None = None
     """Maximum allowed amount of agentic turns."""
@@ -126,8 +207,7 @@ class ClaudeAgentOptions:
     """System prompt for the agent."""
     agent: str | None = None
     """Agent name for the main thread. The agent must be defined in `agents` or settings."""
-    persist_session: bool | None = None
-    """Whether to persist the session to disk."""
+
     debug_file: str | None = None
     """Write debug logs to a specific file path. Implicitly enables debug mode."""
     context_1m: bool = False
