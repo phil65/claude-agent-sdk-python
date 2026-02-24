@@ -201,7 +201,7 @@ class StatusSystemMessage(BaseMessage):
 
     type: Literal["system"] = "system"
     subtype: Literal["status"] = "status"
-    status: Literal["compacting"] | str | None
+    status: Literal["compacting"] | None
 
 
 class TriggerMetadata(TypedDict):
