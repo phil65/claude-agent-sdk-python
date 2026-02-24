@@ -21,6 +21,8 @@ from typing import Annotated, Any, Literal, assert_never
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
 from pydantic.alias_generators import to_camel
 
+from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
+
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
 # =============================================================================
@@ -70,8 +72,6 @@ class ClaudeToolResultBlock(BaseModel):
     tool_use_id: str
     content: list[dict[str, Any]] | str | None = None
     is_error: bool | None = None
-    agent_id: str | None = Field(default=None, alias="agentId")
-    """Reference to agent file for sub-agent messages."""
 
     def extract_text(self) -> str:
         """Extract text content from this tool result."""
@@ -259,14 +259,15 @@ class ClaudeMessageEntryBase(ClaudeEntryBase):
 
     is_compact_summary: bool | None = None
     request_id: str | None = None
-    # toolUseResult can be list, dict, or string (error message)
-    tool_use_result: list[dict[str, Any]] | dict[str, Any] | str | None = None
 
 
 class ClaudeUserEntry(ClaudeMessageEntryBase):
     """User message entry."""
 
     type: Literal["user"]
+    tool_use_result: (
+        list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
+    ) = None
 
 
 class ClaudeAssistantEntry(ClaudeMessageEntryBase):
@@ -434,7 +435,9 @@ class ClaudeGenericSystemEntry(ClaudeSystemEntryBase):
     retry_attempt: int | None = None
     max_retries: int | None = None
     tool_use_id: str | None = Field(default=None, alias="toolUseID")
-    tool_use_result: list[dict[str, Any]] | dict[str, Any] | str | None = None
+    tool_use_result: (
+        list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
+    ) = None
 
 
 def _system_entry_discriminator(data: Any) -> str:  # noqa: ANN401
