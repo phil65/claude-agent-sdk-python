@@ -21,32 +21,14 @@ from typing import Annotated, Any, Literal, assert_never
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
 from pydantic.alias_generators import to_camel
 
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
-# =============================================================================
-# Type aliases
-# =============================================================================
 
-StopReason = Literal["end_turn", "max_tokens", "stop_sequence", "tool_use"] | None
 UserType = Literal["external", "internal"]
 
-
-# =============================================================================
-# Base model
-# =============================================================================
-
-
-class ClaudeBaseModel(BaseModel):
-    """Base class for Claude history models with camelCase alias generation."""
-
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
-
-
-# =============================================================================
-# Content blocks (discriminated union by "type")
-# =============================================================================
 
 
 class ClaudeTextBlock(BaseModel):
@@ -54,6 +36,7 @@ class ClaudeTextBlock(BaseModel):
 
     type: Literal["text"]
     text: str
+    model_config = ConfigDict(extra=)
 
 
 class ClaudeToolUseBlock(BaseModel):
@@ -208,7 +191,7 @@ class ClaudeApiMessage(BaseModel):
     type: Literal["message"] = "message"
     role: Literal["assistant"]
     content: str | Sequence[ClaudeContentBlock]
-    stop_reason: StopReason = None
+    stop_reason: StopReason | None = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
 
@@ -227,7 +210,7 @@ class ClaudeUserMessage(BaseModel):
 # =============================================================================
 
 
-class ClaudeEntryBase(ClaudeBaseModel):
+class ClaudeEntryBase(ClaudeCodeBaseModel):
     """Common fields shared across user/assistant/system/saved_hook_context entries."""
 
     uuid: str
@@ -285,7 +268,7 @@ ClaudeEntry = ClaudeUserEntry | ClaudeAssistantEntry
 # =============================================================================
 
 
-class ClaudeDocumentContent(ClaudeBaseModel):
+class ClaudeDocumentContent(ClaudeCodeBaseModel):
     """Document content block."""
 
     type: Literal["document"]
@@ -297,7 +280,7 @@ ClaudeQueueContent = (
 )
 
 
-class ClaudeEnqueueOperation(ClaudeBaseModel):
+class ClaudeEnqueueOperation(ClaudeCodeBaseModel):
     """Enqueue operation with content."""
 
     type: Literal["queue-operation"]
@@ -307,7 +290,7 @@ class ClaudeEnqueueOperation(ClaudeBaseModel):
     timestamp: str
 
 
-class ClaudeDequeueOperation(ClaudeBaseModel):
+class ClaudeDequeueOperation(ClaudeCodeBaseModel):
     """Dequeue operation."""
 
     type: Literal["queue-operation"]
@@ -316,7 +299,7 @@ class ClaudeDequeueOperation(ClaudeBaseModel):
     timestamp: str
 
 
-class ClaudeRemoveOperation(ClaudeBaseModel):
+class ClaudeRemoveOperation(ClaudeCodeBaseModel):
     """Remove operation (steering input)."""
 
     type: Literal["queue-operation"]
@@ -326,7 +309,7 @@ class ClaudeRemoveOperation(ClaudeBaseModel):
     timestamp: str
 
 
-class ClaudePopAllOperation(ClaudeBaseModel):
+class ClaudePopAllOperation(ClaudeCodeBaseModel):
     """PopAll operation - clears all queued content."""
 
     type: Literal["queue-operation"]
@@ -354,7 +337,7 @@ class ClaudeSystemEntryBase(ClaudeEntryBase):
     slug: str | None = None
 
 
-class ClaudeHookInfo(ClaudeBaseModel):
+class ClaudeHookInfo(ClaudeCodeBaseModel):
     """Hook info in stop_hook_summary."""
 
     command: str
@@ -492,7 +475,7 @@ ClaudeSystemEntry = Annotated[
 # =============================================================================
 
 
-class ClaudeSummaryEntry(ClaudeBaseModel):
+class ClaudeSummaryEntry(ClaudeCodeBaseModel):
     """Summary entry (conversation summary)."""
 
     type: Literal["summary"]
@@ -508,7 +491,7 @@ class ClaudeSummaryEntry(ClaudeBaseModel):
 # =============================================================================
 
 
-class ClaudeFileHistorySnapshot(ClaudeBaseModel):
+class ClaudeFileHistorySnapshot(ClaudeCodeBaseModel):
     """Snapshot data in file history entry."""
 
     message_id: str
@@ -516,7 +499,7 @@ class ClaudeFileHistorySnapshot(ClaudeBaseModel):
     timestamp: str
 
 
-class ClaudeFileHistoryEntry(ClaudeBaseModel):
+class ClaudeFileHistoryEntry(ClaudeCodeBaseModel):
     """File history snapshot entry."""
 
     type: Literal["file-history-snapshot"]
@@ -530,7 +513,7 @@ class ClaudeFileHistoryEntry(ClaudeBaseModel):
 # =============================================================================
 
 
-class ClaudeMcpProgressData(ClaudeBaseModel):
+class ClaudeMcpProgressData(ClaudeCodeBaseModel):
     """Progress data for MCP tool operations."""
 
     type: Literal["mcp_progress"]
@@ -540,7 +523,7 @@ class ClaudeMcpProgressData(ClaudeBaseModel):
     elapsed_time_ms: int | None = None
 
 
-class ClaudeBashProgressData(ClaudeBaseModel):
+class ClaudeBashProgressData(ClaudeCodeBaseModel):
     """Progress data for bash tool operations."""
 
     type: Literal["bash_progress"]
@@ -550,7 +533,7 @@ class ClaudeBashProgressData(ClaudeBaseModel):
     total_lines: int | None = None
 
 
-class ClaudeHookProgressData(ClaudeBaseModel):
+class ClaudeHookProgressData(ClaudeCodeBaseModel):
     """Progress data for hook operations."""
 
     type: Literal["hook_progress"]
@@ -561,7 +544,7 @@ class ClaudeHookProgressData(ClaudeBaseModel):
     status_message: str | None = None
 
 
-class ClaudeWaitingForTaskData(ClaudeBaseModel):
+class ClaudeWaitingForTaskData(ClaudeCodeBaseModel):
     """Progress data for waiting task operations."""
 
     type: Literal["waiting_for_task"]
@@ -569,7 +552,7 @@ class ClaudeWaitingForTaskData(ClaudeBaseModel):
     task_type: str | None = None
 
 
-class ClaudeAgentProgressData(ClaudeBaseModel):
+class ClaudeAgentProgressData(ClaudeCodeBaseModel):
     """Progress data for agent/subagent operations."""
 
     type: Literal["agent_progress"]
@@ -580,14 +563,14 @@ class ClaudeAgentProgressData(ClaudeBaseModel):
     resume: dict[str, Any] | None = None
 
 
-class ClaudeQueryUpdateData(ClaudeBaseModel):
+class ClaudeQueryUpdateData(ClaudeCodeBaseModel):
     """Progress data for search query updates."""
 
     type: Literal["query_update"]
     query: str
 
 
-class ClaudeSearchResultsReceivedData(ClaudeBaseModel):
+class ClaudeSearchResultsReceivedData(ClaudeCodeBaseModel):
     """Progress data for search results received."""
 
     type: Literal["search_results_received"]
@@ -595,7 +578,7 @@ class ClaudeSearchResultsReceivedData(ClaudeBaseModel):
     query: str
 
 
-class ClaudeSkillProgressData(ClaudeBaseModel):
+class ClaudeSkillProgressData(ClaudeCodeBaseModel):
     """Progress data for skill operations."""
 
     type: Literal["skill_progress"]
@@ -603,7 +586,7 @@ class ClaudeSkillProgressData(ClaudeBaseModel):
     agent_id: str | None = None
 
 
-class ClaudeTaskProgressData(ClaudeBaseModel):
+class ClaudeTaskProgressData(ClaudeCodeBaseModel):
     """Progress data for task tracking."""
 
     type: Literal["task_progress"]
@@ -612,7 +595,7 @@ class ClaudeTaskProgressData(ClaudeBaseModel):
     message: str | None = None
 
 
-class ClaudeToolProgressData(ClaudeBaseModel):
+class ClaudeToolProgressData(ClaudeCodeBaseModel):
     """Progress data for tool execution (SDK format)."""
 
     type: Literal["tool_progress"]
@@ -638,7 +621,7 @@ ClaudeProgressData = Annotated[
 ]
 
 
-class ClaudeProgressEntry(ClaudeBaseModel):
+class ClaudeProgressEntry(ClaudeCodeBaseModel):
     """Progress entry for tracking tool execution status."""
 
     type: Literal["progress"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict
@@ -32,11 +33,17 @@ StopReason = Literal[
 ApiKeySource = Literal["none", "env", "config", "ANTHROPIC_API_KEY"]
 SettingSource = Literal["user", "project", "local"]
 
+IS_DEV = "pytest" in sys.modules
+
 
 class ClaudeCodeBaseModel(BaseModel):
     """Base model for all Claude Code Pydantic models."""
 
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+        extra="forbid" if IS_DEV else "ignore",
+    )
 
 
 # Thinking configuration types
