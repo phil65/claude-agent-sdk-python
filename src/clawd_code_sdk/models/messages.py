@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import re
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
 
+# from anthropic.types import MessageParam
+from anthropic.types.model import Model  # noqa: TC002
 from pydantic import Discriminator, TypeAdapter
 
 from clawd_code_sdk._errors import (
@@ -179,7 +181,7 @@ class InitSystemMessage(BaseSystemMessage):
     cwd: str
     tools: list[str]
     mcp_servers: list[McpServerStatus]
-    model: str
+    model: Model
     permissionMode: PermissionMode  # noqa: N815
     slash_commands: list[str]
     output_style: Literal["default", "json"]
@@ -329,8 +331,8 @@ class HookResponseSystemMessage(BaseSystemMessage):
     hook_id: str
     hook_name: str
     hook_event: str
-    outcome: Literal["success", "failure"]  # need to verify
-    exit_code: int
+    outcome: Literal["success", "error", "cancelled"]
+    exit_code: int | None = None
     stderr: str
     stdout: str
     output: str
