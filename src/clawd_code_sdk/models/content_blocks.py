@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TC003
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import Discriminator, TypeAdapter
+from pydantic import ConfigDict, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models import ToolInput  # noqa: TC001
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 
 
 if TYPE_CHECKING:
@@ -67,3 +69,10 @@ ContentBlock = Annotated[
 ]
 
 content_block_adapter: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
+
+
+class MessageParam(ClaudeCodeBaseModel):
+    """Replacement for Anthropic MessageParam which serializes to our own content blocks."""
+
+    content: Sequence[ContentBlock] | str
+    model_config = ConfigDict(extra="allow")
