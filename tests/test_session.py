@@ -15,6 +15,7 @@ from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ResultMessage,
+    ResultSuccessMessage,
 )
 from clawd_code_sdk.session import (
     ConversationTurn,
@@ -96,10 +97,9 @@ TOOL_USE_MSG = {
 }
 
 RESULT_MSG = asdict(
-    ResultMessage(
+    ResultSuccessMessage(
         uuid="msg-001",
         session_id="test-session",
-        subtype="success",
         duration_ms=1500,
         duration_api_ms=1200,
         is_error=False,
@@ -131,10 +131,9 @@ class TestConversationTurn:
     """Test ConversationTurn dataclass."""
 
     def test_frozen(self):
-        result = ResultMessage(
+        result = ResultSuccessMessage(
             uuid="r1",
             session_id="s1",
-            subtype="success",
             duration_ms=100,
             duration_api_ms=80,
             is_error=False,

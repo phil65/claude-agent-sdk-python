@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 import json
-from typing import TYPE_CHECKING, Literal
 from unittest.mock import AsyncMock
 
 import anyio
@@ -20,7 +19,7 @@ from clawd_code_sdk import (
     ClaudeSDKClient,
     InvalidRequestError,
     RateLimitError,
-    ResultMessage,
+    ResultSuccessMessage,
     ServerError,
     query,
 )
@@ -29,15 +28,10 @@ from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
 from clawd_code_sdk.models.messages import Usage
 
 
-if TYPE_CHECKING:
-    from clawd_code_sdk.models.messages import ErrorSubType
-
-
 def _make_result(
     *,
     uuid: str = "msg-001",
     session_id: str = "test-session",
-    subtype: Literal["success"] | ErrorSubType = "success",
     duration_ms: int = 1000,
     duration_api_ms: int = 800,
     is_error: bool = False,
@@ -45,11 +39,10 @@ def _make_result(
     total_cost_usd: float = 0.001,
     usage: Usage | None = None,
 ) -> dict[str, object]:
-    """Build a wire-format result message dict from a ResultMessage."""
-    msg = ResultMessage(
+    """Build a wire-format result message dict from a ResultSuccessMessage."""
+    msg = ResultSuccessMessage(
         uuid=uuid,
         session_id=session_id,
-        subtype=subtype,
         duration_ms=duration_ms,
         duration_api_ms=duration_api_ms,
         is_error=is_error,

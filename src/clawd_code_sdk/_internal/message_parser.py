@@ -10,7 +10,8 @@ from pydantic import TypeAdapter
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.models import (
     AssistantMessage,
-    ResultMessage,
+    ResultErrorMessage,
+    ResultSuccessMessage,
     StreamEvent,
     UserMessage,
     content_block_adapter,
@@ -66,9 +67,15 @@ def parse_message(data: dict[str, Any]) -> Message:
             except Exception as e:
                 raise MessageParseError(f"Failed to parse system message: {e}", data) from e
 
+        case {"type": "result", "subtype": "success", **result_data}:
+            try:
+                return ResultSuccessMessage(**result_data)
+            except TypeError as e:
+                msg = f"Missing required field in result message: {e}"
+                raise MessageParseError(msg, data) from e
         case {"type": "result", **result_data}:
             try:
-                return ResultMessage(**result_data)
+                return ResultErrorMessage(**result_data)
             except TypeError as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e

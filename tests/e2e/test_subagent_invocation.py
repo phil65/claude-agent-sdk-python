@@ -7,6 +7,8 @@ via AgentDefinition, the SDK emits the expected task lifecycle messages
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from clawd_code_sdk import (
@@ -15,13 +17,13 @@ from clawd_code_sdk import (
     ClaudeAgentOptions,
     ClaudeSDKClient,
     InitSystemMessage,
-    Message,
     ResultMessage,
 )
-from clawd_code_sdk.models.messages import (
-    TaskNotificationSystemMessage,
-    TaskStartedSystemMessage,
-)
+from clawd_code_sdk.models.messages import TaskNotificationSystemMessage, TaskStartedSystemMessage
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk import Message
 
 
 @pytest.mark.e2e

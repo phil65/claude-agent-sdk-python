@@ -381,23 +381,39 @@ class Usage(TypedDict):
 
 
 @dataclass(kw_only=True)
-class ResultMessage(BaseMessage):
-    """Result message with cost and usage information."""
+class BaseResultMessage(BaseMessage):
+    """Base result message with cost and usage information."""
 
     type: Literal["result"] = "result"
-    subtype: Literal["success"] | ErrorSubType
     duration_ms: int
     duration_api_ms: int
     is_error: bool
     num_turns: int
     total_cost_usd: float
     usage: Usage
-    result: str | None = None
-    structured_output: Any = None
-    errors: list[str] | None = None
     stop_reason: StopReason | None = None
     modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
     permission_denials: list[SDKPermissionDenial] | None = None
+
+
+@dataclass(kw_only=True)
+class ResultSuccessMessage(BaseResultMessage):
+    """Successful result message."""
+
+    subtype: Literal["success"] = "success"
+    result: str | None = None
+    structured_output: Any = None
+
+
+@dataclass(kw_only=True)
+class ResultErrorMessage(BaseResultMessage):
+    """Error result message."""
+
+    subtype: ErrorSubType
+    errors: list[str] | None = None
+
+
+ResultMessage = ResultSuccessMessage | ResultErrorMessage
 
 
 @dataclass(kw_only=True)

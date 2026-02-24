@@ -18,8 +18,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Annotated, Any, Literal, assert_never
 
-from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel, Discriminator, Field, Tag
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001

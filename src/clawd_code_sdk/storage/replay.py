@@ -61,7 +61,8 @@ from clawd_code_sdk.models.content_blocks import (
 )
 from clawd_code_sdk.models.messages import (
     AssistantMessage,
-    ResultMessage,
+    ResultErrorMessage,
+    ResultSuccessMessage,
     StreamEvent,
     ToolProgressMessage,
     Usage,
@@ -326,7 +327,7 @@ def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
 
 def _make_synthetic_result(
     turn_entries: Sequence[ClaudeJSONLEntry],
-) -> ResultMessage:
+) -> ResultSuccessMessage | ResultErrorMessage:
     """Create a synthetic ResultMessage from a turn's stored entries.
 
     Reconstructs what is available from storage:
@@ -362,23 +363,26 @@ def _make_synthetic_result(
                 if stop_reason is not None:
                     stop_reason = stop_reason
 
-    return ResultMessage(
-        uuid=last_uuid or "synthetic",
-        session_id=session_id,
-        subtype="error_during_execution" if is_error else "success",
-        duration_ms=0,
-        duration_api_ms=0,
-        is_error=is_error,
-        num_turns=len(seen_msg_ids),
-        total_cost_usd=0.0,
-        usage=Usage(
-            input_tokens=total_usage.input_tokens,
-            output_tokens=total_usage.output_tokens,
-            cache_creation_input_tokens=total_usage.cache_creation_input_tokens,
-            cache_read_input_tokens=total_usage.cache_read_input_tokens,
-        ),
-        stop_reason=stop_reason,  # type: ignore[arg-type]
+    token_usage = Usage(
+        input_tokens=total_usage.input_tokens,
+        output_tokens=total_usage.output_tokens,
+        cache_creation_input_tokens=total_usage.cache_creation_input_tokens,
+        cache_read_input_tokens=total_usage.cache_read_input_tokens,
     )
+    common = {
+        "uuid": last_uuid or "synthetic",
+        "session_id": session_id,
+        "duration_ms": 0,
+        "duration_api_ms": 0,
+        "is_error": is_error,
+        "num_turns": len(seen_msg_ids),
+        "total_cost_usd": 0.0,
+        "usage": token_usage,
+        "stop_reason": stop_reason,
+    }
+    if is_error:
+        return ResultErrorMessage(**common, subtype="error_during_execution")  # type: ignore[arg-type]
+    return ResultSuccessMessage(**common)  # type: ignore[arg-type]
 
 
 # =============================================================================
