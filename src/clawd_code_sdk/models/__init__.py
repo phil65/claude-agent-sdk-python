@@ -229,6 +229,7 @@ from .messages import (
 )
 from .options import ClaudeAgentOptions
 from .options import (
+    BaseSessionConfig,
     ContinueLatest,
     NewSession,
     ResumeSession,
@@ -371,6 +372,7 @@ __all__ = [
     "system_message_adapter",
     # options
     "ClaudeAgentOptions",
+    "BaseSessionConfig",
     "ContinueLatest",
     "NewSession",
     "ResumeSession",

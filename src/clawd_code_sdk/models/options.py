@@ -30,49 +30,51 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(kw_only=True)
-class NewSession:
+class BaseSessionConfig:
+    """Common fields for all session configurations."""
+
+    persist: bool = True
+    """Whether to persist the session to disk."""
+
+
+@dataclass(kw_only=True)
+class NewSession(BaseSessionConfig):
     """Start a fresh session.
 
     Attributes:
         session_id: Deterministic session ID, or None to auto-generate a UUID.
-        persist: Whether to persist the session to disk.
     """
 
     mode: Literal["new"] = "new"
     session_id: str | None = None
-    persist: bool = True
 
 
 @dataclass(kw_only=True)
-class ResumeSession:
+class ResumeSession(BaseSessionConfig):
     """Resume an existing session by ID.
 
     Attributes:
         session_id: The session ID to resume.
         fork: If True, fork to a new session ID instead of continuing in-place.
         at_message: Resume from a specific message UUID within the session.
-        persist: Whether to persist the session to disk.
     """
 
     mode: Literal["resume"] = "resume"
     session_id: str
     fork: bool = False
     at_message: str | None = None
-    persist: bool = True
 
 
 @dataclass(kw_only=True)
-class ContinueLatest:
+class ContinueLatest(BaseSessionConfig):
     """Continue the most recent conversation.
 
     Attributes:
         fork: If True, fork to a new session ID instead of continuing in-place.
-        persist: Whether to persist the session to disk.
     """
 
     mode: Literal["continue"] = "continue"
     fork: bool = False
-    persist: bool = True
 
 
 SessionConfig = NewSession | ResumeSession | ContinueLatest
@@ -98,7 +100,7 @@ def resolve_session_config(value: str | SessionConfig | None) -> SessionConfig:
             return NewSession()
         case str() as session_id:
             return ResumeSession(session_id=session_id)
-        case NewSession() | ResumeSession() | ContinueLatest() as config:
+        case BaseSessionConfig() as config:
             return config
 
 

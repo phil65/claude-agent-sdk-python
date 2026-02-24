@@ -125,30 +125,20 @@ class SubprocessCLITransport(Transport):
 
         session = resolve_session_config(self._options.session)
         match session:
-            case NewSession(session_id=sid, persist=persist):
-                if sid is not None:
-                    cmd.extend(["--session-id", sid])
-                if not persist:
-                    cmd.append("--no-persist-session")
-            case ResumeSession(
-                session_id=sid,
-                fork=fork,
-                at_message=at_msg,
-                persist=persist,
-            ):
+            case NewSession(session_id=sid) if sid is not None:
+                cmd.extend(["--session-id", sid])
+            case ResumeSession(session_id=sid, fork=fork, at_message=at_msg):
                 cmd.extend(["--resume", sid])
                 if fork:
                     cmd.append("--fork-session")
                 if at_msg is not None:
                     cmd.extend(["--resume-session-at", at_msg])
-                if not persist:
-                    cmd.append("--no-persist-session")
-            case ContinueLatest(fork=fork, persist=persist):
+            case ContinueLatest(fork=fork):
                 cmd.append("--continue")
                 if fork:
                     cmd.append("--fork-session")
-                if not persist:
-                    cmd.append("--no-persist-session")
+        if not session.persist:
+            cmd.append("--no-persist-session")
 
         # Handle settings and sandbox: merge sandbox into settings if both are provided
         if settings_value := self._options.build_settings_value():
