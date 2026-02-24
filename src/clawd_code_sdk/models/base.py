@@ -21,6 +21,7 @@ SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/
 ModelName = Literal["sonnet", "opus", "haiku"]
 PermissionBehavior = Literal["allow", "deny", "ask"]
 ReasoningEffort = Literal["low", "medium", "high", "max"]
+TaskStatus = Literal["completed", "failed", "stopped"]
 StopReason = Literal[
     "end_turn",
     "max_tokens",

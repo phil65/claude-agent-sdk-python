@@ -23,7 +23,7 @@ from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa
 from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
-from .base import ApiKeySource, PermissionMode, StopReason  # noqa: TC001
+from .base import ApiKeySource, PermissionMode, StopReason, TaskStatus  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -258,7 +258,7 @@ class TaskNotificationSystemMessage(BaseSystemMessage):
 
     subtype: Literal["task_notification"] = "task_notification"
     task_id: str = ""
-    status: Literal["completed", "failed", "stopped"] = "completed"
+    status: TaskStatus = "completed"
     output_file: str = ""
     summary: str = ""
     tool_use_id: str | None = None
