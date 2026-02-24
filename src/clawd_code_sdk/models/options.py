@@ -171,17 +171,14 @@ class ClaudeAgentOptions:
     """Environment variables for the CLI subprocess."""
     user: str | None = None
     """User for the AnyIO process."""
-    # Other
-    settings: str | None = None
-    """Path to a settings JSON file or a JSON string."""
+    # CWD
     add_dirs: list[str | Path] = field(default_factory=list)
     """Add additional working directories."""
     cwd: str | Path | None = None
     """The working directory for the agent."""
-    hooks: dict[HookEvent, list[HookMatcher]] | None = None
-    """Hook configurations."""
-    agents: dict[str, AgentDefinition] | None = None
-    """SubAgent definitions."""
+    # Settings
+    settings: str | None = None
+    """Path to a settings JSON file or a JSON string."""
     setting_sources: list[SettingSource] | None = None
     """List of sources to load settings from."""
     sandbox: SandboxSettings | None = None
@@ -190,6 +187,15 @@ class ClaudeAgentOptions:
     Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
     not from these sandbox settings.
     """
+    debug_file: str | None = None
+    """Write debug logs to a specific file path. Implicitly enables debug mode."""
+    # Agent config
+    system_prompt: str | SystemPromptPreset | None = None
+    """System prompt for the agent."""
+    hooks: dict[HookEvent, list[HookMatcher]] | None = None
+    """Hook configurations."""
+    agents: dict[str, AgentDefinition] | None = None
+    """SubAgent definitions."""
     plugins: list[SdkPluginConfig] = field(default_factory=list)
     """"Plugin configurations to load."""
     output_format: dict[str, Any] | None = None
@@ -197,19 +203,15 @@ class ClaudeAgentOptions:
 
     Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
     """
+    # Other
     enable_file_checkpointing: bool = False
     """Enable file checkpointing to track file changes during the session.
 
     When enabled, files can be rewound to their state at any user message
     using `ClaudeSDKClient.rewind_files()`.
     """
-    system_prompt: str | SystemPromptPreset | None = None
-    """System prompt for the agent."""
     agent: str | None = None
     """Agent name for the main thread. The agent must be defined in `agents` or settings."""
-
-    debug_file: str | None = None
-    """Write debug logs to a specific file path. Implicitly enables debug mode."""
     context_1m: bool = False
     """Enable 1M token context window (Sonnet 4/4.5 only)."""
     prompt_suggestions: bool | None = None
