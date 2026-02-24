@@ -40,6 +40,8 @@ class ClaudeAgentOptions:
     """MCP servers for the agent."""
     chrome: bool = False
     """Add the chrome-tools MCP server (-> Claude Code browser extension) to the agent."""
+    strict_mcp_config: bool = False
+    """Enforce strict validation of MCP server configurations."""
     # Permissions
     permission_mode: PermissionMode | None = None
     """Permission mode."""
@@ -75,27 +77,28 @@ class ClaudeAgentOptions:
     """Controls thinking behavior."""
     effort: ReasoningEffort | None = None
     """Effort level for thinking depth."""
-    # Other
-    cwd: str | Path | None = None
-    """The working directory for the agent."""
+    # CLI SubProcess
     cli_path: str | Path | None = None
     """CLI path override (auto-detects by default)."""
-    settings: str | None = None
-    """Path to a settings JSON file or a JSON string."""
-    add_dirs: list[str | Path] = field(default_factory=list)
-    """Add additional working directories."""
-    env: dict[str, str] = field(default_factory=dict)
-    """Environment variables for the CLI subprocess."""
     extra_args: dict[str, str | None] = field(default_factory=dict)
     """Arbitrary extra CLI flags."""
     max_buffer_size: int | None = None
     """Max bytes when buffering CLI stdout."""
     stderr: Callable[[str], None] | None = None
     """Callback for stderr output from CLI."""
-    hooks: dict[HookEvent, list[HookMatcher]] | None = None
-    """Hook configurations."""
+    env: dict[str, str] = field(default_factory=dict)
+    """Environment variables for the CLI subprocess."""
     user: str | None = None
     """User for the AnyIO process."""
+    # Other
+    settings: str | None = None
+    """Path to a settings JSON file or a JSON string."""
+    add_dirs: list[str | Path] = field(default_factory=list)
+    """Add additional working directories."""
+    cwd: str | Path | None = None
+    """The working directory for the agent."""
+    hooks: dict[HookEvent, list[HookMatcher]] | None = None
+    """Hook configurations."""
     agents: dict[str, AgentDefinition] | None = None
     """SubAgent definitions."""
     setting_sources: list[SettingSource] | None = None
@@ -127,8 +130,6 @@ class ClaudeAgentOptions:
     """Whether to persist the session to disk."""
     debug_file: str | None = None
     """Write debug logs to a specific file path. Implicitly enables debug mode."""
-    strict_mcp_config: bool = False
-    """Enforce strict validation of MCP server configurations."""
     context_1m: bool = False
     """Enable 1M token context window (Sonnet 4/4.5 only)."""
     prompt_suggestions: bool | None = None
