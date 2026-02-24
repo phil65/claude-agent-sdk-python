@@ -414,10 +414,11 @@ class ToolProgressMessage(BaseMessage):
     """Progress update for a running tool."""
 
     type: Literal["tool_progress"] = "tool_progress"
-    tool_use_id: str = ""
-    tool_name: str = ""
-    parent_tool_use_id: str | None = None
-    elapsed_time_seconds: float = 0.0
+    tool_use_id: str
+    tool_name: str
+    parent_tool_use_id: str | None
+    elapsed_time_seconds: float
+    task_id: str | None = None
 
 
 @dataclass(kw_only=True)
@@ -425,8 +426,8 @@ class ToolUseSummaryMessage(BaseMessage):
     """Summary of preceding tool uses."""
 
     type: Literal["tool_use_summary"] = "tool_use_summary"
-    summary: str = ""
-    preceding_tool_use_ids: list[str] | None = None
+    summary: str
+    preceding_tool_use_ids: list[str]
 
 
 @dataclass(kw_only=True)
