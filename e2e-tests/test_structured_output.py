@@ -1,7 +1,7 @@
 """End-to-end tests for structured output with real Claude API calls.
 
 These tests verify that the output_schema feature works correctly by making
-actual API calls to Claude with JSON Schema validation.
+actual API calls to Claude with JSON schema validation.
 """
 
 import os
@@ -30,8 +30,7 @@ async def test_simple_structured_output():
         },
         "required": ["file_count", "has_tests"],
     }
-    output_fmt = {"type": "json_schema", "schema": schema}
-    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=".")
+    options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=".")
     # Agent must use Glob/Bash to count files
     result_message = None
     prompt = "Count how many Python files are in src/clawd_code_sdk/ and check if there are any test files. Use tools to explore the filesystem."
@@ -77,8 +76,7 @@ async def test_nested_structured_output():
         },
         "required": ["analysis", "words"],
     }
-    output_fmt = {"type": "json_schema", "schema": schema}
-    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits")
+    options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits")
     prompt = (
         "Analyze this text: 'Hello world'. Provide word count, character count, and list of words."
     )
@@ -118,8 +116,7 @@ async def test_structured_output_with_enum():
         },
         "required": ["has_tests", "test_framework"],
     }
-    output_fmt = {"type": "json_schema", "schema": schema}
-    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=".")
+    options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=".")
     result_message = None
     prompt = "Search for test files in the tests/ directory. Determine which test framework is being used (pytest/unittest/nose) and count how many test files exist. Use Grep to search for framework imports."
     async for message in query(prompt=prompt, options=options):
@@ -153,9 +150,8 @@ async def test_structured_output_with_tools():
         },
         "required": ["file_count", "has_readme"],
     }
-    output_fmt = {"type": "json_schema", "schema": schema}
     cwd = tempfile.gettempdir()
-    options = ClaudeAgentOptions(output_format=output_fmt, permission_mode="acceptEdits", cwd=cwd)
+    options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=cwd)
     result_message = None
     prompt = "Count how many files are in the current directory and check if there's a README file. Use tools as needed."
     async for message in query(prompt=prompt, options=options):

@@ -125,10 +125,17 @@ class ClaudeSDKClient:
             case {"type": "preset", "append": str() as append}:
                 append_system_prompt = append
 
-        # Extract JSON schema for initialize request
-        json_schema: dict[str, Any] | None = None
-        if isinstance((f := self.options.output_format), dict) and f.get("type") == "json_schema":
-            json_schema = f.get("schema")
+        # JSON schema for structured output
+        json_schema: dict[str, Any] | None
+        match self.options.output_schema:
+            case type() as tp:
+                from pydantic import TypeAdapter
+
+                json_schema = TypeAdapter(tp).json_schema()
+            case dict() as schema:
+                json_schema = schema
+            case None:
+                json_schema = None
 
         # Create Query to handle control protocol
         self._query = Query(

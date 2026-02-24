@@ -198,10 +198,20 @@ class ClaudeAgentOptions:
     """SubAgent definitions."""
     plugins: list[SdkPluginConfig] = field(default_factory=list)
     """"Plugin configurations to load."""
-    output_format: dict[str, Any] | None = None
-    """Output format for structured outputs (matches Messages API structure)
+    output_schema: dict[str, Any] | type | None = None
+    """JSON schema for structured output.
 
-    Example: {"type": "json_schema", "schema": {"type": "object", "properties": {...}}}
+    Accepts either a JSON schema dict or a Python type (Pydantic model,
+    dataclass, TypedDict, etc.) which will be converted to a JSON schema
+    automatically.
+
+    When set, Claude will return responses conforming to this schema.
+
+    Examples:
+        # As a dict
+        output_schema={"type": "object", "properties": {"name": {"type": "string"}}}
+        # As a type
+        output_schema=MyPydanticModel
     """
     # Other
     enable_file_checkpointing: bool = False
