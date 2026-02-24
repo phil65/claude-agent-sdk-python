@@ -36,7 +36,6 @@ class ClaudeTextBlock(BaseModel):
 
     type: Literal["text"]
     text: str
-    model_config = ConfigDict(extra=)
 
 
 class ClaudeToolUseBlock(BaseModel):
