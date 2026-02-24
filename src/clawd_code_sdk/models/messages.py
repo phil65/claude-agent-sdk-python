@@ -261,6 +261,27 @@ class TaskNotificationSystemMessage(BaseMessage):
     tool_use_id: str | None = None
 
 
+class TaskProgressUsage(TypedDict):
+    """Usage info for a task progress update."""
+
+    total_tokens: int
+    tool_uses: int
+    duration_ms: int
+
+
+@dataclass(kw_only=True)
+class TaskProgressSystemMessage(BaseMessage):
+    """System message emitted periodically with task progress updates."""
+
+    type: Literal["system"] = "system"
+    subtype: Literal["task_progress"] = "task_progress"
+    task_id: str = ""
+    tool_use_id: str | None = None
+    description: str = ""
+    usage: TaskProgressUsage | None = None
+    last_tool_name: str | None = None
+
+
 class FilePersistedEntry(TypedDict):
     """A single file that was persisted."""
 
@@ -428,6 +449,7 @@ SystemMessageUnion = Annotated[
     | HookResponseSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
+    | TaskProgressSystemMessage
     | FilesPersistedSystemMessage,
     Discriminator("subtype"),
 ]
@@ -449,6 +471,7 @@ Message = (
     | StatusSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
+    | TaskProgressSystemMessage
     | FilesPersistedSystemMessage
     | ToolProgressMessage
     | ToolUseSummaryMessage
