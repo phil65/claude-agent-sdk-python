@@ -20,6 +20,7 @@ from clawd_code_sdk import (
     UserMessage,
 )
 from clawd_code_sdk.models.content_blocks import TextBlock, ToolResultBlock, ToolUseBlock
+from clawd_code_sdk.models.messages import ToolProgressMessage
 
 
 if TYPE_CHECKING:
@@ -39,13 +40,8 @@ async def test_mcp_image_tool_wire_format():
 
     options = ClaudeAgentOptions(
         mcp_servers={
-            "image_test": {
-                "type": "stdio",
-                "command": sys.executable,
-                "args": [mcp_server_path],
-            },
+            "image_test": {"type": "stdio", "command": sys.executable, "args": [mcp_server_path]},
         },
-        allowed_tools=["mcp__image_test__get_test_image"],
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
         max_turns=3,
@@ -131,7 +127,6 @@ async def test_mcp_progress_tool_wire_format():
                 "args": [mcp_server_path],
             },
         },
-        allowed_tools=["mcp__progress_test__test_progress"],
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
         max_turns=3,
@@ -181,24 +176,17 @@ async def test_mcp_progress_tool_wire_format():
     if isinstance(parsed, str):
         assert "hello from test" in parsed
     elif isinstance(parsed, list):
-        text_parts = [
-            b.text
-            for b in parsed
-            if isinstance(b, TextBlock)  # type: ignore[union-attr]
-        ]
+        text_parts = [b.text for b in parsed if isinstance(b, TextBlock)]  # type: ignore[union-attr]
         combined = " ".join(text_parts)
         assert "hello from test" in combined, f"Expected message in result, got: {combined}"
 
-    # Check for ToolProgressMessage events (MCP progress notifications)
-    from clawd_code_sdk.models.messages import ToolProgressMessage
-
     progress_messages = [m for m in messages if isinstance(m, ToolProgressMessage)]
-    # Progress messages may or may not arrive depending on CLI version and timing,
-    # so we only assert on them if present
-    if progress_messages:
-        for pm in progress_messages:
-            assert pm.tool_name, "Progress message should have a tool_name"
-            assert pm.elapsed_time_seconds >= 0, "elapsed_time_seconds should be non-negative"
+    # Right now no progress messages emitted from the subprocess, seems to be a bug.
+    # rever assertion in case it changes
+    assert not progress_messages
+    for pm in progress_messages:
+        assert pm.tool_name, "Progress message should have a tool_name"
+        assert pm.elapsed_time_seconds >= 0, "elapsed_time_seconds should be non-negative"
 
 
 if __name__ == "__main__":
