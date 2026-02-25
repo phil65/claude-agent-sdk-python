@@ -1,0 +1,13 @@
+BASH_DEFAULT_TIMEOUT_MS	Default timeout for long-running bash commands	
+BASH_MAX_OUTPUT_LENGTH	Maximum number of characters in bash outputs before they are middle-truncated	
+BASH_MAX_TIMEOUT_MS	Maximum timeout the model can set for long-running bash commands	
+CLAUDE_AUTOCOMPACT_PCT_OVERRIDE	Set the percentage of context capacity (1-100) at which auto-compaction triggers. By default, auto-compaction triggers at approximately 95% capacity. Use lower values like 50 to compact earlier. Values above the default threshold have no effect. Applies to both main conversations and subagents. This percentage aligns with the context_window.used_percentage field available in status line
+CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR	Return to the original working directory after each Bash command	
+CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD	Set to 1 to load CLAUDE.md files from directories specified with --add-dir. By default, additional directories do not load memory files
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS	Set to 1 to enable agent teams. Agent teams are experimental and disabled by default	
+CLAUDE_CODE_FILE_READ_MAX_OUTPUT_TOKENS	Override the default token limit for file reads. Useful when you need to read larger files in full
+CLAUDE_CODE_MAX_OUTPUT_TOKENS	Set the maximum number of output tokens for most requests. Default: 32,000. Maximum: 64,000. Increasing this value reduces the effective context window available before auto-compaction triggers.
+CLAUDE_CODE_TASK_LIST_ID	Share a task list across sessions. Set the same ID in multiple Claude Code instances to coordinate on a shared task list. See Task list	
+CLAUDE_CODE_TEAM_NAME	Name of the agent team this teammate belongs to. Set automatically on agent team members
+ENABLE_TOOL_SEARCH	Controls MCP tool search. Values: auto (default, enables at 10% context), auto:N (custom threshold, e.g., auto:5 for 5%), true (always on), false (disabled)
+MAX_MCP_OUTPUT_TOKENS	Maximum number of tokens allowed in MCP tool responses. Claude Code displays a warning when output exceeds 10,000 tokens (default: 25000)
