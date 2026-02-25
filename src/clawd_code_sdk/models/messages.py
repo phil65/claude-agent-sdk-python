@@ -48,6 +48,7 @@ ErrorSubType = Literal[
     "error_max_budget_usd",
     "error_max_structured_output_retries",
 ]
+Outcome = Literal["success", "error", "cancelled"]
 
 
 class UserPromptMessageContent(TypedDict):
@@ -115,7 +116,7 @@ class AssistantMessage:
 
     type: Literal["assistant"] = "assistant"
     content: Sequence[ContentBlock]
-    model: str
+    model: Model | str
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
     session_id: str | None = None  # not sure these two are needed.
@@ -303,11 +304,9 @@ class FilesPersistedSystemMessage(BaseSystemMessage):
     """System message emitted when files have been persisted."""
 
     subtype: Literal["files_persisted"] = "files_persisted"
-    files: list[FilePersistedEntry] | None = None
-    failed: list[FilePersistedFailure] | None = None
-    processed_at: str = ""
-    uuid: str = ""
-    session_id: str = ""
+    files: list[FilePersistedEntry]
+    failed: list[FilePersistedFailure]
+    processed_at: str
 
 
 @dataclass(kw_only=True)
@@ -315,12 +314,12 @@ class HookProgressSystemMessage(BaseSystemMessage):
     """Progress update from a running hook."""
 
     subtype: Literal["hook_progress"] = "hook_progress"
-    hook_id: str = ""
-    hook_name: str = ""
-    hook_event: str = ""
-    stdout: str = ""
-    stderr: str = ""
-    output: str = ""
+    hook_id: str
+    hook_name: str
+    hook_event: str
+    stdout: str
+    stderr: str
+    output: str
 
 
 @dataclass(kw_only=True)
@@ -331,7 +330,7 @@ class HookResponseSystemMessage(BaseSystemMessage):
     hook_id: str
     hook_name: str
     hook_event: str
-    outcome: Literal["success", "error", "cancelled"]
+    outcome: Outcome
     exit_code: int | None = None
     stderr: str
     stdout: str
