@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 # Content block types
-@dataclass
+@dataclass(kw_only=True)
 class TextBlock:
     """Text content block."""
 
@@ -25,7 +25,7 @@ class TextBlock:
     text: str = ""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ThinkingBlock:
     """Thinking content block."""
 
@@ -34,7 +34,7 @@ class ThinkingBlock:
     signature: str = ""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ToolUseBlock:
     """Tool use content block."""
 
@@ -45,7 +45,7 @@ class ToolUseBlock:
     caller: dict[str, str] | None = None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ToolResultBlock:
     """Tool result content block."""
 
