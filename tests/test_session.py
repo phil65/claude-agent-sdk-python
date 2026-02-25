@@ -89,7 +89,7 @@ TOOL_USE_MSG = {
                 "type": "tool_use",
                 "id": "tool-123",
                 "name": "Read",
-                "input": {"path": "/tmp/test.py"},
+                "input": {"file_path": "/tmp/test.py"},
             },
         ],
         model="claude-sonnet-4-5-20250514",
@@ -260,7 +260,7 @@ class TestSession:
                 tc = turn.tool_calls[0]
                 assert tc.tool_use_id == "tool-123"
                 assert tc.tool_name == "Read"
-                assert tc.input == {"path": "/tmp/test.py"}
+                assert tc.input == {"file_path": "/tmp/test.py"}
 
         anyio.run(_test)
 
