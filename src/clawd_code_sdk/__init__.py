@@ -20,6 +20,7 @@ from ._internal.transport import Transport
 from ._version import __version__
 from .anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
+from .list_sessions import list_sessions
 from .models import (
     AgentDefinition,
     ContinueLatest,
@@ -33,6 +34,7 @@ from .models import (
     HookInput,
     HookJSONOutput,
     HookMatcher,
+    ListSessionsOptions,
     McpSdkServerConfig,
     McpServerConfig,
     Message,
@@ -81,6 +83,7 @@ from .models import (
     UserPromptSubmitHookInput,
     NewSession,
     ResumeSession,
+    SDKSessionInfo,
     SessionConfig,
 )
 from .query import query
@@ -102,14 +105,17 @@ __cli_version__ = "2.1.11"
 __all__ = [
     # Main exports
     "query",
+    "list_sessions",
     "__version__",
     # Transport
     "Transport",
     "ClaudeSDKClient",
     # Session config
     "ContinueLatest",
+    "ListSessionsOptions",
     "NewSession",
     "ResumeSession",
+    "SDKSessionInfo",
     "SessionConfig",
     # Types
     "PermissionMode",

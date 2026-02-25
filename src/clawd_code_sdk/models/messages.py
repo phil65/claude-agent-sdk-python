@@ -456,6 +456,39 @@ class AuthStatusMessage(BaseMessage):
     error: str | None = None
 
 
+@dataclass(kw_only=True)
+class SDKSessionInfo:
+    """Session metadata returned by list_sessions.
+
+    Contains summary information about a stored session without
+    loading the full conversation history.
+    """
+
+    session_id: str
+    """Unique session identifier (UUID)."""
+
+    summary: str
+    """Display title for the session: custom title, auto-generated summary, or first prompt."""
+
+    last_modified: int
+    """Last modified time in milliseconds since epoch."""
+
+    file_size: int
+    """Session file size in bytes."""
+
+    custom_title: str | None = None
+    """User-set session title via /rename."""
+
+    first_prompt: str | None = None
+    """First meaningful user prompt in the session."""
+
+    git_branch: str | None = None
+    """Git branch at the end of the session."""
+
+    cwd: str | None = None
+    """Working directory for the session."""
+
+
 SystemMessageUnion = Annotated[
     InitSystemMessage
     | HookStartedSystemMessage

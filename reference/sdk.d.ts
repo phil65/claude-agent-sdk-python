@@ -212,6 +212,7 @@ declare namespace coreTypes {
         SDKResultError,
         SDKResultMessage,
         SDKResultSuccess,
+        SDKSessionInfo,
         SDKStatusMessage,
         SDKStatus,
         SDKSystemMessage,
@@ -301,6 +302,38 @@ export declare type InferShape<T extends AnyZodRawShape> = {
 export declare type JsonSchemaOutputFormat = {
     type: 'json_schema';
     schema: Record<string, unknown>;
+};
+
+/**
+ * List sessions with metadata.
+ *
+ * When `dir` is provided, returns sessions for that project directory
+ * and its git worktrees. When omitted, returns sessions across all
+ * projects.
+ *
+ * @example
+ * ```typescript
+ * // List sessions for a specific project
+ * const sessions = await listSessions({ dir: '/path/to/project' })
+ *
+ * // List all sessions across all projects
+ * const allSessions = await listSessions()
+ * ```
+ */
+export declare function listSessions(_options?: ListSessionsOptions): Promise<SDKSessionInfo[]>;
+
+/**
+ * Options for listing sessions.
+ */
+export declare type ListSessionsOptions = {
+    /**
+     * Directory to list sessions for. When provided, returns sessions for
+     * this project directory (and its git worktrees). When omitted, returns
+     * sessions across all projects.
+     */
+    dir?: string;
+    /** Maximum number of sessions to return. */
+    limit?: number;
 };
 
 export declare type McpClaudeAIProxyServerConfig = {
@@ -1622,6 +1655,44 @@ export declare interface SDKSession {
     /** Async disposal support (calls close if not already closed) */
     [Symbol.asyncDispose](): Promise<void>;
 }
+
+/**
+ * Session metadata returned by listSessions.
+ */
+export declare type SDKSessionInfo = {
+    /**
+     * Unique session identifier (UUID).
+     */
+    sessionId: string;
+    /**
+     * Display title for the session: custom title, auto-generated summary, or first prompt.
+     */
+    summary: string;
+    /**
+     * Last modified time in milliseconds since epoch.
+     */
+    lastModified: number;
+    /**
+     * Session file size in bytes.
+     */
+    fileSize: number;
+    /**
+     * User-set session title via /rename.
+     */
+    customTitle?: string;
+    /**
+     * First meaningful user prompt in the session.
+     */
+    firstPrompt?: string;
+    /**
+     * Git branch at the end of the session.
+     */
+    gitBranch?: string;
+    /**
+     * Working directory for the session.
+     */
+    cwd?: string;
+};
 
 /**
  * V2 API - UNSTABLE

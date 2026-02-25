@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 
 if TYPE_CHECKING:
@@ -83,6 +83,25 @@ SessionConfig = NewSession | ResumeSession | ContinueLatest
 Can also be specified as a plain ``str``, which is a shortcut for
 ``ResumeSession(session_id=str)``.
 """
+
+
+class ListSessionsOptions(TypedDict, total=False):
+    """Options for listing sessions.
+
+    When ``dir`` is provided, returns sessions for that project directory
+    and its git worktrees. When omitted, returns sessions across all projects.
+    """
+
+    dir: str
+    """Directory to list sessions for.
+
+    When provided, returns sessions for this project directory
+    (and its git worktrees). When omitted, returns sessions
+    across all projects.
+    """
+
+    limit: int
+    """Maximum number of sessions to return."""
 
 
 def resolve_session_config(value: str | SessionConfig | None) -> SessionConfig:
