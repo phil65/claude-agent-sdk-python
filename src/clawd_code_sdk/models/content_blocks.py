@@ -22,7 +22,7 @@ class TextBlock:
     """Text content block."""
 
     type: Literal["text"] = field(default="text", repr=False)
-    text: str = ""
+    text: str
 
 
 @dataclass(kw_only=True)
@@ -30,8 +30,8 @@ class ThinkingBlock:
     """Thinking content block."""
 
     type: Literal["thinking"] = field(default="thinking", repr=False)
-    thinking: str = ""
-    signature: str = ""
+    thinking: str
+    signature: str
 
 
 @dataclass(kw_only=True)
