@@ -209,6 +209,7 @@ class StatusSystemMessage(BaseSystemMessage):
 
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | None
+    permissionMode: PermissionMode | None = None  # noqa: N815
 
 
 class TriggerMetadata(TypedDict):
