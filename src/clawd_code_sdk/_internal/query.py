@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 import anyenv
 import anyio
-from pydantic import BaseModel
 
 from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
 from clawd_code_sdk.models import (
@@ -633,20 +632,10 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 request = ListToolsRequest()
                 result = await handler(request)
                 # Convert MCP result to JSONRPC response
-                tools_data = []
-                for tool in result.root.tools:  # type: ignore[union-attr]
-                    tool_data: dict[str, Any] = {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "inputSchema": (
-                            tool.inputSchema.model_dump()
-                            if isinstance(tool.inputSchema, BaseModel)
-                            else tool.inputSchema
-                        ),
-                    }
-                    if annots := tool.annotations:
-                        tool_data["annotations"] = annots.model_dump(exclude_none=True)
-                    tools_data.append(tool_data)
+                tools_data = [
+                    tool.model_dump(exclude_none=True, by_alias=True)
+                    for tool in result.root.tools  # type: ignore[union-attr]
+                ]
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": tools_data})
 
             case "tools/call" if handler := server.request_handlers.get(CallToolRequest):
