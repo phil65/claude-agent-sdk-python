@@ -6,7 +6,7 @@ from contextlib import suppress
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 import anyenv
 import anyio
@@ -678,12 +678,8 @@ def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, An
 
     for item in content:
         match item:
-            case TextContent(text=text):
-                yield {"type": "text", "text": text}
-            case ImageContent(data=data, mimeType=mime) | AudioContent(data=data, mimeType=mime):
-                yield {"type": "image", "data": data, "mimeType": mime}
-            case ResourceLink():
-                pass
+            case TextContent() | ImageContent() | AudioContent():
+                yield item.model_dump(exclude_none=True, by_alias=True)
             case EmbeddedResource(
                 resource=BlobResourceContents(mimeType=mime, uri=uri)
                 | TextResourceContents(mimeType=mime, uri=uri) as resource
@@ -697,3 +693,7 @@ def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, An
                 data = resource.blob if isinstance(resource, BlobResourceContents) else ""
                 dct = {"type": typ, "media_type": mime, "data": data}
                 yield {"type": "document", "source": dct}
+            case ResourceLink() | EmbeddedResource():
+                pass
+            case _ as unreachable:
+                assert_never(unreachable)
