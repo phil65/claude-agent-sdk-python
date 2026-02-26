@@ -687,16 +687,13 @@ def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, An
             case EmbeddedResource(
                 resource=BlobResourceContents(mimeType=mime, uri=uri)
                 | TextResourceContents(mimeType=mime, uri=uri) as resource
-            ):
+            ) if (uri_str := str(uri)).startswith("document://") or mime == "application/pdf":
                 # EmbeddedResource - check if it's a document (PDF, etc.)
-                uri_str = str(uri)
-                if uri_str.startswith("document://") or mime == "application/pdf":
-                    # Convert EmbeddedResource to Anthropic document format
-                    typ = (
-                        uri_str.removeprefix("document://")
-                        if uri_str.startswith("document://")
-                        else "base64"
-                    )
-                    data = resource.blob if isinstance(resource, BlobResourceContents) else ""
-                    dct = {"type": typ, "media_type": mime, "data": data}
-                    yield {"type": "document", "source": dct}
+                typ = (
+                    uri_str.removeprefix("document://")
+                    if uri_str.startswith("document://")
+                    else "base64"
+                )
+                data = resource.blob if isinstance(resource, BlobResourceContents) else ""
+                dct = {"type": typ, "media_type": mime, "data": data}
+                yield {"type": "document", "source": dct}

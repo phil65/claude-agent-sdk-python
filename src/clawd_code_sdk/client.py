@@ -8,6 +8,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import anyenv
+from pydantic import TypeAdapter
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
@@ -129,8 +130,6 @@ class ClaudeSDKClient:
         json_schema: dict[str, Any] | None
         match self.options.output_schema:
             case type() as typ:
-                from pydantic import TypeAdapter
-
                 json_schema = TypeAdapter(typ).json_schema()
             case dict() as schema:
                 json_schema = schema
