@@ -118,13 +118,14 @@ class ClaudeSDKClient:
         # Extract system prompt for initialize request
         system_prompt: str | None = None
         append_system_prompt: str | None = None
-        match self.options.system_prompt:
-            case None:
-                system_prompt = ""  # Explicitly clear default system prompt
-            case str() as prompt_str:
-                system_prompt = prompt_str
-            case {"type": "preset", "append": str() as append}:
-                append_system_prompt = append
+        if self.options.system_prompt is None:
+            if not self.options.include_builtin_system_prompt:
+                system_prompt = ""  # Clear the builtin prompt
+            # else: send nothing, CLI uses its default builtin prompt
+        elif self.options.include_builtin_system_prompt:
+            append_system_prompt = self.options.system_prompt
+        else:
+            system_prompt = self.options.system_prompt
 
         # JSON schema for structured output
         json_schema: dict[str, Any] | None

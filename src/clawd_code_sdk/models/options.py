@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.base import ModelName
     from clawd_code_sdk.models.permissions import OnUserQuestion
 
-    from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
+    from .agents import AgentDefinition, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
     from .hooks import HookEvent, HookMatcher
     from .mcp import McpServerConfig, SdkPluginConfig
@@ -219,8 +219,14 @@ class ClaudeAgentOptions:
     debug_file: str | None = None
     """Write debug logs to a specific file path. Implicitly enables debug mode."""
     # Agent config
-    system_prompt: str | SystemPromptPreset | None = None
+    system_prompt: str | None = None
     """System prompt for the agent."""
+    include_builtin_system_prompt: bool = True
+    """Whether to include Claude Code's builtin system prompt.
+
+    When True (default) and system_prompt is set, it is appended to the
+    builtin system prompt. When False, the system_prompt replaces it entirely.
+    """
     hooks: dict[HookEvent, list[HookMatcher]] | None = None
     """Hook configurations."""
     agents: dict[str, AgentDefinition] | None = None
