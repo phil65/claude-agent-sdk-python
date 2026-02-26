@@ -268,6 +268,30 @@ export declare const EXIT_REASONS: readonly ["clear", "logout", "prompt_input_ex
 
 export declare type ExitReason = 'clear' | 'logout' | 'prompt_input_exit' | 'other' | 'bypass_permissions_disabled';
 
+/**
+ * Reads a session's conversation messages from its JSONL transcript file.
+ *
+ * Parses the transcript, builds the conversation chain via parentUuid links,
+ * and returns user/assistant messages in chronological order.
+ *
+ * @param sessionId - UUID of the session to read
+ * @param options - Optional dir, limit, and offset
+ * @returns Array of user/assistant messages, or empty array if session not found
+ */
+export declare function getSessionMessages(_sessionId: string, _options?: GetSessionMessagesOptions): Promise<SessionMessage[]>;
+
+/**
+ * Options for retrieving session messages.
+ */
+export declare type GetSessionMessagesOptions = {
+    /** Project directory to find the session in. If omitted, searches all projects. */
+    dir?: string;
+    /** Maximum number of messages to return. */
+    limit?: number;
+    /** Number of messages to skip from the start. */
+    offset?: number;
+};
+
 export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "SubagentStart", "SubagentStop", "PreCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "ConfigChange", "WorktreeCreate", "WorktreeRemove"];
 
 /**
@@ -1874,6 +1898,18 @@ export declare type SDKUserMessageReplay = {
 export declare type SessionEndHookInput = BaseHookInput & {
     hook_event_name: 'SessionEnd';
     reason: ExitReason;
+};
+
+/**
+ * A user or assistant message from a session transcript.
+ * Returned by `getSessionMessages` for reading historical session data.
+ */
+export declare type SessionMessage = {
+    type: 'user' | 'assistant';
+    uuid: string;
+    session_id: string;
+    message: unknown;
+    parent_tool_use_id: null;
 };
 
 export declare type SessionStartHookInput = BaseHookInput & {
