@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from clawd_code_sdk.models.base import ModelName
+    from clawd_code_sdk.models.permissions import OnUserQuestion
 
     from .agents import AgentDefinition, SystemPromptPreset, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
@@ -155,6 +156,13 @@ class ClaudeAgentOptions:
     """MCP tool to handle permission prompts."""
     can_use_tool: CanUseTool | None = None
     """Tool permission callback."""
+    on_user_question: OnUserQuestion | None = None
+    """Callback for handling AskUserQuestion elicitation requests.
+
+    Called when Claude asks the user a clarifying question via the
+    AskUserQuestion tool. If not set, these requests fall through
+    to can_use_tool (if set) for backwards compatibility.
+    """
     # Session
     session: str | SessionConfig | None = None
     """Session configuration.

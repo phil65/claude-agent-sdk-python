@@ -28,6 +28,7 @@ from .models import (
     BaseHookInput,
     CanUseTool,
     ClaudeAgentOptions,
+    OnUserQuestion,
     ContentBlock,
     HookCallback,
     HookContext,
@@ -141,6 +142,7 @@ __all__ = [
     "ContentBlock",
     # Tool callbacks
     "CanUseTool",
+    "OnUserQuestion",
     "ToolPermissionContext",
     "PermissionResult",
     "PermissionResultAllow",

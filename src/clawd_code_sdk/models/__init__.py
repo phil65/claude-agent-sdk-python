@@ -244,6 +244,7 @@ from .options import (
 )
 from .permissions import (
     CanUseTool,
+    OnUserQuestion,
     PermissionResult,
     PermissionResultAllow,
     PermissionResultDeny,
@@ -272,6 +273,7 @@ __all__ = [
     "ToolsPreset",
     # permissions
     "CanUseTool",
+    "OnUserQuestion",
     "PermissionBehavior",
     "PermissionResult",
     "PermissionResultAllow",

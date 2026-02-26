@@ -44,9 +44,10 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import ControlRequestUnion, PermissionMode
     from clawd_code_sdk.models.agents import AgentDefinition
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
+    from clawd_code_sdk.models.input_types import AskUserQuestionInput
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
     from clawd_code_sdk.models.messages import UserPromptMessage
-    from clawd_code_sdk.models.permissions import CanUseTool, PermissionResult
+    from clawd_code_sdk.models.permissions import CanUseTool, OnUserQuestion, PermissionResult
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ class Query:
         self,
         transport: Transport,
         can_use_tool: CanUseTool | None = None,
+        on_user_question: OnUserQuestion | None = None,
         hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,
@@ -107,6 +109,7 @@ class Query:
         Args:
             transport: Low-level transport for I/O
             can_use_tool: Optional callback for tool permission requests
+            on_user_question: Optional callback for AskUserQuestion elicitation
             hooks: Optional hook configurations
             sdk_mcp_servers: Optional SDK MCP server instances
             initialize_timeout: Timeout in seconds for the initialize request
@@ -119,6 +122,7 @@ class Query:
         self._initialize_timeout = initialize_timeout
         self.transport = transport
         self.can_use_tool = can_use_tool
+        self.on_user_question = on_user_question
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
         self._agents = {name: agent_def.to_dict() for name, agent_def in (agents or {}).items()}
@@ -317,15 +321,27 @@ class Query:
     async def _handle_permission_request(
         self, req: SDKControlPermissionRequest
     ) -> PermissionResult:
-        """Handle a tool permission request."""
-        if not self.can_use_tool:
-            raise RuntimeError("canUseTool callback is not provided")
+        """Handle a tool permission request.
 
+        Dispatches AskUserQuestion to on_user_question if set,
+        otherwise falls through to can_use_tool for backwards compatibility.
+        """
         context = ToolPermissionContext(
             tool_use_id=req.tool_use_id,
             suggestions=req.permission_suggestions or [],
             blocked_path=req.blocked_path,
         )
+
+        # Dispatch elicitation requests to dedicated callback if available
+        if req.tool_name == "AskUserQuestion" and self.on_user_question:
+            input_data: AskUserQuestionInput = req.input  # type: ignore[assignment]
+            result = await self.on_user_question(input_data, context)
+            if isinstance(result, PermissionResultAllow) and result.updated_input is None:
+                result.updated_input = req.input
+            return result
+
+        if not self.can_use_tool:
+            raise RuntimeError("canUseTool callback is not provided")
 
         result = await self.can_use_tool(req.tool_name, req.input, context)
         if isinstance(result, PermissionResultAllow) and result.updated_input is None:

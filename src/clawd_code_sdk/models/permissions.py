@@ -6,12 +6,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from clawd_code_sdk.models import ToolInput
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
     PermissionBehavior,  # noqa: TC001
     PermissionMode,  # noqa: TC001
 )
+from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
 
 
 # Permission Update types (matching TypeScript SDK)
@@ -107,3 +107,13 @@ PermissionResult = PermissionResultAllow | PermissionResultDeny
 CanUseTool = Callable[
     [str, ToolInput | dict[str, Any], ToolPermissionContext], Awaitable[PermissionResult]
 ]
+
+OnUserQuestion = Callable[
+    [AskUserQuestionInput, ToolPermissionContext], Awaitable[PermissionResult]
+]
+"""Callback for handling AskUserQuestion elicitation requests.
+
+Called when Claude asks the user a clarifying question.
+The callback should return a PermissionResultAllow with updated_input
+containing the answers, or a PermissionResultDeny to cancel.
+"""

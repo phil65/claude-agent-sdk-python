@@ -141,6 +141,7 @@ class ClaudeSDKClient:
         self._query = Query(
             transport=self._transport,
             can_use_tool=self.options.can_use_tool,
+            on_user_question=self.options.on_user_question,
             hooks=self.options.hooks,
             sdk_mcp_servers=sdk_mcp_servers,
             initialize_timeout=initialize_timeout,
