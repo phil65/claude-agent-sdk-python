@@ -52,14 +52,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
-    """Extract the request ID from a JSON-RPC message.
-
-    Falls back to 0 if the message has no id (e.g. notifications).
-    """
+    """Extract the request ID from a JSON-RPC message if available. Falls back to 0."""
     raw_id = message.get("id")
-    if isinstance(raw_id, str | int):
-        return raw_id
-    return 0
+    return raw_id if isinstance(raw_id, str | int) else 0
 
 
 def convert_hooks_to_internal_format(
@@ -140,7 +135,6 @@ class Query:
             dict[str, Any]
         ](max_buffer_size=math.inf)
         self._tg: TaskGroup | None = None
-        self._initialized = False
         self._closed = False
         self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
@@ -155,6 +149,10 @@ class Query:
         # Track whether we entered the task group in this task
         # Used to determine if we can safely call __aexit__()
         self._tg_entered_in_current_task = False
+
+    @property
+    def initialized(self) -> bool:
+        return self._initialization_result is not None
 
     async def initialize(self) -> ClaudeCodeServerInfo:
         """Initialize control protocol.
@@ -197,7 +195,6 @@ class Query:
 
         # Use longer timeout for initialize since MCP servers may take time to start
         response = await self._send_control_request(request, timeout=self._initialize_timeout)
-        self._initialized = True
         self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
         return self._initialization_result
 
@@ -432,11 +429,7 @@ class Query:
         return await self._send_control_request({"subtype": "mcp_set_servers", "servers": servers})
 
     async def mcp_reconnect(self, server_name: str) -> dict[str, Any]:
-        """Reconnect to an MCP server.
-
-        Args:
-            server_name: Name of the MCP server to reconnect
-        """
+        """Reconnect to an MCP server."""
         req = {"subtype": "mcp_reconnect", "serverName": server_name}
         return await self._send_control_request(req)
 
