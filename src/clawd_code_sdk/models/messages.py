@@ -198,9 +198,9 @@ class HookStartedSystemMessage(BaseSystemMessage):
     """System message emitted when a hook starts."""
 
     subtype: Literal["hook_started"] = "hook_started"
-    hook_id: str | None = None
-    hook_name: str | None = None
-    hook_event: str | None = None
+    hook_id: str
+    hook_name: str
+    hook_event: str
 
 
 @dataclass(kw_only=True)
@@ -248,9 +248,9 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task starts."""
 
     subtype: Literal["task_started"] = "task_started"
-    task_id: str = ""
+    task_id: str
     tool_use_id: str | None = None
-    description: str = ""
+    description: str
     task_type: str | None = None
 
 
@@ -259,10 +259,10 @@ class TaskNotificationSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task completes, fails, or stops."""
 
     subtype: Literal["task_notification"] = "task_notification"
-    task_id: str = ""
-    status: TaskStatus = "completed"
-    output_file: str = ""
-    summary: str = ""
+    task_id: str
+    status: TaskStatus
+    output_file: str
+    summary: str
     tool_use_id: str | None = None
 
 
@@ -279,10 +279,10 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     """System message emitted periodically with task progress updates."""
 
     subtype: Literal["task_progress"] = "task_progress"
-    task_id: str = ""
+    task_id: str
     tool_use_id: str | None = None
-    description: str = ""
-    usage: TaskProgressUsage | None = None
+    description: str
+    usage: TaskProgressUsage
     last_tool_name: ToolName | str | None = None
 
 
