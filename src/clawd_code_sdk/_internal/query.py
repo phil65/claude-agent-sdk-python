@@ -309,13 +309,12 @@ class Query:
                 case SDKControlMcpMessageRequest(server_name=server_name, message=message):
                     mcp_resp = await self._handle_sdk_mcp_request(server_name, message)
                     response_data = {"mcp_response": mcp_resp}
-                case SDKControlInterruptRequest():
-                    pass  # No response data needed
                 case (
                     SDKControlInitializeRequest()
                     | SDKControlSetPermissionModeRequest()
                     | SDKControlRewindFilesRequest()
                     | SDKControlStopTaskRequest()
+                    | SDKControlInterruptRequest()  # No response data needed
                 ):
                     pass  # Handled elsewhere
             dct = ControlResponse(subtype="success", request_id=request_id, response=response_data)
