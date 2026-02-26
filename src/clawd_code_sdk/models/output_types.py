@@ -26,65 +26,95 @@ class AgentOutputTextContent(TypedDict):
     """A text content block in agent output."""
 
     type: Literal["text"]
+    """Content type, always 'text'."""
     text: str
+    """The text content."""
 
 
 class AgentServerToolUse(TypedDict):
     """Server-side tool usage statistics."""
 
     web_search_requests: int
+    """Number of web search requests made."""
     web_fetch_requests: int
+    """Number of web fetch requests made."""
 
 
 class AgentCacheCreation(TypedDict):
     """Cache creation token statistics."""
 
     ephemeral_1h_input_tokens: int
+    """Tokens for 1-hour ephemeral cache entries."""
     ephemeral_5m_input_tokens: int
+    """Tokens for 5-minute ephemeral cache entries."""
 
 
 class AgentOutputUsage(TypedDict):
     """Token usage statistics from an agent task."""
 
     input_tokens: int
+    """Number of input tokens consumed."""
     output_tokens: int
+    """Number of output tokens generated."""
     cache_creation_input_tokens: int | None
+    """Tokens used to create cache entries."""
     cache_read_input_tokens: int | None
+    """Tokens read from cache."""
     server_tool_use: AgentServerToolUse | None
+    """Server-side tool usage statistics."""
     service_tier: ServiceTier | None
+    """Service tier used for the request."""
     cache_creation: AgentCacheCreation | None
+    """Cache creation statistics."""
 
 
 class AgentCompletedOutput(TypedDict):
     """Output from the Task tool when the agent completed successfully."""
 
     status: Literal["completed"]
+    """Agent completion status."""
     agentId: str
+    """ID of the agent that ran."""
     content: list[AgentOutputTextContent]
+    """Text content blocks produced by the agent."""
     totalToolUseCount: int
+    """Total number of tool calls made."""
     totalDurationMs: int
+    """Total execution duration in milliseconds."""
     totalTokens: int
+    """Total tokens used."""
     usage: AgentOutputUsage
+    """Detailed token usage statistics."""
     prompt: str
+    """The prompt that was given to the agent."""
 
 
 class AgentAsyncLaunchedOutput(TypedDict):
     """Output from the Task tool when an agent was launched asynchronously."""
 
     status: Literal["async_launched"]
+    """Indicates the agent was launched in the background."""
     agentId: str
+    """The ID of the async agent."""
     description: str
+    """The description of the task."""
     prompt: str
+    """The prompt for the agent."""
     outputFile: str
+    """Path to the output file for checking agent progress."""
     canReadOutputFile: NotRequired[bool]
+    """Whether the calling agent has Read/Bash tools to check progress."""
 
 
 class AgentSubAgentEnteredOutput(TypedDict):
     """Output from the Task tool when entering a sub-agent context."""
 
     status: Literal["sub_agent_entered"]
+    """Indicates a sub-agent context was entered."""
     description: str
+    """Description of the sub-agent task."""
     message: str
+    """Status message."""
 
 
 AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput | AgentSubAgentEnteredOutput
@@ -467,6 +497,8 @@ class AskUserQuestionOutput(TypedDict):
     """``tool_use_result`` for the AskUserQuestion tool."""
 
     questions: list[AskUserQuestionItem]
+    """The questions that were asked."""
+
     answers: dict[str, str]
     """Maps question text to answer string. Multi-select answers are comma-separated."""
 
@@ -495,10 +527,15 @@ class McpResourceEntry(TypedDict):
     """A single MCP resource entry."""
 
     uri: str
+    """Resource URI."""
     name: str
-    mimeType: NotRequired[str]
+    """Resource name."""
     description: NotRequired[str]
+    """Resource description."""
+    mimeType: NotRequired[str]
+    """Resource MIME type."""
     server: str
+    """Server providing this resource."""
 
 
 ListMcpResourcesOutput = list[McpResourceEntry]
@@ -509,40 +546,50 @@ class ReadMcpResourceContentItem(TypedDict):
     """A single content item from an MCP resource."""
 
     uri: str
+    """Resource URI."""
     mimeType: NotRequired[str]
+    """Content MIME type."""
     text: NotRequired[str]
+    """Text content."""
 
 
 class ReadMcpResourceOutput(TypedDict):
     """``tool_use_result`` for the ReadMcpResource tool."""
 
     contents: list[ReadMcpResourceContentItem]
+    """Resource contents."""
 
 
 class SubscribeMcpResourceOutput(TypedDict):
-    """``tool_use_result`` for the SubscribeMcpResource tool."""
+    """Output from subscribing to an MCP resource."""
 
     subscribed: bool
+    """Whether the subscription was successful."""
     subscriptionId: str
+    """Unique identifier for this subscription."""
 
 
 class UnsubscribeMcpResourceOutput(TypedDict):
-    """``tool_use_result`` for the UnsubscribeMcpResource tool."""
+    """Output from unsubscribing from an MCP resource."""
 
     unsubscribed: bool
+    """Whether the unsubscription was successful."""
 
 
 class SubscribePollingOutput(TypedDict):
-    """``tool_use_result`` for the SubscribePolling tool."""
+    """Output from subscribing to a polling resource."""
 
     subscribed: bool
+    """Whether the subscription was successful."""
     subscriptionId: str
+    """Unique identifier for this subscription."""
 
 
 class UnsubscribePollingOutput(TypedDict):
-    """``tool_use_result`` for the UnsubscribePolling tool."""
+    """Output from unsubscribing from a polling resource."""
 
     unsubscribed: bool
+    """Whether the unsubscription was successful."""
 
 
 # ---------------------------------------------------------------------------
@@ -551,15 +598,22 @@ class UnsubscribePollingOutput(TypedDict):
 
 
 class ConfigOutput(TypedDict):
-    """``tool_use_result`` for the Config tool."""
+    """Output from the Config tool."""
 
     success: bool
+    """Whether the operation succeeded."""
     operation: NotRequired[Literal["get", "set"]]
+    """The config operation that was performed."""
     setting: NotRequired[str]
+    """The setting name."""
     value: NotRequired[Any]
+    """The current or requested value."""
     previousValue: NotRequired[Any]
+    """The previous value (for set operations)."""
     newValue: NotRequired[Any]
+    """The new value (for set operations)."""
     error: NotRequired[str]
+    """Error message if the operation failed."""
 
 
 # ---------------------------------------------------------------------------
