@@ -239,11 +239,7 @@ class Query:
                 match message:
                     case {
                         "type": "control_response",
-                        "response": {
-                            "request_id": request_id,
-                            "subtype": "error",
-                            "error": error,
-                        },
+                        "response": {"request_id": request_id, "subtype": "error", "error": error},
                     } if request_id in self.pending_control_responses:
                         event = self.pending_control_responses[request_id]
                         self.pending_control_results[request_id] = ControlRequestError(
@@ -608,8 +604,6 @@ class Query:
 async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
     from mcp.types import CallToolRequest, CallToolRequestParams, CallToolResult, ListToolsRequest
 
-    method = message.get("method")
-    assert isinstance(method, str)
     msg_id = get_jsonrpc_request_id(message)
     try:
         # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
@@ -618,8 +612,8 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
         #
         # This forces us to manually route methods. When Python MCP adds Transport
         # support, we can refactor to match the TypeScript approach.
-        match method:
-            case "initialize":
+        match message:
+            case {"method": "initialize"}:
                 # Handle MCP initialization - hardcoded for tools only, no listChanged
                 init_result = {
                     "protocolVersion": "2024-11-05",
@@ -628,20 +622,19 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 }
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=init_result)
 
-            case "tools/list" if handler := server.request_handlers.get(ListToolsRequest):
+            case {"method": "tools/list"} if handler := server.request_handlers.get(
+                ListToolsRequest
+            ):
                 request = ListToolsRequest()
                 result = await handler(request)
                 # Convert MCP result to JSONRPC response
-                tools_data = [
-                    tool.model_dump(exclude_none=True, by_alias=True)
-                    for tool in result.root.tools  # type: ignore[union-attr]
-                ]
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": tools_data})
+                data = [i.model_dump(exclude_none=True, by_alias=True) for i in result.root.tools]  # type: ignore[union-attr]
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": data})
 
-            case "tools/call" if handler := server.request_handlers.get(CallToolRequest):
-                params = message.get("params", {})
-                assert isinstance(params, dict)
-                call_params = CallToolRequestParams(**params)  # pyright: ignore[reportArgumentType]
+            case {"method": "tools/call", "params": dict() as params} if (
+                handler := server.request_handlers.get(CallToolRequest)
+            ):
+                call_params = CallToolRequestParams(**params)
                 call_request = CallToolRequest(params=call_params)
                 result = await handler(call_request)
                 # Convert MCP result to JSONRPC response
@@ -651,15 +644,17 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 if result.root.isError:
                     response_data["is_error"] = True
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=response_data)
-            case "notifications/initialized":
+            case {"method": "notifications/initialized"}:
                 # Handle initialized notification - just acknowledge it
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={})
             # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
             # This is the limitation Ashwin pointed out - we have to manually update
-            case _:
+            case {"method": method}:
                 error = JSONRPCError(code=-32601, message=f"Method '{method}' not found")
                 return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-
+            case _ as msg:
+                error = JSONRPCError(code=-32601, message=f"Invalid JSON message {msg}")
+                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
     except Exception as e:
         error = JSONRPCError(code=-32603, message=str(e))
         return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
