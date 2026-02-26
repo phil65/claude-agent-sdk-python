@@ -237,29 +237,38 @@ class Query:
                 if self._closed:
                     break
 
-                match message.get("type"):
-                    case "control_response":
-                        response = message.get("response", {})
-                        request_id = response.get("request_id")
-                        if request_id in self.pending_control_responses:
-                            event = self.pending_control_responses[request_id]
-                            if response.get("subtype") == "error":
-                                msg = response.get("error", "Unknown error")
-                                self.pending_control_results[request_id] = ControlRequestError(
-                                    msg, subtype=response.get("subtype")
-                                )
-                            else:
-                                self.pending_control_results[request_id] = response
-                            event.set()
+                match message:
+                    case {
+                        "type": "control_response",
+                        "response": {
+                            "request_id": request_id,
+                            "subtype": "error",
+                            "error": error,
+                        },
+                    } if request_id in self.pending_control_responses:
+                        event = self.pending_control_responses[request_id]
+                        self.pending_control_results[request_id] = ControlRequestError(
+                            error, subtype="error"
+                        )
+                        event.set()
 
-                    case "control_request":
-                        if tg := self._tg:
-                            req = control_request_adapter.validate_python(message["request"])
-                            tg.start_soon(self._handle_control_request, message["request_id"], req)
-                    case "control_cancel_request":  # TODO: Implement cancellation support
+                    case {
+                        "type": "control_response",
+                        "response": {"request_id": request_id} as response,
+                    } if request_id in self.pending_control_responses:
+                        event = self.pending_control_responses[request_id]
+                        self.pending_control_results[request_id] = response
+                        event.set()
+                    case {"type": "control_response"} as msg:
+                        logger.info("unhandled control message: %s", msg)
+                    case {"type": "control_request"} if tg := self._tg:
+                        req = control_request_adapter.validate_python(message["request"])
+                        tg.start_soon(self._handle_control_request, message["request_id"], req)
+                    case {"type": "control_request"} as msg:
+                        logger.info("Control request sent while no task group active: %s", msg)
+                    case {"type": "control_cancel_request"}:
                         pass
-
-                    case "result":  # Track results for proper stream closure
+                    case {"type": "result"}:
                         self._first_result_event.set()
                         await self._message_send.send(message)
                     case _:
