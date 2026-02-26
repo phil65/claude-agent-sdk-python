@@ -192,7 +192,7 @@ class ClaudeAgentOptions:
     """CLI path override (auto-detects by default)."""
     extra_args: dict[str, str | None] = field(default_factory=dict)
     """Arbitrary extra CLI flags."""
-    max_buffer_size: int | None = None
+    max_buffer_size: int = 10 * 1024 * 1024
     """Max bytes when buffering CLI stdout."""
     stderr: Callable[[str], None] | None = None
     """Callback for stderr output from CLI."""
