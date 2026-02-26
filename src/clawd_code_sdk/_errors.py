@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+
+if TYPE_CHECKING:
+    from anthropic.types.model import Model
 
 
 class ClaudeSDKError(Exception):
@@ -83,7 +87,7 @@ class APIError(ClaudeSDKError):
         self,
         message: str,
         error_type: APIErrorType,
-        model: str | None = None,
+        model: Model | None = None,
     ):
         self.error_type = error_type
         self.model = model
@@ -96,7 +100,7 @@ class AuthenticationError(APIError):
     This typically indicates an invalid API key or insufficient permissions.
     """
 
-    def __init__(self, message: str, model: str | None = None):
+    def __init__(self, message: str, model: Model | None = None):
         super().__init__(message, "authentication_failed", model)
 
 
@@ -107,7 +111,7 @@ class BillingError(APIError):
     billing-related issues.
     """
 
-    def __init__(self, message: str, model: str | None = None):
+    def __init__(self, message: str, model: Model | None = None):
         super().__init__(message, "billing_error", model)
 
 
@@ -118,7 +122,7 @@ class RateLimitError(APIError):
     when handling this exception.
     """
 
-    def __init__(self, message: str, model: str | None = None):
+    def __init__(self, message: str, model: Model | None = None):
         super().__init__(message, "rate_limit", model)
 
 
@@ -129,7 +133,7 @@ class InvalidRequestError(APIError):
     Check the error message for details about what needs to be corrected.
     """
 
-    def __init__(self, message: str, model: str | None = None):
+    def __init__(self, message: str, model: Model | None = None):
         super().__init__(message, "invalid_request", model)
 
 
@@ -140,7 +144,7 @@ class ServerError(APIError):
     Applications should implement retry logic for transient server errors.
     """
 
-    def __init__(self, message: str, model: str | None = None):
+    def __init__(self, message: str, model: Model | None = None):
         super().__init__(message, "server_error", model)
 
 
