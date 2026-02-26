@@ -442,24 +442,18 @@ class Query:
         Args:
             server_name: Name of the MCP server to reconnect
         """
-        return await self._send_control_request(
-            {"subtype": "mcp_reconnect", "serverName": server_name}
-        )
+        req = {"subtype": "mcp_reconnect", "serverName": server_name}
+        return await self._send_control_request(req)
 
     async def mcp_toggle(self, server_name: str, *, enabled: bool) -> dict[str, Any]:
         """Enable or disable an MCP server."""
-        return await self._send_control_request(
-            {"subtype": "mcp_toggle", "serverName": server_name, "enabled": enabled}
-        )
+        req = {"subtype": "mcp_toggle", "serverName": server_name, "enabled": enabled}
+        return await self._send_control_request(req)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> dict[str, Any]:
         """Set the maximum number of thinking tokens."""
-        return await self._send_control_request(
-            {
-                "subtype": "set_max_thinking_tokens",
-                "max_thinking_tokens": max_thinking_tokens,
-            }
-        )
+        req = {"subtype": "set_max_thinking_tokens", "max_thinking_tokens": max_thinking_tokens}
+        return await self._send_control_request(req)
 
     async def interrupt(self) -> dict[str, Any]:
         """Send interrupt control request."""
@@ -489,9 +483,8 @@ class Query:
         Args:
             user_message_id: UUID of the user message to rewind to
         """
-        return await self._send_control_request(
-            {"subtype": "rewind_files", "user_message_id": user_message_id}
-        )
+        req = {"subtype": "rewind_files", "user_message_id": user_message_id}
+        return await self._send_control_request(req)
 
     async def stream_input(self, stream: AsyncIterable[UserPromptMessage]) -> None:
         """Stream input messages to transport.
