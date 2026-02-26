@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from clawd_code_sdk.models.base import ModelName
     from clawd_code_sdk.models.permissions import OnUserQuestion
@@ -201,7 +201,7 @@ class ClaudeAgentOptions:
     user: str | None = None
     """User for the AnyIO process."""
     # CWD
-    add_dirs: list[str | Path] = field(default_factory=list)
+    add_dirs: Sequence[str | Path] = field(default_factory=list)
     """Add additional working directories."""
     cwd: str | Path | None = None
     """The working directory for the agent."""
