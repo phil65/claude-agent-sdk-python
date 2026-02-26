@@ -10,6 +10,7 @@ import tempfile
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, ResultMessage, query
+from clawd_code_sdk.models.messages import ResultSuccessMessage
 
 
 os.environ["ANTHROPIC_API_KEY"] = ""
@@ -40,7 +41,7 @@ async def test_simple_structured_output():
 
     # Verify result
     assert result_message is not None, "No result message received"
-    assert not result_message.is_error, f"Query failed: {result_message.result}"
+    assert isinstance(result_message, ResultSuccessMessage), f"Query failed: {result_message}"
     assert result_message.subtype == "success"
     # Verify structured output is present and valid
     assert result_message.structured_output is not None, "No structured output in result"
@@ -87,7 +88,7 @@ async def test_nested_structured_output():
 
     # Verify result
     assert result_message is not None
-    assert not result_message.is_error
+    assert isinstance(result_message, ResultSuccessMessage)
     assert result_message.structured_output is not None
 
     # Check nested structure
@@ -125,7 +126,7 @@ async def test_structured_output_with_enum():
 
     # Verify result
     assert result_message is not None
-    assert not result_message.is_error
+    assert isinstance(result_message, ResultSuccessMessage)
     assert result_message.structured_output is not None
     # Check enum values are valid
     output = result_message.structured_output
@@ -160,7 +161,7 @@ async def test_structured_output_with_tools():
 
     # Verify result
     assert result_message is not None
-    assert not result_message.is_error
+    assert isinstance(result_message, ResultSuccessMessage)
     assert result_message.structured_output is not None
     # Check structure
     output = result_message.structured_output
@@ -172,4 +173,4 @@ async def test_structured_output_with_tools():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-vv"])
+    pytest.main([__file__, "-vv", "-m", "e2e"])
