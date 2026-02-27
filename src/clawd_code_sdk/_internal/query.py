@@ -33,7 +33,7 @@ from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable, Iterator
+    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Iterator
 
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.transport import Transport
     from clawd_code_sdk.models import ControlRequestUnion, PermissionMode
     from clawd_code_sdk.models.agents import AgentDefinition
-    from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
+    from clawd_code_sdk.models.hooks import HookCallback, HookEvent, HookMatcher
     from clawd_code_sdk.models.input_types import AskUserQuestionInput
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
     from clawd_code_sdk.models.messages import UserPromptMessage
@@ -127,7 +127,7 @@ class Query:
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}
         self.pending_control_results: dict[str, dict[str, Any] | Exception] = {}
-        self.hook_callbacks: dict[str, Callable[..., Any]] = {}
+        self.hook_callbacks: dict[str, HookCallback] = {}
         self.next_callback_id = 0
         self._request_counter = 0
         # Message stream
