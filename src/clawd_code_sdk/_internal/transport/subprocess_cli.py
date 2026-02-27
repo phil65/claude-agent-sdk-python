@@ -244,6 +244,10 @@ class SubprocessCLITransport(Transport):
         if self._options.enable_file_checkpointing:
             process_env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"
 
+        # Enable experimental agent teams feature
+        if self._options.enable_agent_teams:
+            process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
+
         if self._cwd:
             process_env["PWD"] = self._cwd
 

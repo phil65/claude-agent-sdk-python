@@ -263,6 +263,8 @@ class ClaudeAgentOptions:
     """Whether to  create prompt suggestions."""
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
+    enable_agent_teams: bool = False
+    """Enable the experimental agent teams feature."""
 
     def build_settings_value(self) -> str | None:
         """Build settings value, merging sandbox settings if provided.
