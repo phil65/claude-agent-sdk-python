@@ -356,7 +356,7 @@ class HookResponseSystemMessage(BaseSystemMessage):
 
 
 class ModelUsage(TypedDict):
-    """Token usage from Claude API response."""
+    """Cumulative token usage per model, accumulated across the entire session."""
 
     inputTokens: int
     outputTokens: int
@@ -377,7 +377,7 @@ class SDKPermissionDenial(TypedDict):
 
 
 class Usage(TypedDict):
-    """Token usage from Claude API response."""
+    """Token usage from the last API call only (per-turn, not cumulative)."""
 
     input_tokens: int
     output_tokens: int
@@ -387,17 +387,26 @@ class Usage(TypedDict):
 
 @dataclass(kw_only=True)
 class BaseResultMessage(BaseMessage):
-    """Base result message with cost and usage information."""
+    """Base result message with cost and usage information.
+
+    Note: Fields use inconsistent scoping. See per-field docs for details.
+    """
 
     type: Literal["result"] = "result"
     duration_ms: int
+    """Wall-clock time for this query only (per-query)."""
     duration_api_ms: int
+    """Cumulative API time across the entire session."""
     is_error: bool
     num_turns: int
+    """Number of model turns in this query only (per-query)."""
     total_cost_usd: float
+    """Cumulative cost across the entire session."""
     usage: Usage
+    """Token usage from the last API call only (per-turn)."""
     stop_reason: StopReason | None
     modelUsage: dict[str, ModelUsage]  # noqa: N815
+    """Cumulative token usage per model across the entire session."""
     permission_denials: list[SDKPermissionDenial]
 
 
