@@ -12,12 +12,17 @@ from pydantic import TypeAdapter
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
+    AccumulatedUsage,
     ClaudeAgentOptions,
     ResultMessage,
     UserPromptMessage,
 )
 from clawd_code_sdk.models.mcp import McpStatusResponse
-from clawd_code_sdk.models.messages import AssistantMessage
+from clawd_code_sdk.models.messages import (
+    AssistantMessage,
+    ResultErrorMessage,
+    ResultSuccessMessage,
+)
 
 
 if TYPE_CHECKING:
@@ -59,6 +64,10 @@ class ClaudeSDKClient:
         self._custom_transport = transport
         self._transport: Transport | None = None
         self._query: Query | None = None
+        self.session_usage: AccumulatedUsage = AccumulatedUsage()
+        """Cumulative token usage across all queries in this session."""
+        self.query_usage: AccumulatedUsage = AccumulatedUsage()
+        """Token usage for the current/last query only (reset on each query() call)."""
         os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
 
     def _ensure_connected(self) -> Query:
@@ -165,8 +174,12 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         async for data in query.receive_messages():
             message = parse_message(data)
-            if isinstance(message, AssistantMessage):
-                message.raise_if_api_error()
+            match message:
+                case AssistantMessage():
+                    message.raise_if_api_error()
+                case ResultSuccessMessage() | ResultErrorMessage():
+                    self.query_usage.accumulate(message.usage)
+                    self.session_usage.accumulate(message.usage)
             yield message
 
     async def query(
@@ -175,6 +188,7 @@ class ClaudeSDKClient:
         session_id: str = "default",
     ) -> None:
         """Send a new request in streaming mode."""
+        self.query_usage.reset()
         self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")

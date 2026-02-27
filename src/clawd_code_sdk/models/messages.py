@@ -385,6 +385,40 @@ class Usage(TypedDict):
     cache_read_input_tokens: int
 
 
+@dataclass
+class AccumulatedUsage:
+    """Accumulated token usage, built by summing per-turn Usage values."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+    @property
+    def total_tokens(self) -> int:
+        """Sum of all token fields."""
+        return (
+            self.input_tokens
+            + self.output_tokens
+            + self.cache_creation_input_tokens
+            + self.cache_read_input_tokens
+        )
+
+    def accumulate(self, usage: Usage) -> None:
+        """Add a per-turn Usage to this accumulator."""
+        self.input_tokens += usage["input_tokens"]
+        self.output_tokens += usage["output_tokens"]
+        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
+        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
+
+    def reset(self) -> None:
+        """Reset all counters to zero."""
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cache_creation_input_tokens = 0
+        self.cache_read_input_tokens = 0
+
+
 @dataclass(kw_only=True)
 class BaseResultMessage(BaseMessage):
     """Base result message with cost and usage information.

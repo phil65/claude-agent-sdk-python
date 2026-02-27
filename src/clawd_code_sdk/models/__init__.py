@@ -210,6 +210,7 @@ from .content_blocks import (
 )
 
 from .messages import (
+    AccumulatedUsage,
     AssistantMessage,
     AssistantMessageError,
     BaseSystemMessage,
