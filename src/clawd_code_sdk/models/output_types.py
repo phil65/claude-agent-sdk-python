@@ -183,6 +183,56 @@ class TaskOutputResult(TypedDict):
 
 
 # ---------------------------------------------------------------------------
+# BashOutput (checking background shells — tool name "BashOutput")
+# ---------------------------------------------------------------------------
+
+
+class BashOutputOutput(TypedDict):
+    """``tool_use_result`` for the BashOutput tool (background shell output retrieval).
+
+    Not part of the official SDK ToolOutputSchemas as of SDK v0.2.62.
+    Shape derived from: https://github.com/kzahel/yepanywhere/blob/main/packages/shared/src/claude-sdk-schema/tool/ToolResultSchemas.ts
+    """
+
+    shellId: NotRequired[str]
+    """ID of the background shell."""
+    command: NotRequired[str]
+    """The command that was executed."""
+    status: NotRequired[Literal["running", "completed", "failed"]]
+    """Current status of the command."""
+    exitCode: NotRequired[int | None]
+    """Exit code of the command, or None if still running."""
+    stdout: NotRequired[str]
+    """Standard output."""
+    stderr: NotRequired[str]
+    """Standard error."""
+    stdoutLines: NotRequired[int]
+    """Number of lines in stdout."""
+    stderrLines: NotRequired[int]
+    """Number of lines in stderr."""
+    timestamp: NotRequired[str]
+    """Timestamp of the output."""
+
+
+# ---------------------------------------------------------------------------
+# KillShell (kill background shell — tool name "KillBash")
+# ---------------------------------------------------------------------------
+
+
+class KillShellOutput(TypedDict):
+    """``tool_use_result`` for the KillBash tool.
+
+    Not part of the official SDK ToolOutputSchemas as of SDK v0.2.62.
+    Shape derived from: https://github.com/kzahel/yepanywhere/blob/main/packages/shared/src/claude-sdk-schema/tool/ToolResultSchemas.ts
+    """
+
+    message: NotRequired[str]
+    """Status message."""
+    shell_id: NotRequired[str]
+    """ID of the shell that was killed."""
+
+
+# ---------------------------------------------------------------------------
 # TaskStop
 # ---------------------------------------------------------------------------
 
@@ -677,6 +727,8 @@ class EnterWorktreeOutput(TypedDict):
 ToolUseResult = (
     AgentOutput
     | BashOutput
+    | BashOutputOutput
+    | KillShellOutput
     | TaskOutputResult
     | TaskStopOutput
     | ExitPlanModeOutput
@@ -714,6 +766,8 @@ TodoWriteToolUseResult = TodoWriteOutput
 TOOL_USE_RESULT_TYPES: dict[str, type[Any]] = {
     "Task": AgentCompletedOutput,
     "Bash": BashOutput,
+    "BashOutput": BashOutputOutput,
+    "KillBash": KillShellOutput,
     "TaskOutput": TaskOutputResult,
     "TaskStop": TaskStopOutput,
     "ExitPlanMode": ExitPlanModeOutput,
