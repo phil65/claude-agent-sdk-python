@@ -24,7 +24,7 @@ import sys
 # URLs and paths
 SCHEMA_URL = "https://json.schemastore.org/claude-code-settings.json"
 PROJECT_ROOT = Path(__file__).parent.parent
-OUTPUT_FILE = PROJECT_ROOT / "src" / "clawd_code_sdk" / "models" / "settings_file.py"
+OUTPUT_FILE = PROJECT_ROOT / "reference" / "settings_file.py"
 TEMP_SCHEMA = "/tmp/claude-code-settings.json"
 TEMP_SCHEMA_TITLED = "/tmp/claude-code-settings-titled.json"
 
