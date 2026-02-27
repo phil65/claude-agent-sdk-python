@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import sys
 
+from clawd_code_sdk.models import ModelUsage
+
 
 def main() -> None:
     stdin_messages: list[str] = []
@@ -63,6 +65,20 @@ def main() -> None:
         "num_turns": 1,
         "session_id": "test",
         "total_cost_usd": 0.001,
+        "stop_reason": None,
+        "permission_denials": [],
+        "modelUsage": {
+            "opus": ModelUsage(
+                inputTokens=100,
+                outputTokens=50,
+                cacheReadInputTokens=0,
+                cacheCreationInputTokens=0,
+                webSearchRequests=0,
+                costUSD=0.001,
+                contextWindow=0,
+                maxOutputTokens=0,
+            )
+        },
         "usage": {
             "input_tokens": 100,
             "output_tokens": 50,

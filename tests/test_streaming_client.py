@@ -25,6 +25,7 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+from clawd_code_sdk.models import ModelUsage
 
 
 if TYPE_CHECKING:
@@ -391,6 +392,20 @@ class TestClaudeSDKClientStreaming:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "stop_reason": None,
+                        "permission_denials": [],
+                        "modelUsage": {
+                            "opus": ModelUsage(
+                                inputTokens=100,
+                                outputTokens=50,
+                                cacheReadInputTokens=0,
+                                cacheCreationInputTokens=0,
+                                webSearchRequests=0,
+                                costUSD=0.001,
+                                contextWindow=0,
+                                maxOutputTokens=0,
+                            )
+                        },
                         "usage": {
                             "input_tokens": 100,
                             "output_tokens": 50,
@@ -541,6 +556,20 @@ class TestClaudeSDKClientStreaming:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "stop_reason": None,
+                        "permission_denials": [],
+                        "modelUsage": {
+                            "opus": ModelUsage(
+                                inputTokens=100,
+                                outputTokens=50,
+                                cacheReadInputTokens=0,
+                                cacheCreationInputTokens=0,
+                                webSearchRequests=0,
+                                costUSD=0.001,
+                                contextWindow=0,
+                                maxOutputTokens=0,
+                            )
+                        },
                         "usage": {
                             "input_tokens": 100,
                             "output_tokens": 50,
@@ -737,6 +766,20 @@ class TestClaudeSDKClientEdgeCases:
                         "num_turns": 1,
                         "session_id": "test",
                         "total_cost_usd": 0.001,
+                        "stop_reason": None,
+                        "permission_denials": [],
+                        "modelUsage": {
+                            "opus": ModelUsage(
+                                inputTokens=100,
+                                outputTokens=50,
+                                cacheReadInputTokens=0,
+                                cacheCreationInputTokens=0,
+                                webSearchRequests=0,
+                                costUSD=0.001,
+                                contextWindow=0,
+                                maxOutputTokens=0,
+                            )
+                        },
                         "usage": {
                             "input_tokens": 100,
                             "output_tokens": 50,
@@ -942,3 +985,7 @@ class TestAsyncGeneratorCleanup:
             assert q._closed is True
 
         anyio.run(_test)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])

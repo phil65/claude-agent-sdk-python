@@ -391,9 +391,9 @@ class BaseResultMessage(BaseMessage):
     num_turns: int
     total_cost_usd: float
     usage: Usage
-    stop_reason: StopReason | None = None
-    modelUsage: dict[str, ModelUsage] | None = None  # noqa: N815
-    permission_denials: list[SDKPermissionDenial] | None = None
+    stop_reason: StopReason | None
+    modelUsage: dict[str, ModelUsage]  # noqa: N815
+    permission_denials: list[SDKPermissionDenial]
 
 
 @dataclass(kw_only=True)

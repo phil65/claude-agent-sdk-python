@@ -17,6 +17,7 @@ from clawd_code_sdk import (
     ResultMessage,
     ResultSuccessMessage,
 )
+from clawd_code_sdk.models.messages import ModelUsage
 from clawd_code_sdk.session import (
     ConversationTurn,
     Session,
@@ -105,6 +106,20 @@ RESULT_MSG = asdict(
         is_error=False,
         num_turns=1,
         total_cost_usd=0.005,
+        stop_reason=None,
+        modelUsage={
+            "opus": ModelUsage(
+                inputTokens=200,
+                outputTokens=100,
+                cacheReadInputTokens=0,
+                cacheCreationInputTokens=0,
+                webSearchRequests=0,
+                costUSD=0.005,
+                contextWindow=0,
+                maxOutputTokens=0,
+            )
+        },
+        permission_denials=[],
         usage={
             "input_tokens": 200,
             "output_tokens": 100,
@@ -139,6 +154,20 @@ class TestConversationTurn:
             is_error=False,
             num_turns=1,
             total_cost_usd=0.01,
+            stop_reason=None,
+            permission_denials=[],
+            modelUsage={
+                "opus": ModelUsage(
+                    inputTokens=100,
+                    outputTokens=50,
+                    cacheReadInputTokens=0,
+                    cacheCreationInputTokens=0,
+                    webSearchRequests=0,
+                    costUSD=0.001,
+                    contextWindow=0,
+                    maxOutputTokens=0,
+                )
+            },
             usage={
                 "input_tokens": 100,
                 "output_tokens": 50,

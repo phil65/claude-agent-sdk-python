@@ -24,8 +24,9 @@ from clawd_code_sdk import (
     query,
 )
 from clawd_code_sdk.models import TextBlock
+from clawd_code_sdk.models.base import StopReason
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
-from clawd_code_sdk.models.messages import Usage
+from clawd_code_sdk.models.messages import ModelUsage, SDKPermissionDenial, Usage
 
 
 def _make_result(
@@ -36,6 +37,9 @@ def _make_result(
     duration_api_ms: int = 800,
     is_error: bool = False,
     num_turns: int = 1,
+    permission_denials: list[SDKPermissionDenial] | None = None,
+    stop_reason: StopReason | None = None,
+    model_usage: dict[str, ModelUsage] | None = None,
     total_cost_usd: float = 0.001,
     usage: Usage | None = None,
 ) -> dict[str, object]:
@@ -48,6 +52,21 @@ def _make_result(
         is_error=is_error,
         num_turns=num_turns,
         total_cost_usd=total_cost_usd,
+        permission_denials=permission_denials or [],
+        stop_reason=stop_reason,
+        modelUsage=model_usage
+        or {
+            "opus": ModelUsage(
+                inputTokens=200,
+                outputTokens=100,
+                cacheReadInputTokens=0,
+                cacheCreationInputTokens=0,
+                webSearchRequests=0,
+                costUSD=0.005,
+                contextWindow=0,
+                maxOutputTokens=0,
+            )
+        },
         usage=usage
         or Usage(
             input_tokens=100,

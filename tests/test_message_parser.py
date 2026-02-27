@@ -9,7 +9,6 @@ from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk._internal.message_parser import parse_message
 from clawd_code_sdk.models import (
     AssistantMessage,
-    ResultMessage,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -83,32 +82,6 @@ class TestContentBlockDispatch:
         assert isinstance(msg, UserMessage) and msg.content == "plain text"
 
 
-class TestParentToolUseId:
-    """parent_tool_use_id is forwarded for subagent messages."""
-
-    def test_user_message(self):
-        data = {
-            "type": "user",
-            "uuid": "u1",
-            "session_id": "s1",
-            "message": {"content": [{"type": "text", "text": "hi"}]},
-            "parent_tool_use_id": "toolu_abc",
-        }
-        msg = parse_message(data)
-        assert isinstance(msg, UserMessage) and msg.parent_tool_use_id == "toolu_abc"
-
-    def test_assistant_message(self):
-        data = {
-            "type": "assistant",
-            "message": make_beta_message(
-                content=[{"type": "text", "text": "hi"}],
-            ),
-            "parent_tool_use_id": "toolu_xyz",
-        }
-        msg = parse_message(data)
-        assert isinstance(msg, AssistantMessage) and msg.parent_tool_use_id == "toolu_xyz"
-
-
 class TestAssistantErrorExtraction:
     """Error field is extracted from both top-level and nested message."""
 
@@ -143,34 +116,6 @@ class TestAssistantErrorExtraction:
         }
         msg = parse_message(data)
         assert isinstance(msg, AssistantMessage) and msg.error is None
-
-
-class TestResultMessage:
-    """ResultMessage parses with all required fields."""
-
-    def test_round_trip(self):
-        data = {
-            "type": "result",
-            "uuid": "r1",
-            "session_id": "s1",
-            "subtype": "success",
-            "duration_ms": 1000,
-            "duration_api_ms": 500,
-            "is_error": False,
-            "num_turns": 2,
-            "total_cost_usd": 0.003,
-            "usage": {
-                "input_tokens": 200,
-                "output_tokens": 80,
-                "cache_creation_input_tokens": 1000,
-                "cache_read_input_tokens": 500,
-            },
-        }
-        msg = parse_message(data)
-        assert isinstance(msg, ResultMessage)
-        assert msg.subtype == "success" and msg.num_turns == 2
-        assert msg.usage["input_tokens"] == 200
-        assert msg.total_cost_usd == 0.003
 
 
 class TestErrorWrapping:

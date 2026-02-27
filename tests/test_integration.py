@@ -19,7 +19,7 @@ from clawd_code_sdk import (
     ResultMessage,
     query,
 )
-from clawd_code_sdk.models import TextBlock, ToolUseBlock
+from clawd_code_sdk.models import ModelUsage, TextBlock, ToolUseBlock
 
 
 def create_mock_transport(messages: list[dict]):
@@ -89,6 +89,20 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session",
                     "total_cost_usd": 0.001,
+                    "stop_reason": None,
+                    "permission_denials": [],
+                    "modelUsage": {
+                        "opus": ModelUsage(
+                            inputTokens=100,
+                            outputTokens=50,
+                            cacheReadInputTokens=0,
+                            cacheCreationInputTokens=0,
+                            webSearchRequests=0,
+                            costUSD=0.001,
+                            contextWindow=0,
+                            maxOutputTokens=0,
+                        )
+                    },
                     "usage": {
                         "input_tokens": 100,
                         "output_tokens": 50,
@@ -142,6 +156,20 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session-2",
                     "total_cost_usd": 0.002,
+                    "stop_reason": None,
+                    "permission_denials": [],
+                    "modelUsage": {
+                        "opus": ModelUsage(
+                            inputTokens=100,
+                            outputTokens=50,
+                            cacheReadInputTokens=0,
+                            cacheCreationInputTokens=0,
+                            webSearchRequests=0,
+                            costUSD=0.001,
+                            contextWindow=0,
+                            maxOutputTokens=0,
+                        )
+                    },
                     "usage": {
                         "input_tokens": 150,
                         "output_tokens": 75,
@@ -208,6 +236,20 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session",
                     "total_cost_usd": 0.001,
+                    "stop_reason": None,
+                    "permission_denials": [],
+                    "modelUsage": {
+                        "opus": ModelUsage(
+                            inputTokens=100,
+                            outputTokens=50,
+                            cacheReadInputTokens=0,
+                            cacheCreationInputTokens=0,
+                            webSearchRequests=0,
+                            costUSD=0.001,
+                            contextWindow=0,
+                            maxOutputTokens=0,
+                        )
+                    },
                     "usage": {
                         "input_tokens": 100,
                         "output_tokens": 50,
@@ -253,6 +295,20 @@ class TestIntegration:
                     "num_turns": 1,
                     "session_id": "test-session-budget",
                     "total_cost_usd": 0.0002,
+                    "stop_reason": None,
+                    "permission_denials": [],
+                    "modelUsage": {
+                        "opus": ModelUsage(
+                            inputTokens=100,
+                            outputTokens=50,
+                            cacheReadInputTokens=0,
+                            cacheCreationInputTokens=0,
+                            webSearchRequests=0,
+                            costUSD=0.001,
+                            contextWindow=0,
+                            maxOutputTokens=0,
+                        )
+                    },
                     "usage": {
                         "input_tokens": 100,
                         "output_tokens": 50,
