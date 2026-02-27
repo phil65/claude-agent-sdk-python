@@ -26,6 +26,11 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk._version import __version__
+from clawd_code_sdk.models.base import (
+    ThinkingConfigAdaptive,
+    ThinkingConfigDisabled,
+    ThinkingConfigEnabled,
+)
 
 
 if TYPE_CHECKING:
@@ -207,11 +212,11 @@ class SubprocessCLITransport(Transport):
 
         # Resolve thinking config → --max-thinking-tokens
         match self._options.thinking:
-            case {"type": "adaptive"}:
+            case ThinkingConfigAdaptive():
                 cmd.extend(["--max-thinking-tokens", "32000"])
-            case {"type": "enabled", "budget_tokens": budget}:
+            case ThinkingConfigEnabled(budget_tokens=budget):
                 cmd.extend(["--max-thinking-tokens", str(budget)])
-            case {"type": "disabled"}:
+            case ThinkingConfigDisabled():
                 cmd.extend(["--max-thinking-tokens", "0"])
 
         if self._options.effort is not None:

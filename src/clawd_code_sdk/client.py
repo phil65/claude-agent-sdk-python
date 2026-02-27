@@ -390,7 +390,7 @@ if __name__ == "__main__":
     os.environ["ANTHROPIC_API_KEY"] = ""
 
     async def main() -> None:
-        opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive(type="adaptive"))
+        opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive())
         client = ClaudeSDKClient(opts)
         await client.connect()
         await client.query("ultrathink")

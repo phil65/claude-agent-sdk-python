@@ -79,7 +79,7 @@ async def test_include_partial_messages_stream_events():
 @pytest.mark.asyncio
 async def test_include_partial_messages_thinking_deltas():
     """Test that thinking content is streamed incrementally via deltas."""
-    thinking = ThinkingConfigEnabled(type="enabled", budget_tokens=8000)
+    thinking = ThinkingConfigEnabled(budget_tokens=8000)
     options = ClaudeAgentOptions(model="claude-sonnet-4-5", max_turns=2, thinking=thinking)
     async with ClaudeSDKClient(options) as client:
         await client.query("Think step by step about what 2 + 2 equals")

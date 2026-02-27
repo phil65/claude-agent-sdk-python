@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Literal, TypedDict
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -70,23 +70,23 @@ class ClaudeCodeBaseModel(BaseModel):
 
 
 # Thinking configuration types
-class ThinkingConfigAdaptive(TypedDict):
+class ThinkingConfigAdaptive(ClaudeCodeBaseModel):
     """Adaptive thinking configuration - model decides thinking budget."""
 
-    type: Literal["adaptive"]
+    type: Literal["adaptive"] = "adaptive"
 
 
-class ThinkingConfigEnabled(TypedDict):
+class ThinkingConfigEnabled(ClaudeCodeBaseModel):
     """Enabled thinking configuration with explicit token budget."""
 
-    type: Literal["enabled"]
+    type: Literal["enabled"] = "enabled"
     budget_tokens: int
 
 
-class ThinkingConfigDisabled(TypedDict):
+class ThinkingConfigDisabled(ClaudeCodeBaseModel):
     """Disabled thinking configuration."""
 
-    type: Literal["disabled"]
+    type: Literal["disabled"] = "disabled"
 
 
 ThinkingConfig = ThinkingConfigAdaptive | ThinkingConfigEnabled | ThinkingConfigDisabled
