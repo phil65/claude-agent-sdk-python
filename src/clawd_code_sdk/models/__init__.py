@@ -273,14 +273,12 @@ __all__ = [
     # mcp
     "JSONRPC_VERSION",
     "TOOL_INPUT_TYPES",
-    # output_types (actual tool_use_result wire format)
     "TOOL_USE_RESULT_TYPES",
+    "AccumulatedUsage",
     "AgentAsyncLaunchedOutput",
     "AgentCacheCreation",
     "AgentCompletedOutput",
-    # agents
     "AgentDefinition",
-    # hooks
     "AgentHookHandler",
     "AgentHooksConfig",
     "AgentInput",
@@ -289,14 +287,12 @@ __all__ = [
     "AgentOutputUsage",
     "AgentServerToolUse",
     "AgentSubAgentEnteredOutput",
-    # base
     "ApiKeySource",
     "AskUserQuestion",
     "AskUserQuestionInput",
     "AskUserQuestionItem",
     "AskUserQuestionOption",
     "AskUserQuestionOutput",
-    # messages
     "AssistantMessage",
     "AssistantMessageError",
     "AsyncHookJSONOutput",
@@ -309,18 +305,14 @@ __all__ = [
     "BashOutput",
     "BashOutputInput",
     "BashOutputOutput",
-    # backwards-compat aliases (old tool_use_results.py names)
     "BashToolUseResult",
-    # permissions
     "CanUseTool",
-    # options
     "ClaudeAgentOptions",
     "CommandHookHandler",
     "CompactBoundarySystemMessage",
     "ConfigOutput",
     "ContentBlock",
     "ContinueLatest",
-    # control
     "ControlErrorResponse",
     "ControlRequestUnion",
     "ControlResponse",
@@ -439,7 +431,6 @@ __all__ = [
     "SDKHookCallbackRequest",
     "SDKPermissionDenial",
     "SDKSessionInfo",
-    # sandbox
     "SandboxIgnoreViolations",
     "SandboxNetworkConfig",
     "SandboxSettings",

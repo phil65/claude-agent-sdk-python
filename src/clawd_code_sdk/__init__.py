@@ -116,9 +116,9 @@ __cli_version__ = "2.1.11"
 
 
 __all__ = [
-    "AccumulatedUsage",
     # API Errors
     "APIError",
+    "AccumulatedUsage",
     # Agent support
     "AgentDefinition",
     # Hook support
