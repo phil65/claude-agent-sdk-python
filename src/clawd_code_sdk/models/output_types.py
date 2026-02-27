@@ -167,8 +167,8 @@ class TaskInfo(TypedDict):
     """Information about a background task."""
 
     task_id: str
-    task_type: str
-    status: str
+    task_type: Literal["local_bash", "agent"]
+    status: Literal["running", "completed", "failed"]
     description: str
     output: str
     exitCode: int | None
@@ -177,8 +177,8 @@ class TaskInfo(TypedDict):
 class TaskOutputResult(TypedDict):
     """``tool_use_result`` for the TaskOutput tool (background task polling)."""
 
-    retrieval_status: str
-    """Status of the retrieval: ``"not_ready"``, ``"ready"``, etc."""
+    retrieval_status: Literal["completed", "timeout", "running"]
+    """Status of the retrieval."""
     task: TaskInfo
 
 
