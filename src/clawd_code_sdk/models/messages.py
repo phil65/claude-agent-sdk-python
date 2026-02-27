@@ -23,7 +23,14 @@ from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa
 from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
-from .base import ApiKeySource, PermissionMode, StopReason, TaskStatus, ToolName  # noqa: TC001
+from .base import (  # noqa: TC001
+    ApiKeySource,
+    CompactionTrigger,
+    PermissionMode,
+    StopReason,
+    TaskStatus,
+    ToolName,
+)
 
 
 if TYPE_CHECKING:
@@ -213,7 +220,7 @@ class StatusSystemMessage(BaseSystemMessage):
 
 
 class TriggerMetadata(TypedDict):
-    trigger: Literal["auto", "manual"]
+    trigger: CompactionTrigger
     pre_tokens: int
 
 

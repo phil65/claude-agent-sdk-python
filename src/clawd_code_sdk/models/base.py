@@ -22,6 +22,8 @@ ModelName = Literal["sonnet", "opus", "haiku"]
 PermissionBehavior = Literal["allow", "deny", "ask"]
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 TaskStatus = Literal["completed", "failed", "stopped"]
+CompactionTrigger = Literal["auto", "manual"]
+
 StopReason = Literal[
     "end_turn",
     "max_tokens",

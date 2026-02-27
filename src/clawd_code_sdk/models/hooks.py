@@ -6,6 +6,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
+from clawd_code_sdk.models.base import CompactionTrigger  # noqa: TC001
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -101,7 +103,7 @@ class PreCompactHookInput(BaseHookInput):
     """Input data for PreCompact hook events."""
 
     hook_event_name: Literal["PreCompact"]
-    trigger: Literal["manual", "auto"]
+    trigger: CompactionTrigger
     custom_instructions: str | None
 
 
