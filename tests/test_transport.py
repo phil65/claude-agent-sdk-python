@@ -878,7 +878,7 @@ class TestSubprocessCLITransport:
             description="Agent without memory",
             prompt="You are a test agent",
         )
-        serialized = agent_no_memory.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_no_memory.to_dict()
         assert "memory" not in serialized
         assert serialized == {
             "description": "Agent without memory",
@@ -890,7 +890,7 @@ class TestSubprocessCLITransport:
             prompt="You remember things per-user",
             memory="user",
         )
-        serialized = agent_user_memory.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_user_memory.to_dict()
         assert serialized["memory"] == "user"
         # memory="project" should be included
         agent_project_memory = AgentDefinition(
@@ -898,7 +898,7 @@ class TestSubprocessCLITransport:
             prompt="You remember things per-project",
             memory="project",
         )
-        serialized = agent_project_memory.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_project_memory.to_dict()
         assert serialized["memory"] == "project"
         # memory="local" should be included
         agent_local_memory = AgentDefinition(
@@ -906,7 +906,7 @@ class TestSubprocessCLITransport:
             prompt="You remember things locally",
             memory="local",
         )
-        serialized = agent_local_memory.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_local_memory.to_dict()
         assert serialized["memory"] == "local"
 
     def test_agent_definition_memory_field_with_all_fields(self):
@@ -918,7 +918,7 @@ class TestSubprocessCLITransport:
             model="sonnet",
             memory="project",
         )
-        serialized = agent.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent.to_dict()
         assert serialized == {
             "description": "Full agent",
             "prompt": "You are a full agent",
@@ -945,10 +945,7 @@ class TestSubprocessCLITransport:
             ),
         }
         # Replicate the serialization logic from Query.__init__
-        agents_dict = {
-            name: agent_def.model_dump(by_alias=True, exclude_none=True)
-            for name, agent_def in agents.items()
-        }
+        agents_dict = {name: agent_def.to_dict() for name, agent_def in agents.items()}
         assert agents_dict["memory-agent"]["memory"] == "user"
         assert "memory" not in agents_dict["no-memory-agent"]
 
@@ -964,7 +961,7 @@ class TestSubprocessCLITransport:
             description="Agent without MCP servers",
             prompt="You are a test agent",
         )
-        serialized = agent_no_mcp.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_no_mcp.to_dict()
         assert "mcpServers" not in serialized
         assert "mcp_servers" not in serialized
         # Dict-style mcp_servers should serialize as mcpServers array
@@ -975,7 +972,7 @@ class TestSubprocessCLITransport:
                 "git": {"command": "uvx", "args": ["mcp-server-git"]},
             },
         )
-        serialized = agent_with_mcp.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_with_mcp.to_dict()
         assert "mcpServers" in serialized
         assert "mcp_servers" not in serialized
         assert serialized["mcpServers"] == [
@@ -994,7 +991,7 @@ class TestSubprocessCLITransport:
             prompt="You have tools",
             mcp_servers=["my-server"],
         )
-        serialized = agent_str.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_str.to_dict()
         assert serialized["mcpServers"] == ["my-server"]
         # List with dict configs
         agent_dict = AgentDefinition(
@@ -1002,7 +999,7 @@ class TestSubprocessCLITransport:
             prompt="You have tools",
             mcp_servers=[{"git": {"command": "uvx", "args": ["mcp-server-git"]}}],
         )
-        serialized = agent_dict.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_dict.to_dict()
         assert serialized["mcpServers"] == [
             {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
         ]
@@ -1016,7 +1013,7 @@ class TestSubprocessCLITransport:
                 {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
             ],
         )
-        serialized = agent_mixed.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent_mixed.to_dict()
         assert serialized["mcpServers"] == [
             "shared-server",
             {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
@@ -1034,7 +1031,7 @@ class TestSubprocessCLITransport:
                 "git": {"command": "uvx", "args": ["mcp-server-git"]},
             },
         )
-        serialized = agent.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent.to_dict()
         assert serialized == {
             "description": "Full agent",
             "prompt": "You are a full agent",
@@ -1056,7 +1053,7 @@ class TestSubprocessCLITransport:
                 "remote": {"type": "sse", "url": "http://localhost:8080/sse"},
             },
         )
-        serialized = agent.model_dump(by_alias=True, exclude_none=True)
+        serialized = agent.to_dict()
         assert "mcpServers" in serialized
         assert len(serialized["mcpServers"]) == 2
         # Each dict entry becomes a separate array element
