@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import anyio
-from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -26,6 +25,8 @@ from clawd_code_sdk import (
 from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import ModelUsage
+
+from .conftest import make_beta_message
 
 
 if TYPE_CHECKING:

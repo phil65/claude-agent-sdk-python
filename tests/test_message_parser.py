@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk._errors import MessageParseError
@@ -15,6 +14,8 @@ from clawd_code_sdk.models import (
     ToolUseBlock,
     UserMessage,
 )
+
+from .conftest import make_beta_message
 
 
 class TestContentBlockDispatch:

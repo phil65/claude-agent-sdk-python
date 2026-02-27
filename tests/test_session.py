@@ -8,7 +8,6 @@ import json
 from unittest.mock import AsyncMock
 
 import anyio
-from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -25,6 +24,8 @@ from clawd_code_sdk.session import (
     SessionSnapshot,
     ToolCallSummary,
 )
+
+from .conftest import make_beta_message
 
 
 def _create_mock_transport_with_messages(messages: list[dict]) -> AsyncMock:

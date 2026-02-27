@@ -8,7 +8,6 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import anyio
-from conftest import make_beta_message
 import pytest
 
 from clawd_code_sdk import (
@@ -20,6 +19,8 @@ from clawd_code_sdk import (
     query,
 )
 from clawd_code_sdk.models import ModelUsage, TextBlock, ToolUseBlock
+
+from .conftest import make_beta_message
 
 
 def create_mock_transport(messages: list[dict]):
