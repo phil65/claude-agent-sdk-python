@@ -424,10 +424,7 @@ class TestClaudeSDKClientStreaming:
                 mock_transport.read_messages = mock_receive
 
                 async with ClaudeSDKClient() as client:
-                    messages = []
-                    async for msg in client.receive_response():
-                        messages.append(msg)
-
+                    messages = [msg async for msg in client.receive_response()]
                     # Should only get 2 messages (assistant + result)
                     assert len(messages) == 2
                     assert isinstance(messages[0], AssistantMessage)
@@ -621,10 +618,7 @@ class TestQueryWithAsyncIterable:
 
                 with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
                     # Run query with async iterable
-                    messages = []
-                    async for msg in query(prompt=message_stream()):
-                        messages.append(msg)
-
+                    messages = [msg async for msg in query(prompt=message_stream())]
                     # Should get the result message
                     assert len(messages) == 1
                     assert isinstance(messages[0], ResultMessage)

@@ -89,6 +89,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
+    from clawd_code_sdk.models.base import StopReason
     from clawd_code_sdk.models.content_blocks import ContentBlock
     from clawd_code_sdk.models.messages import Message
     from clawd_code_sdk.storage.models import ClaudeContentBlock, ClaudeJSONLEntry
@@ -125,11 +126,7 @@ def _convert_content_blocks(
     """Convert message content, handling both string and block-list forms."""
     if isinstance(content, str):
         return content
-    blocks: list[ContentBlock] = []
-    for block in content:
-        if (converted := _convert_content_block(block)) is not None:
-            blocks.append(converted)
-    return blocks
+    return [converted for blk in content if (converted := _convert_content_block(blk)) is not None]
 
 
 # =============================================================================
@@ -345,12 +342,12 @@ def _make_synthetic_result(
     last_uuid = ""
     session_id = ""
     is_error = False
-    stop_reason: str | None = None
+    stop_reason: StopReason | None = None
 
     for entry in turn_entries:
         match entry:
             case ClaudeAssistantEntry(
-                message=ClaudeApiMessage(id=msg_id, stop_reason=stop_reason, usage=usage),
+                message=ClaudeApiMessage(id=msg_id, stop_reason=reason, usage=usage),
                 uuid=last_uuid,
                 session_id=session_id,
                 is_api_error_message=is_api_error_message,
@@ -360,8 +357,8 @@ def _make_synthetic_result(
                 if msg_id not in seen_msg_ids:
                     seen_msg_ids.add(msg_id)
                     total_usage.add(usage)
-                if stop_reason is not None:
-                    stop_reason = stop_reason
+                if reason is not None:
+                    stop_reason = reason
 
     token_usage = Usage(
         input_tokens=total_usage.input_tokens,

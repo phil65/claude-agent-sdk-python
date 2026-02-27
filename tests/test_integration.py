@@ -112,11 +112,7 @@ class TestIntegration:
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
-
-            messages = []
-            async for msg in query(prompt="What is 2 + 2?", transport=mock_transport):
-                messages.append(msg)
-
+            messages = [msg async for msg in query("What is 2 + 2?", transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 1
@@ -179,16 +175,9 @@ class TestIntegration:
                     },
                 },
             ]
-            mock_transport = create_mock_transport(test_messages)
-
-            messages = []
-            async for msg in query(
-                prompt="Read /test.txt",
-                options=ClaudeAgentOptions(allowed_tools=["Read"]),
-                transport=mock_transport,
-            ):
-                messages.append(msg)
-
+            mock_tp = create_mock_transport(test_messages)
+            opts = ClaudeAgentOptions(allowed_tools=["Read"])
+            messages = [i async for i in query("Read /test.txt", options=opts, transport=mock_tp)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 2
@@ -260,15 +249,8 @@ class TestIntegration:
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
-
-            messages = []
-            async for msg in query(
-                prompt="Continue",
-                options=ClaudeAgentOptions(session=ContinueLatest()),
-                transport=mock_transport,
-            ):
-                messages.append(msg)
-
+            opts = ClaudeAgentOptions(session=ContinueLatest())
+            messages = [i async for i in query("Continue", options=opts, transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -317,16 +299,9 @@ class TestIntegration:
                     },
                 },
             ]
-            mock_transport = create_mock_transport(test_messages)
-
-            messages = []
-            async for msg in query(
-                prompt="Read the readme",
-                options=ClaudeAgentOptions(max_budget_usd=0.0001),
-                transport=mock_transport,
-            ):
-                messages.append(msg)
-
+            mock_tp = create_mock_transport(test_messages)
+            opts = ClaudeAgentOptions(max_budget_usd=0.0001)
+            messages = [i async for i in query("Read the readme", options=opts, transport=mock_tp)]
             assert len(messages) == 2
             assert isinstance(messages[1], ResultMessage)
             assert messages[1].subtype == "error_max_budget_usd"

@@ -251,11 +251,7 @@ class TestSession:
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
                 assert session.state == "idle"
-
-                messages = []
-                async for msg in session.send("hello"):
-                    messages.append(msg)
-
+                messages = [msg async for msg in session.send("hello")]
                 assert len(messages) == 2
                 assert isinstance(messages[0], AssistantMessage)
                 assert isinstance(messages[1], ResultMessage)

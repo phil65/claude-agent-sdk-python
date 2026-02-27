@@ -150,7 +150,7 @@ async def test_structured_output_with_tools():
     cwd = tempfile.gettempdir()
     options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=cwd)
     result_message = None
-    prompt = "Count how many files are in the current directory and check if there's a README file. Use tools as needed."
+    prompt = "Count how many files are in the current directory and check if there's a README file."
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message

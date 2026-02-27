@@ -168,18 +168,11 @@ You are a simple test agent. When asked a question, provide a brief, helpful ans
 """
         )
 
-        options = ClaudeAgentOptions(
-            setting_sources=["project"],
-            cwd=project_dir,
-            max_turns=1,
-        )
+        options = ClaudeAgentOptions(setting_sources=["project"], cwd=project_dir, max_turns=1)
 
-        messages = []
         async with ClaudeSDKClient(options=options) as client:
             await client.query("Say hello in exactly 3 words")
-            async for msg in client.receive_response():
-                messages.append(msg)
-
+            messages = [msg async for msg in client.receive_response()]
         # Must have at least init, assistant, result
         message_types = [type(m).__name__ for m in messages]
 

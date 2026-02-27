@@ -86,7 +86,7 @@ def preprocess_schema() -> None:
     --use-title-as-name.
     """
     print("Pre-processing schema (adding titles to union variants)...")
-    with open(TEMP_SCHEMA) as f:
+    with Path(TEMP_SCHEMA).open() as f:
         schema = json.load(f)
 
     titled_count = 0
@@ -108,7 +108,7 @@ def preprocess_schema() -> None:
                     item["title"] = f"{parent_name}By{_to_pascal(req[0])}"
                     titled_count += 1
 
-    with open(TEMP_SCHEMA_TITLED, "w") as f:
+    with Path(TEMP_SCHEMA_TITLED).open("w") as f:
         json.dump(schema, f, indent=2)
     print(f"  Added {titled_count} titles, saved to {TEMP_SCHEMA_TITLED}")
 

@@ -47,14 +47,11 @@ async def test_mcp_image_tool_wire_format():
         max_turns=3,
     )
 
-    messages: list[Message] = []
     async with ClaudeSDKClient(options=options) as client:
         await client.query(
             "Call the mcp__image_test__get_test_image tool and describe what you see."
         )
-        async for message in client.receive_response():
-            messages.append(message)
-
+        messages = [msg async for msg in client.receive_response()]
     # Verify we got a result
     result_messages = [m for m in messages if isinstance(m, ResultMessage)]
     assert result_messages, f"No ResultMessage. Got: {[type(m).__name__ for m in messages]}"
@@ -132,13 +129,11 @@ async def test_mcp_progress_tool_wire_format():
         max_turns=3,
     )
 
-    messages: list[Message] = []
     async with ClaudeSDKClient(options=options) as client:
         await client.query(
             'Call the mcp__progress_test__test_progress tool with message "hello from test".'
         )
-        async for message in client.receive_response():
-            messages.append(message)
+        messages: list[Message] = [msg async for msg in client.receive_response()]
 
     # Verify we got a successful result
     result_messages = [m for m in messages if isinstance(m, ResultMessage)]

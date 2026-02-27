@@ -4,8 +4,6 @@ These tests verify that the SDK properly handles partial message streaming,
 including StreamEvent parsing and message interleaving.
 """
 
-from typing import Any
-
 from anthropic.types import RawContentBlockDeltaEvent, ThinkingDelta
 import pytest
 
@@ -34,27 +32,20 @@ async def test_include_partial_messages_stream_events():
         },
     )
 
-    collected_messages: list[Any] = []
-
     async with ClaudeSDKClient(options) as client:
         # Send a simple prompt that will generate streaming response with thinking
         await client.query("Think of three jokes, then tell one")
-
-        async for message in client.receive_response():
-            collected_messages.append(message)
+        collected_messages = [i async for i in client.receive_response()]
 
     # Verify we got the expected message types
     message_types = [type(msg).__name__ for msg in collected_messages]
-
     # Should have InitSystemMessage(init) at the start
     assert message_types[0] == "InitSystemMessage"
     assert isinstance(collected_messages[0], InitSystemMessage)
     assert collected_messages[0].subtype == "init"
-
     # Should have multiple StreamEvent messages
     stream_events = [msg for msg in collected_messages if isinstance(msg, StreamEvent)]
     assert len(stream_events) > 0, "No StreamEvent messages received"
-
     # Check for expected StreamEvent types
     event_types = [event.event.type for event in stream_events]
     assert "message_start" in event_types, "No message_start StreamEvent"
@@ -88,19 +79,13 @@ async def test_include_partial_messages_stream_events():
 @pytest.mark.asyncio
 async def test_include_partial_messages_thinking_deltas():
     """Test that thinking content is streamed incrementally via deltas."""
-    options = ClaudeAgentOptions(
-        model="claude-sonnet-4-5",
-        max_turns=2,
-        thinking=ThinkingConfigEnabled(type="enabled", budget_tokens=8000),
-    )
-
+    thinking = ThinkingConfigEnabled(type="enabled", budget_tokens=8000)
+    options = ClaudeAgentOptions(model="claude-sonnet-4-5", max_turns=2, thinking=thinking)
     thinking_deltas = []
-
     async with ClaudeSDKClient(options) as client:
         await client.query("Think step by step about what 2 + 2 equals")
 
         async for message in client.receive_response():
-            print(message)
             if (
                 isinstance(message, StreamEvent)
                 and isinstance(message.event, RawContentBlockDeltaEvent)

@@ -155,11 +155,7 @@ class TestQueryFunction:
                 _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-
-            messages = []
-            async for msg in query(prompt="What is 2+2?", transport=mock_transport):
-                messages.append(msg)
-
+            messages = [msg async for msg in query(prompt="What is 2+2?", transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -181,18 +177,13 @@ class TestQueryFunction:
                 _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-
             options = ClaudeAgentOptions(
                 allowed_tools=["Read", "Write"],
                 system_prompt="You are helpful",
                 permission_mode="acceptEdits",
                 max_turns=5,
             )
-
-            messages = []
-            async for msg in query(prompt="Hi", options=options, transport=mock_transport):
-                messages.append(msg)
-
+            messages = [msg async for msg in query("Hi", options=options, transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -214,12 +205,8 @@ class TestQueryFunction:
                 _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-
             options = ClaudeAgentOptions(cwd="/custom/path")
-            messages = []
-            async for msg in query(prompt="test", options=options, transport=mock_transport):
-                messages.append(msg)
-
+            messages = [i async for i in query("test", options=options, transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)

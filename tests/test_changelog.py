@@ -3,6 +3,8 @@ import re
 
 
 class TestChangelog:
+    """Test the CHANGELOG.md file."""
+
     def setup_method(self):
         self.changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
 
@@ -67,7 +69,7 @@ class TestChangelog:
 
         for i in range(1, len(versions)):
             assert versions[i - 1] > versions[i], (
-                f"Versions should be in descending order: {versions[i - 1]} should be > {versions[i]}"
+                f"Versions should be in descending order: {versions[i - 1]} must be > {versions[i]}"
             )
 
     def test_changelog_no_empty_bullet_points(self):

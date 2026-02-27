@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Mock Claude CLI server for testing async iterable message streaming.
 
 Reads JSON-RPC messages from stdin, handles the initialize control request,

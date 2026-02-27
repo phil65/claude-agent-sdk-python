@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 async def query(
-    *,
     prompt: str | AsyncIterable[UserPromptMessage],
+    *,
     options: ClaudeAgentOptions | None = None,
     transport: Transport | None = None,
 ) -> AsyncIterator[Message]:

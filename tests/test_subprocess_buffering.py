@@ -69,11 +69,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # type: ignore[assignment]
             transport._stderr_stream = MockTextReceiveStream([])  # type: ignore[assignment]
-
-            messages: list[Any] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 2
             assert messages[0]["type"] == "message"
             assert messages[0]["id"] == "msg1"
@@ -98,10 +94,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-            messages: list[Any] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 2
             assert messages[0]["content"] == "Line 1\nLine 2\nLine 3"
             assert messages[1]["data"] == "Some\nMultiline\nContent"
@@ -122,10 +115,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-            messages: list[dict[str, Any]] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 2
             assert messages[0]["id"] == "msg1"
             assert messages[1]["id"] == "res1"
@@ -162,11 +152,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([part1, part2, part3])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
-            messages: list[Any] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 1
             assert messages[0]["type"] == "assistant"
             assert len(messages[0]["message"]["content"]) == 2
@@ -203,11 +189,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream(chunks)  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-
-            messages: list[Any] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 1
             assert messages[0]["type"] == "user"
             assert (
@@ -230,9 +212,7 @@ class TestSubprocessBuffering:
             transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
             with pytest.raises(Exception) as exc_info:
-                messages: list[Any] = []
-                async for msg in transport.read_messages():
-                    messages.append(msg)
+                _messages = [msg async for msg in transport.read_messages()]
 
             assert isinstance(exc_info.value, CLIJSONDecodeError)
             assert "exceeded maximum buffer size" in str(exc_info.value)
@@ -286,10 +266,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream(lines)  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-            messages: list[Any] = []
-            async for msg in transport.read_messages():
-                messages.append(msg)
-
+            messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 3
             assert messages[0]["type"] == "system"
             assert messages[0]["subtype"] == "start"

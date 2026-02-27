@@ -346,6 +346,8 @@ class HookResponseSystemMessage(BaseSystemMessage):
 
 
 class ModelUsage(TypedDict):
+    """Token usage from Claude API response."""
+
     inputTokens: int
     outputTokens: int
     cacheReadInputTokens: int
@@ -357,6 +359,8 @@ class ModelUsage(TypedDict):
 
 
 class SDKPermissionDenial(TypedDict):
+    """Permission denial from Claude API response."""
+
     tool_name: ToolName | str
     tool_use_id: str
     tool_input: ToolInput | dict[str, Any]
