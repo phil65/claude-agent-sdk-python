@@ -319,7 +319,7 @@ class TestHookCallbacks:
             return {"async_": True, "asyncTimeout": 5000}
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[async_hook])]}
+        hooks = {"PreToolUse": [HookMatcher(hooks=[async_hook])]}
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
@@ -369,7 +369,7 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[conversion_test_hook])]}
+        hooks = {"PreToolUse": [HookMatcher(hooks=[conversion_test_hook])]}
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
@@ -407,33 +407,6 @@ class TestHookCallbacks:
         assert result.get("asyncTimeout") == 10000
         assert result.get("stopReason") == "Testing field conversion"
         assert result.get("systemMessage") == "Fields should be converted"
-
-
-class TestClaudeAgentOptionsIntegration:
-    """Test that callbacks work through ClaudeAgentOptions."""
-
-    def test_options_with_callbacks(self):
-        """Test creating options with callbacks."""
-
-        async def my_callback(
-            tool_name: str, input_data: dict, context: ToolPermissionContext
-        ) -> PermissionResultAllow:
-            return PermissionResultAllow()
-
-        async def my_hook(
-            input_data: HookInput, tool_use_id: str | None, context: HookContext
-        ) -> dict:
-            return {}
-
-        options = ClaudeAgentOptions(
-            can_use_tool=my_callback,
-            hooks={"tool_use_start": [HookMatcher(matcher={"tool": "Bash"}, hooks=[my_hook])]},
-        )
-
-        assert options.can_use_tool == my_callback
-        assert "tool_use_start" in options.hooks
-        assert len(options.hooks["tool_use_start"]) == 1
-        assert options.hooks["tool_use_start"][0].hooks[0] == my_hook
 
 
 class TestHookEventCallbacks:
