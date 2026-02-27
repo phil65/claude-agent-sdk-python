@@ -190,7 +190,7 @@ def _list_all_session_files() -> list[tuple[Path, str | None]]:
             continue
         cwd = decode_project_path(project_dir.name)
         for session_file in project_dir.glob("*.jsonl"):
-            results.append((session_file, cwd))
+            results.append((session_file, cwd))  # noqa: PERF401
     return results
 
 

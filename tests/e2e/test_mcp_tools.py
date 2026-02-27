@@ -62,12 +62,12 @@ async def test_mcp_image_tool_wire_format():
     for msg in messages:
         if isinstance(msg, AssistantMessage):
             for block in msg.content:
-                all_content_blocks.append(
+                all_content_blocks.append(  # noqa: PERF401
                     {"source": "assistant", "type": block.type, "block": block}
                 )
         elif isinstance(msg, UserMessage) and isinstance(msg.content, list):
             for block in msg.content:
-                all_content_blocks.append({"source": "user", "type": block.type, "block": block})
+                all_content_blocks.append({"source": "user", "type": block.type, "block": block})  # noqa: PERF401
 
     # We expect at least a tool_use block (Claude calling the tool)
     tool_use_blocks = [b for b in all_content_blocks if b["type"] == "tool_use"]
@@ -145,12 +145,12 @@ async def test_mcp_progress_tool_wire_format():
     for msg in messages:
         if isinstance(msg, AssistantMessage):
             for block in msg.content:
-                all_content_blocks.append(
+                all_content_blocks.append(  # noqa: PERF401
                     {"source": "assistant", "type": block.type, "block": block}
                 )
         elif isinstance(msg, UserMessage) and isinstance(msg.content, list):
             for block in msg.content:
-                all_content_blocks.append({"source": "user", "type": block.type, "block": block})
+                all_content_blocks.append({"source": "user", "type": block.type, "block": block})  # noqa: PERF401
 
     # Verify Claude called the progress tool
     tool_use_blocks = [b for b in all_content_blocks if b["type"] == "tool_use"]

@@ -49,7 +49,7 @@ from pydantic import BaseModel, Field, TypeAdapter
 # - "bash_code_execution_tool_result_error" -> BetaBashCodeExecutionToolResultError
 # - "text_editor_code_execution_view_result" -> BetaTextEditorCodeExecutionViewResultBlock
 # - "text_editor_code_execution_create_result" -> BetaTextEditorCodeExecutionCreateResultBlock
-# - "text_editor_code_execution_str_replace_result" -> BetaTextEditorCodeExecutionStrReplaceResultBlock
+# - "text_editor_code_execution_str_replace_result" -> BetaTextEditorCodeExecutionStrReplaceResultBlock  # noqa: E501
 # - "text_editor_code_execution_tool_result_error" -> BetaTextEditorCodeExecutionToolResultError
 ToolResultContentBlock = Annotated[
     TextBlock
@@ -75,7 +75,7 @@ _tool_result_content_adapter: TypeAdapter[list[ToolResultContentBlock]] | None =
 
 
 def _get_adapter() -> TypeAdapter[list[ToolResultContentBlock]]:
-    global _tool_result_content_adapter
+    global _tool_result_content_adapter  # noqa: PLW0603
     if _tool_result_content_adapter is None:
         # Force schema build for Anthropic models (deferred by default)
         for model in [

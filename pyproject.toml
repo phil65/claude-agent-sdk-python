@@ -41,6 +41,11 @@ dev = [
   "ruff>=0.1.0",
 ]
 
+[dependency-groups]
+dev = [
+  "fastmcp>=3.0.0",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -103,20 +108,95 @@ exclude = ["examples/"]
 [tool.ruff.lint]
 future-annotations = true
 select = [
-  "E",  # pycodestyle errors
-  "W",  # pycodestyle warnings
-  "F",  # pyflakes
-  "I",  # isort
-  "N",  # pep8-naming
-  "UP",  # pyupgrade
+  "A",  # Flake8-builtins
+  # "ANN",  # Flake8-Annotations
+  # "ASYNC",  # Flake8-Async
+  # "ARG",  # # Flake8-Unused-Arguments
   "B",  # flake8-bugbear
+  "BLE",  # Flake8-blind-except
+  "C",
   "C4",  # flake8-comprehensions
+  # "C90",  # MCCabe
+  "COM",  # Flake8-commas
+  # "CPY",  #  Copyright-related rules
+  "D",  # PyDocStyle
+  # "DTZ",  # Flake8- Datetimez
+  "E",  # PyCodeStyle Error
+  "EM",  # flake8-errmsg
+  # "ERA",  #  Eradicate
+  "EXE",  # flake8-executable
+  "F",  # PyFlakes
+  "FA",  # flake8-future-annotations
+  # "FBT",  # flake8-boolean-trap
+  # "FIX",  # flake8-fixme
+  "FLY",  # flynt
+  "G",  # flake8-logging-format
+  "I",  # ISort
+  "ICN",  # Flake8-import-conventions
+  "INP",  # flake8-no-pep420
+  "INT",  # flake8-gettext
+  "ISC",  # flake8-implicit-str-concat
+  "N",  # pep8-naming
+  # "NPY",  # numpy-specific rules
+  # "PD",   # pandas-vet
+  "PERF",  # perflint
+  # "PGH",  # pygrep-hooks
+  "PIE",  # flake8-pie
+  "PLE",  # PyLint Error
+  "PLC",  # PyLint convention
+  "PLW",  # PyLint Warning
+  "PLR",  # PyLint refactor
+  "PT",  # flake8-pytest-style
   "PTH",  # flake8-use-pathlib
+  "PYI",  # flake8-pyi
+  "Q",  # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # ruff-specific rules
+  # "S",    # flake8-bandit
   "SIM",  # flake8-simplify
-  "TC",
+  "SLF",  # flake8-self
+  "SLOT",  # flake8-slots
+  # "T",
+  # "TD",   # flake8-todos
+  "T10",  # flake8-debugger
+  # "T20",  # flake8-print
+  "TC",  # flake8-type-checking
+  "TID",  # flake8-tidy-imports
+  "TRY",  # tryceratops
+  "UP",  # PyUpgrade
+  "W",  # PyCodeStyle warning
+  "YTT",  # flake8-2020
 ]
 ignore = [
-  "E501",  # line too long (handled by formatter)
+  "BLE001",
+  "C408",  # Unnecessary {obj_type} call (rewrite as a literal)
+  "C901",  # {name} is too complex ({complexity} > {max_complexity})
+  "COM812",
+  # "CPY001", # Missing copyright notice at top of file
+  "D100",  # Missing docstring in public module
+  "D102",  # Missing docstring in public method
+  "D103",  # Missing docstring in public function
+  "D105",  # Missing docstring in magic method
+  "D107",  # Missing docstring in __init__
+  "D203",  # 1 blank line required before class docstring
+  "D204",  # 1 blank line required after class docstring
+  "D213",  # Multi-line docstring summary should start at the second line
+  "D401",  # First line of docstring should be in imperative mood: "{first_line}"
+  "D408",  # Section underline should be in the line following the section's name ("{name}")
+  "D413",  # Missing blank line after last section ("{name}")
+  "EM101",  # Exception must not use a string literal, assign to variable first
+  "EM102",  # Exception must not use an f-string literal, assign to variable first
+  "ISC001",
+  "PLC0415",
+  "PLR0912",  # Too many branches
+  "PLR0913",  # Too many arguments to function call
+  "PLR0911",  # Comlexity
+  "PLR0915",  # Too many statements
+  # "PLR2004", # Magic values instead of named consts
+  "SLF001",  # Private member accessed
+  "TRY003",  # Avoid specifying long messages outside the exception class
+  "TC006",  # runtime-cast-value
 ]
 
 [tool.ruff.lint.flake8-quotes]
@@ -156,8 +236,9 @@ max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "I001"]
-"scripts/*" = ["INP001"]
+"scripts/*" = ["INP001", "PLR2004"]
 "*tests/*" = ["D100", "PLR2004"]
+"reference/settings_file.py" = ["ALL"]
 "docs/examples/**/*.py" = [
   "TC001",
 ]  # Examples don't need TYPE_CHECKING imports
@@ -173,8 +254,3 @@ invalid-type-form = "ignore"
 not-subscriptable = "ignore"
 possibly-missing-import = "warn"
 division-by-zero = "warn"
-
-[dependency-groups]
-dev = [
-    "fastmcp>=3.0.0",
-]

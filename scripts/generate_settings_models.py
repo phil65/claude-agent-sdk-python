@@ -233,7 +233,7 @@ def main() -> None:
     except subprocess.CalledProcessError as e:
         print(f"\nError: Command failed: {e}", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"\nUnexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 

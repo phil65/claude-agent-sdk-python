@@ -211,7 +211,7 @@ class TestSubprocessBuffering:
             transport._process = mock_process
             transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
             transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
-            with pytest.raises(Exception) as exc_info:
+            with pytest.raises(Exception) as exc_info:  # noqa: PT011
                 _messages = [msg async for msg in transport.read_messages()]
 
             assert isinstance(exc_info.value, CLIJSONDecodeError)

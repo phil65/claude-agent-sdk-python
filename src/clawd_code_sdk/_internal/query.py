@@ -514,7 +514,7 @@ class Query:
                 case "end":
                     break
                 case "error":
-                    raise Exception(message.get("error", "Unknown error"))
+                    raise Exception(message.get("error", "Unknown error"))  # noqa: TRY002
                 case _:
                     yield message
 

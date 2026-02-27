@@ -54,7 +54,7 @@ class TestErrorTypes:
         except json.JSONDecodeError as e:
             error = CLIJSONDecodeError("{invalid json}", e)
             assert error.line == "{invalid json}"
-            assert error.original_error == e
+            assert error.original_error == e  # noqa: PT017
             assert "Failed to decode JSON" in str(error)
 
 
@@ -123,7 +123,7 @@ class TestAPIErrors:
             try:
                 raise error
             except APIError as e:
-                assert e.error_type is not None
+                assert e.error_type is not None  # noqa: PT017
 
             # Should also be catchable by ClaudeSDKError
             try:

@@ -198,7 +198,7 @@ class InitSystemMessage(BaseSystemMessage):
     model: Model
     permissionMode: PermissionMode  # noqa: N815
     slash_commands: list[str]
-    output_style: Literal["default", "json"] | str
+    output_style: Literal["default", "json"] | str  # noqa: PYI051
     claude_code_version: str
     agents: list[str]
     skills: list[str]

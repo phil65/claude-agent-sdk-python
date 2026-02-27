@@ -163,7 +163,7 @@ class McpServerStatusEntry(ClaudeCodeBaseModel):
     status: McpConnectionStatus
     server_info: McpServerVersionInfo | None = None
     config: dict[str, Any] = Field(default_factory=dict)
-    scope: Literal["project", "user", "local", "claudeai", "managed"] | str | None = None
+    scope: Literal["project", "user", "local", "claudeai", "managed"] | str | None = None  # noqa: PYI051
     tools: list[McpToolStatus] = Field(default_factory=list)
 
 

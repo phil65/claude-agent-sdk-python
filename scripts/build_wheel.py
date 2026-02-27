@@ -167,6 +167,7 @@ def retag_wheel(wheel_path: Path, platform_tag: str) -> Path:
         ],
         capture_output=True,
         text=True,
+        check=True,
     )
 
     if result.returncode != 0:
