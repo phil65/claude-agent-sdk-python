@@ -53,6 +53,7 @@ class AgentDefinition:
     critical_system_reminder_experimental: str | None = None
     skills: list[str] | None = None
     max_turns: int | None = None
+    background: bool | None = None
     # permission_mode: PermissionMode | None = None
     # hooks: dict[HookEvent, list[HookMatcher]] | None = None
 
