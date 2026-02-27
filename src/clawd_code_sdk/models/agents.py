@@ -6,9 +6,8 @@ from dataclasses import dataclass, fields
 from typing import Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
-
-from .hooks import AgentHooksConfig  # noqa: TC001
-from .mcp import ExternalMcpServerConfig  # noqa: TC001
+from clawd_code_sdk.models.hooks import AgentHooksConfig  # noqa: TC001
+from clawd_code_sdk.models.mcp import ExternalMcpServerConfig  # noqa: TC001
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
