@@ -345,21 +345,6 @@ class HookResponseSystemMessage(BaseSystemMessage):
     output: str
 
 
-class CacheCreation(TypedDict):
-    ephemeral_1h_input_tokens: int
-    ephemeral_5m_input_tokens: int
-
-
-class ServerToolUse(TypedDict):
-    web_search_requests: int
-    web_fetch_requests: int
-    service_tier: Literal["standard", "priority"]
-    cache_creation: CacheCreation
-    inference_geo: Literal["not_available"] | str
-    iterations: list[Any]
-    speed: str
-
-
 class ModelUsage(TypedDict):
     inputTokens: int
     outputTokens: int
@@ -369,7 +354,6 @@ class ModelUsage(TypedDict):
     costUSD: float
     contextWindow: int
     maxOutputTokens: int
-    server_tool_use: ServerToolUse
 
 
 class SDKPermissionDenial(TypedDict):
