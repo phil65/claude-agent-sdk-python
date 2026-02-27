@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -97,6 +98,34 @@ def generate_models() -> None:
     print(f"  Generated models to {OUTPUT_FILE}")
 
 
+def post_process() -> None:
+    """Fix known datamodel-codegen issues in the generated file."""
+    print("Post-processing generated models...")
+    content = OUTPUT_FILE.read_text()
+    original = content
+
+    # Replace constr(pattern=...) with str in dict key positions.
+    # datamodel-codegen emits constr() for constrained dict keys, but mypy
+    # doesn't understand the con* functional forms. Pydantic doesn't validate
+    # dict key patterns at runtime anyway, so plain str is equivalent.
+    content = re.sub(r"constr\(pattern=r?['\"][^'\"]*['\"]\)", "str", content)
+
+    # Remove unused constr import if no constr() usages remain outside imports
+    non_import_lines = [
+        line for line in content.splitlines() if not line.strip().startswith(("from ", "import "))
+    ]
+    if "constr" not in "\n".join(non_import_lines):
+        content = re.sub(r",\s*constr", "", content)
+        content = re.sub(r"constr,\s*", "", content)
+        content = content.replace("from pydantic import constr\n", "")
+
+    if content != original:
+        OUTPUT_FILE.write_text(content)
+        print("  Fixed constr() dict key annotations")
+    else:
+        print("  No post-processing needed")
+
+
 def verify_output() -> None:
     """Verify the generated file exists and has content."""
     if not OUTPUT_FILE.exists():
@@ -120,6 +149,7 @@ def main() -> None:
     try:
         download_schema()
         generate_models()
+        post_process()
         verify_output()
 
         print("\n" + "=" * 60)
