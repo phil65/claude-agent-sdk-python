@@ -619,6 +619,42 @@ class ConfigOutput(TypedDict):
 
 
 # ---------------------------------------------------------------------------
+# Skill
+# ---------------------------------------------------------------------------
+
+
+class SkillOutput(TypedDict):
+    """``tool_use_result`` for the Skill tool.
+
+    Not part of the official SDK ToolOutputSchemas as of SDK v0.2.62.
+    Shape derived from empirical testing.
+    """
+
+    success: bool
+    """Whether the skill was invoked successfully."""
+    commandName: str
+    """The name of the skill that was invoked."""
+    allowedTools: list[str]
+    """Tools that the skill is allowed to use."""
+
+
+# ---------------------------------------------------------------------------
+# EnterPlanMode
+# ---------------------------------------------------------------------------
+
+
+class EnterPlanModeOutput(TypedDict):
+    """``tool_use_result`` for the EnterPlanMode tool.
+
+    Not part of the official SDK ToolOutputSchemas as of SDK v0.2.62.
+    Shape derived from empirical testing.
+    """
+
+    message: str
+    """A message indicating that plan mode was entered."""
+
+
+# ---------------------------------------------------------------------------
 # EnterWorktree
 # ---------------------------------------------------------------------------
 
@@ -661,6 +697,8 @@ ToolUseResult = (
     | UnsubscribePollingOutput
     | ConfigOutput
     | EnterWorktreeOutput
+    | SkillOutput
+    | EnterPlanModeOutput
 )
 
 #: Backwards-compatible aliases for names previously in ``tool_use_results.py``.
@@ -697,4 +735,6 @@ TOOL_USE_RESULT_TYPES: dict[str, type[Any]] = {
     "UnsubscribePolling": UnsubscribePollingOutput,
     "Config": ConfigOutput,
     "EnterWorktree": EnterWorktreeOutput,
+    "Skill": SkillOutput,
+    "EnterPlanMode": EnterPlanModeOutput,
 }
