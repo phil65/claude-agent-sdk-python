@@ -35,6 +35,91 @@ HookEvent = Literal[
 ]
 
 
+# ---------------------------------------------------------------------------
+# Declarative hook handler configs (for agent/skill frontmatter & settings)
+# ---------------------------------------------------------------------------
+# These TypedDicts represent the JSON-serializable hook handler format used in
+# agent definitions, skill frontmatter, and settings files. They are distinct
+# from HookCallback (Python callables used for programmatic SDK hooks).
+#
+# See https://code.claude.com/docs/en/hooks#hook-handler-fields
+
+# Functional syntax required because "async" is a Python keyword.
+CommandHookHandler = TypedDict(
+    "CommandHookHandler",
+    {
+        "type": Literal["command"],
+        "command": str,
+        "timeout": NotRequired[float],
+        "async": NotRequired[bool],
+        "statusMessage": NotRequired[str],
+        "once": NotRequired[bool],
+    },
+)
+"""Bash command hook handler.
+
+See https://code.claude.com/docs/en/hooks#command-hook-fields
+"""
+
+
+class PromptHookHandler(TypedDict):
+    """LLM prompt hook handler.
+
+    See https://code.claude.com/docs/en/hooks#prompt-and-agent-hook-fields
+    """
+
+    type: Literal["prompt"]
+    prompt: str
+    model: NotRequired[str]
+    timeout: NotRequired[float]
+    statusMessage: NotRequired[str]
+    once: NotRequired[bool]
+
+
+class AgentHookHandler(TypedDict):
+    """Agent hook handler with multi-turn tool access.
+
+    See https://code.claude.com/docs/en/hooks#agent-based-hooks
+    """
+
+    type: Literal["agent"]
+    prompt: str
+    model: NotRequired[str]
+    timeout: NotRequired[float]
+    statusMessage: NotRequired[str]
+
+
+HookHandler = CommandHookHandler | PromptHookHandler | AgentHookHandler
+"""Union of all declarative hook handler types."""
+
+
+class HookMatcherConfig(TypedDict):
+    """Declarative hook matcher for agent/skill/settings hook configuration.
+
+    See https://code.claude.com/docs/en/hooks#matcher-patterns
+    """
+
+    matcher: NotRequired[str | None]
+    hooks: list[HookHandler]
+
+
+# Hook config type for AgentDefinition.hooks
+AgentHooksConfig = dict[HookEvent, list[HookMatcherConfig]]
+"""Type alias for the hooks field on AgentDefinition.
+
+Maps hook event names to lists of matcher configs. Example::
+
+    hooks: AgentHooksConfig = {
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [{"type": "command", "command": "./check.sh"}],
+            }
+        ],
+    }
+"""
+
+
 # Hook input types - strongly typed for each hook event
 class BaseHookInput(TypedDict):
     """Base hook input fields present across many hook events."""

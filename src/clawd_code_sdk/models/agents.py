@@ -7,6 +7,7 @@ from typing import Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
 
+from .hooks import AgentHooksConfig  # noqa: TC001
 from .mcp import ExternalMcpServerConfig  # noqa: TC001
 
 
@@ -54,8 +55,8 @@ class AgentDefinition:
     skills: list[str] | None = None
     max_turns: int | None = None
     background: bool | None = None
+    hooks: AgentHooksConfig | None = None
     # permission_mode: PermissionMode | None = None
-    # hooks: dict[HookEvent, list[HookMatcher]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dict suitable for the CLI wire format.
