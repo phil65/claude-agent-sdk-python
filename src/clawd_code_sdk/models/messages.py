@@ -85,6 +85,8 @@ class UserPromptMessage(TypedDict):
 
 @dataclass(kw_only=True)
 class BaseMessage:
+    """Base class for messages."""
+
     uuid: str
     session_id: str
 
@@ -170,12 +172,16 @@ class AssistantMessage:
 
 @dataclass(kw_only=True)
 class McpServerStatus:
+    """MCP server status."""
+
     name: str
     status: McpConnectionStatus
 
 
 @dataclass(kw_only=True)
 class Plugin:
+    """Claude code plugin."""
+
     name: str
     path: str
 
@@ -220,6 +226,8 @@ class StatusSystemMessage(BaseSystemMessage):
 
 
 class TriggerMetadata(TypedDict):
+    """Trigger metadata."""
+
     trigger: CompactionTrigger
     pre_tokens: int
 
@@ -233,6 +241,8 @@ class CompactBoundarySystemMessage(BaseSystemMessage):
 
 
 class RateLimitInfo(TypedDict):
+    """Rate limit information."""
+
     status: Literal["allowed", "rejected"]
     resetsAt: int
     rateLimitType: Literal["five_hour", "twenty_four_hour"]

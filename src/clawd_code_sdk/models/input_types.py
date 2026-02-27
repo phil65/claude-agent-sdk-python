@@ -31,11 +31,13 @@ class AgentInput(TypedDict):
     model: NotRequired[ModelName]
     """Optional model to use for the agent."""
     resume: NotRequired[str]
-    """Optional agent ID to resume from in order to continue from the previous execution transcript."""
+    """Optional agent ID to resume from in order to continue from the previous exec transcript."""
     run_in_background: NotRequired[bool]
     """Whether to run the agent in the background."""
     max_turns: NotRequired[int]
-    """Maximum number of agentic turns (API round-trips) before stopping. Used internally for warmup."""
+    """Maximum number of agentic turns (API round-trips) before stopping.
+
+    Used internally for warmup."""
     name: NotRequired[str]
     """Name for the spawned agent."""
     team_name: NotRequired[str]
@@ -127,11 +129,15 @@ class FileReadInput(TypedDict):
     file_path: str
     """The absolute path to the file to read."""
     offset: NotRequired[int]
-    """The line number to start reading from. Only provide if the file is too large to read at once."""
+    """The line number to start reading from.
+
+    Only provide if the file is too large to read at once."""
     limit: NotRequired[int]
     """The number of lines to read. Only provide if the file is too large to read at once"""
     pages: NotRequired[str]
-    """Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request."""
+    """Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files.
+
+    Maximum 20 pages per request."""
 
 
 @_extra_allow

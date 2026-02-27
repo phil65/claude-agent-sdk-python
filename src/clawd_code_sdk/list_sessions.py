@@ -46,14 +46,14 @@ def _read_git_branch_from_tail(path: Path) -> str | None:
             data = f.read().decode("utf-8", errors="ignore")
             lines = data.strip().split("\n")
             for line in reversed(lines):
-                line = line.strip()
-                if not line:
+                stripped = line.strip()
+                if not stripped:
                     continue
                 # Quick string check before parsing
-                if "gitBranch" not in line and "git_branch" not in line:
+                if "gitBranch" not in stripped and "git_branch" not in stripped:
                     continue
                 try:
-                    entry: dict[str, object] = anyenv.load_json(line, return_type=dict)
+                    entry: dict[str, object] = anyenv.load_json(stripped, return_type=dict)
                     branch = entry.get("gitBranch") or entry.get("git_branch")
                     if isinstance(branch, str) and branch:
                         return branch

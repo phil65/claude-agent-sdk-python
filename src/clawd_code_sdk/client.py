@@ -339,7 +339,7 @@ class ClaudeSDKClient:
         - If no ResultMessage is received, the iterator continues indefinitely
 
         Yields:
-            Message: Each message received (UserMessage, AssistantMessage, InitSystemMessage, ResultMessage)
+            Message: Each message received
 
         Example:
             ```python
@@ -377,7 +377,7 @@ class ClaudeSDKClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         """Exit async context - always disconnects."""
         await self.disconnect()
 

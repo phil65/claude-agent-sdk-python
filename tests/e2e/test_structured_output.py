@@ -33,7 +33,10 @@ async def test_simple_structured_output():
     options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=".")
     # Agent must use Glob/Bash to count files
     result_message = None
-    prompt = "Count how many Python files are in src/clawd_code_sdk/ and check if there are any test files. Use tools to explore the filesystem."
+    prompt = (
+        "Count how many Python files are in src/clawd_code_sdk/ "
+        "and check if there are any test files. Use tools to explore the filesystem."
+    )
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
@@ -116,7 +119,11 @@ async def test_structured_output_with_enum():
     }
     options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=".")
     result_message = None
-    prompt = "Search for test files in the tests/ directory. Determine which test framework is being used (pytest/unittest/nose) and count how many test files exist. Use Grep to search for framework imports."
+    prompt = (
+        "Search for test files in the tests/ directory. "
+        "Determine which test framework is being used (pytest/unittest/nose) "
+        "and count how many test files exist. Use Grep to search for framework imports."
+    )
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message

@@ -81,17 +81,17 @@ async def test_include_partial_messages_thinking_deltas():
     """Test that thinking content is streamed incrementally via deltas."""
     thinking = ThinkingConfigEnabled(type="enabled", budget_tokens=8000)
     options = ClaudeAgentOptions(model="claude-sonnet-4-5", max_turns=2, thinking=thinking)
-    thinking_deltas = []
     async with ClaudeSDKClient(options) as client:
         await client.query("Think step by step about what 2 + 2 equals")
-
-        async for message in client.receive_response():
+        thinking_deltas = [
+            message.event.delta.thinking
+            async for message in client.receive_response()
             if (
                 isinstance(message, StreamEvent)
                 and isinstance(message.event, RawContentBlockDeltaEvent)
                 and isinstance(message.event.delta, ThinkingDelta)
-            ):
-                thinking_deltas.append(message.event.delta.thinking)
+            )
+        ]
 
     # Should have received multiple thinking deltas
     assert len(thinking_deltas) > 0, "No thinking deltas received"

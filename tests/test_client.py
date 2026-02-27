@@ -360,11 +360,7 @@ class TestAPIErrorRaising:
                 _make_result(uuid="msg-002"),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-
-            messages = []
-            async for msg in query(prompt="test", transport=mock_transport):
-                messages.append(msg)
-
+            messages = [msg async for msg in query("test", transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)

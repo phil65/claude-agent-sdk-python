@@ -16,11 +16,15 @@ from .mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
 # SDK Control Protocol
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlInterruptRequest:
+    """SDK control interrupt request."""
+
     subtype: Literal["interrupt"] = "interrupt"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlPermissionRequest:
+    """SDK control permission request."""
+
     subtype: Literal["can_use_tool"] = "can_use_tool"
     tool_name: str
     input: dict[str, Any]
@@ -34,6 +38,8 @@ class SDKControlPermissionRequest:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlInitializeRequest:
+    """SDK control initialize request."""
+
     subtype: Literal["initialize"] = "initialize"
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentDefinition] | None = None
@@ -46,12 +52,16 @@ class SDKControlInitializeRequest:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlSetPermissionModeRequest:
+    """SDK control set permission mode request."""
+
     subtype: Literal["set_permission_mode"] = "set_permission_mode"
     mode: PermissionMode
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKHookCallbackRequest:
+    """SDK hook callback request."""
+
     subtype: Literal["hook_callback"] = "hook_callback"
     callback_id: str
     input: HookInput
@@ -60,6 +70,8 @@ class SDKHookCallbackRequest:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlMcpMessageRequest:
+    """SDK control MCP message request."""
+
     subtype: Literal["mcp_message"] = "mcp_message"
     server_name: str
     message: JSONRPCMessage
@@ -67,6 +79,8 @@ class SDKControlMcpMessageRequest:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlRewindFilesRequest:
+    """SDK control rewind files request."""
+
     subtype: Literal["rewind_files"] = "rewind_files"
     user_message_id: str
     dry_run: bool | None = None
@@ -74,12 +88,16 @@ class SDKControlRewindFilesRequest:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlStopTaskRequest:
+    """SDK control stop task request."""
+
     subtype: Literal["stop_task"] = "stop_task"
     task_id: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlApplyFlagSettingsRequest:
+    """SDK control apply flag settings request."""
+
     subtype: Literal["apply_flag_settings"] = "apply_flag_settings"
     settings: dict[str, Any]
 
@@ -174,6 +192,8 @@ control_request_adapter: TypeAdapter[ControlRequestUnion] = TypeAdapter(ControlR
 
 @dataclass(frozen=True, slots=True)
 class SDKControlRequest:
+    """SDK control request."""
+
     type: Literal["control_request"]
     request_id: str
     request: ControlRequestUnion
@@ -188,17 +208,23 @@ class SDKControlCancelRequest:
 
 
 class ControlResponse(TypedDict):
+    """Control response."""
+
     subtype: Literal["success"]
     request_id: str
     response: dict[str, Any] | None
 
 
 class ControlErrorResponse(TypedDict):
+    """Control Error response."""
+
     subtype: Literal["error"]
     request_id: str
     error: str
 
 
 class SDKControlResponse(TypedDict):
+    """SDK Control response."""
+
     type: Literal["control_response"]
     response: ControlResponse | ControlErrorResponse

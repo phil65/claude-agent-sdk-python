@@ -414,18 +414,18 @@ class SubprocessCLITransport(Transport):
                 # Note: TextReceiveStream can truncate long lines, so we need to buffer
                 # and speculatively parse until we get a complete JSON object
                 for json_line in line_str.split("\n"):
-                    json_line = json_line.strip()
-                    if not json_line:
+                    stripped = json_line.strip()
+                    if not stripped:
                         continue
 
                     # Keep accumulating partial JSON until we can parse it
-                    json_buffer += json_line
+                    json_buffer += stripped
 
                     if len(json_buffer) > self._max_buffer_size:
                         buffer_length = len(json_buffer)
                         json_buffer = ""
                         raise SDKJSONDecodeError(
-                            f"JSON message exceeded maximum buffer size of {self._max_buffer_size} bytes",
+                            f"JSON message exceeded max buffer size of {self._max_buffer_size}b",
                             ValueError(f"{buffer_length=} exceeds {self._max_buffer_size=}"),
                         )
 
@@ -483,7 +483,7 @@ async def _check_claude_version(cli_path: str) -> None:
                     min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
                     if version_parts < min_parts:
                         warning = (
-                            f"Warning: Claude Code version {version} is unsupported in the Agent SDK. "
+                            f"Warning: Claude Code version {version} is unsupported in the SDK. "
                             f"Minimum required version is {MINIMUM_CLAUDE_CODE_VERSION}. "
                             "Some features may not work correctly."
                         )
@@ -507,7 +507,7 @@ def _find_bundled_cli() -> str | None:
     # The _bundled directory is in the same package as this module
     bundled_path = Path(__file__).parent.parent.parent / "_bundled" / cli_name
     if bundled_path.exists() and bundled_path.is_file():
-        logger.info(f"Using bundled Claude Code CLI: {bundled_path}")
+        logger.info("Using bundled Claude Code CLI: %s", bundled_path)
         return str(bundled_path)
     return None
 

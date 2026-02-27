@@ -695,7 +695,7 @@ class TestClaudeSDKClientEdgeCases:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
-                with pytest.raises(ValueError):
+                with pytest.raises(ValueError, match="Test error"):
                     async with ClaudeSDKClient():
                         raise ValueError("Test error")
 

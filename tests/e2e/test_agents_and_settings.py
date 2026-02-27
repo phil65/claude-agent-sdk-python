@@ -226,7 +226,8 @@ async def test_setting_sources_default():
                 if isinstance(message, InitSystemMessage):
                     output_style = message.output_style
                     assert output_style != "local-test-style", (
-                        f"outputStyle should NOT be from local settings (default is no settings), got: {output_style}"
+                        "outputStyle should NOT be from local settings "
+                        "(default is no settings), got: {output_style}"
                     )
                     assert output_style == "default", (
                         f"outputStyle should be 'default', got: {output_style}"

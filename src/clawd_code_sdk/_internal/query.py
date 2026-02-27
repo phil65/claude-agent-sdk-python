@@ -272,7 +272,7 @@ class Query:
             logger.debug("Read task cancelled")
             raise  # Re-raise to properly handle cancellation
         except Exception as e:
-            logger.exception(f"Fatal error in message reader: {e}")
+            logger.exception("Fatal error in message reader")
             # Signal all pending control requests so they fail fast instead of timing out
             for request_id, event in list(self.pending_control_responses.items()):
                 if request_id not in self.pending_control_results:
@@ -489,8 +489,10 @@ class Query:
             # wait for first result before closing the channel
             if self.sdk_mcp_servers or self.hooks:
                 logger.debug(
-                    f"Waiting for first result before closing stdin "
-                    f"(sdk_mcp_servers={len(self.sdk_mcp_servers)}, has_hooks={bool(self.hooks)})"
+                    "Waiting for first result before closing stdin "
+                    "(sdk_mcp_servers=%s, has_hooks=%s)",
+                    len(self.sdk_mcp_servers),
+                    bool(self.hooks),
                 )
                 try:
                     with anyio.move_on_after(self._stream_close_timeout):
@@ -502,7 +504,7 @@ class Query:
             # After all messages sent (and result received if needed), end input
             await self.transport.end_input()
         except Exception as e:
-            logger.debug(f"Error streaming input: {e}")
+            logger.debug("Error streaming input: %s", e)
 
     async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""

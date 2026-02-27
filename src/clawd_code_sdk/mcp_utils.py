@@ -57,6 +57,7 @@ def tool(
             - A dictionary mapping parameter names to types (e.g., {"text": str})
             - A TypedDict class for more complex schemas
             - A JSON Schema dictionary for full validation
+        annotations: Optional annotations for the tool.
 
     Returns:
         A decorator function that wraps the tool implementation and returns

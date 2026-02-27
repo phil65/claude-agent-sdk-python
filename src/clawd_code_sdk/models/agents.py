@@ -12,7 +12,8 @@ from .mcp import ExternalMcpServerConfig  # noqa: TC001
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
-# Matches the TypeScript type: AgentMcpServerSpec = string | Record<string, McpServerConfigForProcessTransport>
+# Matches the TypeScript type: AgentMcpServerSpec =
+# string | Record<string, McpServerConfigForProcessTransport>
 AgentMcpServerSpec = str | dict[str, Any]
 
 # Fields on AgentDefinition that need snake_case -> camelCase conversion

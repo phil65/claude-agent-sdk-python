@@ -11,8 +11,6 @@ uses TaskOutput to retrieve results.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 from clawd_code_sdk import (
@@ -25,10 +23,6 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk.models import TextBlock
 from clawd_code_sdk.models.messages import TaskStartedSystemMessage, UserMessage
-
-
-if TYPE_CHECKING:
-    from clawd_code_sdk import Message
 
 
 @pytest.mark.e2e
@@ -56,14 +50,12 @@ async def test_subagent_task_lifecycle():
         permission_mode="bypassPermissions",
     )
 
-    messages: list[Message] = []
     async with ClaudeSDKClient(options=options) as client:
         await client.query(
             "Use the echo-agent subagent with the message 'pineapple'. "
             "Include the subagent's response in your reply."
         )
-        async for msg in client.receive_response():
-            messages.append(msg)
+        messages = [msg async for msg in client.receive_response()]
 
     # 1. Verify agent was registered
     init_msgs = [m for m in messages if isinstance(m, InitSystemMessage)]
@@ -128,15 +120,12 @@ async def test_background_subagent_lifecycle():
         permission_mode="bypassPermissions",
     )
 
-    messages: list[Message] = []
     async with ClaudeSDKClient(options=options) as client:
         await client.query(
             "Use the echo-agent subagent with the message 'pineapple'. "
             "Include the subagent's response in your reply."
         )
-        async for msg in client.receive_response():
-            messages.append(msg)
-
+        messages = [msg async for msg in client.receive_response()]
     # 1. Verify agent was registered
     init_msgs = [m for m in messages if isinstance(m, InitSystemMessage)]
     assert init_msgs, "Should have received an InitSystemMessage"
