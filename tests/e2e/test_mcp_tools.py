@@ -58,7 +58,7 @@ async def test_mcp_image_tool_wire_format():
     # Verify we got a result
     result_messages = [m for m in messages if isinstance(m, ResultMessage)]
     assert result_messages, f"No ResultMessage. Got: {[type(m).__name__ for m in messages]}"
-    assert not result_messages[0].is_error, f"Query error: {result_messages[0].errors}"
+    assert not result_messages[0].is_error
 
     # Inspect all content blocks from assistant and user messages
     all_content_blocks: list[dict[str, Any]] = []
@@ -104,7 +104,7 @@ async def test_mcp_image_tool_wire_format():
     assert "source" in image_param
     assert image_param["source"]["type"] == "base64"
     assert image_param["source"]["media_type"] == "image/png"
-    assert len(image_param["source"]["data"]) > 0, "Image data should not be empty"
+    assert len(image_param["source"]["data"]) > 0, "Image data should not be empty"  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.e2e
@@ -143,7 +143,7 @@ async def test_mcp_progress_tool_wire_format():
     # Verify we got a successful result
     result_messages = [m for m in messages if isinstance(m, ResultMessage)]
     assert result_messages, f"No ResultMessage. Got: {[type(m).__name__ for m in messages]}"
-    assert not result_messages[0].is_error, f"Query error: {result_messages[0].errors}"
+    assert not result_messages[0].is_error
 
     # Collect assistant content blocks to verify tool_use
     all_content_blocks: list[dict[str, Any]] = []

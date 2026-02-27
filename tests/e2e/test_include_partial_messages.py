@@ -6,6 +6,7 @@ including StreamEvent parsing and message interleaving.
 
 from typing import Any
 
+from anthropic.types import ThinkingDelta
 import pytest
 
 from clawd_code_sdk import ClaudeSDKClient
@@ -55,7 +56,7 @@ async def test_include_partial_messages_stream_events():
     assert len(stream_events) > 0, "No StreamEvent messages received"
 
     # Check for expected StreamEvent types
-    event_types = [event.event.get("type") for event in stream_events]
+    event_types = [event.event.type for event in stream_events]
     assert "message_start" in event_types, "No message_start StreamEvent"
     assert "content_block_start" in event_types, "No content_block_start StreamEvent"
     assert "content_block_delta" in event_types, "No content_block_delta StreamEvent"
@@ -91,9 +92,7 @@ async def test_include_partial_messages_thinking_deltas():
     options = ClaudeAgentOptions(
         model="claude-sonnet-4-5",
         max_turns=2,
-        env={
-            "MAX_THINKING_TOKENS": "8000",
-        },
+        env={"MAX_THINKING_TOKENS": "8000"},
     )
 
     thinking_deltas = []
@@ -102,19 +101,17 @@ async def test_include_partial_messages_thinking_deltas():
         await client.query("Think step by step about what 2 + 2 equals")
 
         async for message in client.receive_response():
-            if isinstance(message, StreamEvent):
-                event = message.event
-                if event.get("type") == "content_block_delta":
-                    delta = event.get("delta", {})
-                    if delta.get("type") == "thinking_delta":
-                        thinking_deltas.append(delta.get("thinking", ""))
+            if isinstance(message, StreamEvent) and isinstance(message.event, ThinkingDelta):
+                thinking_deltas.append(message.event.thinking)
 
     # Should have received multiple thinking deltas
     assert len(thinking_deltas) > 0, "No thinking deltas received"
-
     # Combined thinking should form coherent text
     combined_thinking = "".join(thinking_deltas)
     assert len(combined_thinking) > 10, "Thinking content too short"
-
     # Should contain some reasoning about the calculation
     assert "2" in combined_thinking.lower(), "Thinking doesn't mention the numbers"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv", "-m", "e2e"])

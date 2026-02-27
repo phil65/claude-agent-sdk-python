@@ -196,4 +196,4 @@ async def test_multiple_hooks_together():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-vv"])
+    pytest.main([__file__, "-vv", "-m", "e2e"])

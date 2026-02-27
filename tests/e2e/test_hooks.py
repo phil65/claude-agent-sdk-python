@@ -158,4 +158,4 @@ async def test_hook_with_additional_context():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-vv"])
+    pytest.main([__file__, "-vv", "-m", "e2e"])

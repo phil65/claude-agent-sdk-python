@@ -517,4 +517,4 @@ async def test_agent_definition_with_mcp_servers():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-vv"])
+    pytest.main([__file__, "-vv", "-m", "e2e"])

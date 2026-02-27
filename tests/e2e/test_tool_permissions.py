@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import uuid
 
 import pytest
@@ -13,6 +13,7 @@ from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, PermissionResult
 
 if TYPE_CHECKING:
     from clawd_code_sdk import PermissionResultDeny, ToolPermissionContext
+    from clawd_code_sdk.models.input_types import ToolInput
 
 
 @pytest.mark.e2e
@@ -23,7 +24,7 @@ async def test_permission_callback_gets_called():
     Note: The CLI auto-allows certain read-only commands (like 'echo') without
     consulting the SDK callback. We use 'touch' which requires permission.
     """
-    callback_invocations: list[tuple[str, dict]] = []
+    callback_invocations: list[tuple[str, ToolInput | dict[str, Any]]] = []
 
     # Use a unique file path to avoid conflicts
     unique_id = uuid.uuid4().hex[:8]
@@ -32,7 +33,7 @@ async def test_permission_callback_gets_called():
 
     async def permission_callback(
         tool_name: str,
-        input_data: dict,
+        input_data: ToolInput | dict[str, Any],
         context: ToolPermissionContext,
     ) -> PermissionResultAllow | PermissionResultDeny:
         """Track callback invocation and allow all operations."""
@@ -40,9 +41,7 @@ async def test_permission_callback_gets_called():
         callback_invocations.append((tool_name, input_data))
         return PermissionResultAllow()
 
-    options = ClaudeAgentOptions(
-        can_use_tool=permission_callback,
-    )
+    options = ClaudeAgentOptions(can_use_tool=permission_callback)
 
     try:
         async with ClaudeSDKClient(options=options) as client:
@@ -67,4 +66,4 @@ async def test_permission_callback_gets_called():
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-vv"])
+    pytest.main([__file__, "-vv", "-m", "e2e"])

@@ -127,3 +127,7 @@ async def test_sdk_mcp_without_permissions():
             pass  # Just consume messages
 
     assert "echo" not in executions, "SDK MCP tool was executed"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv", "-m", "e2e"])

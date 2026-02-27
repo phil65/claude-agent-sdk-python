@@ -19,6 +19,7 @@ from clawd_code_sdk import (
     InitSystemMessage,
     ResultMessage,
 )
+from clawd_code_sdk.models import TextBlock
 from clawd_code_sdk.models.messages import TaskNotificationSystemMessage, TaskStartedSystemMessage
 
 
@@ -99,7 +100,7 @@ async def test_subagent_task_lifecycle():
     for msg in messages:
         if isinstance(msg, AssistantMessage) and not hasattr(msg, "parent_tool_use_id"):
             for block in msg.content:
-                if hasattr(block, "text"):
+                if isinstance(block, TextBlock):
                     response_text += block.text
 
     response_lower = response_text.lower()
@@ -110,3 +111,7 @@ async def test_subagent_task_lifecycle():
     # 6. Verify we got a final result
     result_msgs = [m for m in messages if isinstance(m, ResultMessage)]
     assert result_msgs, "Should have received a ResultMessage"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv", "-m", "e2e"])
