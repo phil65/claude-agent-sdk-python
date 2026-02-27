@@ -2,10 +2,7 @@
 
 import pytest
 
-from clawd_code_sdk import (
-    ClaudeAgentOptions,
-    ClaudeSDKClient,
-)
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
 
 @pytest.mark.e2e
@@ -13,27 +10,21 @@ from clawd_code_sdk import (
 async def test_set_permission_mode():
     """Test that permission mode can be changed dynamically during a session."""
 
-    options = ClaudeAgentOptions(
-        permission_mode="default",
-    )
+    options = ClaudeAgentOptions(permission_mode="default")
 
     async with ClaudeSDKClient(options=options) as client:
         # Change permission mode to acceptEdits
         await client.set_permission_mode("acceptEdits")
-
         # Make a query that would normally require permission
         await client.query("What is 2+2? Just respond with the number.")
-
         async for message in client.receive_response():
             print(f"Got message: {message}")
             pass  # Just consume messages
 
         # Change back to default
         await client.set_permission_mode("default")
-
         # Make another query
         await client.query("What is 3+3? Just respond with the number.")
-
         async for message in client.receive_response():
             print(f"Got message: {message}")
             pass  # Just consume messages
@@ -43,31 +34,22 @@ async def test_set_permission_mode():
 @pytest.mark.asyncio
 async def test_set_model():
     """Test that model can be changed dynamically during a session."""
-
-    options = ClaudeAgentOptions()
-
-    async with ClaudeSDKClient(options=options) as client:
+    async with ClaudeSDKClient() as client:
         # Start with default model
         await client.query("What is 1+1? Just the number.")
-
         async for message in client.receive_response():
             print(f"Default model response: {message}")
             pass
-
         # Switch to Haiku model
-        await client.set_model("claude-3-5-haiku-20241022")
-
+        await client.set_model("claude-haiku-4-5")
         await client.query("What is 2+2? Just the number.")
-
         async for message in client.receive_response():
             print(f"Haiku model response: {message}")
             pass
 
         # Switch back to default (None means default)
         await client.set_model(None)
-
         await client.query("What is 3+3? Just the number.")
-
         async for message in client.receive_response():
             print(f"Back to default model: {message}")
             pass
@@ -78,12 +60,9 @@ async def test_set_model():
 async def test_interrupt():
     """Test that interrupt can be sent during a session."""
 
-    options = ClaudeAgentOptions()
-
-    async with ClaudeSDKClient(options=options) as client:
+    async with ClaudeSDKClient() as client:
         # Start a query
         await client.query("Count from 1 to 100 slowly.")
-
         # Send interrupt (may or may not stop the response depending on timing)
         try:
             await client.interrupt()

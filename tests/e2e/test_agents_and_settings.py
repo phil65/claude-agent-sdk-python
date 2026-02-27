@@ -188,7 +188,7 @@ You are a simple test agent. When asked a question, provide a brief, helpful ans
             f"Missing AssistantMessage - got only: {message_types}. "
             "This may indicate issue #406 (silent failure with filesystem agents)."
         )
-        assert "ResultMessage" in message_types, "Missing ResultMessage"
+        assert "ResultSuccessMessage" in message_types, "Missing ResultMessage"
 
         # Find the init message and check for the filesystem agent
         for msg in messages:

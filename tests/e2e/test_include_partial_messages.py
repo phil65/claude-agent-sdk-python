@@ -6,7 +6,7 @@ including StreamEvent parsing and message interleaving.
 
 from typing import Any
 
-from anthropic.types import ThinkingDelta
+from anthropic.types import RawContentBlockDeltaEvent, ThinkingDelta
 import pytest
 
 from clawd_code_sdk import ClaudeSDKClient
@@ -19,6 +19,7 @@ from clawd_code_sdk.models import (
     TextBlock,
     ThinkingBlock,
 )
+from clawd_code_sdk.models.base import ThinkingConfigEnabled
 
 
 @pytest.mark.e2e
@@ -92,7 +93,7 @@ async def test_include_partial_messages_thinking_deltas():
     options = ClaudeAgentOptions(
         model="claude-sonnet-4-5",
         max_turns=2,
-        env={"MAX_THINKING_TOKENS": "8000"},
+        thinking=ThinkingConfigEnabled(type="enabled", budget_tokens=8000),
     )
 
     thinking_deltas = []
@@ -101,8 +102,13 @@ async def test_include_partial_messages_thinking_deltas():
         await client.query("Think step by step about what 2 + 2 equals")
 
         async for message in client.receive_response():
-            if isinstance(message, StreamEvent) and isinstance(message.event, ThinkingDelta):
-                thinking_deltas.append(message.event.thinking)
+            print(message)
+            if (
+                isinstance(message, StreamEvent)
+                and isinstance(message.event, RawContentBlockDeltaEvent)
+                and isinstance(message.event.delta, ThinkingDelta)
+            ):
+                thinking_deltas.append(message.event.delta.thinking)
 
     # Should have received multiple thinking deltas
     assert len(thinking_deltas) > 0, "No thinking deltas received"
