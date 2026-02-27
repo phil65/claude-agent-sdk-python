@@ -78,7 +78,22 @@ class ContinueLatest(BaseSessionConfig):
     fork: bool = False
 
 
-SessionConfig = NewSession | ResumeSession | ContinueLatest
+@dataclass(kw_only=True)
+class FromPR(BaseSessionConfig):
+    """Resume sessions linked to a specific GitHub PR.
+
+    Accepts a PR number or URL. Sessions are automatically linked
+    when created via ``gh pr create``.
+
+    Attributes:
+        pr: PR number or URL.
+    """
+
+    mode: Literal["from_pr"] = "from_pr"
+    pr: int | str
+
+
+SessionConfig = NewSession | ResumeSession | ContinueLatest | FromPR
 """Union of all session configuration types.
 
 Can also be specified as a plain ``str``, which is a shortcut for

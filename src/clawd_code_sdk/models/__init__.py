@@ -248,6 +248,7 @@ from .options import ClaudeAgentOptions
 from .options import (
     BaseSessionConfig,
     ContinueLatest,
+    FromPR,
     ListSessionsOptions,
     NewSession,
     ResumeSession,
@@ -405,6 +406,7 @@ __all__ = [
     "ClaudeAgentOptions",
     "BaseSessionConfig",
     "ContinueLatest",
+    "FromPR",
     "ListSessionsOptions",
     "NewSession",
     "ResumeSession",

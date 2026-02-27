@@ -118,6 +118,7 @@ class SubprocessCLITransport(Transport):
         # Session configuration
         from clawd_code_sdk.models.options import (
             ContinueLatest,
+            FromPR,
             NewSession,
             ResumeSession,
             resolve_session_config,
@@ -137,6 +138,8 @@ class SubprocessCLITransport(Transport):
                 cmd.append("--continue")
                 if fork:
                     cmd.append("--fork-session")
+            case FromPR(pr=pr):
+                cmd.extend(["--from-pr", str(pr)])
         if not session.persist:
             cmd.append("--no-persist-session")
 

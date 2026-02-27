@@ -88,6 +88,7 @@ from .models import (
     UserPromptMessage,
     UserPromptMessageContent,
     UserPromptSubmitHookInput,
+    FromPR,
     NewSession,
     ResumeSession,
     SDKSessionInfo,
@@ -119,6 +120,7 @@ __all__ = [
     "ClaudeSDKClient",
     # Session config
     "ContinueLatest",
+    "FromPR",
     "ListSessionsOptions",
     "NewSession",
     "ResumeSession",
