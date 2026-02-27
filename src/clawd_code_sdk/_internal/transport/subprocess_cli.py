@@ -138,8 +138,10 @@ class SubprocessCLITransport(Transport):
                 cmd.append("--continue")
                 if fork:
                     cmd.append("--fork-session")
-            case FromPR(pr=pr):
+            case FromPR(pr=pr, fork=fork):
                 cmd.extend(["--from-pr", str(pr)])
+                if fork:
+                    cmd.append("--fork-session")
         if not session.persist:
             cmd.append("--no-persist-session")
 

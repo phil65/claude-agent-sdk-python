@@ -87,10 +87,12 @@ class FromPR(BaseSessionConfig):
 
     Attributes:
         pr: PR number or URL.
+        fork: If True, fork to a new session ID instead of continuing in-place.
     """
 
     mode: Literal["from_pr"] = "from_pr"
     pr: int | str
+    fork: bool = False
 
 
 SessionConfig = NewSession | ResumeSession | ContinueLatest | FromPR
