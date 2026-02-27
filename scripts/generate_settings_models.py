@@ -14,6 +14,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -25,6 +26,39 @@ SCHEMA_URL = "https://json.schemastore.org/claude-code-settings.json"
 PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUT_FILE = PROJECT_ROOT / "src" / "clawd_code_sdk" / "models" / "settings_file.py"
 TEMP_SCHEMA = "/tmp/claude-code-settings.json"
+TEMP_SCHEMA_TITLED = "/tmp/claude-code-settings-titled.json"
+
+# Titles injected into anyOf/oneOf variants that lack a "title" field.
+# Maps JSON pointer path -> list of (discriminator_parent_name, variants_key).
+# The script derives each variant's title from the const discriminator value
+# (e.g., source="github" -> MarketplaceSourceGithub) or from the first
+# required property (e.g., serverName -> AllowedMcpServerByServerName).
+_UNION_TITLE_MAP: dict[str, tuple[str, str]] = {
+    "$defs.hookCommand": ("HookConfig", "anyOf"),
+    "properties.allowedMcpServers.items": ("AllowedMcpServer", "anyOf"),
+    "properties.deniedMcpServers.items": ("DeniedMcpServer", "anyOf"),
+    "properties.extraKnownMarketplaces.additionalProperties.properties.source": (
+        "MarketplaceSource",
+        "anyOf",
+    ),
+    "properties.strictKnownMarketplaces.items": ("StrictMarketplace", "anyOf"),
+    "properties.blockedMarketplaces.items": ("BlockedMarketplace", "anyOf"),
+}
+
+
+def _to_pascal(s: str) -> str:
+    """Convert a camelCase or snake_case string to PascalCase."""
+    if "_" not in s and s[0].islower():
+        return s[0].upper() + s[1:]
+    return "".join(w.capitalize() for w in s.split("_"))
+
+
+def _resolve_path(schema: dict, dotted_path: str) -> dict:
+    """Resolve a dotted key path like 'properties.foo.items' into the schema."""
+    obj = schema
+    for part in dotted_path.split("."):
+        obj = obj[part]
+    return obj
 
 
 def download_schema() -> None:
@@ -42,6 +76,43 @@ def download_schema() -> None:
     print(f"  Downloaded to {TEMP_SCHEMA}")
 
 
+def preprocess_schema() -> None:
+    """Add title fields to unnamed anyOf/oneOf variants for better class names.
+
+    datamodel-codegen generates numbered suffixes (Source1, Source2, ...) for
+    unnamed union variants. By injecting a title derived from the discriminator
+    const value or unique required property, we get descriptive class names
+    (MarketplaceSourceGithub, HookConfigCommand, etc.) when combined with
+    --use-title-as-name.
+    """
+    print("Pre-processing schema (adding titles to union variants)...")
+    with open(TEMP_SCHEMA) as f:
+        schema = json.load(f)
+
+    titled_count = 0
+    for path, (parent_name, union_key) in _UNION_TITLE_MAP.items():
+        node = _resolve_path(schema, path)
+        for item in node[union_key]:
+            if not isinstance(item, dict) or "properties" not in item or "title" in item:
+                continue
+            # Strategy 1: Use const discriminator value
+            for pval in item["properties"].values():
+                if "const" in pval:
+                    item["title"] = f"{parent_name}{_to_pascal(pval['const'])}"
+                    titled_count += 1
+                    break
+            else:
+                # Strategy 2: Use first required property name
+                req = item.get("required", [])
+                if req:
+                    item["title"] = f"{parent_name}By{_to_pascal(req[0])}"
+                    titled_count += 1
+
+    with open(TEMP_SCHEMA_TITLED, "w") as f:
+        json.dump(schema, f, indent=2)
+    print(f"  Added {titled_count} titles, saved to {TEMP_SCHEMA_TITLED}")
+
+
 def generate_models() -> None:
     """Generate Pydantic models using datamodel-codegen."""
     print("Generating Pydantic models...")
@@ -54,7 +125,7 @@ def generate_models() -> None:
         "datamodel-code-generator",
         "datamodel-codegen",
         "--input",
-        TEMP_SCHEMA,
+        TEMP_SCHEMA_TITLED,
         "--input-file-type",
         "jsonschema",
         "--output",
@@ -78,6 +149,7 @@ def generate_models() -> None:
         "all",
         "--use-one-literal-as-default",
         "--collapse-root-models",
+        "--use-title-as-name",
         "--base-class",
         "clawd_code_sdk.models.base.ClaudeCodeBaseModel",
         "--formatters",
@@ -148,6 +220,7 @@ def main() -> None:
 
     try:
         download_schema()
+        preprocess_schema()
         generate_models()
         post_process()
         verify_output()
