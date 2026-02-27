@@ -6,7 +6,7 @@ from contextlib import suppress
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Any, assert_never
+from typing import TYPE_CHECKING, Any, Self, assert_never
 
 import anyenv
 import anyio
@@ -272,7 +272,7 @@ class Query:
             logger.debug("Read task cancelled")
             raise  # Re-raise to properly handle cancellation
         except Exception as e:
-            logger.error(f"Fatal error in message reader: {e}")
+            logger.exception(f"Fatal error in message reader: {e}")
             # Signal all pending control requests so they fail fast instead of timing out
             for request_id, event in list(self.pending_control_responses.items()):
                 if request_id not in self.pending_control_results:
@@ -412,7 +412,6 @@ class Query:
         Returns:
             The response message
         """
-
         if server_name not in self.sdk_mcp_servers:
             dct = JSONRPCError(code=-32601, message=f"Server '{server_name}' not found")
             return {"jsonrpc": "2.0", "id": get_jsonrpc_request_id(message), "error": dct}
@@ -565,7 +564,7 @@ class Query:
         await self.transport.close()
 
     # Make Query an async context manager
-    async def __aenter__(self) -> Query:
+    async def __aenter__(self) -> Self:
         """Enter async context - starts reading messages."""
         await self.start()
         return self

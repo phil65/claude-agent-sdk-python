@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 import uuid
 
 from clawd_code_sdk.client import ClaudeSDKClient
@@ -402,7 +402,7 @@ class SessionManager:
 
     # ── Context manager ──────────────────────────────────────────
 
-    async def __aenter__(self) -> SessionManager:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

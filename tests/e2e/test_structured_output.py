@@ -20,7 +20,6 @@ os.environ["ANTHROPIC_API_KEY"] = ""
 @pytest.mark.asyncio
 async def test_simple_structured_output():
     """Test structured output with file counting requiring tool use."""
-
     # Define schema for file analysis
     schema = {
         "type": "object",
@@ -57,7 +56,6 @@ async def test_simple_structured_output():
 @pytest.mark.asyncio
 async def test_nested_structured_output():
     """Test structured output with nested objects and arrays."""
-
     # Define a schema with nested structure
     schema = {
         "type": "object",
@@ -104,7 +102,6 @@ async def test_nested_structured_output():
 @pytest.mark.asyncio
 async def test_structured_output_with_enum():
     """Test structured output with enum constraints requiring code analysis."""
-
     schema = {
         "type": "object",
         "properties": {
@@ -141,7 +138,6 @@ async def test_structured_output_with_enum():
 @pytest.mark.asyncio
 async def test_structured_output_with_tools():
     """Test structured output when agent uses tools."""
-
     # Schema for file analysis
     schema = {
         "type": "object",

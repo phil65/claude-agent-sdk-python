@@ -123,9 +123,7 @@ class SdkPluginConfig(TypedDict):
 
 
 class ToolAnnotations(ClaudeCodeBaseModel):
-    """
-    Additional properties describing a Tool to clients.
-    """
+    """Additional properties describing a Tool to clients."""
 
     # title: str | None = None
     # """A human-readable title for the tool."""

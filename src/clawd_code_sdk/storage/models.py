@@ -21,7 +21,7 @@ from typing import Annotated, Any, Literal, assert_never
 from pydantic import BaseModel, Discriminator, Field, Tag
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
-from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
+from clawd_code_sdk.models.output_types import ToolUseResult
 
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
@@ -421,7 +421,7 @@ class ClaudeGenericSystemEntry(ClaudeSystemEntryBase):
     ) = None
 
 
-def _system_entry_discriminator(data: Any) -> str:  # noqa: ANN401
+def _system_entry_discriminator(data: Any) -> str:
     """Discriminator function for system entry subtypes.
 
     Routes known subtypes to their typed models, falls back to generic.

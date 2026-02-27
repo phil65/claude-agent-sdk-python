@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterable
 from dataclasses import replace
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import anyenv
 from pydantic import TypeAdapter
@@ -31,9 +31,7 @@ if TYPE_CHECKING:
 
 
 class ClaudeSDKClient:
-    """
-    Client for bidirectional, interactive conversations with Claude Code.
-
+    """Client for bidirectional, interactive conversations with Claude Code.
 
     Key features:
     - **Bidirectional**: Send and receive messages at any time
@@ -71,7 +69,6 @@ class ClaudeSDKClient:
 
     async def connect(self, prompt: str | AsyncIterable[UserPromptMessage] | None = None) -> None:
         """Connect to Claude with a prompt or message stream."""
-
         from clawd_code_sdk._internal.query import Query
         from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
@@ -329,8 +326,7 @@ class ClaudeSDKClient:
         return query._initialization_result
 
     async def receive_response(self) -> AsyncIterator[Message]:
-        """
-        Receive messages from Claude until and including a ResultMessage.
+        """Receive messages from Claude until and including a ResultMessage.
 
         This async iterator yields all messages in sequence and automatically terminates
         after yielding a ResultMessage (which indicates the response is complete).
@@ -376,7 +372,7 @@ class ClaudeSDKClient:
             self._query = None
         self._transport = None
 
-    async def __aenter__(self) -> ClaudeSDKClient:
+    async def __aenter__(self) -> Self:
         """Enter async context - automatically connects with empty stream for interactive use."""
         await self.connect()
         return self

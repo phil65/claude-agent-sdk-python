@@ -74,16 +74,15 @@ def download_cli() -> None:
                 "-Command",
                 f"& ([scriptblock]::Create((irm https://claude.ai/install.ps1))) {version}",
             ]
+    # Use bash installer on Unix-like systems
+    elif version == "latest":
+        install_cmd = ["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
     else:
-        # Use bash installer on Unix-like systems
-        if version == "latest":
-            install_cmd = ["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
-        else:
-            install_cmd = [
-                "bash",
-                "-c",
-                f"curl -fsSL https://claude.ai/install.sh | bash -s {version}",
-            ]
+        install_cmd = [
+            "bash",
+            "-c",
+            f"curl -fsSL https://claude.ai/install.sh | bash -s {version}",
+        ]
 
     try:
         subprocess.run(

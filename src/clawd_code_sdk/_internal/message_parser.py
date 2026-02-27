@@ -32,8 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_message(data: dict[str, Any]) -> Message:
-    """
-    Parse message from CLI output into typed Message objects.
+    """Parse message from CLI output into typed Message objects.
 
     Args:
         data: Raw message dictionary from CLI output

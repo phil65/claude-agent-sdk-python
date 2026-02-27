@@ -29,7 +29,6 @@ class Transport(ABC):
         For subprocess transports, this starts the process.
         For network transports, this establishes the connection.
         """
-        pass
 
     @abstractmethod
     async def write(self, data: str) -> None:
@@ -38,7 +37,6 @@ class Transport(ABC):
         Args:
             data: Raw string data to write (typically JSON + newline)
         """
-        pass
 
     @abstractmethod
     def read_messages(self) -> AsyncIterator[dict[str, Any]]:
@@ -47,17 +45,14 @@ class Transport(ABC):
         Yields:
             Parsed JSON messages from the transport
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close the transport connection and clean up resources."""
-        pass
 
     @abstractmethod
     async def end_input(self) -> None:
         """End the input stream (close stdin for process transports)."""
-        pass
 
 
 __all__ = ["Transport"]

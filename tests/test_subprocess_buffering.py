@@ -25,7 +25,6 @@ DEFAULT_CLI_PATH = "/usr/bin/claude"
 
 def make_options(**kwargs: Any) -> ClaudeAgentOptions:
     """Construct ClaudeAgentOptions with a default CLI path for tests."""
-
     cli_path = kwargs.pop("cli_path", DEFAULT_CLI_PATH)
     assert isinstance(cli_path, str)
     return ClaudeAgentOptions(cli_path=cli_path, **kwargs)

@@ -192,7 +192,6 @@ async def test_server_creation():
 @pytest.mark.asyncio
 async def test_image_content_support():
     """Test that tools can return image content with base64 data."""
-
     # Create sample base64 image data (a simple 1x1 pixel PNG)
     png_data = base64.b64encode(
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
@@ -258,7 +257,6 @@ async def test_image_content_support():
 @pytest.mark.asyncio
 async def test_document_content_support():
     """Test that tools can return document content (e.g., PDFs) via EmbeddedResource."""
-
     # Create sample base64 PDF data (minimal valid PDF)
     pdf_data = base64.b64encode(
         b"%PDF-1.0\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"

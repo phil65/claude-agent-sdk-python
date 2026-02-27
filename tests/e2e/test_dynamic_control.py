@@ -9,7 +9,6 @@ from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient
 @pytest.mark.asyncio
 async def test_set_permission_mode():
     """Test that permission mode can be changed dynamically during a session."""
-
     options = ClaudeAgentOptions(permission_mode="default")
 
     async with ClaudeSDKClient(options=options) as client:
@@ -19,7 +18,7 @@ async def test_set_permission_mode():
         await client.query("What is 2+2? Just respond with the number.")
         async for message in client.receive_response():
             print(f"Got message: {message}")
-            pass  # Just consume messages
+            # Just consume messages
 
         # Change back to default
         await client.set_permission_mode("default")
@@ -27,7 +26,7 @@ async def test_set_permission_mode():
         await client.query("What is 3+3? Just respond with the number.")
         async for message in client.receive_response():
             print(f"Got message: {message}")
-            pass  # Just consume messages
+            # Just consume messages
 
 
 @pytest.mark.e2e
@@ -39,27 +38,23 @@ async def test_set_model():
         await client.query("What is 1+1? Just the number.")
         async for message in client.receive_response():
             print(f"Default model response: {message}")
-            pass
         # Switch to Haiku model
         await client.set_model("claude-haiku-4-5")
         await client.query("What is 2+2? Just the number.")
         async for message in client.receive_response():
             print(f"Haiku model response: {message}")
-            pass
 
         # Switch back to default (None means default)
         await client.set_model(None)
         await client.query("What is 3+3? Just the number.")
         async for message in client.receive_response():
             print(f"Back to default model: {message}")
-            pass
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_interrupt():
     """Test that interrupt can be sent during a session."""
-
     async with ClaudeSDKClient() as client:
         # Start a query
         await client.query("Count from 1 to 100 slowly.")
@@ -73,7 +68,6 @@ async def test_interrupt():
         # Consume any remaining messages
         async for message in client.receive_response():
             print(f"Got message after interrupt: {message}")
-            pass
 
 
 if __name__ == "__main__":

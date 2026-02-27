@@ -127,27 +127,23 @@ def get_platform_tag() -> str:
         # macOS - use minimum version 11.0 (Big Sur) for broad compatibility
         if machine == "arm64":
             return "macosx_11_0_arm64"
-        else:
-            return "macosx_11_0_x86_64"
-    elif system == "Linux":
+        return "macosx_11_0_x86_64"
+    if system == "Linux":
         # Linux - use manylinux for broad compatibility
         if machine in ["x86_64", "amd64"]:
             return "manylinux_2_17_x86_64"
-        elif machine in ["aarch64", "arm64"]:
+        if machine in ["aarch64", "arm64"]:
             return "manylinux_2_17_aarch64"
-        else:
-            return f"linux_{machine}"
-    elif system == "Windows":
+        return f"linux_{machine}"
+    if system == "Windows":
         # Windows
         if machine in ["x86_64", "amd64"]:
             return "win_amd64"
-        elif machine == "arm64":
+        if machine == "arm64":
             return "win_arm64"
-        else:
-            return "win32"
-    else:
-        # Unknown platform, use generic
-        return f"{system.lower()}_{machine}"
+        return "win32"
+    # Unknown platform, use generic
+    return f"{system.lower()}_{machine}"
 
 
 def retag_wheel(wheel_path: Path, platform_tag: str) -> Path:
@@ -192,9 +188,8 @@ def retag_wheel(wheel_path: Path, platform_tag: str) -> Path:
             wheel_path.unlink()
 
         return new_path
-    else:
-        print("Warning: Could not find retagged wheel")
-        return wheel_path
+    print("Warning: Could not find retagged wheel")
+    return wheel_path
 
 
 def build_wheel() -> None:

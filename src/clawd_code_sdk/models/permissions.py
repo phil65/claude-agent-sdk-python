@@ -8,8 +8,8 @@ from typing import Any, Literal
 
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
-    PermissionBehavior,  # noqa: TC001
-    PermissionMode,  # noqa: TC001
+    PermissionBehavior,
+    PermissionMode,
 )
 from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
 

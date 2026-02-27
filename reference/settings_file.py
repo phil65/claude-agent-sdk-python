@@ -12,9 +12,7 @@ from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 
 
 class Attribution(ClaudeCodeBaseModel):
-    """
-    Customize attribution for git commits and pull requests. See https://code.claude.com/docs/en/settings#attribution-settings
-    """
+    """Customize attribution for git commits and pull requests. See https://code.claude.com/docs/en/settings#attribution-settings."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -90,9 +88,7 @@ class DeniedMcpServerByServerUrl(AllowedMcpServerByServerUrl):
 
 
 class StatusLine(ClaudeCodeBaseModel):
-    """
-    Custom status line display configuration. See https://code.claude.com/docs/en/statusline
-    """
+    """Custom status line display configuration. See https://code.claude.com/docs/en/statusline."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -112,9 +108,7 @@ class StatusLine(ClaudeCodeBaseModel):
 
 
 class FileSuggestion(ClaudeCodeBaseModel):
-    """
-    Configure a custom script for @ file autocomplete. See https://code.claude.com/docs/en/settings#file-suggestion-settings
-    """
+    """Configure a custom script for @ file autocomplete. See https://code.claude.com/docs/en/settings#file-suggestion-settings."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -130,9 +124,7 @@ class FileSuggestion(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceUrl(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -148,9 +140,7 @@ class MarketplaceSourceUrl(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceHostPattern(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -166,9 +156,7 @@ class MarketplaceSourceHostPattern(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceGithub(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -192,9 +180,7 @@ class MarketplaceSourceGithub(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceGit(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -218,9 +204,7 @@ class MarketplaceSourceGit(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceNpm(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -236,9 +220,7 @@ class MarketplaceSourceNpm(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceFile(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -254,9 +236,7 @@ class MarketplaceSourceFile(ClaudeCodeBaseModel):
 
 
 class MarketplaceSourceDirectory(ClaudeCodeBaseModel):
-    """
-    Where to fetch the marketplace from
-    """
+    """Where to fetch the marketplace from."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -424,9 +404,7 @@ class AllowedDomain(AdditionalDirectory):
 
 
 class Network(ClaudeCodeBaseModel):
-    """
-    Configures network isolation settings for the sandboxed bash environment, including domain restrictions, Unix socket access, and custom proxy configuration.
-    """
+    """Configures network isolation settings for the sandboxed bash environment, including domain restrictions, Unix socket access, and custom proxy configuration."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -462,9 +440,7 @@ class Network(ClaudeCodeBaseModel):
 
 
 class Sandbox(ClaudeCodeBaseModel):
-    """
-    Sandbox execution configuration. See https://code.claude.com/docs/en/sandboxing
-    """
+    """Sandbox execution configuration. See https://code.claude.com/docs/en/sandboxing."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -504,9 +480,7 @@ class Verb(AdditionalDirectory):
 
 
 class SpinnerVerbs(ClaudeCodeBaseModel):
-    """
-    Customize the verbs shown in spinner progress messages
-    """
+    """Customize the verbs shown in spinner progress messages."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -526,9 +500,7 @@ class Tip(AdditionalDirectory):
 
 
 class SpinnerTipsOverride(ClaudeCodeBaseModel):
-    """
-    Customize the tips displayed in the spinner while Claude is working. See https://code.claude.com/docs/en/settings
-    """
+    """Customize the tips displayed in the spinner while Claude is working. See https://code.claude.com/docs/en/settings."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -713,9 +685,7 @@ class PermissionRule(RootModel[str]):
 
 
 class HookConfigCommand(ClaudeCodeBaseModel):
-    """
-    Bash command hook
-    """
+    """Bash command hook."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -743,9 +713,7 @@ class HookConfigCommand(ClaudeCodeBaseModel):
 
 
 class HookConfigPrompt(ClaudeCodeBaseModel):
-    """
-    LLM prompt hook. See https://code.claude.com/docs/en/hooks#prompt-based-hooks
-    """
+    """LLM prompt hook. See https://code.claude.com/docs/en/hooks#prompt-based-hooks."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -773,9 +741,7 @@ class HookConfigPrompt(ClaudeCodeBaseModel):
 
 
 class HookConfigAgent(ClaudeCodeBaseModel):
-    """
-    Agent hook with multi-turn tool access for verification. See https://code.claude.com/docs/en/hooks#agent-based-hooks
-    """
+    """Agent hook with multi-turn tool access for verification. See https://code.claude.com/docs/en/hooks#agent-based-hooks."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -803,9 +769,7 @@ class HookConfigAgent(ClaudeCodeBaseModel):
 
 
 class HookMatcher(ClaudeCodeBaseModel):
-    """
-    Hook matcher configuration with multiple hooks
-    """
+    """Hook matcher configuration with multiple hooks."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -821,8 +785,7 @@ class HookMatcher(ClaudeCodeBaseModel):
 
 
 class Permissions(ClaudeCodeBaseModel):
-    """
-    Tool usage permissions configuration.
+    """Tool usage permissions configuration.
     See https://code.claude.com/docs/en/permissions and https://code.claude.com/docs/en/settings#permission-settings
     See https://code.claude.com/docs/en/settings#tools-available-to-claude for full list of tools available to Claude.
     """
@@ -870,9 +833,7 @@ class Permissions(ClaudeCodeBaseModel):
 
 
 class Hooks(ClaudeCodeBaseModel):
-    """
-    Custom commands to run before/after tool executions. See https://code.claude.com/docs/en/hooks
-    """
+    """Custom commands to run before/after tool executions. See https://code.claude.com/docs/en/hooks."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -952,9 +913,7 @@ class Hooks(ClaudeCodeBaseModel):
 
 
 class ClaudeCodeSettings(ClaudeCodeBaseModel):
-    """
-    Configuration settings for Claude Code. Learn more: https://code.claude.com/docs/en/settings
-    """
+    """Configuration settings for Claude Code. Learn more: https://code.claude.com/docs/en/settings."""
 
     model_config = ConfigDict(
         extra="allow",

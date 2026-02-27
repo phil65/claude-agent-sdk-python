@@ -354,7 +354,7 @@ class TestHookCallbacks:
         assert result.get("asyncTimeout") == 5000
 
     async def test_field_name_conversion(self):
-        """Test that Python-safe field names (async_, continue_) are converted to CLI format (async, continue)."""
+        """Test that some field names (async_, continue_) are stripped from "_" to CLI format."""
 
         async def conversion_test_hook(
             input_data: HookInput, tool_use_id: str | None, context: HookContext
@@ -370,12 +370,9 @@ class TestHookCallbacks:
 
         transport = MockTransport()
         hooks = {"PreToolUse": [HookMatcher(matcher=None, hooks=[conversion_test_hook])]}
-
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
-
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
-
         request_data = control_request_adapter.validate_python(
             {
                 "subtype": "hook_callback",

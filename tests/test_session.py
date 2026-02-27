@@ -432,7 +432,7 @@ class TestSessionManager:
         anyio.run(_test)
 
     def test_sessions_property_is_copy(self):
-        """sessions property returns a copy, not the internal dict."""
+        """Sessions property returns a copy, not the internal dict."""
 
         async def _test():
             transport = _create_mock_transport_with_messages([])
