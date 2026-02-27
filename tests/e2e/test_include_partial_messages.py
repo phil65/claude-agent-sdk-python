@@ -24,13 +24,7 @@ from clawd_code_sdk.models.base import ThinkingConfigEnabled
 @pytest.mark.asyncio
 async def test_include_partial_messages_stream_events():
     """Test that include_partial_messages produces StreamEvent messages."""
-    options = ClaudeAgentOptions(
-        model="claude-sonnet-4-5",
-        max_turns=2,
-        env={
-            "MAX_THINKING_TOKENS": "8000",
-        },
-    )
+    options = ClaudeAgentOptions(model="sonnet", max_turns=2, env={"MAX_THINKING_TOKENS": "8000"})
 
     async with ClaudeSDKClient(options) as client:
         # Send a simple prompt that will generate streaming response with thinking
@@ -53,23 +47,15 @@ async def test_include_partial_messages_stream_events():
     assert "content_block_delta" in event_types, "No content_block_delta StreamEvent"
     assert "content_block_stop" in event_types, "No content_block_stop StreamEvent"
     assert "message_stop" in event_types, "No message_stop StreamEvent"
-
     # Should have AssistantMessage messages with thinking and text
-    assistant_messages = [msg for msg in collected_messages if isinstance(msg, AssistantMessage)]
-    assert len(assistant_messages) >= 1, "No AssistantMessage received"
-
+    assistant_msgs = [msg for msg in collected_messages if isinstance(msg, AssistantMessage)]
+    assert len(assistant_msgs) >= 1, "No AssistantMessage received"
     # Check for thinking block in at least one AssistantMessage
-    has_thinking = any(
-        any(isinstance(block, ThinkingBlock) for block in msg.content) for msg in assistant_messages
-    )
+    has_thinking = any(any(isinstance(b, ThinkingBlock) for b in m.content) for m in assistant_msgs)
     assert has_thinking, "No ThinkingBlock found in AssistantMessages"
-
     # Check for text block (the joke) in at least one AssistantMessage
-    has_text = any(
-        any(isinstance(block, TextBlock) for block in msg.content) for msg in assistant_messages
-    )
+    has_text = any(any(isinstance(b, TextBlock) for b in msg.content) for msg in assistant_msgs)
     assert has_text, "No TextBlock found in AssistantMessages"
-
     # Should end with ResultMessage
     assert isinstance(collected_messages[-1], ResultMessage)
     assert collected_messages[-1].subtype == "success"
@@ -84,12 +70,12 @@ async def test_include_partial_messages_thinking_deltas():
     async with ClaudeSDKClient(options) as client:
         await client.query("Think step by step about what 2 + 2 equals")
         thinking_deltas = [
-            message.event.delta.thinking
-            async for message in client.receive_response()
+            msg.event.delta.thinking
+            async for msg in client.receive_response()
             if (
-                isinstance(message, StreamEvent)
-                and isinstance(message.event, RawContentBlockDeltaEvent)
-                and isinstance(message.event.delta, ThinkingDelta)
+                isinstance(msg, StreamEvent)
+                and isinstance(msg.event, RawContentBlockDeltaEvent)
+                and isinstance(msg.event.delta, ThinkingDelta)
             )
         ]
 

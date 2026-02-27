@@ -9,7 +9,7 @@ from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, ThinkingConfigAd
 
 @pytest.mark.e2e
 async def test_compact() -> None:
-    opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive()
+    opts = ClaudeAgentOptions(thinking=ThinkingConfigAdaptive())
     client = ClaudeSDKClient(opts)
     await client.connect()
     await client.query("hello")
