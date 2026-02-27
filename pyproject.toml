@@ -125,6 +125,7 @@ docstring-quotes = "double"
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [
   "pydantic.BaseModel",
+  "clawd_code_sdk.models.base.ClaudeCodeBaseModel",
   "sqlalchemy.orm.DeclarativeBase",
   "schemez.Schema",
   "acp.base.Schema",
