@@ -94,6 +94,8 @@ class AgentAsyncLaunchedOutput(TypedDict):
 
     status: Literal["async_launched"]
     """Indicates the agent was launched in the background."""
+    isAsync: Literal[True]
+    """Always True for async-launched agents."""
     agentId: str
     """The ID of the async agent."""
     description: str
