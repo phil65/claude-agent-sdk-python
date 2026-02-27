@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 import json
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import anyio
@@ -24,9 +25,13 @@ from clawd_code_sdk import (
     query,
 )
 from clawd_code_sdk.models import TextBlock
-from clawd_code_sdk.models.base import StopReason
 from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
-from clawd_code_sdk.models.messages import ModelUsage, SDKPermissionDenial, Usage
+from clawd_code_sdk.models.messages import ModelUsage, Usage
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models.base import StopReason
+    from clawd_code_sdk.models.messages import SDKPermissionDenial
 
 
 def _make_result(

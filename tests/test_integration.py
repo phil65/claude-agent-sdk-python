@@ -120,6 +120,7 @@ class TestIntegration:
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 1
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "2 + 2 equals 4"
             assert isinstance(messages[1], ResultMessage)
             assert messages[1].total_cost_usd == 0.001
@@ -195,7 +196,7 @@ class TestIntegration:
             assert messages[0].content[0].text == "Let me read that file for you."
             assert isinstance(messages[0].content[1], ToolUseBlock)
             assert messages[0].content[1].name == "Read"
-            assert messages[0].content[1].input["file_path"] == "/test.txt"
+            assert messages[0].content[1].input.get("file_path") == "/test.txt"
 
         anyio.run(_test)
 
@@ -270,6 +271,7 @@ class TestIntegration:
 
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[0].content[0], TextBlock)
             assert messages[0].content[0].text == "Continuing from previous conversation"
 
         anyio.run(_test)
