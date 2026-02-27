@@ -185,14 +185,14 @@ class InitSystemMessage(BaseSystemMessage):
     """System init message with session metadata."""
 
     subtype: Literal["init"] = "init"
-    apiKeySource: ApiKeySource | None = None  # noqa: N815
+    apiKeySource: ApiKeySource | None  # noqa: N815
     cwd: str
     tools: list[str]
     mcp_servers: list[McpServerStatus]
     model: Model
     permissionMode: PermissionMode  # noqa: N815
     slash_commands: list[str]
-    output_style: Literal["default", "json"]
+    output_style: Literal["default", "json"] | str
     claude_code_version: str
     agents: list[str]
     skills: list[str]
