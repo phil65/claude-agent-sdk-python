@@ -40,42 +40,33 @@ class BaseSessionConfig:
 
 @dataclass(kw_only=True)
 class NewSession(BaseSessionConfig):
-    """Start a fresh session.
-
-    Attributes:
-        session_id: Deterministic session ID, or None to auto-generate a UUID.
-    """
+    """Start a fresh session."""
 
     mode: Literal["new"] = "new"
     session_id: str | None = None
+    """Deterministic session ID, or None to auto-generate a UUID."""
 
 
 @dataclass(kw_only=True)
 class ResumeSession(BaseSessionConfig):
-    """Resume an existing session by ID.
-
-    Attributes:
-        session_id: The session ID to resume.
-        fork: If True, fork to a new session ID instead of continuing in-place.
-        at_message: Resume from a specific message UUID within the session.
-    """
+    """Resume an existing session by ID."""
 
     mode: Literal["resume"] = "resume"
     session_id: str
+    """The session ID to resume."""
     fork: bool = False
+    """If True, fork to a new session ID instead of continuing in-place."""
     at_message: str | None = None
+    """Resume from a specific message UUID within the session."""
 
 
 @dataclass(kw_only=True)
 class ContinueLatest(BaseSessionConfig):
-    """Continue the most recent conversation.
-
-    Attributes:
-        fork: If True, fork to a new session ID instead of continuing in-place.
-    """
+    """Continue the most recent conversation."""
 
     mode: Literal["continue"] = "continue"
     fork: bool = False
+    """If True, fork to a new session ID instead of continuing in-place."""
 
 
 @dataclass(kw_only=True)
@@ -84,15 +75,13 @@ class FromPR(BaseSessionConfig):
 
     Accepts a PR number or URL. Sessions are automatically linked
     when created via ``gh pr create``.
-
-    Attributes:
-        pr: PR number or URL.
-        fork: If True, fork to a new session ID instead of continuing in-place.
     """
 
     mode: Literal["from_pr"] = "from_pr"
     pr: int | str
+    """PR number or URL."""
     fork: bool = False
+    """If True, fork to a new session ID instead of continuing in-place."""
 
 
 SessionConfig = NewSession | ResumeSession | ContinueLatest | FromPR
