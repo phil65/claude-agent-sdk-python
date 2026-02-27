@@ -488,11 +488,10 @@ class Query:
 
             # If we have SDK MCP servers or hooks that need bidirectional communication,
             # wait for first result before closing the channel
-            has_hooks = bool(self.hooks)
-            if self.sdk_mcp_servers or has_hooks:
+            if self.sdk_mcp_servers or self.hooks:
                 logger.debug(
                     f"Waiting for first result before closing stdin "
-                    f"(sdk_mcp_servers={len(self.sdk_mcp_servers)}, has_hooks={has_hooks})"
+                    f"(sdk_mcp_servers={len(self.sdk_mcp_servers)}, has_hooks={bool(self.hooks)})"
                 )
                 try:
                     with anyio.move_on_after(self._stream_close_timeout):
@@ -543,7 +542,6 @@ class Query:
         if self._tg is not None:
             # Always cancel the task group's scope to stop any running tasks
             self._tg.cancel_scope.cancel()
-
             # Try to properly exit the task group, but handle the case where
             # we're in a different task context than where __aenter__() was called
             try:
@@ -572,12 +570,7 @@ class Query:
         await self.start()
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: Any,
-    ) -> bool:
+    async def __aexit__(self, *args: object) -> bool:
         """Exit async context - closes the query."""
         await self.close()
         return False
