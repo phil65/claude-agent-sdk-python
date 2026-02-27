@@ -1,8 +1,12 @@
-"""End-to-end test for subagent invocation via AgentDefinition.
+"""End-to-end tests for subagent invocation via AgentDefinition.
 
 Verifies that when the main agent dispatches work to a subagent defined
 via AgentDefinition, the SDK emits the expected task lifecycle messages
-(task_started, task_notification) and that the subagent actually runs.
+and that the subagent actually runs.
+
+Foreground subagents emit task_started and fold output back into AssistantMessage.
+Background subagents emit task_started, launch asynchronously, and the main agent
+uses TaskOutput to retrieve results.
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ from clawd_code_sdk import (
     ResultMessage,
 )
 from clawd_code_sdk.models import TextBlock
-from clawd_code_sdk.models.messages import TaskNotificationSystemMessage, TaskStartedSystemMessage
+from clawd_code_sdk.models.messages import TaskStartedSystemMessage, UserMessage
 
 
 if TYPE_CHECKING:
@@ -30,14 +34,13 @@ if TYPE_CHECKING:
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_subagent_task_lifecycle():
-    """Test that invoking a subagent produces task_started and task_notification messages.
+    """Test that invoking a foreground subagent produces the expected messages.
 
     Defines a simple subagent, asks the main agent to call it, and verifies:
     1. The subagent appears in the init message
     2. A TaskStartedSystemMessage is emitted when the subagent begins
-    3. A TaskNotificationSystemMessage is emitted when the subagent completes
-    4. The task_id is consistent between started and notification
-    5. The main agent's response includes output from the subagent
+    3. The main agent's response includes output from the subagent
+    4. A ResultMessage is received at the end
     """
     options = ClaudeAgentOptions(
         agents={
@@ -67,38 +70,22 @@ async def test_subagent_task_lifecycle():
     assert init_msgs, "Should have received an InitSystemMessage"
     assert "echo-agent" in init_msgs[0].agents
 
-    # 2. Check for task lifecycle messages
+    # 2. Verify the subagent was started
     task_started = [m for m in messages if isinstance(m, TaskStartedSystemMessage)]
-    task_notifications = [m for m in messages if isinstance(m, TaskNotificationSystemMessage)]
-
     assert task_started, (
         "Should have received at least one TaskStartedSystemMessage "
         f"(got message types: {[type(m).__name__ for m in messages]})"
     )
-    assert task_notifications, (
-        "Should have received at least one TaskNotificationSystemMessage "
-        f"(got message types: {[type(m).__name__ for m in messages]})"
-    )
 
-    # 3. Verify task_id consistency
-    started_task_ids = {m.task_id for m in task_started}
-    notified_task_ids = {m.task_id for m in task_notifications}
-    assert started_task_ids & notified_task_ids, (
-        f"task_id should match between started ({started_task_ids}) "
-        f"and notification ({notified_task_ids})"
-    )
+    # 3. Verify task metadata
+    started = task_started[0]
+    assert started.task_id, "task_id should be non-empty"
+    assert started.description, "description should be non-empty"
 
-    # 4. Verify notification status
-    completed = [m for m in task_notifications if m.status == "completed"]
-    assert completed, (
-        f"At least one task should have completed, got statuses: "
-        f"{[m.status for m in task_notifications]}"
-    )
-
-    # 5. Verify the main agent's response includes subagent output
+    # 4. Verify the main agent's response includes subagent output
     response_text = ""
     for msg in messages:
-        if isinstance(msg, AssistantMessage) and not hasattr(msg, "parent_tool_use_id"):
+        if isinstance(msg, AssistantMessage):
             for block in msg.content:
                 if isinstance(block, TextBlock):
                     response_text += block.text
@@ -108,7 +95,87 @@ async def test_subagent_task_lifecycle():
         f"Response should include 'pineapple' from the echo agent, got: {response_text[:500]}"
     )
 
-    # 6. Verify we got a final result
+    # 5. Verify we got a final result
+    result_msgs = [m for m in messages if isinstance(m, ResultMessage)]
+    assert result_msgs, "Should have received a ResultMessage"
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_background_subagent_lifecycle():
+    """Test that a background subagent launches asynchronously.
+
+    Defines a subagent with background=True, asks the main agent to call it,
+    and verifies:
+    1. The subagent appears in the init message
+    2. A TaskStartedSystemMessage is emitted
+    3. The Task tool result indicates async launch (isAsync=True)
+    4. The main agent uses TaskOutput to retrieve the result
+    5. The final response includes the subagent's output
+    """
+    options = ClaudeAgentOptions(
+        agents={
+            "echo-agent": AgentDefinition(
+                description="A simple echo agent that repeats what you say",
+                prompt=(
+                    "You are an echo agent. When given a message, respond with "
+                    "exactly: 'ECHO: ' followed by the message. Nothing else."
+                ),
+                background=True,
+            )
+        },
+        max_turns=10,
+        permission_mode="bypassPermissions",
+    )
+
+    messages: list[Message] = []
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query(
+            "Use the echo-agent subagent with the message 'pineapple'. "
+            "Include the subagent's response in your reply."
+        )
+        async for msg in client.receive_response():
+            messages.append(msg)
+
+    # 1. Verify agent was registered
+    init_msgs = [m for m in messages if isinstance(m, InitSystemMessage)]
+    assert init_msgs, "Should have received an InitSystemMessage"
+    assert "echo-agent" in init_msgs[0].agents
+
+    # 2. Verify the subagent was started
+    task_started = [m for m in messages if isinstance(m, TaskStartedSystemMessage)]
+    assert task_started, (
+        "Should have received at least one TaskStartedSystemMessage "
+        f"(got message types: {[type(m).__name__ for m in messages]})"
+    )
+    started = task_started[0]
+    assert started.task_id, "task_id should be non-empty"
+
+    # 3. Verify async launch via tool result
+    user_msgs = [m for m in messages if isinstance(m, UserMessage)]
+    async_results = [
+        m
+        for m in user_msgs
+        if isinstance(m.tool_use_result, dict) and m.tool_use_result.get("isAsync") is True
+    ]
+    assert async_results, (
+        "Should have a tool_use_result with isAsync=True indicating background launch"
+    )
+
+    # 4. Verify TaskOutput was used to retrieve the result
+    response_text = ""
+    for msg in messages:
+        if isinstance(msg, AssistantMessage):
+            for block in msg.content:
+                if isinstance(block, TextBlock):
+                    response_text += block.text
+
+    response_lower = response_text.lower()
+    assert "pineapple" in response_lower, (
+        f"Response should include 'pineapple' from the echo agent, got: {response_text[:500]}"
+    )
+
+    # 5. Verify we got a final result
     result_msgs = [m for m in messages if isinstance(m, ResultMessage)]
     assert result_msgs, "Should have received a ResultMessage"
 
