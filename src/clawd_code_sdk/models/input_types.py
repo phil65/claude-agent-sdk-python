@@ -253,6 +253,29 @@ class EnterWorktreeInput(TypedDict):
 
 
 @_extra_allow
+class SkillInput(TypedDict):
+    """Input for the Skill tool. Invokes a named skill (slash command).
+
+    Not part of the official SDK ToolInputSchemas as of SDK v0.2.62.
+    Shape derived from empirical testing.
+    """
+
+    skill: str
+    """The skill name (e.g., "commit", "review", "debug")."""
+    args: NotRequired[str]
+    """Optional arguments for the skill."""
+
+
+@_extra_allow
+class EnterPlanModeInput(TypedDict):
+    """Input for the EnterPlanMode tool. Enters planning mode.
+
+    Not part of the official SDK ToolInputSchemas as of SDK v0.2.62.
+    Shape derived from empirical testing.
+    """
+
+
+@_extra_allow
 class ExitPlanModeInput(TypedDict):
     """Input for the ExitPlanMode tool. Exits planning mode for user approval."""
 
@@ -297,6 +320,8 @@ ToolInput = (
     | ExitPlanModeInput
     | ListMcpResourcesInput
     | ReadMcpResourceInput
+    | SkillInput
+    | EnterPlanModeInput
 )
 
 #: Mapping from tool name to its input type.
@@ -319,4 +344,6 @@ TOOL_INPUT_TYPES: dict[str, type[ToolInput]] = {
     "ExitPlanMode": ExitPlanModeInput,
     "ListMcpResources": ListMcpResourcesInput,
     "ReadMcpResource": ReadMcpResourceInput,
+    "Skill": SkillInput,
+    "EnterPlanMode": EnterPlanModeInput,
 }
