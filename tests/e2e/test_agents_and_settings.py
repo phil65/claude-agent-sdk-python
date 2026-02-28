@@ -91,7 +91,7 @@ async def test_agent_definition_with_query_function():
 
     # Use query() with string prompt
     found_agent = False
-    async for message in query(prompt="What is 2 + 2?", options=options):
+    async for message in query("What is 2 + 2?", options=options):
         if isinstance(message, InitSystemMessage):
             agents = message.agents
             assert "test-agent-query" in agents, (
@@ -119,7 +119,7 @@ async def test_large_agents_with_query_function():
     options = ClaudeAgentOptions(agents=agents, max_turns=1)
     # Use query() with string prompt - agents still go via initialize
     found_agents = []
-    async for message in query(prompt="What is 2 + 2?", options=options):
+    async for message in query("What is 2 + 2?", options=options):
         if isinstance(message, InitSystemMessage):
             found_agents = message.agents
             break

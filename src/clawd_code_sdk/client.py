@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterable
 from dataclasses import replace
 import os
 from typing import TYPE_CHECKING, Any, Self
@@ -15,13 +14,13 @@ from clawd_code_sdk.models import (
     AccumulatedUsage,
     ClaudeAgentOptions,
     ResultMessage,
-    UserPromptMessage,
 )
 from clawd_code_sdk.models.mcp import McpStatusResponse
 from clawd_code_sdk.models.messages import (
     AssistantMessage,
     ResultErrorMessage,
     ResultSuccessMessage,
+    UserTextPrompt,
 )
 
 
@@ -32,6 +31,9 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import Message, PermissionMode
     from clawd_code_sdk.models.mcp import McpServerConfig
+    from clawd_code_sdk.models.messages import (
+        UserImagePrompt,
+    )
     from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
@@ -76,38 +78,22 @@ class ClaudeSDKClient:
             raise CLIConnectionError("Not connected. Call connect() first.")
         return self._query
 
-    async def connect(self, prompt: str | AsyncIterable[UserPromptMessage] | None = None) -> None:
-        """Connect to Claude with a prompt or message stream."""
+    async def connect(self) -> None:
+        """Connect to Claude Code CLI and initialize the session."""
         from clawd_code_sdk._internal.query import Query
         from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
-        # Auto-connect with empty async iterable if no prompt is provided
-        async def _empty_stream() -> AsyncIterator[UserPromptMessage]:
-            # Never yields, but indicates that this function is an iterator and
-            # keeps the connection open.
-            # This yield is never reached but makes this an async generator
-            return
-            yield {}  # type: ignore[unreachable]
-
-        actual_prompt = _empty_stream() if prompt is None else prompt
         # Validate and configure permission settings (matching TypeScript SDK logic)
         self.options.validate()
 
         if self.options.can_use_tool:
-            # canUseTool callback requires streaming mode (AsyncIterable prompt)
-            if isinstance(prompt, str):
-                raise ValueError(
-                    "can_use_tool callback requires streaming mode. "
-                    "Please provide prompt as an AsyncIterable instead of a string."
-                )
-
             # Automatically set permission_prompt_tool_name to "stdio" for control protocol
             options = replace(self.options, permission_prompt_tool_name="stdio")
         else:
             options = self.options
 
         # Use provided custom transport or create subprocess transport
-        tp = self._custom_transport or SubprocessCLITransport(prompt=actual_prompt, options=options)
+        tp = self._custom_transport or SubprocessCLITransport(options=options)
         self._transport = tp
         await self._transport.connect()
         # Extract SDK MCP servers from options
@@ -160,12 +146,6 @@ class ClaudeSDKClient:
         # Start reading messages and initialize
         await self._query.start()
         await self._query.initialize()
-        # Send the initial prompt
-        match prompt:
-            case str() as text:
-                await self.query(text)
-            case AsyncIterable() if self._query._tg:
-                self._query._tg.start_soon(self._query.stream_input, prompt)
 
     async def receive_messages(self) -> AsyncIterator[Message]:
         """Receive all messages from Claude."""
@@ -184,29 +164,40 @@ class ClaudeSDKClient:
 
     async def query(
         self,
-        prompt: str | AsyncIterable[UserPromptMessage],
+        *prompts: str | UserTextPrompt | UserImagePrompt,
         session_id: str = "default",
+        parent_tool_use_id: str | None = None,
     ) -> None:
-        """Send a new request in streaming mode."""
+        """Send a new user message with one or more content blocks.
+
+        Args:
+            *prompts: One or more content blocks. Strings are converted to
+                UserTextPrompt automatically. Pass multiple to combine, e.g.
+                ``query(image_prompt, "What's in this image?")``.
+            session_id: Session identifier for the message.
+            parent_tool_use_id: If responding to a tool use, the tool_use block ID.
+        """
         self.query_usage.reset()
         self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
-        # Handle string prompts
-        if isinstance(prompt, str):
-            message = UserPromptMessage(
-                type="user",
-                message={"role": "user", "content": prompt},
-                parent_tool_use_id=None,
-                session_id=session_id,
-            )
-            await self._transport.write(anyenv.dump_json(message) + "\n")
+        if not prompts:
+            return
+        # Collect content blocks
+        blocks = [UserTextPrompt(text=p) if isinstance(p, str) else p for p in prompts]
+        # Single text block → plain string, otherwise list of content block dicts
+        message_content: str | list[dict[str, Any]]
+        if len(blocks) == 1 and isinstance(blocks[0], UserTextPrompt):
+            message_content = blocks[0].text
         else:
-            # Handle AsyncIterable prompts - stream them
-            async for msg in prompt:
-                # Ensure session_id is set on each message
-                msg.setdefault("session_id", session_id)
-                await self._transport.write(anyenv.dump_json(msg) + "\n")
+            message_content = [b.to_content_block() for b in blocks]
+        wire_message = {
+            "type": "user",
+            "message": {"role": "user", "content": message_content},
+            "parent_tool_use_id": parent_tool_use_id,
+            "session_id": session_id,
+        }
+        await self._transport.write(anyenv.dump_json(wire_message) + "\n")
 
     async def interrupt(self) -> None:
         """Send interrupt signal (only works with streaming mode)."""

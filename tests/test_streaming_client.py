@@ -6,7 +6,6 @@ import asyncio
 import json
 from pathlib import Path
 import sys
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, patch
 
 import anyio
@@ -27,12 +26,6 @@ from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITrans
 from clawd_code_sdk.models import ModelUsage
 
 from .conftest import make_beta_message
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterable
-
-    from clawd_code_sdk import UserPromptMessage
 
 
 def create_mock_transport(with_init_response=True):
@@ -162,8 +155,8 @@ class TestClaudeSDKClientStreaming:
 
         anyio.run(_test)
 
-    def test_connect_with_string_prompt(self):
-        """Test connecting with a string prompt."""
+    def test_connect_creates_transport(self):
+        """Test that connect creates a transport and initializes."""
 
         async def _test():
             with patch(
@@ -172,37 +165,9 @@ class TestClaudeSDKClientStreaming:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
                 client = ClaudeSDKClient()
-                await client.connect("Hello Claude")
-                # Verify transport was created with string prompt
-                call_kwargs = mock_transport_class.call_args.kwargs
-                assert call_kwargs["prompt"] == "Hello Claude"
-
-        anyio.run(_test)
-
-    def test_connect_with_async_iterable(self):
-        """Test connecting with an async iterable."""
-
-        async def _test():
-            with patch(
-                "clawd_code_sdk._internal.transport.subprocess_cli.SubprocessCLITransport"
-            ) as mock_transport_class:
-                mock_transport = create_mock_transport()
-                mock_transport_class.return_value = mock_transport
-
-                async def message_stream() -> AsyncIterable[UserPromptMessage]:
-                    yield {"type": "user", "message": {"role": "user", "content": "Hi"}}
-                    yield {
-                        "type": "user",
-                        "message": {"role": "user", "content": "Bye"},
-                    }
-
-                client = ClaudeSDKClient()
-                stream = message_stream()
-                await client.connect(stream)
-                # Verify transport was created with async iterable
-                call_kwargs = mock_transport_class.call_args.kwargs
-                # Should be the same async iterator
-                assert call_kwargs["prompt"] is stream
+                await client.connect()
+                # Verify transport was created
+                mock_transport_class.assert_called_once()
 
         anyio.run(_test)
 
@@ -594,17 +559,13 @@ class TestClaudeSDKClientStreaming:
         anyio.run(_test)
 
 
-class TestQueryWithAsyncIterable:
-    """Test query() function with async iterable inputs."""
+class TestQueryWithMultiplePrompts:
+    """Test query() function with multiple prompt inputs."""
 
-    def test_query_with_async_iterable(self):
-        """Test query with async iterable of messages."""
+    def test_query_with_multiple_prompts(self):
+        """Test query with multiple prompt arguments."""
 
         async def _test():
-            async def message_stream() -> AsyncIterable[UserPromptMessage]:
-                yield {"type": "user", "message": {"role": "user", "content": "First"}}
-                yield {"type": "user", "message": {"role": "user", "content": "Second"}}
-
             test_script = str(Path(__file__).parent / "mock_claude_server.py")
 
             # Mock _find_cli to return the test script path directly
@@ -618,8 +579,7 @@ class TestQueryWithAsyncIterable:
                     return cmd
 
                 with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
-                    # Run query with async iterable
-                    messages = [msg async for msg in query(prompt=message_stream())]
+                    messages = [msg async for msg in query("First", "Second")]
                     # Should get the result message
                     assert len(messages) == 1
                     assert isinstance(messages[0], ResultMessage)

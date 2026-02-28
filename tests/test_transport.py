@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 
@@ -25,11 +25,6 @@ from clawd_code_sdk.models.base import (
 )
 from clawd_code_sdk.models.sandbox import SandboxNetworkConfig, SandboxSettings
 
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterable
-
-    from clawd_code_sdk.models.messages import UserPromptMessage
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
 
@@ -50,13 +45,13 @@ class TestSubprocessCLITransport:
             patch("pathlib.Path.exists", return_value=False),
             pytest.raises(CLINotFoundError) as exc_info,
         ):
-            SubprocessCLITransport(prompt="test", options=ClaudeAgentOptions())
+            SubprocessCLITransport(options=ClaudeAgentOptions())
 
         assert "Claude Code not found" in str(exc_info.value)
 
     def test_build_command_basic(self):
         """Test building basic CLI command."""
-        transport = SubprocessCLITransport(prompt="Hello", options=make_options())
+        transport = SubprocessCLITransport(options=make_options())
         cmd = transport._build_command()
         assert cmd[0] == "/usr/bin/claude"
         assert "--output-format" in cmd
@@ -71,7 +66,7 @@ class TestSubprocessCLITransport:
         """Test that cli_path accepts pathlib.Path objects."""
         path = Path("/usr/bin/claude")
         opts = ClaudeAgentOptions(cli_path=path)
-        transport = SubprocessCLITransport(prompt="Hello", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         # Path object is converted to string, compare with str(path)
         assert transport._cli_path == str(path)
 
@@ -83,7 +78,7 @@ class TestSubprocessCLITransport:
             {"type": "preset", "preset": "claude_code", "append": "Be concise."},
         ]:
             opts = make_options(system_prompt=system_prompt)
-            transport = SubprocessCLITransport(prompt="test", options=opts)
+            transport = SubprocessCLITransport(options=opts)
             cmd = transport._build_command()
             assert "--system-prompt" not in cmd
             assert "--append-system-prompt" not in cmd
@@ -91,7 +86,6 @@ class TestSubprocessCLITransport:
     def test_build_command_with_options(self):
         """Test building CLI command with options."""
         transport = SubprocessCLITransport(
-            prompt="test",
             options=make_options(
                 allowed_tools=["Read", "Write"],
                 disallowed_tools=["Bash"],
@@ -116,7 +110,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_fallback_model(self):
         """Test building CLI command with fallback_model option."""
         opts = make_options(model="opus", fallback_model="sonnet")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--model" in cmd
         assert "opus" in cmd
@@ -126,7 +120,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_thinking_enabled(self):
         """Test building CLI command with thinking config."""
         opts = make_options(thinking=ThinkingConfigEnabled(budget_tokens=5000))
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
         assert "5000" in cmd
@@ -134,7 +128,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_thinking_adaptive(self):
         """Test building CLI command with adaptive thinking config."""
         opts = make_options(thinking=ThinkingConfigAdaptive())
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
         assert "32000" in cmd
@@ -142,7 +136,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_thinking_disabled(self):
         """Test building CLI command with disabled thinking config."""
         opts = make_options(thinking=ThinkingConfigDisabled())
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
         assert "0" in cmd
@@ -150,7 +144,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_effort(self):
         """Test building CLI command with effort option."""
         opts = make_options(effort="high")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--effort" in cmd
         assert "high" in cmd
@@ -158,7 +152,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_context_1m(self):
         """Test building CLI command with context_1m option."""
         opts = make_options(context_1m=True)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--betas" in cmd
         betas_index = cmd.index("--betas")
@@ -166,7 +160,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_without_context_1m(self):
         """Test that --betas is not added when context_1m is False."""
-        transport = SubprocessCLITransport(prompt="test", options=make_options())
+        transport = SubprocessCLITransport(options=make_options())
         cmd = transport._build_command()
         assert "--betas" not in cmd
 
@@ -175,7 +169,7 @@ class TestSubprocessCLITransport:
         dir1 = "/path/to/dir1"
         dir2 = Path("/path/to/dir2")
         opts = make_options(add_dirs=[dir1, dir2])
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Check that both directories are in the command
         assert "--add-dir" in cmd
@@ -191,7 +185,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk.models.options import ResumeSession
 
         opts = make_options(session=ResumeSession(session_id="session-123"))
-        transport = SubprocessCLITransport(prompt="Continue from before", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--resume" in cmd
         assert "session-123" in cmd
@@ -199,7 +193,7 @@ class TestSubprocessCLITransport:
     def test_session_resume_shortcut(self):
         """Test resume session with string shortcut."""
         opts = make_options(session="session-123")
-        transport = SubprocessCLITransport(prompt="Continue from before", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--resume" in cmd
         assert "session-123" in cmd
@@ -209,7 +203,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk.models.options import ContinueLatest
 
         opts = make_options(session=ContinueLatest())
-        transport = SubprocessCLITransport(prompt="Continue", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--continue" in cmd
 
@@ -218,7 +212,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk.models.options import ResumeSession
 
         opts = make_options(session=ResumeSession(session_id="prev-id", fork=True))
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--resume" in cmd
         assert "prev-id" in cmd
@@ -231,7 +225,7 @@ class TestSubprocessCLITransport:
         opts = make_options(
             session=ResumeSession(session_id="prev-id", at_message="msg-uuid"),
         )
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--resume" in cmd
         assert "prev-id" in cmd
@@ -243,7 +237,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk.models.options import NewSession
 
         opts = make_options(session=NewSession(session_id="my-session-uuid"))
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--session-id" in cmd
         assert "my-session-uuid" in cmd
@@ -253,7 +247,7 @@ class TestSubprocessCLITransport:
         from clawd_code_sdk.models.options import NewSession
 
         opts = make_options(session=NewSession(persist=False))
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--no-persist-session" in cmd
 
@@ -281,7 +275,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 # Return version process first, then main process
                 mock_exec.side_effect = [mock_version_process, mock_process]
-                transport = SubprocessCLITransport(prompt="test", options=make_options())
+                transport = SubprocessCLITransport(options=make_options())
                 await transport.connect()
                 assert transport._process is not None
                 await transport.close()
@@ -293,10 +287,9 @@ class TestSubprocessCLITransport:
         """Test reading messages from CLI output."""
         # This test is simplified to just test the transport creation
         # The full async stream handling is tested in integration tests
-        transport = SubprocessCLITransport(prompt="test", options=make_options())
+        transport = SubprocessCLITransport(options=make_options())
         # The transport now just provides raw message reading via read_messages()
         # So we just verify the transport can be created and basic structure is correct
-        assert transport._prompt == "test"
         assert transport._cli_path == "/usr/bin/claude"
 
     def test_connect_with_nonexistent_cwd(self):
@@ -304,7 +297,7 @@ class TestSubprocessCLITransport:
 
         async def _test():
             opts = make_options(cwd="/this/directory/does/not/exist")
-            transport = SubprocessCLITransport(prompt="test", options=opts)
+            transport = SubprocessCLITransport(options=opts)
             with pytest.raises(CLIConnectionError) as exc_info:
                 await transport.connect()
 
@@ -315,7 +308,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_settings_file(self):
         """Test building CLI command with settings as file path."""
         opts = make_options(settings="/path/to/settings.json")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         assert "/path/to/settings.json" in cmd
@@ -324,7 +317,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with settings as JSON object."""
         settings_json = '{"permissions": {"allow": ["Bash(ls:*)"]}}'
         opts = make_options(settings=settings_json)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         assert settings_json in cmd
@@ -333,7 +326,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with extra_args for future flags."""
         args = {"new-flag": "value", "boolean-flag": None, "another-option": "test-value"}
         opts = make_options(extra_args=args)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         cmd_str = " ".join(cmd)
         # Check flags with values
@@ -356,7 +349,7 @@ class TestSubprocessCLITransport:
             }
         }
         opts = make_options(mcp_servers=mcp_servers)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Find the --mcp-config flag and its value
         assert "--mcp-config" in cmd
@@ -372,7 +365,7 @@ class TestSubprocessCLITransport:
         # Test with string path
         string_path = "/path/to/mcp-config.json"
         opts = make_options(mcp_servers=string_path)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -380,7 +373,7 @@ class TestSubprocessCLITransport:
         # Test with Path object
         path_obj = Path("/path/to/mcp-config.json")
         opts = make_options(mcp_servers=path_obj)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -391,7 +384,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with mcp_servers as JSON string."""
         json_config = '{"mcpServers": {"server": {"type": "stdio", "command": "test"}}}'
         opts = make_options(mcp_servers=json_config)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -421,7 +414,7 @@ class TestSubprocessCLITransport:
                 mock_process.returncode = None
                 # Return version process first, then main process
                 mock_open_process.side_effect = [mock_version_process, mock_process]
-                transport = SubprocessCLITransport(prompt="test", options=options)
+                transport = SubprocessCLITransport(options=options)
                 await transport.connect()
                 # Verify open_process was called twice (version check + main process)
                 assert mock_open_process.call_count == 2
@@ -471,7 +464,6 @@ class TestSubprocessCLITransport:
                 mock_open_process.side_effect = [mock_version_process, mock_process]
 
                 transport = SubprocessCLITransport(
-                    prompt="test",
                     options=options,
                 )
 
@@ -525,7 +517,6 @@ class TestSubprocessCLITransport:
                 mock_open_process.side_effect = [mock_version_process, mock_process]
 
                 transport = SubprocessCLITransport(
-                    prompt="test",
                     options=options,
                 )
 
@@ -569,7 +560,7 @@ class TestSubprocessCLITransport:
                 mock_process.returncode = None
                 # Return version process first, then main process
                 mock_open_process.side_effect = [mock_version_process, mock_process]
-                transport = SubprocessCLITransport(prompt="test", options=options)
+                transport = SubprocessCLITransport(options=options)
                 await transport.connect()
                 # Verify open_process was called twice (version check + main process)
                 assert mock_open_process.call_count == 2
@@ -595,7 +586,7 @@ class TestSubprocessCLITransport:
             ),
         )
         opts = make_options(sandbox=sandbox)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should have --settings with sandbox merged in
         assert "--settings" in cmd
@@ -615,7 +606,7 @@ class TestSubprocessCLITransport:
         existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
         sandbox = SandboxSettings(enabled=True, excluded_commands=["git", "docker"])
         opts = make_options(settings=existing_settings, sandbox=sandbox)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should have merged settings
         assert "--settings" in cmd
@@ -633,7 +624,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_settings_file_and_no_sandbox(self):
         """Test that settings file path is passed through when no sandbox."""
         opts = make_options(settings="/path/to/settings.json")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should pass path directly, not parse it
         assert "--settings" in cmd
@@ -644,7 +635,7 @@ class TestSubprocessCLITransport:
         """Test sandbox with minimal configuration."""
         sandbox = SandboxSettings(enabled=True)
         opts = make_options(sandbox=sandbox)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         settings_idx = cmd.index("--settings")
@@ -665,7 +656,7 @@ class TestSubprocessCLITransport:
             ),
         )
         opts = make_options(sandbox=sandbox)
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         settings_idx = cmd.index("--settings")
         settings_value = cmd[settings_idx + 1]
@@ -680,7 +671,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_array(self):
         """Test building CLI command with tools as array of tool names."""
         opts = make_options(tools=["Read", "Edit", "Bash"])
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -689,7 +680,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_empty_array(self):
         """Test building CLI command with tools as empty array (disables all tools)."""
         opts = make_options(tools=[])
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -698,7 +689,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_preset(self):
         """Test building CLI command with tools preset."""
         opts = make_options(tools={"type": "preset", "preset": "claude_code"})
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -706,7 +697,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_without_tools(self):
         """Test building CLI command without tools option (default None)."""
-        transport = SubprocessCLITransport(prompt="test", options=make_options())
+        transport = SubprocessCLITransport(options=make_options())
         cmd = transport._build_command()
         assert "--tools" not in cmd
 
@@ -723,7 +714,7 @@ class TestSubprocessCLITransport:
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
         opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
 
         # Same setup as production: TextSendStream wrapping process.stdin
         transport._ready = True
@@ -762,7 +753,7 @@ class TestSubprocessCLITransport:
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
         opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
-        transport = SubprocessCLITransport(prompt="test", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         # Same setup as production
         transport._ready = True
         transport._process = MagicMock(returncode=None)
@@ -821,20 +812,14 @@ class TestSubprocessCLITransport:
         }
         # Test with string prompt
         opts = make_options(agents=agents)
-        transport = SubprocessCLITransport(prompt="Hello", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--agents" not in cmd
         assert "--input-format" in cmd
         assert "stream-json" in cmd
 
-        # Test with async iterable prompt
-        async def fake_stream() -> AsyncIterable[UserPromptMessage]:
-            yield {"type": "user", "message": {"role": "user", "content": "test"}}
-
-        transport2 = SubprocessCLITransport(
-            prompt=fake_stream(),
-            options=make_options(agents=agents),
-        )
+        # Verify same behavior with different options
+        transport2 = SubprocessCLITransport(options=make_options(agents=agents))
         cmd2 = transport2._build_command()
         assert "--agents" not in cmd2
         assert "--input-format" in cmd2
@@ -847,7 +832,7 @@ class TestSubprocessCLITransport:
         so that agents and other large configs can be sent via initialize request.
         """
         # String prompt should still use streaming
-        transport = SubprocessCLITransport(prompt="Hello", options=make_options())
+        transport = SubprocessCLITransport(options=make_options())
         cmd = transport._build_command()
         assert "--input-format" in cmd
         assert "stream-json" in cmd
@@ -863,7 +848,7 @@ class TestSubprocessCLITransport:
         large_prompt = "x" * 50000
         agents = {"large-agent": AgentDefinition(description="A large agent", prompt=large_prompt)}
         opts = make_options(agents=agents)
-        transport = SubprocessCLITransport(prompt="Hello", options=opts)
+        transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # --agents should not be in command (sent via initialize)
         assert "--agents" not in cmd

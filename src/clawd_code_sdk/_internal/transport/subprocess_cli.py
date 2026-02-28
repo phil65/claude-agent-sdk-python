@@ -34,12 +34,11 @@ from clawd_code_sdk.models.base import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, AsyncIterator
+    from collections.abc import AsyncIterator
 
     from anyio.abc import Process
 
     from clawd_code_sdk.models import ClaudeAgentOptions
-    from clawd_code_sdk.models.messages import UserPromptMessage
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +60,8 @@ class SubprocessCLITransport(Transport):
 
     def __init__(
         self,
-        prompt: str | AsyncIterable[UserPromptMessage],
         options: ClaudeAgentOptions,
     ):
-        self._prompt = prompt
         self._options = options
         self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
         self._cwd = str(options.cwd) if options.cwd else None

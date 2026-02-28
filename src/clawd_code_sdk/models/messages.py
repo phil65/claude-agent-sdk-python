@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence  # noqa: TC003
 from dataclasses import dataclass
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
 # from anthropic.types import MessageParam
 from anthropic.types.model import Model  # noqa: TC002
@@ -58,29 +58,43 @@ ErrorSubType = Literal[
 Outcome = Literal["success", "error", "cancelled"]
 
 
-class UserPromptMessageContent(TypedDict):
-    """Inner message content for a user prompt."""
-
-    role: Literal["user"]
-    """Message role, always 'user'."""
-    content: str
-    """The text content of the message."""
+ImageMediaType = Literal["image/png", "image/jpeg", "image/gif", "image/webp"]
 
 
-class UserPromptMessage(TypedDict):
-    """A user prompt message sent over the wire to the Claude Code CLI.
+@dataclass
+class UserTextPrompt:
+    """A text-only user prompt."""
 
-    Used as the element type for streaming prompt iterables.
-    """
+    text: str
 
-    type: Literal["user"]
-    """Message type, always 'user'."""
-    message: UserPromptMessageContent
-    """The message content."""
-    parent_tool_use_id: NotRequired[str | None]
-    """Optional parent tool use ID for tool result responses."""
-    session_id: NotRequired[str]
-    """Session identifier. Auto-injected if not provided."""
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        return {"type": "text", "text": self.text}
+
+
+@dataclass
+class UserImagePrompt:
+    """A user prompt containing a single base64-encoded image."""
+
+    image_data: str
+    """Base64-encoded image data."""
+    media_type: ImageMediaType
+    """MIME type of the image."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        return {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": self.media_type,
+                "data": self.image_data,
+            },
+        }
+
+
+UserPrompt = UserTextPrompt | UserImagePrompt
+"""Union type for all user prompt dataclasses."""
 
 
 @dataclass(kw_only=True)
@@ -406,10 +420,10 @@ class AccumulatedUsage:
 
     def accumulate(self, usage: Usage) -> None:
         """Add a per-turn Usage to this accumulator."""
-        self.input_tokens += usage["input_tokens"]
-        self.output_tokens += usage["output_tokens"]
-        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
-        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
+        self.input_tokens += usage.get("input_tokens", 0)
+        self.output_tokens += usage.get("output_tokens", 0)
+        self.cache_creation_input_tokens += usage.get("cache_creation_input_tokens", 0)
+        self.cache_read_input_tokens += usage.get("cache_read_input_tokens", 0)
 
     def reset(self) -> None:
         """Reset all counters to zero."""

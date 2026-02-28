@@ -293,7 +293,9 @@ class SessionManager:
         if connect:
             session._state = "connecting"
             try:
-                await client.connect(prompt)
+                await client.connect()
+                if prompt:
+                    await client.query(prompt)
                 session._state = "idle"
                 session._last_activity = datetime.now(UTC)
             except Exception:

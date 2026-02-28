@@ -33,7 +33,7 @@ from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Iterator
+    from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.hooks import HookCallback, HookEvent, HookMatcher
     from clawd_code_sdk.models.input_types import AskUserQuestionInput
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
-    from clawd_code_sdk.models.messages import UserPromptMessage
     from clawd_code_sdk.models.permissions import CanUseTool, OnUserQuestion, PermissionResult
 
 logger = logging.getLogger(__name__)
@@ -472,39 +471,6 @@ class Query:
         """
         req = {"subtype": "rewind_files", "user_message_id": user_message_id}
         return await self._send_control_request(req)
-
-    async def stream_input(self, stream: AsyncIterable[UserPromptMessage]) -> None:
-        """Stream input messages to transport.
-
-        If SDK MCP servers or hooks are present, waits for the first result
-        before closing stdin to allow bidirectional control protocol communication.
-        """
-        try:
-            async for message in stream:
-                if self._closed:
-                    break
-                await self.transport.write(anyenv.dump_json(message) + "\n")
-
-            # If we have SDK MCP servers or hooks that need bidirectional communication,
-            # wait for first result before closing the channel
-            if self.sdk_mcp_servers or self.hooks:
-                logger.debug(
-                    "Waiting for first result before closing stdin "
-                    "(sdk_mcp_servers=%s, has_hooks=%s)",
-                    len(self.sdk_mcp_servers),
-                    bool(self.hooks),
-                )
-                try:
-                    with anyio.move_on_after(self._stream_close_timeout):
-                        await self._first_result_event.wait()
-                        logger.debug("Received first result, closing input stream")
-                except Exception:
-                    logger.debug("Timed out waiting for first result, closing input stream")
-
-            # After all messages sent (and result received if needed), end input
-            await self.transport.end_input()
-        except Exception as e:
-            logger.debug("Error streaming input: %s", e)
 
     async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""

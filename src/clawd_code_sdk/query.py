@@ -9,15 +9,15 @@ from clawd_code_sdk.models import ClaudeAgentOptions
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, AsyncIterator
+    from collections.abc import AsyncIterator
 
     from clawd_code_sdk._internal.transport import Transport
-    from clawd_code_sdk.models import Message, UserPromptMessage
+    from clawd_code_sdk.models import Message
+    from clawd_code_sdk.models.messages import UserImagePrompt, UserTextPrompt
 
 
 async def query(
-    prompt: str | AsyncIterable[UserPromptMessage],
-    *,
+    *prompts: str | UserTextPrompt | UserImagePrompt,
     options: ClaudeAgentOptions | None = None,
     transport: Transport | None = None,
 ) -> AsyncIterator[Message]:
@@ -27,8 +27,8 @@ async def query(
     For interactive, stateful conversations, use ClaudeSDKClient directly.
 
     Args:
-        prompt: The prompt to send to Claude. Can be a string for single-shot queries
-                or an AsyncIterable[UserPromptMessage] for streaming input.
+        *prompts: One or more content blocks to send. Strings are automatically
+                  converted to UserTextPrompt.
         options: Optional configuration (defaults to ClaudeAgentOptions() if None).
         transport: Optional transport implementation override.
 
@@ -37,14 +37,15 @@ async def query(
 
     Example:
         ```python
-        async for message in query(prompt="What is the capital of France?"):
+        async for message in query("What is the capital of France?"):
             print(message)
         ```
     """
     options = options or ClaudeAgentOptions()
     client = ClaudeSDKClient(options=options, transport=transport)
     try:
-        await client.connect(prompt)
+        await client.connect()
+        await client.query(*prompts)
         async for message in client.receive_response():
             yield message
     finally:
