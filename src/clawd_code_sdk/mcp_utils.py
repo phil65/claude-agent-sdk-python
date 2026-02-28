@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 from pydantic import AnyUrl, TypeAdapter
 
@@ -172,8 +172,8 @@ def create_sdk_mcp_server(
             tool_list = []
             for tool_def in tools:
                 match tool_def.input_schema:
-                    case {"type": _typ, "properties": _props}:
-                        schema = tool_def.input_schema
+                    case {"type": _typ, "properties": _props} as dct:
+                        schema = dct
                     case dict() as input_schema:
                         # Simple dict mapping names to types - convert to JSON schema
                         properties = {}
@@ -183,10 +183,12 @@ def create_sdk_mcp_server(
                         schema = {"type": "object", "properties": properties, "required": required}
                     case type() as tp:
                         schema = TypeAdapter(tp).json_schema()
+                    case _ as unreachable:
+                        assert_never(unreachable)
                 mcp_tool = Tool(
                     name=tool_def.name,
                     description=tool_def.description,
-                    inputSchema=schema,
+                    inputSchema=schema,  # type: ignore[arg-type]
                     annotations=tool_def.annotations,
                 )
                 tool_list.append(mcp_tool)
