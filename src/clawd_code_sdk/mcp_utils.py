@@ -194,7 +194,7 @@ def create_sdk_mcp_server(
 
         # Register call_tool handler to execute tools
         @server.call_tool()  # type: ignore[untyped-decorator]
-        async def call_tool(name: str, arguments: dict[str, Any]) -> Any:
+        async def call_tool(name: str, arguments: dict[str, Any]) -> list[ContentBlock]:
             """Execute a tool by name with given arguments."""
             if name not in tool_map:
                 raise ValueError(f"Tool '{name}' not found")
