@@ -199,7 +199,7 @@ class TestIntegration:
                 patch("pathlib.Path.exists", return_value=False),
                 pytest.raises(CLINotFoundError) as exc_info,
             ):
-                async for _ in query(prompt="test"):
+                async for _ in query("test"):
                     pass
 
             assert "Claude Code not found" in str(exc_info.value)

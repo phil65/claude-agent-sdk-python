@@ -156,7 +156,7 @@ class TestQueryFunction:
                 _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-            messages = [msg async for msg in query(prompt="What is 2+2?", transport=mock_transport)]
+            messages = [msg async for msg in query("What is 2+2?", transport=mock_transport)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -239,7 +239,7 @@ class TestAPIErrorRaising:
             mock_transport = create_mock_transport_with_messages([error_message])
 
             with pytest.raises(InvalidRequestError) as exc_info:
-                async for _ in query(prompt="test", transport=mock_transport):
+                async for _ in query("test", transport=mock_transport):
                     pass
 
             assert exc_info.value.error_type == "invalid_request"
@@ -268,7 +268,7 @@ class TestAPIErrorRaising:
             mock_transport = create_mock_transport_with_messages([error_message])
 
             with pytest.raises(RateLimitError) as exc_info:
-                async for _ in query(prompt="test", transport=mock_transport):
+                async for _ in query("test", transport=mock_transport):
                     pass
 
             assert exc_info.value.error_type == "rate_limit"
@@ -290,7 +290,7 @@ class TestAPIErrorRaising:
             mock_transport = create_mock_transport_with_messages([error_message])
 
             with pytest.raises(AuthenticationError) as exc_info:
-                async for _ in query(prompt="test", transport=mock_transport):
+                async for _ in query("test", transport=mock_transport):
                     pass
 
             assert exc_info.value.error_type == "authentication_failed"
@@ -317,7 +317,7 @@ class TestAPIErrorRaising:
             mock_transport = create_mock_transport_with_messages([error_message])
 
             with pytest.raises(ServerError) as exc_info:
-                async for _ in query(prompt="test", transport=mock_transport):
+                async for _ in query("test", transport=mock_transport):
                     pass
 
             assert exc_info.value.error_type == "server_error"
@@ -339,7 +339,7 @@ class TestAPIErrorRaising:
             mock_transport = create_mock_transport_with_messages([error_message])
 
             with pytest.raises(APIError) as exc_info:
-                async for _ in query(prompt="test", transport=mock_transport):
+                async for _ in query("test", transport=mock_transport):
                     pass
 
             assert exc_info.value.error_type == "unknown"
