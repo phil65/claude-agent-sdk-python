@@ -31,9 +31,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import Message, PermissionMode
     from clawd_code_sdk.models.mcp import McpServerConfig
-    from clawd_code_sdk.models.messages import (
-        UserImagePrompt,
-    )
+    from clawd_code_sdk.models.messages import UserPrompt
     from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
@@ -164,7 +162,7 @@ class ClaudeSDKClient:
 
     async def query(
         self,
-        *prompts: str | UserTextPrompt | UserImagePrompt,
+        *prompts: str | UserPrompt,
         session_id: str = "default",
         parent_tool_use_id: str | None = None,
     ) -> None:

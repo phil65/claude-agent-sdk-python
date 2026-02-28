@@ -13,11 +13,11 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk._internal.transport import Transport
     from clawd_code_sdk.models import Message
-    from clawd_code_sdk.models.messages import UserImagePrompt, UserTextPrompt
+    from clawd_code_sdk.models.messages import UserPrompt
 
 
 async def query(
-    *prompts: str | UserTextPrompt | UserImagePrompt,
+    *prompts: str | UserPrompt,
     options: ClaudeAgentOptions | None = None,
     transport: Transport | None = None,
 ) -> AsyncIterator[Message]:

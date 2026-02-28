@@ -59,6 +59,8 @@ Outcome = Literal["success", "error", "cancelled"]
 
 
 ImageMediaType = Literal["image/png", "image/jpeg", "image/gif", "image/webp"]
+DocumentMediaType = Literal["application/pdf"]
+PlainTextMediaType = Literal["text/plain"]
 
 
 @dataclass
@@ -93,7 +95,119 @@ class UserImagePrompt:
         }
 
 
-UserPrompt = UserTextPrompt | UserImagePrompt
+@dataclass
+class UserImageURLPrompt:
+    """A user prompt containing an image referenced by URL."""
+
+    url: str
+    """Public URL of the image."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        return {
+            "type": "image",
+            "source": {
+                "type": "url",
+                "url": self.url,
+            },
+        }
+
+
+@dataclass
+class UserDocumentPrompt:
+    """A user prompt containing a base64-encoded PDF document."""
+
+    document_data: str
+    """Base64-encoded PDF data."""
+    media_type: DocumentMediaType = "application/pdf"
+    """MIME type of the document."""
+    title: str | None = None
+    """Optional document title."""
+    context: str | None = None
+    """Optional context about the document."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        block: dict[str, Any] = {
+            "type": "document",
+            "source": {
+                "type": "base64",
+                "media_type": self.media_type,
+                "data": self.document_data,
+            },
+        }
+        if self.title is not None:
+            block["title"] = self.title
+        if self.context is not None:
+            block["context"] = self.context
+        return block
+
+
+@dataclass
+class UserDocumentURLPrompt:
+    """A user prompt containing a PDF document referenced by URL."""
+
+    url: str
+    """Public URL of the PDF document."""
+    title: str | None = None
+    """Optional document title."""
+    context: str | None = None
+    """Optional context about the document."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        block: dict[str, Any] = {
+            "type": "document",
+            "source": {
+                "type": "url",
+                "url": self.url,
+            },
+        }
+        if self.title is not None:
+            block["title"] = self.title
+        if self.context is not None:
+            block["context"] = self.context
+        return block
+
+
+@dataclass
+class UserPlainTextDocumentPrompt:
+    """A user prompt containing a plain text document."""
+
+    data: str
+    """The plain text content."""
+    media_type: PlainTextMediaType = "text/plain"
+    """MIME type (always text/plain)."""
+    title: str | None = None
+    """Optional document title."""
+    context: str | None = None
+    """Optional context about the document."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        block: dict[str, Any] = {
+            "type": "document",
+            "source": {
+                "type": "text",
+                "media_type": self.media_type,
+                "data": self.data,
+            },
+        }
+        if self.title is not None:
+            block["title"] = self.title
+        if self.context is not None:
+            block["context"] = self.context
+        return block
+
+
+UserPrompt = (
+    UserTextPrompt
+    | UserImagePrompt
+    | UserImageURLPrompt
+    | UserDocumentPrompt
+    | UserDocumentURLPrompt
+    | UserPlainTextDocumentPrompt
+)
 """Union type for all user prompt dataclasses."""
 
 
