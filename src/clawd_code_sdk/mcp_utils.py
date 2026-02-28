@@ -13,7 +13,7 @@ from clawd_code_sdk.models import McpSdkServerConfig
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from mcp.types import ToolAnnotations
+    from mcp.types import ContentBlock, ToolAnnotations
 
 
 MMAPPING = {
@@ -148,7 +148,14 @@ def create_sdk_mcp_server(
         >>> server = create_sdk_mcp_server("store", tools=[add_item])
     """
     from mcp.server import Server
-    from mcp.types import BlobResourceContents, EmbeddedResource, ImageContent, TextContent, Tool
+    from mcp.types import (
+        AudioContent,
+        BlobResourceContents,
+        EmbeddedResource,
+        ImageContent,
+        TextContent,
+        Tool,
+    )
 
     # Create MCP server instance
     server = Server(name, version=version)
@@ -197,13 +204,15 @@ def create_sdk_mcp_server(
             # Convert result to MCP format
             # The decorator expects us to return the content, not a CallToolResult
             # It will wrap our return value in CallToolResult
-            content: list[TextContent | ImageContent | EmbeddedResource] = []
+            content: list[ContentBlock] = []
             for item in result.get("content", []):
                 match item:
-                    case {"type": "text", "text": text}:
-                        content.append(TextContent(type="text", text=text))
-                    case {"type": "image", "data": data, "mimeType": mimeType}:
-                        content.append(ImageContent(type="image", data=data, mimeType=mimeType))
+                    case {"type": "text"}:
+                        content.append(TextContent.model_validate(item))
+                    case {"type": "image"}:
+                        content.append(ImageContent.model_validate(item))
+                    case {"type": "audio"}:
+                        content.append(AudioContent.model_validate(item))
                     case {"type": "document"}:
                         # Convert document to EmbeddedResource with BlobResourceContents
                         # This preserves document data through MCP for conversion to
