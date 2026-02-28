@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, TypeAdapter
 
 from clawd_code_sdk.models import McpSdkServerConfig
 
@@ -164,21 +164,18 @@ def create_sdk_mcp_server(
             """Return the list of available tools."""
             tool_list = []
             for tool_def in tools:
-                # Convert input_schema to JSON Schema format
-                if isinstance(tool_def.input_schema, dict):
-                    # Check if it's already a JSON schema
-                    if "type" in tool_def.input_schema and "properties" in tool_def.input_schema:
+                match tool_def.input_schema:
+                    case {"type": _typ, "properties": _props}:
                         schema = tool_def.input_schema
-                    else:
+                    case dict() as input_schema:
                         # Simple dict mapping names to types - convert to JSON schema
                         properties = {}
-                        for param_name, param_type in tool_def.input_schema.items():
+                        for param_name, param_type in input_schema.items():
                             properties[param_name] = MMAPPING.get(param_type, {"type": "string"})
                         required = list(properties.keys())
                         schema = {"type": "object", "properties": properties, "required": required}
-                else:
-                    # For TypedDict or other types, create basic schema
-                    schema = {"type": "object", "properties": {}}
+                    case type() as tp:
+                        schema = TypeAdapter(tp).json_schema()
                 mcp_tool = Tool(
                     name=tool_def.name,
                     description=tool_def.description,
