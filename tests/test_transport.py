@@ -18,6 +18,11 @@ import pytest
 from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import AgentDefinition, ClaudeAgentOptions
+from clawd_code_sdk.models.base import (
+    ThinkingConfigAdaptive,
+    ThinkingConfigDisabled,
+    ThinkingConfigEnabled,
+)
 from clawd_code_sdk.models.sandbox import SandboxNetworkConfig, SandboxSettings
 
 
@@ -120,7 +125,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_thinking_enabled(self):
         """Test building CLI command with thinking config."""
-        opts = make_options(thinking={"type": "enabled", "budget_tokens": 5000})
+        opts = make_options(thinking=ThinkingConfigEnabled(budget_tokens=5000))
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
@@ -128,7 +133,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_thinking_adaptive(self):
         """Test building CLI command with adaptive thinking config."""
-        opts = make_options(thinking={"type": "adaptive"})
+        opts = make_options(thinking=ThinkingConfigAdaptive())
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
@@ -136,7 +141,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_thinking_disabled(self):
         """Test building CLI command with disabled thinking config."""
-        opts = make_options(thinking={"type": "disabled"})
+        opts = make_options(thinking=ThinkingConfigDisabled())
         transport = SubprocessCLITransport(prompt="test", options=opts)
         cmd = transport._build_command()
         assert "--max-thinking-tokens" in cmd
