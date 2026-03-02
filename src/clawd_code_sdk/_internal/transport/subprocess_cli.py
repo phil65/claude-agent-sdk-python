@@ -267,6 +267,7 @@ class SubprocessCLITransport(Transport):
                 cwd=self._cwd,
                 env=process_env,
                 user=self._options.user,
+                start_new_session=True,
                 creationflags=_CREATION_FLAGS,
             )
 
