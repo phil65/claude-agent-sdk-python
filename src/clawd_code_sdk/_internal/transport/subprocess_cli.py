@@ -266,7 +266,7 @@ class SubprocessCLITransport(Transport):
                 cmd,
                 cwd=self._cwd,
                 env=process_env,
-                user=self._options.user,
+                user=self._options.user if platform.system() != "Windows" else None,
                 start_new_session=True,
                 creationflags=_CREATION_FLAGS,
             )
