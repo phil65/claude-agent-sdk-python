@@ -266,7 +266,12 @@ class TestSubprocessCLITransport:
                 mock_process = MagicMock()
                 mock_process.returncode = None
                 mock_process.terminate = MagicMock()
-                mock_process.wait = AsyncMock()
+
+                # Simulate graceful exit: wait() sets returncode to 0
+                async def _graceful_wait():
+                    mock_process.returncode = 0
+
+                mock_process.wait = AsyncMock(side_effect=_graceful_wait)
                 mock_process.stdout = MagicMock()
                 mock_process.stderr = MagicMock()
                 # Mock stdin with aclose method
@@ -279,7 +284,9 @@ class TestSubprocessCLITransport:
                 await transport.connect()
                 assert transport._process is not None
                 await transport.close()
-                mock_process.terminate.assert_called_once()
+                # Process should exit gracefully without needing SIGTERM
+                mock_process.terminate.assert_not_called()
+                mock_process.wait.assert_called()
 
         anyio.run(_test)
 
