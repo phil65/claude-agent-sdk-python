@@ -23,6 +23,8 @@ PermissionBehavior = Literal["allow", "deny", "ask"]
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 TaskStatus = Literal["completed", "failed", "stopped"]
 CompactionTrigger = Literal["auto", "manual"]
+ElicitationMode = Literal["form", "url"]
+ElicitationAction = Literal["accept", "decline", "cancel"]
 
 StopReason = Literal[
     "end_turn",

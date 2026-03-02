@@ -27,9 +27,10 @@ from clawd_code_sdk.models import (
     ToolPermissionContext,
     control_request_adapter,
 )
-from clawd_code_sdk.models.control import ControlErrorResponse
+from clawd_code_sdk.models.control import ControlErrorResponse, SDKControlElicitationRequest
 from clawd_code_sdk.models.mcp import JSONRPCError, JSONRPCErrorResponse, JSONRPCResultResponse
-from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
+from clawd_code_sdk.models.permissions import ElicitationRequest
+from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -45,7 +46,12 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.hooks import HookCallback, HookEvent, HookMatcher
     from clawd_code_sdk.models.input_types import AskUserQuestionInput
     from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
-    from clawd_code_sdk.models.permissions import CanUseTool, OnUserQuestion, PermissionResult
+    from clawd_code_sdk.models.permissions import (
+        CanUseTool,
+        OnElicitation,
+        OnUserQuestion,
+        PermissionResult,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +94,7 @@ class Query:
         transport: Transport,
         can_use_tool: CanUseTool | None = None,
         on_user_question: OnUserQuestion | None = None,
+        on_elicitation: OnElicitation | None = None,
         hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
         initialize_timeout: float = 60.0,
@@ -103,6 +110,7 @@ class Query:
             transport: Low-level transport for I/O
             can_use_tool: Optional callback for tool permission requests
             on_user_question: Optional callback for AskUserQuestion elicitation
+            on_elicitation: Optional callback for MCP elicitation requests
             hooks: Optional hook configurations
             sdk_mcp_servers: Optional SDK MCP server instances
             initialize_timeout: Timeout in seconds for the initialize request
@@ -116,6 +124,7 @@ class Query:
         self.transport = transport
         self.can_use_tool = can_use_tool
         self.on_user_question = on_user_question
+        self.on_elicitation = on_elicitation
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
         self._agents = {name: agent_def.to_dict() for name, agent_def in (agents or {}).items()}
@@ -300,6 +309,8 @@ class Query:
                 case SDKControlMcpMessageRequest(server_name=server_name, message=message):
                     mcp_resp = await self._handle_sdk_mcp_request(server_name, message)
                     response_data = {"mcp_response": mcp_resp}
+                case SDKControlElicitationRequest() as req:
+                    response_data = await self._handle_elicitation_request(req)
                 case (
                     SDKControlInitializeRequest()
                     | SDKControlSetPermissionModeRequest()
@@ -346,6 +357,32 @@ class Query:
         if isinstance(result, PermissionResultAllow) and result.updated_input is None:
             result.updated_input = req.input
         return result
+
+    async def _handle_elicitation_request(
+        self, req: SDKControlElicitationRequest
+    ) -> dict[str, Any]:
+        """Handle an MCP elicitation request.
+
+        If on_elicitation callback is set, dispatches to it.
+        Otherwise, automatically declines the elicitation.
+        """
+        if not self.on_elicitation:
+            # Auto-decline if no callback is set
+            return {"action": "decline"}
+
+        elicitation_req = ElicitationRequest(
+            server_name=req.mcp_server_name,
+            message=req.message,
+            mode=req.mode,
+            url=req.url,
+            elicitation_id=req.elicitation_id,
+            requested_schema=req.requested_schema,
+        )
+        result = await self.on_elicitation(elicitation_req)
+        response: dict[str, Any] = {"action": result.action}
+        if result.content is not None:
+            response["content"] = result.content
+        return response
 
     async def _handle_hook_callback(self, req: SDKHookCallbackRequest) -> dict[str, Any]:
         """Handle a hook callback request."""
@@ -417,6 +454,13 @@ class Query:
 
         server = self.sdk_mcp_servers[server_name]
         return await process_mcp_request(message, server)
+
+    async def supported_agents(self) -> list[ClaudeCodeAgentInfo]:
+        """Get the list of available subagents for the current session."""
+        if self._initialization_result is None:
+            msg = "Not initialized. Call initialize() first."
+            raise RuntimeError(msg)
+        return self._initialization_result.agents
 
     async def get_mcp_status(self) -> dict[str, Any]:
         """Get current MCP server connection status."""

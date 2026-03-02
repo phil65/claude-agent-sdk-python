@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Literal
 
+from anthropic.types import Model
 from pydantic import Field
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel
+from clawd_code_sdk.models.messages import FastModeState
 
 
 EffortLevel = Literal["low", "medium", "high", "max"]
@@ -66,6 +68,19 @@ class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
     """Organization name."""
 
 
+class ClaudeCodeAgentInfo(ClaudeCodeBaseModel):
+    """Information about an available subagent from Claude Code server."""
+
+    name: str
+    """Agent type identifier (e.g., "Explore")."""
+
+    description: str
+    """Description of when to use this agent."""
+
+    model: Model | str | None = None
+    """Model alias this agent uses. If omitted, inherits the parent's model."""
+
+
 class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     """Complete server initialization info from Claude Code.
 
@@ -88,6 +103,12 @@ class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
 
     account: ClaudeCodeAccountInfo | None = Field(default=None)
     """Account and authentication information."""
+
+    agents: list[ClaudeCodeAgentInfo] = Field(default_factory=list)
+    """List of available subagents."""
+
+    fast_mode_state: FastModeState | None = None
+    """Fast mode state: off, in cooldown after rate limit, or actively enabled."""
 
     pid: int | None = None
     """Process id."""

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any, Literal, NotRequired, TypedDict
 
+from anthropic.types import Model  # noqa: TC002
+
 from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
 from clawd_code_sdk.models.hooks import AgentHooksConfig  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig  # noqa: TC001
@@ -23,6 +25,20 @@ _FIELD_RENAMES: dict[str, str] = {
     "max_turns": "maxTurns",
     "permission_mode": "permissionMode",
 }
+
+
+@dataclass
+class AgentInfo:
+    """Information about an available subagent that can be invoked via the Agent tool."""
+
+    name: str
+    """Agent type identifier (e.g., "Explore")."""
+
+    description: str
+    """Description of when to use this agent."""
+
+    model: Model | str | None = None
+    """Model alias this agent uses. If omitted, inherits the parent's model."""
 
 
 class SystemPromptPreset(TypedDict):

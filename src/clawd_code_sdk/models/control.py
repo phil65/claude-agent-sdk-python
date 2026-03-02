@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal, TypedDict
 from pydantic import Discriminator, TypeAdapter
 
 from .agents import AgentDefinition  # noqa: TC001
-from .base import PermissionMode  # noqa: TC001
+from .base import ElicitationMode, PermissionMode  # noqa: TC001
 from .hooks import HookEvent, HookInput  # noqa: TC001
 from .mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
 
@@ -166,6 +166,46 @@ class SDKControlMcpClearAuthRequest:
     server_name: str
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlMcpOAuthCallbackUrlRequest:
+    """Provides an OAuth redirect callback URL to complete an MCP server OAuth flow.
+
+    Sent by the SDK to the CLI with the full redirect URL (containing the
+    authorization code) after the user completes browser-based OAuth.
+    """
+
+    subtype: Literal["mcp_oauth_callback_url"] = "mcp_oauth_callback_url"
+    server_name: str
+    callback_url: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlRemoteControlRequest:
+    """Toggles the remote control REPL bridge for external session access.
+
+    When enabled, starts a bridge that allows remote clients to send prompts,
+    permission responses, interrupts, and model changes into the session.
+    The response includes ``session_url``, ``connect_url``, and
+    ``environment_id`` when enabling.
+    """
+
+    subtype: Literal["remote_control"] = "remote_control"
+    enabled: bool = False
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlElicitationRequest:
+    """Requests the SDK consumer to handle an MCP elicitation (user input request)."""
+
+    subtype: Literal["elicitation"] = "elicitation"
+    mcp_server_name: str
+    message: str
+    mode: ElicitationMode | None = None
+    url: str | None = None
+    elicitation_id: str | None = None
+    requested_schema: dict[str, Any] | None = None
+
+
 ControlRequestUnion = Annotated[
     SDKControlInterruptRequest
     | SDKControlPermissionRequest
@@ -182,8 +222,11 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpToggleRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest
+    | SDKControlMcpOAuthCallbackUrlRequest
+    | SDKControlRemoteControlRequest
     | SDKControlStopTaskRequest
-    | SDKControlApplyFlagSettingsRequest,
+    | SDKControlApplyFlagSettingsRequest
+    | SDKControlElicitationRequest,
     Discriminator("subtype"),
 ]
 

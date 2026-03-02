@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence  # noqa: TC003
 from dataclasses import dataclass
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
 
 # from anthropic.types import MessageParam
 from anthropic.types.model import Model  # noqa: TC002
@@ -56,11 +56,27 @@ ErrorSubType = Literal[
     "error_max_structured_output_retries",
 ]
 Outcome = Literal["success", "error", "cancelled"]
-
-
+RateLimitType = Literal["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet"]
+RateLimitStatus = Literal["allowed", "allowed_warning", "rejected"]
+OverAgeDisabledReason = Literal[
+    "overage_not_provisioned",
+    "org_level_disabled",
+    "org_level_disabled_until",
+    "out_of_credits",
+    "seat_tier_level_disabled",
+    "member_level_disabled",
+    "seat_tier_zero_credit_limit",
+    "group_zero_credit_limit",
+    "member_zero_credit_limit",
+    "org_service_level_disabled",
+    "org_service_zero_credit_limit",
+    "no_limits_configured",
+    "unknown",
+]
 ImageMediaType = Literal["image/png", "image/jpeg", "image/gif", "image/webp"]
 DocumentMediaType = Literal["application/pdf"]
 PlainTextMediaType = Literal["text/plain"]
+FastModeState = Literal["off", "cooldown", "on"]
 
 
 @dataclass
@@ -331,7 +347,8 @@ class InitSystemMessage(BaseSystemMessage):
     agents: list[str]
     skills: list[str]
     plugins: list[Plugin]
-    fast_mode_state: bool
+    fast_mode_state: FastModeState | None = None
+    """Whether fast mode was enabled."""
 
 
 @dataclass(kw_only=True)
@@ -371,12 +388,15 @@ class CompactBoundarySystemMessage(BaseSystemMessage):
 class RateLimitInfo(TypedDict):
     """Rate limit information."""
 
-    status: Literal["allowed", "rejected"]
-    resetsAt: int
-    rateLimitType: Literal["five_hour", "twenty_four_hour"]
-    overageStatus: Literal["allowed", "rejected"]
-    overageDisabledReason: Literal["org_level_disabled", "user_level_disabled"]
-    isUsingOverage: bool
+    status: RateLimitStatus
+    resetsAt: NotRequired[int]
+    rateLimitType: NotRequired[RateLimitType]
+    utilization: NotRequired[float]
+    overageStatus: NotRequired[RateLimitStatus]
+    overageResetsAt: NotRequired[int]
+    overageDisabledReason: NotRequired[OverAgeDisabledReason]
+    isUsingOverage: NotRequired[bool]
+    surpassedThreshold: NotRequired[float]
 
 
 @dataclass(kw_only=True)
@@ -570,6 +590,9 @@ class BaseResultMessage(BaseMessage):
     modelUsage: dict[str, ModelUsage]  # noqa: N815
     """Cumulative token usage per model across the entire session."""
     permission_denials: list[SDKPermissionDenial]
+    """Permission denials from the last API call only (per-turn)."""
+    fast_mode_state: FastModeState | None = None
+    """Whether fast mode was enabled."""
 
 
 @dataclass(kw_only=True)
@@ -632,6 +655,75 @@ class AuthStatusMessage(BaseMessage):
     error: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# Prompt request/response types
+# ---------------------------------------------------------------------------
+
+
+class PromptRequestOption(TypedDict):
+    """An option in a prompt request."""
+
+    key: str
+    """Unique key for this option, returned in the response."""
+    label: str
+    """Display text for this option."""
+    description: NotRequired[str]
+    """Optional description shown below the label."""
+
+
+class PromptRequest(TypedDict):
+    """Prompt request sent to the SDK consumer."""
+
+    prompt: str
+    """Request ID. Presence of this key marks the line as a prompt request."""
+    message: str
+    """The prompt message to display to the user."""
+    options: list[PromptRequestOption]
+    """Available options for the user to choose from."""
+
+
+class PromptResponse(TypedDict):
+    """Response to a prompt request."""
+
+    prompt_response: str
+    """The request ID from the corresponding prompt request."""
+    selected: str
+    """The key of the selected option."""
+
+
+# ---------------------------------------------------------------------------
+# Additional SDK message types
+# ---------------------------------------------------------------------------
+
+
+@dataclass(kw_only=True)
+class ElicitationCompleteMessage(BaseSystemMessage):
+    """System message emitted when an MCP elicitation completes."""
+
+    subtype: Literal["elicitation_complete"] = "elicitation_complete"
+    mcp_server_name: str
+    elicitation_id: str
+
+
+@dataclass(kw_only=True)
+class LocalCommandOutputMessage(BaseSystemMessage):
+    """Output from a local slash command (e.g. /voice, /cost).
+
+    Displayed as assistant-style text in the transcript.
+    """
+
+    subtype: Literal["local_command_output"] = "local_command_output"
+    content: str
+
+
+@dataclass(kw_only=True)
+class PromptSuggestionMessage(BaseMessage):
+    """Predicted next user prompt, emitted after each turn when promptSuggestions is enabled."""
+
+    type: Literal["prompt_suggestion"] = "prompt_suggestion"
+    suggestion: str
+
+
 @dataclass(kw_only=True)
 class SDKSessionInfo:
     """Session metadata returned by list_sessions.
@@ -675,7 +767,9 @@ SystemMessageUnion = Annotated[
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
-    | FilesPersistedSystemMessage,
+    | FilesPersistedSystemMessage
+    | ElicitationCompleteMessage
+    | LocalCommandOutputMessage,
     Discriminator("subtype"),
 ]
 
@@ -694,6 +788,7 @@ Message = (
     | HookResponseSystemMessage
     | CompactBoundarySystemMessage
     | StatusSystemMessage
+    | LocalCommandOutputMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
@@ -701,4 +796,6 @@ Message = (
     | ToolProgressMessage
     | ToolUseSummaryMessage
     | AuthStatusMessage
+    | ElicitationCompleteMessage
+    | PromptSuggestionMessage
 )

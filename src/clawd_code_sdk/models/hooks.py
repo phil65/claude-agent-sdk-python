@@ -6,7 +6,11 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
-from clawd_code_sdk.models.base import CompactionTrigger  # noqa: TC001
+from clawd_code_sdk.models.base import (  # noqa: TC001
+    CompactionTrigger,
+    ElicitationAction,
+    ElicitationMode,
+)
 
 
 if TYPE_CHECKING:
@@ -29,6 +33,8 @@ HookEvent = Literal[
     "Setup",
     "TeammateIdle",
     "TaskCompleted",
+    "Elicitation",
+    "ElicitationResult",
     "ConfigChange",
     "WorktreeCreate",
     "WorktreeRemove",
@@ -284,6 +290,29 @@ class WorktreeRemoveHookInput(BaseHookInput):
     worktree_path: str
 
 
+class ElicitationHookInput(BaseHookInput):
+    """Input data for Elicitation hook events."""
+
+    hook_event_name: Literal["Elicitation"]
+    mcp_server_name: str
+    message: str
+    mode: NotRequired[ElicitationMode]
+    url: NotRequired[str]
+    elicitation_id: NotRequired[str]
+    requested_schema: NotRequired[dict[str, Any]]
+
+
+class ElicitationResultHookInput(BaseHookInput):
+    """Input data for ElicitationResult hook events."""
+
+    hook_event_name: Literal["ElicitationResult"]
+    mcp_server_name: str
+    elicitation_id: NotRequired[str]
+    mode: NotRequired[ElicitationMode]
+    action: ElicitationAction
+    content: NotRequired[dict[str, Any]]
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -301,6 +330,8 @@ HookInput = (
     | SetupHookInput
     | TeammateIdleHookInput
     | TaskCompletedHookInput
+    | ElicitationHookInput
+    | ElicitationResultHookInput
     | ConfigChangeHookInput
     | WorktreeCreateHookInput
     | WorktreeRemoveHookInput
@@ -368,6 +399,22 @@ class PermissionRequestHookSpecificOutput(TypedDict):
     decision: dict[str, Any]
 
 
+class ElicitationHookSpecificOutput(TypedDict):
+    """Hook-specific output for Elicitation events."""
+
+    hookEventName: Literal["Elicitation"]
+    action: NotRequired[ElicitationAction]
+    content: NotRequired[dict[str, Any]]
+
+
+class ElicitationResultHookSpecificOutput(TypedDict):
+    """Hook-specific output for ElicitationResult events."""
+
+    hookEventName: Literal["ElicitationResult"]
+    action: NotRequired[ElicitationAction]
+    content: NotRequired[dict[str, Any]]
+
+
 HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
@@ -377,6 +424,8 @@ HookSpecificOutput = (
     | NotificationHookSpecificOutput
     | SubagentStartHookSpecificOutput
     | PermissionRequestHookSpecificOutput
+    | ElicitationHookSpecificOutput
+    | ElicitationResultHookSpecificOutput
 )
 
 

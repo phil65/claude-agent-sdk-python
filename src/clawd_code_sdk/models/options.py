@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from clawd_code_sdk.models.base import ModelName
-    from clawd_code_sdk.models.permissions import OnUserQuestion
+    from clawd_code_sdk.models.permissions import OnElicitation, OnUserQuestion
 
     from .agents import AgentDefinition, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
@@ -168,6 +168,15 @@ class ClaudeAgentOptions:
     Called when Claude asks the user a clarifying question via the
     AskUserQuestion tool. If not set, these requests fall through
     to can_use_tool (if set) for backwards compatibility.
+    """
+    on_elicitation: OnElicitation | None = None
+    """Callback for handling MCP elicitation requests.
+
+    Called when an MCP server requests user input (form fields, URL auth, etc.)
+    and no hook handles the request first.
+
+    If not provided, elicitation requests that aren't handled by hooks will
+    be declined automatically.
     """
     # Session
     session: str | SessionConfig | None = None

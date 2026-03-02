@@ -19,6 +19,7 @@ from clawd_code_sdk.models import (
 )
 from clawd_code_sdk.models.messages import (
     AuthStatusMessage,
+    PromptSuggestionMessage,
     RateLimitMessage,
     ToolProgressMessage,
     ToolUseSummaryMessage,
@@ -101,6 +102,8 @@ def parse_message(data: dict[str, Any]) -> Message:
         case {"type": "auth_status", **auth_data}:
             # Convert camelCase isAuthenticating to snake_case
             return AuthStatusMessage(**auth_data)
+        case {"type": "prompt_suggestion", **suggestion_data}:
+            return PromptSuggestionMessage(**suggestion_data)
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():

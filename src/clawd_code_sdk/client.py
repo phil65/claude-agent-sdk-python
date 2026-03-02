@@ -22,6 +22,7 @@ from clawd_code_sdk.models.messages import (
     ResultSuccessMessage,
     UserTextPrompt,
 )
+from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -132,6 +133,7 @@ class ClaudeSDKClient:
             transport=self._transport,
             can_use_tool=self.options.can_use_tool,
             on_user_question=self.options.on_user_question,
+            on_elicitation=self.options.on_elicitation,
             hooks=self.options.hooks,
             sdk_mcp_servers=sdk_mcp_servers,
             initialize_timeout=initialize_timeout,
@@ -313,6 +315,15 @@ class ClaudeSDKClient:
         """Set the maximum number of thinking tokens for extended thinking."""
         query = self._ensure_connected()
         await query.set_max_thinking_tokens(max_thinking_tokens)
+
+    async def supported_agents(self) -> list[ClaudeCodeAgentInfo]:
+        """Get the list of available subagents for the current session.
+
+        Returns:
+            List of available agents with their names, descriptions, and configuration.
+        """
+        query = self._ensure_connected()
+        return await query.supported_agents()
 
     async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.
