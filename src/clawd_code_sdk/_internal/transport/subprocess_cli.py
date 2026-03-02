@@ -272,11 +272,11 @@ class SubprocessCLITransport(Transport):
             )
 
             if self._process.stdout:
-                self._stdout_stream = TextReceiveStream(self._process.stdout)
+                self._stdout_stream = TextReceiveStream(self._process.stdout, errors="replace")
 
             # Setup stderr stream if piped
             if self._process.stderr:
-                self._stderr_stream = TextReceiveStream(self._process.stderr)
+                self._stderr_stream = TextReceiveStream(self._process.stderr, errors="replace")
                 # Start async task to read stderr
                 self._stderr_task_group = anyio.create_task_group()
                 await self._stderr_task_group.__aenter__()
