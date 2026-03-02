@@ -8,8 +8,8 @@ from typing import Any, Literal
 
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
-    ElicitationAction,
-    ElicitationMode,
+    ElicitationAction,  # noqa: TC001
+    ElicitationMode,  # noqa: TC001
     PermissionBehavior,
     PermissionMode,
 )

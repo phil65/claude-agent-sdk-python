@@ -30,7 +30,7 @@ from clawd_code_sdk.models import (
 from clawd_code_sdk.models.control import ControlErrorResponse, SDKControlElicitationRequest
 from clawd_code_sdk.models.mcp import JSONRPCError, JSONRPCErrorResponse, JSONRPCResultResponse
 from clawd_code_sdk.models.permissions import ElicitationRequest
-from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo
+from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         OnUserQuestion,
         PermissionResult,
     )
+    from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo
 
 logger = logging.getLogger(__name__)
 
@@ -458,8 +459,7 @@ class Query:
     async def supported_agents(self) -> list[ClaudeCodeAgentInfo]:
         """Get the list of available subagents for the current session."""
         if self._initialization_result is None:
-            msg = "Not initialized. Call initialize() first."
-            raise RuntimeError(msg)
+            raise RuntimeError("Not initialized. Call initialize() first.")
         return self._initialization_result.agents
 
     async def get_mcp_status(self) -> dict[str, Any]:
@@ -498,11 +498,7 @@ class Query:
         return await self._send_control_request({"subtype": "set_model", "model": model})
 
     async def stop_task(self, task_id: str) -> dict[str, Any]:
-        """Stop a running task.
-
-        Args:
-            task_id: ID of the task to stop
-        """
+        """Stop a running task."""
         return await self._send_control_request({"subtype": "stop_task", "task_id": task_id})
 
     async def rewind_files(self, user_message_id: str) -> dict[str, Any]:
