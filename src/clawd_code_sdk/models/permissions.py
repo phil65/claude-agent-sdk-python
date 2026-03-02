@@ -67,24 +67,28 @@ PermissionUpdate = RulePermissionUpdate | DirectoryPermissionUpdate | ModePermis
 # Tool callback types
 @dataclass
 class ToolPermissionContext:
-    """Context information for tool permission callbacks.
-
-    Attributes:
-        tool_use_id: Unique identifier for this specific tool call within the
-            assistant message. Multiple tool calls in the same assistant message
-            will have different tool_use_ids.
-        signal: Reserved for future abort signal support. Currently always None.
-        suggestions: Permission suggestions from CLI for updating permissions
-            so the user won't be prompted again for this tool during this session.
-        blocked_path: The file path that triggered the permission request, if
-            applicable. For example, when a Bash command tries to access a path
-            outside allowed directories.
-    """
+    """Context information for tool permission callbacks."""
 
     tool_use_id: str
-    signal: Any | None = None  # Future: abort signal support
-    suggestions: list[PermissionUpdate] = field(default_factory=list)  # suggestions from CLI
+    """Unique identifier for this specific tool call within the assistant message.
+
+    Multiple tool calls in the same assistant message will have different tool_use_ids.
+    """
+
+    signal: Any | None = None
+    """Reserved for future abort signal support. Currently always None."""
+
+    suggestions: list[PermissionUpdate] = field(default_factory=list)
+    """Permission suggestions from CLI for updating permissions.
+
+    So the user won't be prompted again for this tool during this session.
+    """
+
     blocked_path: str | None = None
+    """The file path that triggered the permission request, if applicable.
+
+    For example, when a Bash command tries to access a path outside allowed directories.
+    """
 
 
 # Match TypeScript's PermissionResult structure
