@@ -256,8 +256,13 @@ class UserMessage(BaseMessage):
     isSynthetic: bool | None = None  # noqa: N815
 
     def parse_command_output(self) -> str | None:
+        """Extract output from legacy XML-tagged command output in user messages.
+
+        Some slash commands (e.g. /compact) still embed their output in UserMessage
+        content using <local-command-stdout>/<local-command-stderr> XML tags, rather
+        than emitting a LocalCommandOutputMessage. This method extracts that content.
+        """
         content = self.content if isinstance(self.content, str) else ""
-        # Extract content from <local-command-stdout> or <local-command-stderr>
         pattern = r"<local-command-(?:stdout|stderr)>(.*?)</local-command-(?:stdout|stderr)>"
         match = re.search(pattern, content, re.DOTALL)
         return match.group(1) if match else None

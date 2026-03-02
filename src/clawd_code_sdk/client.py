@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import os
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 import anyenv
 from pydantic import TypeAdapter
@@ -20,6 +20,7 @@ from clawd_code_sdk.models.messages import (
     AssistantMessage,
     ResultErrorMessage,
     ResultSuccessMessage,
+    StatusSystemMessage,
     UserTextPrompt,
 )
 from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo  # noqa: TC001
@@ -69,6 +70,8 @@ class ClaudeSDKClient:
         """Cumulative token usage across all queries in this session."""
         self.query_usage: AccumulatedUsage = AccumulatedUsage()
         """Token usage for the current/last query only (reset on each query() call)."""
+        self.status: Literal[compacting] | None = None
+        """Current client status, or None when idle."""
 
     def _ensure_connected(self) -> Query:
         """Return the active Query, raising if not connected."""
@@ -156,6 +159,8 @@ class ClaudeSDKClient:
             match message:
                 case AssistantMessage():
                     message.raise_if_api_error()
+                case StatusSystemMessage(status=status):
+                    self.status = status
                 case ResultSuccessMessage() | ResultErrorMessage():
                     self.query_usage.accumulate(message.usage)
                     self.session_usage.accumulate(message.usage)
