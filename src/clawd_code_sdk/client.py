@@ -69,7 +69,6 @@ class ClaudeSDKClient:
         """Cumulative token usage across all queries in this session."""
         self.query_usage: AccumulatedUsage = AccumulatedUsage()
         """Token usage for the current/last query only (reset on each query() call)."""
-        os.environ["CLAUDE_CODE_ENTRYPOINT"] = "sdk-py-client"
 
     def _ensure_connected(self) -> Query:
         """Return the active Query, raising if not connected."""
