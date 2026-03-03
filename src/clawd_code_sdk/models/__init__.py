@@ -30,6 +30,7 @@ from .base import (
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
+    FastModeState,
 )
 from .control import (
     ControlErrorResponse,
@@ -144,6 +145,7 @@ from .mcp import (
     McpToolStatus,
     RequestId,
     SdkPluginConfig,
+    ExternalMcpServerConfig,
 )
 from .output_types import (
     TOOL_USE_RESULT_TYPES,
@@ -222,10 +224,6 @@ from .messages import (
     AccumulatedUsage,
     AssistantMessage,
     AssistantMessageError,
-    ElicitationCompleteMessage,
-    LocalCommandOutputMessage,
-    McpServerStatus,
-    Message,
     ModelUsage,
     BaseResultMessage,
     PromptRequest,
@@ -241,18 +239,17 @@ from .messages import (
     SDKSessionInfo,
     StreamEvent,
     AuthStatusMessage,
-    TaskProgressUsage,
     ToolProgressMessage,
     ToolUseSummaryMessage,
-    TriggerMetadata,
     Usage,
+    MiscMessages,
     UserMessage,
-    DocumentMediaType,
-    ImageMediaType,
-    PlainTextMediaType,
 )
 from .prompts import (
+    DocumentMediaType,
+    ImageMediaType,
     UserDocumentPrompt,
+    PlainTextMediaType,
     UserDocumentURLPrompt,
     UserImagePrompt,
     UserImageURLPrompt,
@@ -260,8 +257,8 @@ from .prompts import (
     UserPrompt,
     UserTextPrompt,
 )
-from .options import ClaudeAgentOptions
 from .options import (
+    ClaudeAgentOptions,
     BaseSessionConfig,
     ContinueLatest,
     FromPR,
@@ -286,12 +283,16 @@ from .permissions import (
     ToolPermissionContext,
 )
 from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
+from .server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo
 from .system_messages import (
     system_message_adapter,
+    TriggerMetadata,
+    TaskProgressUsage,
     StatusSystemMessage,
     BaseSystemMessage,
     CompactBoundarySystemMessage,
     HookResponseSystemMessage,
+    McpServerStatus,
     HookStartedSystemMessage,
     InitSystemMessage,
     FilesPersistedSystemMessage,
@@ -299,7 +300,12 @@ from .system_messages import (
     TaskNotificationSystemMessage,
     TaskProgressSystemMessage,
     TaskStartedSystemMessage,
+    SystemMessageUnion,
+    LocalCommandOutputMessage,
+    ElicitationCompleteMessage,
 )
+
+Message = MiscMessages | SystemMessageUnion
 
 __all__ = [
     "JSONRPC_VERSION",
@@ -340,6 +346,8 @@ __all__ = [
     "BashToolUseResult",
     "CanUseTool",
     "ClaudeAgentOptions",
+    "ClaudeCodeAgentInfo",
+    "ClaudeCodeServerInfo",
     "CommandHookHandler",
     "CompactBoundarySystemMessage",
     "ConfigOutput",
@@ -365,6 +373,7 @@ __all__ = [
     "EnterWorktreeOutput",
     "ExitPlanModeInput",
     "ExitPlanModeOutput",
+    "ExternalMcpServerConfig",
     "FastModeState",
     "FileEditInput",
     "FileReadInput",
@@ -417,6 +426,7 @@ __all__ = [
     "McpStdioServerConfig",
     "McpToolStatus",
     "Message",
+    "MiscMessages",
     "ModelUsage",
     "NewSession",
     "NotebookEditInput",
@@ -511,6 +521,7 @@ __all__ = [
     "SubscribeMcpResourceOutput",
     "SubscribePollingOutput",
     "SyncHookJSONOutput",
+    "SystemMessageUnion",
     "TaskCompletedHookInput",
     "TaskInfo",
     "TaskNotificationSystemMessage",

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import anyenv
 
-from clawd_code_sdk.models.messages import SDKSessionInfo
+from clawd_code_sdk.models import SDKSessionInfo
 from clawd_code_sdk.storage.helpers import (
     decode_project_path,
     get_claude_projects_dir,

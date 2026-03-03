@@ -17,13 +17,15 @@ import pytest
 
 from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.models import AgentDefinition, ClaudeAgentOptions
-from clawd_code_sdk.models.base import (
+from clawd_code_sdk.models import (
+    AgentDefinition,
+    ClaudeAgentOptions,
+    SandboxNetworkConfig,
+    SandboxSettings,
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
 )
-from clawd_code_sdk.models.sandbox import SandboxNetworkConfig, SandboxSettings
 
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
@@ -182,7 +184,7 @@ class TestSubprocessCLITransport:
 
     def test_session_resume(self):
         """Test resume session options."""
-        from clawd_code_sdk.models.options import ResumeSession
+        from clawd_code_sdk.models import ResumeSession
 
         opts = make_options(session=ResumeSession(session_id="session-123"))
         transport = SubprocessCLITransport(options=opts)
@@ -200,7 +202,7 @@ class TestSubprocessCLITransport:
 
     def test_session_continue_latest(self):
         """Test continue latest session option."""
-        from clawd_code_sdk.models.options import ContinueLatest
+        from clawd_code_sdk.models import ContinueLatest
 
         opts = make_options(session=ContinueLatest())
         transport = SubprocessCLITransport(options=opts)
@@ -209,7 +211,7 @@ class TestSubprocessCLITransport:
 
     def test_session_resume_with_fork(self):
         """Test resume session with fork."""
-        from clawd_code_sdk.models.options import ResumeSession
+        from clawd_code_sdk.models import ResumeSession
 
         opts = make_options(session=ResumeSession(session_id="prev-id", fork=True))
         transport = SubprocessCLITransport(options=opts)
@@ -220,7 +222,7 @@ class TestSubprocessCLITransport:
 
     def test_session_resume_at_message(self):
         """Test resume session at a specific message."""
-        from clawd_code_sdk.models.options import ResumeSession
+        from clawd_code_sdk.models import ResumeSession
 
         opts = make_options(
             session=ResumeSession(session_id="prev-id", at_message="msg-uuid"),
@@ -234,7 +236,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_new_session_id(self):
         """Test building CLI command with explicit new session ID."""
-        from clawd_code_sdk.models.options import NewSession
+        from clawd_code_sdk.models import NewSession
 
         opts = make_options(session=NewSession(session_id="my-session-uuid"))
         transport = SubprocessCLITransport(options=opts)
@@ -244,7 +246,7 @@ class TestSubprocessCLITransport:
 
     def test_session_no_persist(self):
         """Test session with persist=False."""
-        from clawd_code_sdk.models.options import NewSession
+        from clawd_code_sdk.models import NewSession
 
         opts = make_options(session=NewSession(persist=False))
         transport = SubprocessCLITransport(options=opts)

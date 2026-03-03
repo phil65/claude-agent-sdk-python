@@ -53,18 +53,16 @@ from __future__ import annotations
 import json as _json
 from typing import TYPE_CHECKING, Literal
 
-from clawd_code_sdk.models.content_blocks import (
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
-)
-from clawd_code_sdk.models.messages import (
+from clawd_code_sdk.models import (
     AssistantMessage,
     ResultErrorMessage,
     ResultSuccessMessage,
     StreamEvent,
+    TextBlock,
+    ThinkingBlock,
     ToolProgressMessage,
+    ToolResultBlock,
+    ToolUseBlock,
     Usage,
     UserMessage,
 )
@@ -89,9 +87,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
+    from clawd_code_sdk.models import ContentBlock, Message
     from clawd_code_sdk.models.base import StopReason
-    from clawd_code_sdk.models.content_blocks import ContentBlock
-    from clawd_code_sdk.models.messages import Message
     from clawd_code_sdk.storage.models import ClaudeContentBlock, ClaudeJSONLEntry
 
 

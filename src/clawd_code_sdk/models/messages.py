@@ -5,11 +5,10 @@ from __future__ import annotations
 from collections.abc import Sequence  # noqa: TC003
 from dataclasses import dataclass
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 # from anthropic.types import MessageParam
 from anthropic.types.model import Model  # noqa: TC002
-from pydantic import Discriminator, TypeAdapter
 
 from clawd_code_sdk._errors import (
     APIError,
@@ -19,9 +18,12 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
+from clawd_code_sdk.models import (  # noqa: TC001
+    ContentBlock,
+    TextBlock,
+    ToolUseResult,
+)
 from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
-from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
 from .base import StopReason, ToolName  # noqa: TC001
 
@@ -409,45 +411,14 @@ class SDKSessionInfo:
     """Working directory for the session."""
 
 
-SystemMessageUnion = Annotated[
-    InitSystemMessage
-    | HookStartedSystemMessage
-    | StatusSystemMessage
-    | CompactBoundarySystemMessage
-    | HookProgressSystemMessage
-    | HookResponseSystemMessage
-    | TaskStartedSystemMessage
-    | TaskNotificationSystemMessage
-    | TaskProgressSystemMessage
-    | FilesPersistedSystemMessage
-    | ElicitationCompleteMessage
-    | LocalCommandOutputMessage,
-    Discriminator("subtype"),
-]
-
-system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMessageUnion)
-
-
-Message = (
+MiscMessages = (
     UserMessage
     | AssistantMessage
-    | InitSystemMessage
     | ResultMessage
     | StreamEvent
     | RateLimitMessage
-    | HookStartedSystemMessage
-    | HookProgressSystemMessage
-    | HookResponseSystemMessage
-    | CompactBoundarySystemMessage
-    | StatusSystemMessage
-    | LocalCommandOutputMessage
-    | TaskStartedSystemMessage
-    | TaskNotificationSystemMessage
-    | TaskProgressSystemMessage
-    | FilesPersistedSystemMessage
     | ToolProgressMessage
     | ToolUseSummaryMessage
     | AuthStatusMessage
-    | ElicitationCompleteMessage
     | PromptSuggestionMessage
 )

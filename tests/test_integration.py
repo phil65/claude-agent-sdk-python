@@ -18,7 +18,7 @@ from clawd_code_sdk import (
     ResultMessage,
     query,
 )
-from clawd_code_sdk.models import ModelUsage, TextBlock, ToolUseBlock
+from clawd_code_sdk.models import ModelUsage, TextBlock, ToolUseBlock, Usage
 
 from .conftest import make_beta_message
 
@@ -294,10 +294,12 @@ class TestIntegration:
                             maxOutputTokens=0,
                         )
                     },
-                    "usage": {
-                        "input_tokens": 100,
-                        "output_tokens": 50,
-                    },
+                    "usage": Usage(
+                        input_tokens=100,
+                        output_tokens=50,
+                        cache_creation_input_tokens=0,
+                        cache_read_input_tokens=0,
+                    ),
                 },
             ]
             mock_tp = create_mock_transport(test_messages)

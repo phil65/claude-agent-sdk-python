@@ -19,12 +19,11 @@ from clawd_code_sdk import (
     ResultMessage,
     UserMessage,
 )
-from clawd_code_sdk.models.content_blocks import TextBlock, ToolResultBlock, ToolUseBlock
-from clawd_code_sdk.models.messages import ToolProgressMessage
+from clawd_code_sdk.models import TextBlock, ToolProgressMessage, ToolResultBlock, ToolUseBlock
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models.messages import Message
+    from clawd_code_sdk.models import Message
 
 
 @pytest.mark.e2e

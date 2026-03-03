@@ -13,7 +13,7 @@ from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, PermissionResult
 
 if TYPE_CHECKING:
     from clawd_code_sdk import PermissionResultDeny, ToolPermissionContext
-    from clawd_code_sdk.models.input_types import ToolInput
+    from clawd_code_sdk.models import ToolInput
 
 
 @pytest.mark.e2e

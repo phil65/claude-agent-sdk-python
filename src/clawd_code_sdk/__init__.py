@@ -90,9 +90,6 @@ from .models import (
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
-    DocumentMediaType,
-    ImageMediaType,
-    PlainTextMediaType,
     UserDocumentPrompt,
     UserDocumentURLPrompt,
     UserImagePrompt,
@@ -106,6 +103,9 @@ from .models import (
     ResumeSession,
     SDKSessionInfo,
     SessionConfig,
+    DocumentMediaType,
+    ImageMediaType,
+    PlainTextMediaType,
 )
 from .query import query
 from .mcp_utils import SdkMcpTool, tool, create_sdk_mcp_server

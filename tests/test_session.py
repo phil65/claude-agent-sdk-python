@@ -587,7 +587,7 @@ class TestSessionManager:
 
     def test_resume_session(self):
         """resume_session() sets session to ResumeSession."""
-        from clawd_code_sdk.models.options import ResumeSession
+        from clawd_code_sdk.models import ResumeSession
 
         async def _test():
             transport = _create_mock_transport_with_messages([])
@@ -603,7 +603,7 @@ class TestSessionManager:
 
     def test_resume_session_with_options(self):
         """resume_session() merges caller options with resume fields."""
-        from clawd_code_sdk.models.options import ResumeSession
+        from clawd_code_sdk.models import ResumeSession
 
         async def _test():
             transport = _create_mock_transport_with_messages([])

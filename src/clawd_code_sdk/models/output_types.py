@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, NotRequired, TypedDict
 
-from clawd_code_sdk.models.input_types import AskUserQuestionOption, TodoItem  # noqa: TC001
+from clawd_code_sdk.models import AskUserQuestionOption, TodoItem  # noqa: TC001
 
 
 # ---------------------------------------------------------------------------

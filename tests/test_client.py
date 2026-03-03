@@ -23,16 +23,20 @@ from clawd_code_sdk import (
     ServerError,
     query,
 )
-from clawd_code_sdk.models import TextBlock
-from clawd_code_sdk.models.mcp import McpServerStatusEntry, McpStatusResponse
-from clawd_code_sdk.models.messages import ModelUsage, Usage
+from clawd_code_sdk.models import (
+    McpServerStatusEntry,
+    McpStatusResponse,
+    ModelUsage,
+    TextBlock,
+    Usage,
+)
 
 from .conftest import make_beta_message
 
 
 if TYPE_CHECKING:
+    from clawd_code_sdk.models import SDKPermissionDenial
     from clawd_code_sdk.models.base import StopReason
-    from clawd_code_sdk.models.messages import SDKPermissionDenial
 
 
 def _make_result(

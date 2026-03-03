@@ -118,7 +118,7 @@ class SubprocessCLITransport(Transport):
             cmd.extend(["--permission-mode", self._options.permission_mode])
 
         # Session configuration
-        from clawd_code_sdk.models.options import (
+        from clawd_code_sdk.models import (
             ContinueLatest,
             FromPR,
             NewSession,

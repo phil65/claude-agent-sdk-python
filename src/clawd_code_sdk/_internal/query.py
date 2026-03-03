@@ -13,8 +13,15 @@ import anyio
 
 from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
 from clawd_code_sdk.models import (
+    ClaudeCodeServerInfo,
+    ControlErrorResponse,
     ControlResponse,
+    ElicitationRequest,
+    JSONRPCError,
+    JSONRPCErrorResponse,
+    JSONRPCResultResponse,
     PermissionResultAllow,
+    SDKControlElicitationRequest,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlMcpMessageRequest,
@@ -27,10 +34,6 @@ from clawd_code_sdk.models import (
     ToolPermissionContext,
     control_request_adapter,
 )
-from clawd_code_sdk.models.control import ControlErrorResponse, SDKControlElicitationRequest
-from clawd_code_sdk.models.mcp import JSONRPCError, JSONRPCErrorResponse, JSONRPCResultResponse
-from clawd_code_sdk.models.permissions import ElicitationRequest
-from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
 
 
 if TYPE_CHECKING:
@@ -41,18 +44,23 @@ if TYPE_CHECKING:
     from mcp.types import ContentBlock
 
     from clawd_code_sdk._internal.transport import Transport
-    from clawd_code_sdk.models import ControlRequestUnion, PermissionMode
-    from clawd_code_sdk.models.agents import AgentDefinition
-    from clawd_code_sdk.models.hooks import HookCallback, HookEvent, HookMatcher
-    from clawd_code_sdk.models.input_types import AskUserQuestionInput
-    from clawd_code_sdk.models.mcp import JSONRPCMessage, JSONRPCResponse, RequestId
-    from clawd_code_sdk.models.permissions import (
+    from clawd_code_sdk.models import (
+        AgentDefinition,
+        AskUserQuestionInput,
         CanUseTool,
+        ClaudeCodeAgentInfo,
+        ControlRequestUnion,
+        HookCallback,
+        HookEvent,
+        HookMatcher,
+        JSONRPCMessage,
+        JSONRPCResponse,
         OnElicitation,
         OnUserQuestion,
+        PermissionMode,
         PermissionResult,
+        RequestId,
     )
-    from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo
 
 logger = logging.getLogger(__name__)
 

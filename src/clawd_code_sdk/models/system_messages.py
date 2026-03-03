@@ -9,8 +9,8 @@ from typing import Annotated, Literal, TypedDict
 from anthropic.types.model import Model  # noqa: TC002  # noqa: TC002
 from pydantic import Discriminator, TypeAdapter
 
+from clawd_code_sdk.models import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
-from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 
 from .base import (  # noqa: TC001  # noqa: TC001
     ApiKeySource,
@@ -219,7 +219,22 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     last_tool_name: ToolName | str | None = None
 
 
-SystemMessageUnion = Annotated[
+SystemMessageUnion = (
+    InitSystemMessage
+    | HookStartedSystemMessage
+    | StatusSystemMessage
+    | CompactBoundarySystemMessage
+    | HookProgressSystemMessage
+    | HookResponseSystemMessage
+    | TaskStartedSystemMessage
+    | TaskNotificationSystemMessage
+    | TaskProgressSystemMessage
+    | FilesPersistedSystemMessage
+    | ElicitationCompleteMessage
+    | LocalCommandOutputMessage
+)
+
+SystemMessages = Annotated[
     InitSystemMessage
     | HookStartedSystemMessage
     | StatusSystemMessage
@@ -235,4 +250,4 @@ SystemMessageUnion = Annotated[
     Discriminator("subtype"),
 ]
 
-system_message_adapter: TypeAdapter[SystemMessageUnion] = TypeAdapter(SystemMessageUnion)
+system_message_adapter: TypeAdapter[SystemMessages] = TypeAdapter(SystemMessages)

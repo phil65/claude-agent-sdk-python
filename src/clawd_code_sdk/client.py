@@ -12,18 +12,16 @@ from pydantic import TypeAdapter
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
     AccumulatedUsage,
-    ClaudeAgentOptions,
-    ResultMessage,
-)
-from clawd_code_sdk.models.mcp import McpStatusResponse
-from clawd_code_sdk.models.messages import (
     AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeCodeAgentInfo,  # noqa: TC001
+    McpStatusResponse,
     ResultErrorMessage,
+    ResultMessage,
     ResultSuccessMessage,
     StatusSystemMessage,
     UserTextPrompt,
 )
-from clawd_code_sdk.models.server_info import ClaudeCodeAgentInfo  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -31,10 +29,13 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
-    from clawd_code_sdk.models import Message, PermissionMode
-    from clawd_code_sdk.models.mcp import McpServerConfig
-    from clawd_code_sdk.models.messages import UserPrompt
-    from clawd_code_sdk.models.server_info import ClaudeCodeServerInfo
+    from clawd_code_sdk.models import (
+        ClaudeCodeServerInfo,
+        McpServerConfig,
+        Message,
+        PermissionMode,
+        UserPrompt,
+    )
 
 
 class ClaudeSDKClient:
@@ -70,7 +71,7 @@ class ClaudeSDKClient:
         """Cumulative token usage across all queries in this session."""
         self.query_usage: AccumulatedUsage = AccumulatedUsage()
         """Token usage for the current/last query only (reset on each query() call)."""
-        self.status: Literal[compacting] | None = None
+        self.status: Literal["compacting"] | None = None
         """Current client status, or None when idle."""
 
     def _ensure_connected(self) -> Query:

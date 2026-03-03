@@ -21,8 +21,7 @@ from clawd_code_sdk import (
     InitSystemMessage,
     ResultMessage,
 )
-from clawd_code_sdk.models import TextBlock
-from clawd_code_sdk.models.messages import TaskStartedSystemMessage, UserMessage
+from clawd_code_sdk.models import TaskStartedSystemMessage, TextBlock, UserMessage
 
 
 @pytest.mark.e2e

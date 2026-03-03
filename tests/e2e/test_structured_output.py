@@ -10,7 +10,7 @@ import tempfile
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, ResultMessage, query
-from clawd_code_sdk.models.messages import ResultSuccessMessage
+from clawd_code_sdk.models import ResultSuccessMessage
 
 
 os.environ["ANTHROPIC_API_KEY"] = ""

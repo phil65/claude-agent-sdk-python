@@ -20,8 +20,8 @@ from typing import Annotated, Any, Literal, assert_never
 
 from pydantic import BaseModel, Discriminator, Field, Tag
 
+from clawd_code_sdk.models import ToolUseResult
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
-from clawd_code_sdk.models.output_types import ToolUseResult
 
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py

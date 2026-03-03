@@ -9,10 +9,14 @@ from typing import TYPE_CHECKING, Any, Literal, Self
 import uuid
 
 from clawd_code_sdk.client import ClaudeSDKClient
-from clawd_code_sdk.models import ClaudeAgentOptions as Opts
-from clawd_code_sdk.models.content_blocks import TextBlock, ToolUseBlock
-from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
-from clawd_code_sdk.models.messages import AssistantMessage, ResultMessage
+from clawd_code_sdk.models import (
+    AssistantMessage,
+    ClaudeAgentOptions as Opts,
+    ResultMessage,
+    TextBlock,
+    ToolInput,  # noqa: TC001
+    ToolUseBlock,
+)
 
 
 if TYPE_CHECKING:

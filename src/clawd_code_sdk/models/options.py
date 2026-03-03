@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from clawd_code_sdk.models import OnElicitation, OnUserQuestion
     from clawd_code_sdk.models.base import ModelName
-    from clawd_code_sdk.models.permissions import OnElicitation, OnUserQuestion
 
     from .agents import AgentDefinition, ToolsPreset
     from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
