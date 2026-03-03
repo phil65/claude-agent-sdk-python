@@ -26,7 +26,6 @@ from .anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
 from .list_sessions import list_sessions
 from .models import (
-    AccumulatedUsage,
     AgentDefinition,
     AgentHookHandler,
     AgentHooksConfig,
@@ -126,7 +125,6 @@ __cli_version__ = "2.1.11"
 __all__ = [
     # API Errors
     "APIError",
-    "AccumulatedUsage",
     # Agent support
     "AgentDefinition",
     # Hook support

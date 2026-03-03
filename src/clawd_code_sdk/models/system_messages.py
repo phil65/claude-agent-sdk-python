@@ -1,16 +1,14 @@
-"""Content blocks, message types, and stream events."""
+"""System message types."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Annotated, Literal, TypedDict
 
-# from anthropic.types import MessageParam
-from anthropic.types.model import Model  # noqa: TC002  # noqa: TC002
-from pydantic import Discriminator, TypeAdapter
+from anthropic.types.model import Model
+from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
 
-from clawd_code_sdk.models import McpConnectionStatus  # noqa: TC001
-from clawd_code_sdk.models.base import (  # noqa: TC001  # noqa: TC001
+from clawd_code_sdk.models import McpConnectionStatus
+from clawd_code_sdk.models.base import (  # noqa: TC001
     ApiKeySource,
     CompactionTrigger,
     FastModeState,
@@ -23,8 +21,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001  # noqa: TC001
 Outcome = Literal["success", "error", "cancelled"]
 
 
-@dataclass(kw_only=True)
-class Plugin:
+class Plugin(BaseModel):
     """Claude code plugin."""
 
     name: str
@@ -39,8 +36,7 @@ class TaskProgressUsage(TypedDict):
     duration_ms: int
 
 
-@dataclass(kw_only=True)
-class McpServerStatus:
+class McpServerStatus(BaseModel):
     """MCP server status."""
 
     name: str
@@ -61,16 +57,16 @@ class FilePersistedFailure(TypedDict):
     error: str
 
 
-@dataclass(kw_only=True)
-class BaseSystemMessage:
+class BaseSystemMessage(BaseModel):
     """Base class for all system messages."""
+
+    model_config = ConfigDict(extra="forbid")
 
     type: Literal["system"] = "system"
     uuid: str
     session_id: str
 
 
-@dataclass(kw_only=True)
 class ElicitationCompleteMessage(BaseSystemMessage):
     """System message emitted when an MCP elicitation completes."""
 
@@ -79,7 +75,6 @@ class ElicitationCompleteMessage(BaseSystemMessage):
     elicitation_id: str
 
 
-@dataclass(kw_only=True)
 class LocalCommandOutputMessage(BaseSystemMessage):
     """Output from a local slash command (e.g. /voice, /cost).
 
@@ -90,7 +85,6 @@ class LocalCommandOutputMessage(BaseSystemMessage):
     content: str
 
 
-@dataclass(kw_only=True)
 class FilesPersistedSystemMessage(BaseSystemMessage):
     """System message emitted when files have been persisted."""
 
@@ -100,7 +94,6 @@ class FilesPersistedSystemMessage(BaseSystemMessage):
     processed_at: str
 
 
-@dataclass(kw_only=True)
 class HookProgressSystemMessage(BaseSystemMessage):
     """Progress update from a running hook."""
 
@@ -113,7 +106,6 @@ class HookProgressSystemMessage(BaseSystemMessage):
     output: str
 
 
-@dataclass(kw_only=True)
 class HookResponseSystemMessage(BaseSystemMessage):
     """System message emitted when a hook completes."""
 
@@ -128,7 +120,6 @@ class HookResponseSystemMessage(BaseSystemMessage):
     output: str
 
 
-@dataclass(kw_only=True)
 class InitSystemMessage(BaseSystemMessage):
     """System init message with session metadata."""
 
@@ -149,7 +140,6 @@ class InitSystemMessage(BaseSystemMessage):
     """Whether fast mode was enabled."""
 
 
-@dataclass(kw_only=True)
 class HookStartedSystemMessage(BaseSystemMessage):
     """System message emitted when a hook starts."""
 
@@ -159,7 +149,6 @@ class HookStartedSystemMessage(BaseSystemMessage):
     hook_event: str
 
 
-@dataclass(kw_only=True)
 class StatusSystemMessage(BaseSystemMessage):
     """System status message."""
 
@@ -175,7 +164,6 @@ class TriggerMetadata(TypedDict):
     pre_tokens: int
 
 
-@dataclass(kw_only=True)
 class CompactBoundarySystemMessage(BaseSystemMessage):
     """System message emitted at compaction boundaries."""
 
@@ -183,7 +171,6 @@ class CompactBoundarySystemMessage(BaseSystemMessage):
     compact_metadata: TriggerMetadata
 
 
-@dataclass(kw_only=True)
 class TaskStartedSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task starts."""
 
@@ -194,7 +181,6 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     task_type: str | None = None
 
 
-@dataclass(kw_only=True)
 class TaskNotificationSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task completes, fails, or stops."""
 
@@ -206,7 +192,6 @@ class TaskNotificationSystemMessage(BaseSystemMessage):
     tool_use_id: str | None = None
 
 
-@dataclass(kw_only=True)
 class TaskProgressSystemMessage(BaseSystemMessage):
     """System message emitted periodically with task progress updates."""
 

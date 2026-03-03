@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence  # noqa: TC003
-from dataclasses import dataclass
+from collections.abc import Sequence
 import re
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
-# from anthropic.types import MessageParam
-from anthropic.types.model import Model  # noqa: TC002
+from anthropic.types import RawMessageStreamEvent
+from anthropic.types.model import Model
+from pydantic import BaseModel, ConfigDict
 
 from clawd_code_sdk._errors import (
     APIError,
@@ -18,17 +18,12 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
-from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
-from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
+from clawd_code_sdk.models.base import FastModeState
+from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock
+from clawd_code_sdk.models.output_types import ToolUseResult
 
 from .base import StopReason, ToolName  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from anthropic.types import RawMessageStreamEvent
-
-    from clawd_code_sdk.models import ToolInput
+from .input_types import ToolInput  # noqa: TC001
 
 
 # Message types
@@ -66,13 +61,10 @@ OverAgeDisabledReason = Literal[
 ]
 
 
-@dataclass(kw_only=True)
-class SDKSessionInfo:
-    """Session metadata returned by list_sessions.
+class SDKSessionInfo(BaseModel):
+    """Session metadata returned by list_sessions."""
 
-    Contains summary information about a stored session without
-    loading the full conversation history.
-    """
+    model_config = ConfigDict(extra="forbid")
 
     session_id: str
     """Unique session identifier (UUID)."""
@@ -134,18 +126,12 @@ class SDKPermissionDenial(TypedDict):
     tool_input: ToolInput | dict[str, Any]
 
 
-class Usage(TypedDict):
-    """Token usage from the last API call only (per-turn, not cumulative)."""
+class Usage(BaseModel):
+    """Token usage counters.
 
-    input_tokens: int
-    output_tokens: int
-    cache_creation_input_tokens: int
-    cache_read_input_tokens: int
-
-
-@dataclass
-class AccumulatedUsage:
-    """Accumulated token usage, built by summing per-turn Usage values."""
+    Used both for per-turn snapshots (on ResultMessage) and as an accumulator
+    (on ClaudeSDKClient.query_usage / session_usage).
+    """
 
     input_tokens: int = 0
     output_tokens: int = 0
@@ -163,11 +149,11 @@ class AccumulatedUsage:
         )
 
     def accumulate(self, usage: Usage) -> None:
-        """Add a per-turn Usage to this accumulator."""
-        self.input_tokens += usage["input_tokens"]
-        self.output_tokens += usage["output_tokens"]
-        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
-        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
+        """Add another Usage's values to this one."""
+        self.input_tokens += usage.input_tokens
+        self.output_tokens += usage.output_tokens
+        self.cache_creation_input_tokens += usage.cache_creation_input_tokens
+        self.cache_read_input_tokens += usage.cache_read_input_tokens
 
     def reset(self) -> None:
         """Reset all counters to zero."""
@@ -177,15 +163,15 @@ class AccumulatedUsage:
         self.cache_read_input_tokens = 0
 
 
-@dataclass(kw_only=True)
-class BaseMessage:
+class BaseMessage(BaseModel):
     """Base class for messages."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     uuid: str
     session_id: str
 
 
-@dataclass(kw_only=True)
 class UserMessage(BaseMessage):
     """User message."""
 
@@ -199,47 +185,28 @@ class UserMessage(BaseMessage):
     isSynthetic: bool | None = None  # noqa: N815
 
     def parse_command_output(self) -> str | None:
-        """Extract output from legacy XML-tagged command output in user messages.
-
-        Some slash commands (e.g. /compact) still embed their output in UserMessage
-        content using <local-command-stdout>/<local-command-stderr> XML tags, rather
-        than emitting a LocalCommandOutputMessage. This method extracts that content.
-        """
+        """Extract output from legacy XML-tagged command output in user messages."""
         content = self.content if isinstance(self.content, str) else ""
         pattern = r"<local-command-(?:stdout|stderr)>(.*?)</local-command-(?:stdout|stderr)>"
         match = re.search(pattern, content, re.DOTALL)
         return match.group(1) if match else None
 
 
-@dataclass(kw_only=True)
-class AssistantMessage:
+class AssistantMessage(BaseModel):
     """Assistant message with content blocks."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     type: Literal["assistant"] = "assistant"
     content: Sequence[ContentBlock]
     model: Model | str
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
-    session_id: str | None = None  # not sure these two are needed.
+    session_id: str | None = None
     uuid: str | None = None
 
     def raise_if_api_error(self) -> None:
-        """Raise the appropriate API exception if error is set.
-
-        This function converts the error field on an AssistantMessage into a proper
-        Python exception that can be caught and handled programmatically.
-
-        Args:
-            message: The AssistantMessage with error field set.
-
-        Raises:
-            AuthenticationError: For authentication_failed errors (401).
-            BillingError: For billing_error errors.
-            RateLimitError: For rate_limit errors (429).
-            InvalidRequestError: For invalid_request errors (400).
-            ServerError: For server_error errors (500/529).
-            APIError: For unknown error types.
-        """
+        """Raise the appropriate API exception if error is set."""
         if self.error is None:
             return
         error_message = next(
@@ -258,11 +225,9 @@ class AssistantMessage:
             case "server_error":
                 raise ServerError(error_message, self.model)
             case _ as unknown:
-                # Handle "unknown" or any future error types
                 raise APIError(error_message, unknown, self.model)
 
 
-@dataclass(kw_only=True)
 class RateLimitMessage(BaseMessage):
     """Rate limit event message."""
 
@@ -271,7 +236,6 @@ class RateLimitMessage(BaseMessage):
     rate_limit_info: RateLimitInfo
 
 
-@dataclass(kw_only=True)
 class BaseResultMessage(BaseMessage):
     """Base result message with cost and usage information.
 
@@ -291,15 +255,14 @@ class BaseResultMessage(BaseMessage):
     usage: Usage
     """Token usage from the last API call only (per-turn)."""
     stop_reason: StopReason | None
-    modelUsage: dict[str, ModelUsage]  # noqa: N815
+    modelUsage: dict[str, ModelUsage] = {}  # noqa: N815
     """Cumulative token usage per model across the entire session."""
-    permission_denials: list[SDKPermissionDenial]
+    permission_denials: list[SDKPermissionDenial] = []
     """Permission denials from the last API call only (per-turn)."""
     fast_mode_state: FastModeState | None = None
     """Whether fast mode was enabled."""
 
 
-@dataclass(kw_only=True)
 class ResultSuccessMessage(BaseResultMessage):
     """Successful result message."""
 
@@ -308,7 +271,6 @@ class ResultSuccessMessage(BaseResultMessage):
     structured_output: Any = None
 
 
-@dataclass(kw_only=True)
 class ResultErrorMessage(BaseResultMessage):
     """Error result message."""
 
@@ -319,7 +281,6 @@ class ResultErrorMessage(BaseResultMessage):
 ResultMessage = ResultSuccessMessage | ResultErrorMessage
 
 
-@dataclass(kw_only=True)
 class StreamEvent(BaseMessage):
     """Stream event for partial message updates during streaming."""
 
@@ -328,7 +289,6 @@ class StreamEvent(BaseMessage):
     parent_tool_use_id: str | None = None
 
 
-@dataclass(kw_only=True)
 class ToolProgressMessage(BaseMessage):
     """Progress update for a running tool."""
 
@@ -340,7 +300,6 @@ class ToolProgressMessage(BaseMessage):
     task_id: str | None = None
 
 
-@dataclass(kw_only=True)
 class ToolUseSummaryMessage(BaseMessage):
     """Summary of preceding tool uses."""
 
@@ -349,7 +308,6 @@ class ToolUseSummaryMessage(BaseMessage):
     preceding_tool_use_ids: list[str]
 
 
-@dataclass(kw_only=True)
 class AuthStatusMessage(BaseMessage):
     """Authentication status update."""
 
@@ -359,7 +317,6 @@ class AuthStatusMessage(BaseMessage):
     error: str | None = None
 
 
-@dataclass(kw_only=True)
 class PromptSuggestionMessage(BaseMessage):
     """Predicted next user prompt, emitted after each turn when promptSuggestions is enabled."""
 

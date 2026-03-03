@@ -223,7 +223,6 @@ from .content_blocks import (
 )
 
 from .messages import (
-    AccumulatedUsage,
     AssistantMessage,
     AssistantMessageError,
     ModelUsage,
@@ -311,7 +310,6 @@ __all__ = [
     "JSONRPC_VERSION",
     "TOOL_INPUT_TYPES",
     "TOOL_USE_RESULT_TYPES",
-    "AccumulatedUsage",
     "AgentAsyncLaunchedOutput",
     "AgentCacheCreation",
     "AgentCompletedOutput",

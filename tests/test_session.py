@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict
 import json
 from unittest.mock import AsyncMock
 
@@ -98,37 +97,37 @@ TOOL_USE_MSG = {
     ),
 }
 
-RESULT_MSG = asdict(
-    ResultSuccessMessage(
-        uuid="msg-001",
-        session_id="test-session",
-        duration_ms=1500,
-        duration_api_ms=1200,
-        is_error=False,
-        num_turns=1,
-        total_cost_usd=0.005,
-        stop_reason=None,
-        modelUsage={
-            "opus": ModelUsage(
-                inputTokens=200,
-                outputTokens=100,
-                cacheReadInputTokens=0,
-                cacheCreationInputTokens=0,
-                webSearchRequests=0,
-                costUSD=0.005,
-                contextWindow=0,
-                maxOutputTokens=0,
-            )
-        },
-        permission_denials=[],
-        usage={
-            "input_tokens": 200,
-            "output_tokens": 100,
-            "cache_creation_input_tokens": 0,
-            "cache_read_input_tokens": 0,
-        },
-    )
-)
+RESULT_MSG = {
+    "type": "result",
+    "subtype": "success",
+    "uuid": "msg-001",
+    "session_id": "test-session",
+    "duration_ms": 1500,
+    "duration_api_ms": 1200,
+    "is_error": False,
+    "num_turns": 1,
+    "total_cost_usd": 0.005,
+    "stop_reason": None,
+    "modelUsage": {
+        "opus": {
+            "inputTokens": 200,
+            "outputTokens": 100,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0,
+            "webSearchRequests": 0,
+            "costUSD": 0.005,
+            "contextWindow": 0,
+            "maxOutputTokens": 0,
+        }
+    },
+    "permission_denials": [],
+    "usage": {
+        "input_tokens": 200,
+        "output_tokens": 100,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+    },
+}
 
 
 class TestToolCallSummary:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.models import (
@@ -51,7 +51,6 @@ def parse_message(data: dict[str, Any]) -> Message:
             )
             return UserMessage(content=content_, **user_data)
         case {"type": "assistant", "message": message}:
-            # Check for error at top level first, then inside message
             return AssistantMessage(
                 content=[content_block_adapter.validate_python(i) for i in message["content"]],
                 model=message["model"],
@@ -68,13 +67,13 @@ def parse_message(data: dict[str, Any]) -> Message:
         case {"type": "result", "subtype": "success", **result_data}:
             try:
                 return ResultSuccessMessage(**result_data)
-            except TypeError as e:
+            except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
         case {"type": "result", **result_data}:
             try:
                 return ResultErrorMessage(**result_data)
-            except TypeError as e:
+            except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
         case {"type": "stream_event", "event": event, **event_data}:
@@ -83,22 +82,20 @@ def parse_message(data: dict[str, Any]) -> Message:
             try:
                 event = TypeAdapter(RawMessageStreamEvent).validate_python(event)
                 return StreamEvent(event=event, **event_data)
-            except TypeError as e:
+            except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
-        # case {"type": "compact_boundary"}:
         case {"type": "rate_limit_event", **event_data}:
             try:
                 return RateLimitMessage(**event_data)
-            except TypeError as e:
-                msg = f"Missing required field in result message: {e}"
+            except (TypeError, ValidationError) as e:
+                msg = f"Missing required field in rate_limit message: {e}"
                 raise MessageParseError(msg, data) from e
         case {"type": "tool_progress", **progress_data}:
             return ToolProgressMessage(**progress_data)
         case {"type": "tool_use_summary", **summary_data}:
             return ToolUseSummaryMessage(**summary_data)
         case {"type": "auth_status", **auth_data}:
-            # Convert camelCase isAuthenticating to snake_case
             return AuthStatusMessage(**auth_data)
         case {"type": "prompt_suggestion", **suggestion_data}:
             return PromptSuggestionMessage(**suggestion_data)

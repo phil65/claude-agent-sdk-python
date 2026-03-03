@@ -11,7 +11,6 @@ from pydantic import TypeAdapter
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
-    AccumulatedUsage,
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
@@ -20,6 +19,7 @@ from clawd_code_sdk.models import (
     ResultMessage,
     ResultSuccessMessage,
     StatusSystemMessage,
+    Usage,
     UserTextPrompt,
 )
 
@@ -67,9 +67,9 @@ class ClaudeSDKClient:
         self._custom_transport = transport
         self._transport: Transport | None = None
         self._query: Query | None = None
-        self.session_usage: AccumulatedUsage = AccumulatedUsage()
+        self.session_usage: Usage = Usage()
         """Cumulative token usage across all queries in this session."""
-        self.query_usage: AccumulatedUsage = AccumulatedUsage()
+        self.query_usage: Usage = Usage()
         """Token usage for the current/last query only (reset on each query() call)."""
         self.session_cost: float = 0.0
         """Cumulative cost in USD across all queries in this session."""

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict
 import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
@@ -85,7 +84,7 @@ def _make_result(
             cache_read_input_tokens=0,
         ),
     )
-    return asdict(msg)
+    return msg.model_dump()
 
 
 def create_mock_transport_with_messages(messages: list[dict]):
