@@ -408,10 +408,10 @@ class AccumulatedUsage:
 
     def accumulate(self, usage: Usage) -> None:
         """Add a per-turn Usage to this accumulator."""
-        self.input_tokens += usage.get("input_tokens", 0)
-        self.output_tokens += usage.get("output_tokens", 0)
-        self.cache_creation_input_tokens += usage.get("cache_creation_input_tokens", 0)
-        self.cache_read_input_tokens += usage.get("cache_read_input_tokens", 0)
+        self.input_tokens += usage["input_tokens"]
+        self.output_tokens += usage["output_tokens"]
+        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
+        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
 
     def reset(self) -> None:
         """Reset all counters to zero."""
