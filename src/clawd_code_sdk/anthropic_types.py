@@ -9,13 +9,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from anthropic.types import TextBlock, WebSearchResultBlock, WebSearchToolResultError
 from anthropic.types.beta import (
     BetaBashCodeExecutionResultBlock,
     BetaBashCodeExecutionToolResultError,
     BetaCodeExecutionResultBlock,
     BetaCodeExecutionToolResultError,
     BetaImageBlockParam,
+    BetaTextBlock,
     BetaTextEditorCodeExecutionCreateResultBlock,
     BetaTextEditorCodeExecutionStrReplaceResultBlock,
     BetaTextEditorCodeExecutionToolResultError,
@@ -25,6 +25,8 @@ from anthropic.types.beta import (
     BetaToolSearchToolSearchResultBlock,
     BetaWebFetchBlock,
     BetaWebFetchToolResultErrorBlock,
+    BetaWebSearchResultBlock,
+    BetaWebSearchToolResultError,
 )
 from pydantic import BaseModel, Field, TypeAdapter
 
@@ -52,13 +54,13 @@ from pydantic import BaseModel, Field, TypeAdapter
 # - "text_editor_code_execution_str_replace_result" -> BetaTextEditorCodeExecutionStrReplaceResultBlock  # noqa: E501
 # - "text_editor_code_execution_tool_result_error" -> BetaTextEditorCodeExecutionToolResultError
 ToolResultContentBlock = Annotated[
-    TextBlock
+    BetaTextBlock
     | BetaImageBlockParam
     | BetaToolReferenceBlock
     | BetaToolSearchToolSearchResultBlock
     | BetaToolSearchToolResultError
-    | WebSearchResultBlock
-    | WebSearchToolResultError
+    | BetaWebSearchResultBlock
+    | BetaWebSearchToolResultError
     | BetaWebFetchBlock
     | BetaWebFetchToolResultErrorBlock
     | BetaCodeExecutionResultBlock
@@ -79,9 +81,9 @@ def _get_adapter() -> TypeAdapter[list[ToolResultContentBlock]]:
     if _tool_result_content_adapter is None:
         # Force schema build for Anthropic models (deferred by default)
         for model in [
-            TextBlock,
-            WebSearchResultBlock,
-            WebSearchToolResultError,
+            BetaTextBlock,
+            BetaWebSearchResultBlock,
+            BetaWebSearchToolResultError,
             BetaBashCodeExecutionResultBlock,
             BetaBashCodeExecutionToolResultError,
             BetaCodeExecutionResultBlock,
