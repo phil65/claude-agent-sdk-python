@@ -109,13 +109,13 @@ McpServerConfig = (
 )
 
 
-class SdkPluginConfig(TypedDict):
+class SdkPluginConfig(ClaudeCodeBaseModel):
     """SDK plugin configuration.
 
     Currently only local plugins are supported via the 'local' type.
     """
 
-    type: Literal["local"]
+    type: Literal["local"] = "local"
     path: str
 
 

@@ -195,10 +195,10 @@ class SubprocessCLITransport(Transport):
 
         # Add plugin directories
         for plugin in self._options.plugins:
-            if plugin["type"] == "local":
-                cmd.extend(["--plugin-dir", plugin["path"]])
+            if plugin.type == "local":
+                cmd.extend(["--plugin-dir", plugin.path])
             else:
-                raise ValueError(f"Unsupported plugin type: {plugin['type']}")
+                raise ValueError(f"Unsupported plugin type: {plugin.type}")
 
         # Add extra args for future CLI flags
         for flag, value in self._options.extra_args.items():
