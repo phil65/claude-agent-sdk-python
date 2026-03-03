@@ -283,7 +283,7 @@ from .permissions import (
     ToolPermissionContext,
 )
 from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
-from .server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo
+from .server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo, ClaudeCodeCommandInfo
 from .system_messages import (
     system_message_adapter,
     TriggerMetadata,
@@ -347,6 +347,7 @@ __all__ = [
     "CanUseTool",
     "ClaudeAgentOptions",
     "ClaudeCodeAgentInfo",
+    "ClaudeCodeCommandInfo",
     "ClaudeCodeServerInfo",
     "CommandHookHandler",
     "CompactBoundarySystemMessage",
