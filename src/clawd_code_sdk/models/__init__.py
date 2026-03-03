@@ -15,7 +15,7 @@ Types are organized into submodules:
 
 from __future__ import annotations
 
-from .agents import AgentDefinition, AgentInfo, SystemPromptPreset, ToolsPreset
+from .agents import AgentDefinition, AgentInfo, ToolsPreset
 from .base import (
     ApiKeySource,
     ElicitationAction,
@@ -510,7 +510,6 @@ __all__ = [
     "SubscribeMcpResourceOutput",
     "SubscribePollingOutput",
     "SyncHookJSONOutput",
-    "SystemPromptPreset",
     "TaskCompletedHookInput",
     "TaskInfo",
     "TaskNotificationSystemMessage",

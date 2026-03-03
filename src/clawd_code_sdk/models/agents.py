@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, TypedDict
 
 from anthropic.types import Model  # noqa: TC002
 
@@ -39,14 +39,6 @@ class AgentInfo:
 
     model: Model | str | None = None
     """Model alias this agent uses. If omitted, inherits the parent's model."""
-
-
-class SystemPromptPreset(TypedDict):
-    """System prompt preset configuration."""
-
-    type: Literal["preset"]
-    preset: Literal["claude_code"]
-    append: NotRequired[str]
 
 
 class ToolsPreset(TypedDict):
