@@ -262,6 +262,9 @@ from .messages import (
     DocumentMediaType,
     ImageMediaType,
     PlainTextMediaType,
+    system_message_adapter,
+)
+from .prompts import (
     UserDocumentPrompt,
     UserDocumentURLPrompt,
     UserImagePrompt,
@@ -269,7 +272,6 @@ from .messages import (
     UserPlainTextDocumentPrompt,
     UserPrompt,
     UserTextPrompt,
-    system_message_adapter,
 )
 from .options import ClaudeAgentOptions
 from .options import (
@@ -299,7 +301,6 @@ from .permissions import (
 from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
 
 __all__ = [
-    # mcp
     "JSONRPC_VERSION",
     "TOOL_INPUT_TYPES",
     "TOOL_USE_RESULT_TYPES",

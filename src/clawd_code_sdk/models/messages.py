@@ -73,158 +73,23 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
-ImageMediaType = Literal["image/png", "image/jpeg", "image/gif", "image/webp"]
-DocumentMediaType = Literal["application/pdf"]
-PlainTextMediaType = Literal["text/plain"]
 FastModeState = Literal["off", "cooldown", "on"]
 
 
-@dataclass
-class UserTextPrompt:
-    """A text-only user prompt."""
+@dataclass(kw_only=True)
+class McpServerStatus:
+    """MCP server status."""
 
-    text: str
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        return {"type": "text", "text": self.text}
+    name: str
+    status: McpConnectionStatus
 
 
-@dataclass
-class UserImagePrompt:
-    """A user prompt containing a single base64-encoded image."""
+@dataclass(kw_only=True)
+class Plugin:
+    """Claude code plugin."""
 
-    image_data: str
-    """Base64-encoded image data."""
-    media_type: ImageMediaType
-    """MIME type of the image."""
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        return {
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": self.media_type,
-                "data": self.image_data,
-            },
-        }
-
-
-@dataclass
-class UserImageURLPrompt:
-    """A user prompt containing an image referenced by URL."""
-
-    url: str
-    """Public URL of the image."""
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        return {
-            "type": "image",
-            "source": {
-                "type": "url",
-                "url": self.url,
-            },
-        }
-
-
-@dataclass
-class UserDocumentPrompt:
-    """A user prompt containing a base64-encoded PDF document."""
-
-    document_data: str
-    """Base64-encoded PDF data."""
-    media_type: DocumentMediaType = "application/pdf"
-    """MIME type of the document."""
-    title: str | None = None
-    """Optional document title."""
-    context: str | None = None
-    """Optional context about the document."""
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {
-                "type": "base64",
-                "media_type": self.media_type,
-                "data": self.document_data,
-            },
-        }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
-
-
-@dataclass
-class UserDocumentURLPrompt:
-    """A user prompt containing a PDF document referenced by URL."""
-
-    url: str
-    """Public URL of the PDF document."""
-    title: str | None = None
-    """Optional document title."""
-    context: str | None = None
-    """Optional context about the document."""
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {
-                "type": "url",
-                "url": self.url,
-            },
-        }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
-
-
-@dataclass
-class UserPlainTextDocumentPrompt:
-    """A user prompt containing a plain text document."""
-
-    data: str
-    """The plain text content."""
-    media_type: PlainTextMediaType = "text/plain"
-    """MIME type (always text/plain)."""
-    title: str | None = None
-    """Optional document title."""
-    context: str | None = None
-    """Optional context about the document."""
-
-    def to_content_block(self) -> dict[str, Any]:
-        """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {
-                "type": "text",
-                "media_type": self.media_type,
-                "data": self.data,
-            },
-        }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
-
-
-UserPrompt = (
-    UserTextPrompt
-    | UserImagePrompt
-    | UserImageURLPrompt
-    | UserDocumentPrompt
-    | UserDocumentURLPrompt
-    | UserPlainTextDocumentPrompt
-)
-"""Union type for all user prompt dataclasses."""
+    name: str
+    path: str
 
 
 @dataclass(kw_only=True)
@@ -317,22 +182,6 @@ class AssistantMessage:
             case _ as unknown:
                 # Handle "unknown" or any future error types
                 raise APIError(error_message, unknown, self.model)
-
-
-@dataclass(kw_only=True)
-class McpServerStatus:
-    """MCP server status."""
-
-    name: str
-    status: McpConnectionStatus
-
-
-@dataclass(kw_only=True)
-class Plugin:
-    """Claude code plugin."""
-
-    name: str
-    path: str
 
 
 @dataclass(kw_only=True)
