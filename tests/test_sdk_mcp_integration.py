@@ -11,11 +11,14 @@ from mcp.types import CallToolRequest, CallToolRequestParams, ToolAnnotations
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
+from clawd_code_sdk.models import JSONRPCRequest
 
 
 @pytest.mark.asyncio
 async def test_sdk_mcp_server_handlers():
     """Test that SDK MCP server handlers are properly registered."""
+    from mcp.types import CallToolRequest, CallToolRequestParams, ListToolsRequest
+
     # Track tool executions
     tool_executions: list[dict[str, Any]] = []
 
@@ -39,51 +42,35 @@ async def test_sdk_mcp_server_handlers():
     assert server_config["type"] == "sdk"
     assert server_config["name"] == "test-sdk-server"
     assert "instance" in server_config
-
     # Get the server instance
     server = server_config["instance"]
-
-    # Import the request types to check handlers
-    from mcp.types import CallToolRequest, ListToolsRequest
-
     # Verify handlers are registered
     assert ListToolsRequest in server.request_handlers
     assert CallToolRequest in server.request_handlers
-
     # Test list_tools handler - the decorator wraps our function
     list_handler = server.request_handlers[ListToolsRequest]
     request = ListToolsRequest(method="tools/list")
     response = await list_handler(request)
     # Response is ServerResult with nested ListToolsResult
     assert len(response.root.tools) == 2
-
     # Check tool definitions
     tool_names = [t.name for t in response.root.tools]
     assert "greet_user" in tool_names
     assert "add_numbers" in tool_names
-
     # Test call_tool handler
     call_handler = server.request_handlers[CallToolRequest]
-
     # Call greet_user - CallToolRequest wraps the call
-    from mcp.types import CallToolRequestParams
-
-    greet_request = CallToolRequest(
-        method="tools/call",
-        params=CallToolRequestParams(name="greet_user", arguments={"name": "Alice"}),
-    )
+    params = CallToolRequestParams(name="greet_user", arguments={"name": "Alice"})
+    greet_request = CallToolRequest(method="tools/call", params=params)
     result = await call_handler(greet_request)
     # Response is ServerResult with nested CallToolResult
     assert result.root.content[0].text == "Hello, Alice!"
     assert len(tool_executions) == 1
     assert tool_executions[0]["name"] == "greet_user"
     assert tool_executions[0]["args"]["name"] == "Alice"
-
+    params = CallToolRequestParams(name="add_numbers", arguments={"a": 5, "b": 3})
     # Call add_numbers
-    add_request = CallToolRequest(
-        method="tools/call",
-        params=CallToolRequestParams(name="add_numbers", arguments={"a": 5, "b": 3}),
-    )
+    add_request = CallToolRequest(method="tools/call", params=params)
     result = await call_handler(add_request)
     assert "8" in result.root.content[0].text
     assert len(tool_executions) == 2
@@ -105,7 +92,6 @@ async def test_tool_creation():
     assert echo_tool.description == "Echo input"
     assert echo_tool.input_schema == {"input": str}
     assert callable(echo_tool.handler)
-
     # Test the handler works
     result = await echo_tool.handler({"input": "test"})
     assert result == {"output": "test"}
@@ -114,6 +100,7 @@ async def test_tool_creation():
 @pytest.mark.asyncio
 async def test_error_handling():
     """Test that tool errors are properly handled."""
+    from mcp.types import CallToolRequestParams
 
     @tool("fail", "Always fails", {})
     async def fail_tool(args: dict[str, Any]) -> dict[str, Any]:
@@ -122,18 +109,13 @@ async def test_error_handling():
     # Verify the tool raises an error when called directly
     with pytest.raises(ValueError, match="Expected error"):
         await fail_tool.handler({})
-
     # Test error handling through the server
     server_config = create_sdk_mcp_server(name="error-test", tools=[fail_tool])
-
     server = server_config["instance"]
     from mcp.types import CallToolRequest
 
     call_handler = server.request_handlers[CallToolRequest]
-
     # The handler should return an error result, not raise
-    from mcp.types import CallToolRequestParams
-
     fail_request = CallToolRequest(
         method="tools/call", params=CallToolRequestParams(name="fail", arguments={})
     )
@@ -153,12 +135,9 @@ async def test_mixed_servers():
         return {"result": "from SDK"}
 
     sdk_server = create_sdk_mcp_server(name="sdk-server", tools=[sdk_tool])
-
     # Create configuration with both SDK and external servers
     external_server = {"type": "stdio", "command": "echo", "args": ["test"]}
-
     options = ClaudeAgentOptions(mcp_servers={"sdk": sdk_server, "external": external_server})
-
     # Verify both server types are in the configuration
     assert "sdk" in options.mcp_servers
     assert "external" in options.mcp_servers
@@ -224,30 +203,22 @@ async def test_image_content_support():
 
     # Get the server instance
     server = server_config["instance"]
-
     call_handler = server.request_handlers[CallToolRequest]
-
     # Call the chart generation tool
-    chart_request = CallToolRequest(
-        method="tools/call",
-        params=CallToolRequestParams(name="generate_chart", arguments={"title": "Sales Report"}),
-    )
+    params = CallToolRequestParams(name="generate_chart", arguments={"title": "Sales Report"})
+    chart_request = CallToolRequest(method="tools/call", params=params)
     result = await call_handler(chart_request)
-
     # Verify the result contains both text and image content
     assert len(result.root.content) == 2
-
     # Check text content
     text_content = result.root.content[0]
     assert text_content.type == "text"
     assert text_content.text == "Generated chart: Sales Report"
-
     # Check image content
     image_content = result.root.content[1]
     assert image_content.type == "image"
     assert image_content.data == png_data
     assert image_content.mimeType == "image/png"
-
     # Verify the tool was executed correctly
     assert len(tool_executions) == 1
     assert tool_executions[0]["name"] == "generate_chart"
@@ -292,21 +263,15 @@ async def test_document_content_support():
 
     server = server_config["instance"]
     call_handler = server.request_handlers[CallToolRequest]
-
-    doc_request = CallToolRequest(
-        method="tools/call",
-        params=CallToolRequestParams(name="read_document", arguments={"filename": "report.pdf"}),
-    )
+    params = CallToolRequestParams(name="read_document", arguments={"filename": "report.pdf"})
+    doc_request = CallToolRequest(method="tools/call", params=params)
     result = await call_handler(doc_request)
-
     # Verify the result contains both text and document (as EmbeddedResource)
     assert len(result.root.content) == 2
-
     # Check text content
     text_content = result.root.content[0]
     assert text_content.type == "text"
     assert text_content.text == "Document: report.pdf"
-
     # Check document content (stored as EmbeddedResource with BlobResourceContents)
     doc_content = result.root.content[1]
     assert doc_content.type == "resource"
@@ -314,7 +279,6 @@ async def test_document_content_support():
     assert str(doc_content.resource.uri) == "document://base64"
     assert doc_content.resource.mimeType == "application/pdf"
     assert doc_content.resource.blob == pdf_data
-
     # Verify tool execution
     assert len(tool_executions) == 1
     assert tool_executions[0]["name"] == "read_document"
@@ -322,17 +286,14 @@ async def test_document_content_support():
 
 async def test_error_handling_through_jsonrpc():
     """Test that tool errors are properly handled through the JSONRPC handler."""
+    from clawd_code_sdk._internal.query import Query
+    from clawd_code_sdk._internal.transport import Transport
 
     @tool("fail", "Always fails", {})
     async def fail_tool(args: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Expected error")
 
     server_config = create_sdk_mcp_server(name="error-test", tools=[fail_tool])
-
-    # Import the Query class to test the JSONRPC handler
-    from clawd_code_sdk._internal.query import Query
-    from clawd_code_sdk._internal.transport import Transport
-
     # Extract the SDK MCP server instance
     sdk_mcp_servers = {"error": server_config["instance"]}
 
@@ -356,25 +317,19 @@ async def test_error_handling_through_jsonrpc():
             pass
 
     transport = MockTransport()
-    query = Query(
-        transport=transport,
-        sdk_mcp_servers=sdk_mcp_servers,
-    )
-
+    query = Query(transport=transport, sdk_mcp_servers=sdk_mcp_servers)
     # Manually invoke the SDK MCP request handler
-    jsonrpc_message = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {"name": "fail", "arguments": {}},
-    }
-
+    jsonrpc_message = JSONRPCRequest(
+        jsonrpc="2.0",
+        id=1,
+        method="tools/call",
+        params={"name": "fail", "arguments": {}},
+    )
     response = await query._handle_sdk_mcp_request("error", jsonrpc_message)
-
     # The response should include is_error: true
     assert response is not None
     assert response["jsonrpc"] == "2.0"
-    assert response["id"] == 1
+    assert response.get("id") == 1
     assert "result" in response
     assert "is_error" in response["result"]
     assert response["result"]["is_error"] is True
@@ -383,6 +338,7 @@ async def test_error_handling_through_jsonrpc():
 
 async def test_tool_annotations():
     """Test that tool annotations are stored and flow through list_tools."""
+    from mcp.types import ListToolsRequest
 
     @tool(
         "read_data",
@@ -431,15 +387,10 @@ async def test_tool_annotations():
         tools=[read_data, delete_item, search, no_annotations],
     )
     server = server_config["instance"]
-
-    from mcp.types import ListToolsRequest
-
     list_handler = server.request_handlers[ListToolsRequest]
     request = ListToolsRequest(method="tools/list")
     response = await list_handler(request)
-
     tools_by_name = {t.name: t for t in response.root.tools}
-
     assert tools_by_name["read_data"].annotations is not None
     assert tools_by_name["read_data"].annotations.readOnlyHint is True
     assert tools_by_name["delete_item"].annotations is not None
@@ -472,25 +423,18 @@ async def test_tool_annotations_in_jsonrpc():
         name="jsonrpc-annotations-test",
         tools=[read_only_tool, plain_tool],
     )
-
     # Simulate the JSONRPC tools/list request
     query_instance = Query.__new__(Query)
     query_instance.sdk_mcp_servers = {"test": server_config["instance"]}
-
-    response = await query_instance._handle_sdk_mcp_request(
-        "test",
-        {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
-    )
-
+    request = JSONRPCRequest(jsonrpc="2.0", id=1, method="tools/list", params={})
+    response = await query_instance._handle_sdk_mcp_request("test", request)
     assert response is not None
     tools_data = response["result"]["tools"]
     tools_by_name = {t["name"]: t for t in tools_data}
-
     # Tool with annotations should include them
     assert "annotations" in tools_by_name["read_only_tool"]
     assert tools_by_name["read_only_tool"]["annotations"]["readOnlyHint"] is True
     assert tools_by_name["read_only_tool"]["annotations"]["openWorldHint"] is False
-
     # Tool without annotations should not have the key
     assert "annotations" not in tools_by_name["plain_tool"]
 
