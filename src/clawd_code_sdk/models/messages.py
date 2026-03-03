@@ -19,18 +19,11 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
+from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
 from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
-from clawd_code_sdk.models.mcp import McpConnectionStatus  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
-from .base import (  # noqa: TC001
-    ApiKeySource,
-    CompactionTrigger,
-    PermissionMode,
-    StopReason,
-    TaskStatus,
-    ToolName,
-)
+from .base import StopReason, ToolName  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -55,7 +48,6 @@ ErrorSubType = Literal[
     "error_max_budget_usd",
     "error_max_structured_output_retries",
 ]
-Outcome = Literal["success", "error", "cancelled"]
 RateLimitType = Literal["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet"]
 RateLimitStatus = Literal["allowed", "allowed_warning", "rejected"]
 OverAgeDisabledReason = Literal[
@@ -73,23 +65,6 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
-FastModeState = Literal["off", "cooldown", "on"]
-
-
-@dataclass(kw_only=True)
-class McpServerStatus:
-    """MCP server status."""
-
-    name: str
-    status: McpConnectionStatus
-
-
-@dataclass(kw_only=True)
-class Plugin:
-    """Claude code plugin."""
-
-    name: str
-    path: str
 
 
 @dataclass(kw_only=True)
@@ -98,13 +73,6 @@ class BaseMessage:
 
     uuid: str
     session_id: str
-
-
-@dataclass(kw_only=True)
-class BaseSystemMessage(BaseMessage):
-    """Base class for all system messages."""
-
-    type: Literal["system"] = "system"
 
 
 @dataclass(kw_only=True)
@@ -184,61 +152,6 @@ class AssistantMessage:
                 raise APIError(error_message, unknown, self.model)
 
 
-@dataclass(kw_only=True)
-class InitSystemMessage(BaseSystemMessage):
-    """System init message with session metadata."""
-
-    subtype: Literal["init"] = "init"
-    apiKeySource: ApiKeySource | None  # noqa: N815
-    cwd: str
-    tools: list[str]
-    mcp_servers: list[McpServerStatus]
-    model: Model
-    permissionMode: PermissionMode  # noqa: N815
-    slash_commands: list[str]
-    output_style: Literal["default", "json"] | str  # noqa: PYI051
-    claude_code_version: str
-    agents: list[str]
-    skills: list[str]
-    plugins: list[Plugin]
-    fast_mode_state: FastModeState | None = None
-    """Whether fast mode was enabled."""
-
-
-@dataclass(kw_only=True)
-class HookStartedSystemMessage(BaseSystemMessage):
-    """System message emitted when a hook starts."""
-
-    subtype: Literal["hook_started"] = "hook_started"
-    hook_id: str
-    hook_name: str
-    hook_event: str
-
-
-@dataclass(kw_only=True)
-class StatusSystemMessage(BaseSystemMessage):
-    """System status message."""
-
-    subtype: Literal["status"] = "status"
-    status: Literal["compacting"] | None
-    permissionMode: PermissionMode | None = None  # noqa: N815
-
-
-class TriggerMetadata(TypedDict):
-    """Trigger metadata."""
-
-    trigger: CompactionTrigger
-    pre_tokens: int
-
-
-@dataclass(kw_only=True)
-class CompactBoundarySystemMessage(BaseSystemMessage):
-    """System message emitted at compaction boundaries."""
-
-    subtype: Literal["compact_boundary"] = "compact_boundary"
-    compact_metadata: TriggerMetadata
-
-
 class RateLimitInfo(TypedDict):
     """Rate limit information."""
 
@@ -260,101 +173,6 @@ class RateLimitMessage(BaseMessage):
     type: Literal["rate_limit_event"] = "rate_limit_event"
     subtype: Literal["rate_limit"] = "rate_limit"
     rate_limit_info: RateLimitInfo
-
-
-@dataclass(kw_only=True)
-class TaskStartedSystemMessage(BaseSystemMessage):
-    """System message emitted when a subagent task starts."""
-
-    subtype: Literal["task_started"] = "task_started"
-    task_id: str
-    tool_use_id: str | None = None
-    description: str
-    task_type: str | None = None
-
-
-@dataclass(kw_only=True)
-class TaskNotificationSystemMessage(BaseSystemMessage):
-    """System message emitted when a subagent task completes, fails, or stops."""
-
-    subtype: Literal["task_notification"] = "task_notification"
-    task_id: str
-    status: TaskStatus
-    output_file: str
-    summary: str
-    tool_use_id: str | None = None
-
-
-class TaskProgressUsage(TypedDict):
-    """Usage info for a task progress update."""
-
-    total_tokens: int
-    tool_uses: int
-    duration_ms: int
-
-
-@dataclass(kw_only=True)
-class TaskProgressSystemMessage(BaseSystemMessage):
-    """System message emitted periodically with task progress updates."""
-
-    subtype: Literal["task_progress"] = "task_progress"
-    task_id: str
-    tool_use_id: str | None = None
-    description: str
-    usage: TaskProgressUsage
-    last_tool_name: ToolName | str | None = None
-
-
-class FilePersistedEntry(TypedDict):
-    """A single file that was persisted."""
-
-    filename: str
-    file_id: str
-
-
-class FilePersistedFailure(TypedDict):
-    """A file that failed to persist."""
-
-    filename: str
-    error: str
-
-
-@dataclass(kw_only=True)
-class FilesPersistedSystemMessage(BaseSystemMessage):
-    """System message emitted when files have been persisted."""
-
-    subtype: Literal["files_persisted"] = "files_persisted"
-    files: list[FilePersistedEntry]
-    failed: list[FilePersistedFailure]
-    processed_at: str
-
-
-@dataclass(kw_only=True)
-class HookProgressSystemMessage(BaseSystemMessage):
-    """Progress update from a running hook."""
-
-    subtype: Literal["hook_progress"] = "hook_progress"
-    hook_id: str
-    hook_name: str
-    hook_event: str
-    stdout: str
-    stderr: str
-    output: str
-
-
-@dataclass(kw_only=True)
-class HookResponseSystemMessage(BaseSystemMessage):
-    """System message emitted when a hook completes."""
-
-    subtype: Literal["hook_response"] = "hook_response"
-    hook_id: str
-    hook_name: str
-    hook_event: str
-    outcome: Outcome
-    exit_code: int | None = None
-    stderr: str
-    stdout: str
-    output: str
 
 
 class ModelUsage(TypedDict):
@@ -548,26 +366,6 @@ class PromptResponse(TypedDict):
 # ---------------------------------------------------------------------------
 # Additional SDK message types
 # ---------------------------------------------------------------------------
-
-
-@dataclass(kw_only=True)
-class ElicitationCompleteMessage(BaseSystemMessage):
-    """System message emitted when an MCP elicitation completes."""
-
-    subtype: Literal["elicitation_complete"] = "elicitation_complete"
-    mcp_server_name: str
-    elicitation_id: str
-
-
-@dataclass(kw_only=True)
-class LocalCommandOutputMessage(BaseSystemMessage):
-    """Output from a local slash command (e.g. /voice, /cost).
-
-    Displayed as assistant-style text in the transcript.
-    """
-
-    subtype: Literal["local_command_output"] = "local_command_output"
-    content: str
 
 
 @dataclass(kw_only=True)

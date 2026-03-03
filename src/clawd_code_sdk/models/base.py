@@ -25,6 +25,7 @@ TaskStatus = Literal["completed", "failed", "stopped"]
 CompactionTrigger = Literal["auto", "manual"]
 ElicitationMode = Literal["form", "url"]
 ElicitationAction = Literal["accept", "decline", "cancel"]
+FastModeState = Literal["off", "cooldown", "on"]
 
 StopReason = Literal[
     "end_turn",

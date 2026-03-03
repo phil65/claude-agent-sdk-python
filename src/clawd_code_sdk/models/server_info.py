@@ -7,8 +7,7 @@ from typing import Literal
 from anthropic.types import Model
 from pydantic import Field
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel
-from clawd_code_sdk.models.messages import FastModeState
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, FastModeState
 
 
 EffortLevel = Literal["low", "medium", "high", "max"]

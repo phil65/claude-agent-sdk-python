@@ -222,13 +222,7 @@ from .messages import (
     AccumulatedUsage,
     AssistantMessage,
     AssistantMessageError,
-    BaseSystemMessage,
-    CompactBoundarySystemMessage,
     ElicitationCompleteMessage,
-    FastModeState,
-    HookResponseSystemMessage,
-    HookStartedSystemMessage,
-    InitSystemMessage,
     LocalCommandOutputMessage,
     McpServerStatus,
     Message,
@@ -245,15 +239,9 @@ from .messages import (
     ResultSuccessMessage,
     SDKPermissionDenial,
     SDKSessionInfo,
-    StatusSystemMessage,
     StreamEvent,
     AuthStatusMessage,
-    FilesPersistedSystemMessage,
-    HookProgressSystemMessage,
-    TaskNotificationSystemMessage,
-    TaskProgressSystemMessage,
     TaskProgressUsage,
-    TaskStartedSystemMessage,
     ToolProgressMessage,
     ToolUseSummaryMessage,
     TriggerMetadata,
@@ -262,7 +250,6 @@ from .messages import (
     DocumentMediaType,
     ImageMediaType,
     PlainTextMediaType,
-    system_message_adapter,
 )
 from .prompts import (
     UserDocumentPrompt,
@@ -299,6 +286,20 @@ from .permissions import (
     ToolPermissionContext,
 )
 from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
+from .system_messages import (
+    system_message_adapter,
+    StatusSystemMessage,
+    BaseSystemMessage,
+    CompactBoundarySystemMessage,
+    HookResponseSystemMessage,
+    HookStartedSystemMessage,
+    InitSystemMessage,
+    FilesPersistedSystemMessage,
+    HookProgressSystemMessage,
+    TaskNotificationSystemMessage,
+    TaskProgressSystemMessage,
+    TaskStartedSystemMessage,
+)
 
 __all__ = [
     "JSONRPC_VERSION",
