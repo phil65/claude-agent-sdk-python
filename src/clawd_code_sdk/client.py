@@ -71,6 +71,10 @@ class ClaudeSDKClient:
         """Cumulative token usage across all queries in this session."""
         self.query_usage: AccumulatedUsage = AccumulatedUsage()
         """Token usage for the current/last query only (reset on each query() call)."""
+        self.session_cost: float = 0.0
+        """Cumulative cost in USD across all queries in this session."""
+        self.query_cost: float = 0.0
+        """Cost in USD for the current/last query only (reset on each query() call)."""
         self.status: Literal["compacting"] | None = None
         """Current client status, or None when idle."""
 
@@ -165,6 +169,9 @@ class ClaudeSDKClient:
                 case ResultSuccessMessage() | ResultErrorMessage():
                     self.query_usage.accumulate(message.usage)
                     self.session_usage.accumulate(message.usage)
+                    # total_cost_usd is cumulative; derive per-query cost as delta
+                    self.query_cost = message.total_cost_usd - self.session_cost
+                    self.session_cost = message.total_cost_usd
             yield message
 
     async def query(
@@ -183,6 +190,7 @@ class ClaudeSDKClient:
             parent_tool_use_id: If responding to a tool use, the tool_use block ID.
         """
         self.query_usage.reset()
+        self.query_cost = 0.0
         self._ensure_connected()
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
