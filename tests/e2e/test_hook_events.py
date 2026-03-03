@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_pre_tool_use_hook_with_additional_context():
     """Test PreToolUse hook returning additionalContext field end-to-end."""
     hook_invocations: list[dict[str, Any]] = []
@@ -40,9 +39,7 @@ async def test_pre_tool_use_hook_with_additional_context():
     options = ClaudeAgentOptions(
         allowed_tools=["Bash"],
         hooks={
-            "PreToolUse": [
-                HookMatcher(matcher="Bash", hooks=[pre_tool_hook]),
-            ],
+            "PreToolUse": [HookMatcher(matcher="Bash", hooks=[pre_tool_hook])],
         },
     )
 
@@ -61,7 +58,6 @@ async def test_pre_tool_use_hook_with_additional_context():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_post_tool_use_hook_with_tool_use_id():
     """Test PostToolUse hook receives tool_use_id field end-to-end."""
     hook_invocations: list[dict[str, Any]] = []
@@ -88,9 +84,7 @@ async def test_post_tool_use_hook_with_tool_use_id():
     options = ClaudeAgentOptions(
         allowed_tools=["Bash"],
         hooks={
-            "PostToolUse": [
-                HookMatcher(matcher="Bash", hooks=[post_tool_hook]),
-            ],
+            "PostToolUse": [HookMatcher(matcher="Bash", hooks=[post_tool_hook])],
         },
     )
 
@@ -109,7 +103,6 @@ async def test_post_tool_use_hook_with_tool_use_id():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_notification_hook():
     """Test Notification hook fires end-to-end."""
     hook_invocations: list[dict[str, Any]] = []
@@ -134,9 +127,7 @@ async def test_notification_hook():
 
     options = ClaudeAgentOptions(
         hooks={
-            "Notification": [
-                HookMatcher(hooks=[notification_hook]),
-            ],
+            "Notification": [HookMatcher(hooks=[notification_hook])],
         },
     )
 
@@ -156,7 +147,6 @@ async def test_notification_hook():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_multiple_hooks_together():
     """Test registering multiple hook event types together end-to-end."""
     all_invocations: list[dict[str, Any]] = []
@@ -165,11 +155,7 @@ async def test_multiple_hooks_together():
         input_data: HookInput, tool_use_id: str | None, context: HookContext
     ) -> HookJSONOutput:
         """Generic hook that tracks all invocations."""
-        all_invocations.append(
-            {
-                "hook_event_name": input_data.get("hook_event_name"),
-            }
-        )
+        all_invocations.append({"hook_event_name": input_data.get("hook_event_name")})
         return {}
 
     options = ClaudeAgentOptions(

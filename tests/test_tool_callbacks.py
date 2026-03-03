@@ -412,7 +412,6 @@ class TestHookCallbacks:
 class TestHookEventCallbacks:
     """Test hook callbacks for all hook event types."""
 
-    @pytest.mark.asyncio
     async def test_notification_hook_callback(self):
         """Test that a Notification hook callback receives correct input and returns output."""
         hook_calls: list[dict[str, Any]] = []
@@ -463,7 +462,6 @@ class TestHookEventCallbacks:
         assert result["hookSpecificOutput"]["hookEventName"] == "Notification"
         assert result["hookSpecificOutput"]["additionalContext"] == "Notification processed"
 
-    @pytest.mark.asyncio
     async def test_permission_request_hook_callback(self):
         """Test that a PermissionRequest hook callback returns a decision."""
 
@@ -508,7 +506,6 @@ class TestHookEventCallbacks:
         assert result["hookSpecificOutput"]["hookEventName"] == "PermissionRequest"
         assert result["hookSpecificOutput"]["decision"] == {"type": "allow"}
 
-    @pytest.mark.asyncio
     async def test_subagent_start_hook_callback(self):
         """Test that a SubagentStart hook callback works correctly."""
 
@@ -553,7 +550,6 @@ class TestHookEventCallbacks:
         assert result["hookSpecificOutput"]["hookEventName"] == "SubagentStart"
         assert result["hookSpecificOutput"]["additionalContext"] == "Subagent approved"
 
-    @pytest.mark.asyncio
     async def test_post_tool_use_hook_with_updated_mcp_output(self):
         """Test PostToolUse hook returning updatedMCPToolOutput."""
 
@@ -599,7 +595,6 @@ class TestHookEventCallbacks:
         result = response_data["response"]["response"]
         assert result["hookSpecificOutput"]["updatedMCPToolOutput"] == {"result": "modified output"}
 
-    @pytest.mark.asyncio
     async def test_pre_tool_use_hook_with_additional_context(self):
         """Test PreToolUse hook returning additionalContext."""
 
@@ -650,7 +645,6 @@ class TestHookEventCallbacks:
 class TestHookInitializeRegistration:
     """Test that new hook events can be registered through the initialize flow."""
 
-    @pytest.mark.asyncio
     async def test_new_hook_events_registered_in_hooks_config(self):
         """Test that all new hook event types can be configured in hooks dict."""
 

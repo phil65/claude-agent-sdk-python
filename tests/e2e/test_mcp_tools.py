@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_mcp_image_tool_wire_format():
     """Test that image content from an MCP tool flows through the wire protocol.
 
@@ -104,7 +103,6 @@ async def test_mcp_image_tool_wire_format():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_mcp_progress_tool_wire_format():
     """Test that MCP tool progress notifications flow through the wire protocol.
 

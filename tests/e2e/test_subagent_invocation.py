@@ -25,7 +25,6 @@ from clawd_code_sdk.models import TaskStartedSystemMessage, TextBlock, UserMessa
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_subagent_task_lifecycle():
     """Test that invoking a foreground subagent produces the expected messages.
 
@@ -92,7 +91,6 @@ async def test_subagent_task_lifecycle():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_background_subagent_lifecycle():
     """Test that a background subagent launches asynchronously.
 

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_permission_callback_gets_called():
     """Test that can_use_tool callback gets invoked for non-read-only commands.
 

@@ -51,7 +51,7 @@ class ToolResultBlock:
 
     type: Literal["tool_result"] = field(default="tool_result", repr=False)
     tool_use_id: str = ""
-    content: str | list[dict[str, Any]] | None = None
+    content: str | list[dict[str, Any]] | None = None  # BetaContentBlock
     is_error: bool | None = None
 
     def get_parsed_content(self) -> list[ToolResultContentBlock] | str | None:

@@ -40,7 +40,6 @@ def generate_large_agents(
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_agent_definition():
     """Test that custom agent definitions work in streaming mode."""
     options = ClaudeAgentOptions(
@@ -70,7 +69,6 @@ async def test_agent_definition():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_agent_definition_with_query_function():
     """Test that custom agent definitions work with the query() function.
 
@@ -104,7 +102,6 @@ async def test_agent_definition_with_query_function():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_large_agents_with_query_function():
     """Test large agent definitions (260KB+) work with query() function.
 
@@ -133,7 +130,6 @@ async def test_large_agents_with_query_function():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_filesystem_agent_loading():
     """Test that filesystem-based agents load via setting_sources and produce full response.
 
@@ -199,7 +195,6 @@ You are a simple test agent. When asked a question, provide a brief, helpful ans
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_setting_sources_default():
     """Test that default (no setting_sources) loads no settings."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -240,7 +235,6 @@ async def test_setting_sources_default():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_setting_sources_user_only():
     """Test that setting_sources=['user'] excludes project settings."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -284,7 +278,6 @@ This is a test command.
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_setting_sources_project_included():
     """Test that setting_sources=['user', 'project'] includes project settings."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -322,7 +315,6 @@ async def test_setting_sources_project_included():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_large_agent_definitions_via_initialize():
     """Test that large agent definitions (250KB+) are sent via initialize request.
 
@@ -379,7 +371,6 @@ async def test_large_agent_definitions_via_initialize():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_agent_definition_with_memory_cross_session():
     """Test that a subagent with memory persists information across separate sessions.
 
@@ -448,7 +439,6 @@ async def test_agent_definition_with_memory_cross_session():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_agent_definition_with_mcp_servers():
     """Test that a subagent with mcpServers has access to the MCP server's tools.
 

@@ -14,7 +14,6 @@ from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
 from clawd_code_sdk.models import JSONRPCRequest
 
 
-@pytest.mark.asyncio
 async def test_sdk_mcp_server_handlers():
     """Test that SDK MCP server handlers are properly registered."""
     from mcp.types import CallToolRequest, CallToolRequestParams, ListToolsRequest
@@ -79,7 +78,6 @@ async def test_sdk_mcp_server_handlers():
     assert tool_executions[1]["args"]["b"] == 3
 
 
-@pytest.mark.asyncio
 async def test_tool_creation():
     """Test that tools can be created with proper schemas."""
 
@@ -97,7 +95,6 @@ async def test_tool_creation():
     assert result == {"output": "test"}
 
 
-@pytest.mark.asyncio
 async def test_error_handling():
     """Test that tool errors are properly handled."""
     from mcp.types import CallToolRequestParams
@@ -125,7 +122,6 @@ async def test_error_handling():
     assert "Expected error" in str(result.root.content[0].text)
 
 
-@pytest.mark.asyncio
 async def test_mixed_servers():
     """Test that SDK and external MCP servers can work together."""
 
@@ -145,7 +141,6 @@ async def test_mixed_servers():
     assert options.mcp_servers["external"]["type"] == "stdio"
 
 
-@pytest.mark.asyncio
 async def test_server_creation():
     """Test that SDK MCP servers are created correctly."""
     server = create_sdk_mcp_server(name="test-server", version="2.0.0", tools=[])
@@ -168,7 +163,6 @@ async def test_server_creation():
     assert ListToolsRequest not in instance.request_handlers
 
 
-@pytest.mark.asyncio
 async def test_image_content_support():
     """Test that tools can return image content with base64 data."""
     # Create sample base64 image data (a simple 1x1 pixel PNG)
@@ -225,7 +219,6 @@ async def test_image_content_support():
     assert tool_executions[0]["args"]["title"] == "Sales Report"
 
 
-@pytest.mark.asyncio
 async def test_document_content_support():
     """Test that tools can return document content (e.g., PDFs) via EmbeddedResource."""
     # Create sample base64 PDF data (minimal valid PDF)
@@ -401,7 +394,6 @@ async def test_tool_annotations():
     assert tools_by_name["no_annotations"].annotations is None
 
 
-@pytest.mark.asyncio
 async def test_tool_annotations_in_jsonrpc():
     """Test that annotations are included in JSONRPC tools/list response."""
     from clawd_code_sdk._internal.query import Query

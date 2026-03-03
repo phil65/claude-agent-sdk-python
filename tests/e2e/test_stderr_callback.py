@@ -6,7 +6,6 @@ from clawd_code_sdk import ClaudeAgentOptions, query
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_stderr_callback_captures_debug_output():
     """Test that stderr callback receives debug output when enabled."""
     stderr_lines = []
@@ -27,7 +26,6 @@ async def test_stderr_callback_captures_debug_output():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_stderr_callback_without_debug():
     """Test that stderr callback works but receives no output without debug mode."""
     stderr_lines = []
