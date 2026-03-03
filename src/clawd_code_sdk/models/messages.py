@@ -18,12 +18,9 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
-from clawd_code_sdk.models import (  # noqa: TC001
-    ContentBlock,
-    TextBlock,
-    ToolUseResult,
-)
 from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
+from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock  # noqa: TC001
+from clawd_code_sdk.models.output_types import ToolUseResult  # noqa: TC001
 
 from .base import StopReason, ToolName  # noqa: TC001
 
@@ -67,6 +64,117 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
+
+
+@dataclass(kw_only=True)
+class SDKSessionInfo:
+    """Session metadata returned by list_sessions.
+
+    Contains summary information about a stored session without
+    loading the full conversation history.
+    """
+
+    session_id: str
+    """Unique session identifier (UUID)."""
+
+    summary: str
+    """Display title for the session: custom title, auto-generated summary, or first prompt."""
+
+    last_modified: int
+    """Last modified time in milliseconds since epoch."""
+
+    file_size: int
+    """Session file size in bytes."""
+
+    custom_title: str | None = None
+    """User-set session title via /rename."""
+
+    first_prompt: str | None = None
+    """First meaningful user prompt in the session."""
+
+    git_branch: str | None = None
+    """Git branch at the end of the session."""
+
+    cwd: str | None = None
+    """Working directory for the session."""
+
+
+class RateLimitInfo(TypedDict):
+    """Rate limit information."""
+
+    status: RateLimitStatus
+    resetsAt: NotRequired[int]
+    rateLimitType: NotRequired[RateLimitType]
+    utilization: NotRequired[float]
+    overageStatus: NotRequired[RateLimitStatus]
+    overageResetsAt: NotRequired[int]
+    overageDisabledReason: NotRequired[OverAgeDisabledReason]
+    isUsingOverage: NotRequired[bool]
+    surpassedThreshold: NotRequired[float]
+
+
+class ModelUsage(TypedDict):
+    """Cumulative token usage per model, accumulated across the entire session."""
+
+    inputTokens: int
+    outputTokens: int
+    cacheReadInputTokens: int
+    cacheCreationInputTokens: int
+    webSearchRequests: int
+    costUSD: float
+    contextWindow: int
+    maxOutputTokens: int
+
+
+class SDKPermissionDenial(TypedDict):
+    """Permission denial from Claude API response."""
+
+    tool_name: ToolName | str
+    tool_use_id: str
+    tool_input: ToolInput | dict[str, Any]
+
+
+class Usage(TypedDict):
+    """Token usage from the last API call only (per-turn, not cumulative)."""
+
+    input_tokens: int
+    output_tokens: int
+    cache_creation_input_tokens: int
+    cache_read_input_tokens: int
+
+
+@dataclass
+class AccumulatedUsage:
+    """Accumulated token usage, built by summing per-turn Usage values."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+    @property
+    def total_tokens(self) -> int:
+        """Sum of all token fields."""
+        return (
+            self.input_tokens
+            + self.output_tokens
+            + self.cache_creation_input_tokens
+            + self.cache_read_input_tokens
+        )
+
+    def accumulate(self, usage: Usage) -> None:
+        """Add a per-turn Usage to this accumulator."""
+        self.input_tokens += usage["input_tokens"]
+        self.output_tokens += usage["output_tokens"]
+        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
+        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
+
+    def reset(self) -> None:
+        """Reset all counters to zero."""
+        self.input_tokens = 0
+        self.output_tokens = 0
+        self.cache_creation_input_tokens = 0
+        self.cache_read_input_tokens = 0
 
 
 @dataclass(kw_only=True)
@@ -154,20 +262,6 @@ class AssistantMessage:
                 raise APIError(error_message, unknown, self.model)
 
 
-class RateLimitInfo(TypedDict):
-    """Rate limit information."""
-
-    status: RateLimitStatus
-    resetsAt: NotRequired[int]
-    rateLimitType: NotRequired[RateLimitType]
-    utilization: NotRequired[float]
-    overageStatus: NotRequired[RateLimitStatus]
-    overageResetsAt: NotRequired[int]
-    overageDisabledReason: NotRequired[OverAgeDisabledReason]
-    isUsingOverage: NotRequired[bool]
-    surpassedThreshold: NotRequired[float]
-
-
 @dataclass(kw_only=True)
 class RateLimitMessage(BaseMessage):
     """Rate limit event message."""
@@ -175,70 +269,6 @@ class RateLimitMessage(BaseMessage):
     type: Literal["rate_limit_event"] = "rate_limit_event"
     subtype: Literal["rate_limit"] = "rate_limit"
     rate_limit_info: RateLimitInfo
-
-
-class ModelUsage(TypedDict):
-    """Cumulative token usage per model, accumulated across the entire session."""
-
-    inputTokens: int
-    outputTokens: int
-    cacheReadInputTokens: int
-    cacheCreationInputTokens: int
-    webSearchRequests: int
-    costUSD: float
-    contextWindow: int
-    maxOutputTokens: int
-
-
-class SDKPermissionDenial(TypedDict):
-    """Permission denial from Claude API response."""
-
-    tool_name: ToolName | str
-    tool_use_id: str
-    tool_input: ToolInput | dict[str, Any]
-
-
-class Usage(TypedDict):
-    """Token usage from the last API call only (per-turn, not cumulative)."""
-
-    input_tokens: int
-    output_tokens: int
-    cache_creation_input_tokens: int
-    cache_read_input_tokens: int
-
-
-@dataclass
-class AccumulatedUsage:
-    """Accumulated token usage, built by summing per-turn Usage values."""
-
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
-
-    @property
-    def total_tokens(self) -> int:
-        """Sum of all token fields."""
-        return (
-            self.input_tokens
-            + self.output_tokens
-            + self.cache_creation_input_tokens
-            + self.cache_read_input_tokens
-        )
-
-    def accumulate(self, usage: Usage) -> None:
-        """Add a per-turn Usage to this accumulator."""
-        self.input_tokens += usage["input_tokens"]
-        self.output_tokens += usage["output_tokens"]
-        self.cache_creation_input_tokens += usage["cache_creation_input_tokens"]
-        self.cache_read_input_tokens += usage["cache_read_input_tokens"]
-
-    def reset(self) -> None:
-        """Reset all counters to zero."""
-        self.input_tokens = 0
-        self.output_tokens = 0
-        self.cache_creation_input_tokens = 0
-        self.cache_read_input_tokens = 0
 
 
 @dataclass(kw_only=True)
@@ -329,86 +359,12 @@ class AuthStatusMessage(BaseMessage):
     error: str | None = None
 
 
-# ---------------------------------------------------------------------------
-# Prompt request/response types
-# ---------------------------------------------------------------------------
-
-
-class PromptRequestOption(TypedDict):
-    """An option in a prompt request."""
-
-    key: str
-    """Unique key for this option, returned in the response."""
-    label: str
-    """Display text for this option."""
-    description: NotRequired[str]
-    """Optional description shown below the label."""
-
-
-class PromptRequest(TypedDict):
-    """Prompt request sent to the SDK consumer."""
-
-    prompt: str
-    """Request ID. Presence of this key marks the line as a prompt request."""
-    message: str
-    """The prompt message to display to the user."""
-    options: list[PromptRequestOption]
-    """Available options for the user to choose from."""
-
-
-class PromptResponse(TypedDict):
-    """Response to a prompt request."""
-
-    prompt_response: str
-    """The request ID from the corresponding prompt request."""
-    selected: str
-    """The key of the selected option."""
-
-
-# ---------------------------------------------------------------------------
-# Additional SDK message types
-# ---------------------------------------------------------------------------
-
-
 @dataclass(kw_only=True)
 class PromptSuggestionMessage(BaseMessage):
     """Predicted next user prompt, emitted after each turn when promptSuggestions is enabled."""
 
     type: Literal["prompt_suggestion"] = "prompt_suggestion"
     suggestion: str
-
-
-@dataclass(kw_only=True)
-class SDKSessionInfo:
-    """Session metadata returned by list_sessions.
-
-    Contains summary information about a stored session without
-    loading the full conversation history.
-    """
-
-    session_id: str
-    """Unique session identifier (UUID)."""
-
-    summary: str
-    """Display title for the session: custom title, auto-generated summary, or first prompt."""
-
-    last_modified: int
-    """Last modified time in milliseconds since epoch."""
-
-    file_size: int
-    """Session file size in bytes."""
-
-    custom_title: str | None = None
-    """User-set session title via /rename."""
-
-    first_prompt: str | None = None
-    """First meaningful user prompt in the session."""
-
-    git_branch: str | None = None
-    """Git branch at the end of the session."""
-
-    cwd: str | None = None
-    """Working directory for the session."""
 
 
 MiscMessages = (

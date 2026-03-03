@@ -16,12 +16,11 @@ from clawd_code_sdk.models import (
     StreamEvent,
     TextBlock,
     ThinkingBlock,
+    ThinkingConfigEnabled,
 )
-from clawd_code_sdk.models.base import ThinkingConfigEnabled
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_include_partial_messages_stream_events():
     """Test that include_partial_messages produces StreamEvent messages."""
     options = ClaudeAgentOptions(model="sonnet", max_turns=2, env={"MAX_THINKING_TOKENS": "8000"})
@@ -62,7 +61,6 @@ async def test_include_partial_messages_stream_events():
 
 
 @pytest.mark.e2e
-@pytest.mark.asyncio
 async def test_include_partial_messages_thinking_deltas():
     """Test that thinking content is streamed incrementally via deltas."""
     thinking = ThinkingConfigEnabled(budget_tokens=8000)

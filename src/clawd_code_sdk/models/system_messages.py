@@ -10,11 +10,10 @@ from anthropic.types.model import Model  # noqa: TC002  # noqa: TC002
 from pydantic import Discriminator, TypeAdapter
 
 from clawd_code_sdk.models import McpConnectionStatus  # noqa: TC001
-from clawd_code_sdk.models.base import FastModeState  # noqa: TC001
-
-from .base import (  # noqa: TC001  # noqa: TC001
+from clawd_code_sdk.models.base import (  # noqa: TC001  # noqa: TC001
     ApiKeySource,
     CompactionTrigger,
+    FastModeState,
     PermissionMode,
     TaskStatus,
     ToolName,

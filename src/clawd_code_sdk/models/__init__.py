@@ -26,11 +26,13 @@ from .base import (
     SdkBeta,
     SettingSource,
     StopReason,
+    FastModeState,
+)
+from .thinking import (
     ThinkingConfig,
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
-    FastModeState,
 )
 from .control import (
     ControlErrorResponse,
@@ -226,9 +228,6 @@ from .messages import (
     AssistantMessageError,
     ModelUsage,
     BaseResultMessage,
-    PromptRequest,
-    PromptRequestOption,
-    PromptResponse,
     PromptSuggestionMessage,
     RateLimitInfo,
     RateLimitMessage,
@@ -257,6 +256,7 @@ from .prompts import (
     UserPrompt,
     UserTextPrompt,
 )
+from .prompt_requests import PromptRequest, PromptRequestOption, PromptResponse
 from .options import (
     ClaudeAgentOptions,
     BaseSessionConfig,

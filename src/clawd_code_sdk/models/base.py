@@ -70,26 +70,3 @@ class ClaudeCodeBaseModel(BaseModel):
         alias_generator=to_camel,
         extra="forbid" if IS_DEV else "ignore",
     )
-
-
-# Thinking configuration types
-class ThinkingConfigAdaptive(ClaudeCodeBaseModel):
-    """Adaptive thinking configuration - model decides thinking budget."""
-
-    type: Literal["adaptive"] = "adaptive"
-
-
-class ThinkingConfigEnabled(ClaudeCodeBaseModel):
-    """Enabled thinking configuration with explicit token budget."""
-
-    type: Literal["enabled"] = "enabled"
-    budget_tokens: int
-
-
-class ThinkingConfigDisabled(ClaudeCodeBaseModel):
-    """Disabled thinking configuration."""
-
-    type: Literal["disabled"] = "disabled"
-
-
-ThinkingConfig = ThinkingConfigAdaptive | ThinkingConfigEnabled | ThinkingConfigDisabled

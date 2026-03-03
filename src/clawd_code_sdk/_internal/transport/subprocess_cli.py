@@ -26,7 +26,7 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk._version import __version__
-from clawd_code_sdk.models.base import (
+from clawd_code_sdk.models.thinking import (
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,

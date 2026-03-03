@@ -16,11 +16,12 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.base import ModelName
 
     from .agents import AgentDefinition, ToolsPreset
-    from .base import PermissionMode, ReasoningEffort, SettingSource, ThinkingConfig
+    from .base import PermissionMode, ReasoningEffort, SettingSource
     from .hooks import HookEvent, HookMatcher
     from .mcp import McpServerConfig, SdkPluginConfig
     from .permissions import CanUseTool
     from .sandbox import SandboxSettings
+    from .thinking import ThinkingConfig
 
 logger = logging.getLogger(__name__)
 
