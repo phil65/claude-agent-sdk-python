@@ -7,10 +7,10 @@ from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import Discriminator, TypeAdapter
 
-from .agents import AgentDefinition  # noqa: TC001
-from .base import ElicitationMode, PermissionMode  # noqa: TC001
-from .hooks import HookEvent, HookInput  # noqa: TC001
-from .mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
+from clawd_code_sdk.models.agents import AgentDefinition  # noqa: TC001
+from clawd_code_sdk.models.base import ElicitationMode, PermissionMode  # noqa: TC001
+from clawd_code_sdk.models.hooks import HookEvent, HookInput  # noqa: TC001
+from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
 
 
 # SDK Control Protocol

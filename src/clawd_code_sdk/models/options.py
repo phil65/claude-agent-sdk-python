@@ -13,15 +13,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from clawd_code_sdk.models import OnElicitation, OnUserQuestion
-    from clawd_code_sdk.models.base import ModelName
-
-    from .agents import AgentDefinition, ToolsPreset
-    from .base import PermissionMode, ReasoningEffort, SettingSource
-    from .hooks import HookEvent, HookMatcher
-    from .mcp import McpServerConfig, SdkPluginConfig
-    from .permissions import CanUseTool
-    from .settings import Sandbox
-    from .thinking import ThinkingConfig
+    from clawd_code_sdk.models.agents import AgentDefinition, ToolsPreset
+    from clawd_code_sdk.models.base import ModelName, PermissionMode, ReasoningEffort, SettingSource
+    from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
+    from clawd_code_sdk.models.mcp import McpServerConfig, SdkPluginConfig
+    from clawd_code_sdk.models.permissions import CanUseTool
+    from clawd_code_sdk.models.settings import Sandbox
+    from clawd_code_sdk.models.thinking import ThinkingConfig
 
 logger = logging.getLogger(__name__)
 
