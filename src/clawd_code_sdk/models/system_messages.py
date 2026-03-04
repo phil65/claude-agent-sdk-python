@@ -190,6 +190,7 @@ class TaskNotificationSystemMessage(BaseSystemMessage):
     output_file: str
     summary: str
     tool_use_id: str | None = None
+    usage: TaskProgressUsage | None = None
 
 
 class TaskProgressSystemMessage(BaseSystemMessage):
