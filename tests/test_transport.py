@@ -20,7 +20,9 @@ from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITrans
 from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
+    ClaudeCodeSettings,
     Network,
+    Permissions,
     Sandbox,
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
@@ -322,14 +324,18 @@ class TestSubprocessCLITransport:
         assert "--settings" in cmd
         assert "/path/to/settings.json" in cmd
 
-    def test_build_command_with_settings_json(self):
-        """Test building CLI command with settings as JSON object."""
-        settings_json = '{"permissions": {"allow": ["Bash(ls:*)"]}}'
-        opts = make_options(settings=settings_json)
+    def test_build_command_with_settings_model(self):
+        """Test building CLI command with settings as ClaudeCodeSettings."""
+        settings = ClaudeCodeSettings(
+            permissions=Permissions(allow=["Bash(ls:*)"]),
+        )
+        opts = make_options(settings=settings)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
-        assert settings_json in cmd
+        settings_idx = cmd.index("--settings")
+        parsed = json.loads(cmd[settings_idx + 1])
+        assert parsed["permissions"] == {"allow": ["Bash(ls:*)"]}
 
     def test_build_command_with_extra_args(self):
         """Test building CLI command with extra_args for future flags."""
@@ -609,12 +615,13 @@ class TestSubprocessCLITransport:
         assert parsed["sandbox"]["network"]["allowLocalBinding"] is True
         assert parsed["sandbox"]["network"]["allowUnixSockets"] == ["/var/run/docker.sock"]
 
-    def test_build_command_with_sandbox_and_settings_json(self):
-        """Test building CLI command with sandbox merged into existing settings JSON."""
-        # Existing settings as JSON string
-        existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
+    def test_build_command_with_sandbox_and_settings_model(self):
+        """Test building CLI command with sandbox merged into ClaudeCodeSettings."""
+        settings = ClaudeCodeSettings(
+            permissions=Permissions(allow=["Bash(ls:*)"]),
+        )
         sandbox = Sandbox(enabled=True, excluded_commands=["git", "docker"])
-        opts = make_options(settings=existing_settings, sandbox=sandbox)
+        opts = make_options(settings=settings, sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should have merged settings
@@ -624,7 +631,6 @@ class TestSubprocessCLITransport:
         parsed = json.loads(settings_value)
         # Original settings should be preserved
         assert parsed["permissions"] == {"allow": ["Bash(ls:*)"]}
-        assert parsed["verbose"] is True
         # Sandbox should be merged in
         assert "sandbox" in parsed
         assert parsed["sandbox"]["enabled"] is True

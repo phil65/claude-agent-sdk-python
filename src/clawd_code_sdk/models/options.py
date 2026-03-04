@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
     from clawd_code_sdk.models.mcp import McpServerConfig, SdkPluginConfig
     from clawd_code_sdk.models.permissions import CanUseTool
-    from clawd_code_sdk.models.settings import Sandbox
+    from clawd_code_sdk.models.settings import ClaudeCodeSettings, Sandbox
     from clawd_code_sdk.models.thinking import ThinkingConfig
 
 logger = logging.getLogger(__name__)
@@ -220,8 +220,14 @@ class ClaudeAgentOptions:
     cwd: str | Path | None = None
     """The working directory for the agent."""
     # Settings
-    settings: str | None = None
-    """Path to a settings JSON file or a JSON string."""
+    settings: str | Path | ClaudeCodeSettings | None = None
+    """Settings configuration.
+
+    Accepts:
+    - A ``str`` or ``Path``: interpreted as a path to a settings JSON file.
+    - A ``ClaudeCodeSettings`` instance: serialized to JSON automatically.
+    - ``None``: no explicit settings.
+    """
     setting_sources: list[SettingSource] | None = None
     """List of sources to load settings from."""
     sandbox: Sandbox | None = None
@@ -281,14 +287,14 @@ class ClaudeAgentOptions:
     """Enable the experimental agent teams feature."""
 
     def build_settings_value(self) -> str | None:
-        """Build settings value, merging sandbox settings if provided.
+        """Build the CLI ``--settings`` value, merging sandbox if provided.
 
-        Returns the settings value as either:
-        - A JSON string (if sandbox is provided or settings is JSON)
-        - A file path (if only settings path is provided without sandbox)
-        - None if neither settings nor sandbox is provided
+        Returns:
+            A JSON string, a file path, or None.
         """
         import anyenv
+
+        from clawd_code_sdk.models.settings import ClaudeCodeSettings as _Settings
 
         has_settings = self.settings is not None
         has_sandbox = self.sandbox is not None
@@ -296,26 +302,29 @@ class ClaudeAgentOptions:
         if not has_settings and not has_sandbox:
             return None
 
-        # If only settings path and no sandbox, pass through as-is
-        if has_settings and not has_sandbox:
-            return self.settings
+        # Resolve settings to a dict (or pass through as file path)
+        settings_obj: dict[str, Any] | None = None
 
-        # If we have sandbox settings, we need to merge into a JSON object
-        settings_obj: dict[str, Any] = {}
-
-        if has_settings:
-            assert self.settings is not None
-            settings_str = self.settings.strip()
-            # Check if settings is a JSON string or a file path
-            if settings_str.startswith("{") and settings_str.endswith("}"):
-                settings_obj = anyenv.load_json(settings_str)
-            else:
-                settings_path = Path(settings_str)
-                if settings_path.exists():
-                    with settings_path.open(encoding="utf-8") as f:
-                        settings_obj = json.load(f)
+        match self.settings:
+            case _Settings() as model:
+                settings_obj = model.model_dump(by_alias=True, exclude_none=True)
+            case str() | Path() as path:
+                if has_sandbox:
+                    # Need to load file to merge sandbox into it
+                    settings_path = Path(path)
+                    if settings_path.exists():
+                        with settings_path.open(encoding="utf-8") as f:
+                            settings_obj = json.load(f)
+                    else:
+                        logger.warning("Settings file not found: %s", settings_path)
+                        settings_obj = {}
                 else:
-                    logger.warning("Settings file not found: %s", settings_path)
+                    # No sandbox to merge, pass file path directly to CLI
+                    return str(path)
+            case None:
+                settings_obj = {}
+
+        assert settings_obj is not None
 
         # Merge sandbox settings
         if has_sandbox:

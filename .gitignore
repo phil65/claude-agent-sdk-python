@@ -1,4 +1,7 @@
 # Python
+# E2E test artifacts
+tests/e2e/artifacts/
+
 __pycache__/
 *.py[cod]
 *$py.class
