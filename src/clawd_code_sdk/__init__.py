@@ -145,6 +145,8 @@ __all__ = [
     # Tool callbacks
     "CanUseTool",
     "ClaudeAgentOptions",
+    # Settings / sandbox
+    "ClaudeCodeSettings",
     "ClaudeSDKClient",
     # Errors
     "ClaudeSDKError",
@@ -154,6 +156,7 @@ __all__ = [
     "ContinueLatest",
     "ConversationTurn",
     "DocumentMediaType",
+    "Filesystem",
     "FromPR",
     "HookCallback",
     "HookContext",
@@ -162,6 +165,7 @@ __all__ = [
     "HookJSONOutput",
     "HookMatcher",
     "HookMatcherConfig",
+    "Hooks",
     "ImageMediaType",
     "InitSystemMessage",
     "InvalidRequestError",
@@ -169,6 +173,7 @@ __all__ = [
     "McpSdkServerConfig",
     "McpServerConfig",
     "Message",
+    "Network",
     "NewSession",
     "NotificationHookInput",
     "NotificationHookSpecificOutput",
@@ -181,6 +186,7 @@ __all__ = [
     "PermissionResultAllow",
     "PermissionResultDeny",
     "PermissionUpdate",
+    "Permissions",
     "PlainTextMediaType",
     "PostToolUseFailureHookInput",
     "PostToolUseFailureHookSpecificOutput",
@@ -195,12 +201,6 @@ __all__ = [
     "ResultSuccessMessage",
     "ResumeSession",
     "SDKSessionInfo",
-    # Settings / sandbox
-    "ClaudeCodeSettings",
-    "Filesystem",
-    "Hooks",
-    "Network",
-    "Permissions",
     "Sandbox",
     # Beta support
     "SdkBeta",
