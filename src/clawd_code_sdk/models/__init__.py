@@ -1,17 +1,4 @@
-"""Type definitions for Claude SDK.
-
-This package re-exports all types for backwards compatibility.
-Types are organized into submodules:
-- base: Type aliases, literals, and thinking configuration
-- agents: Agent definitions and presets
-- permissions: Permission system types
-- hooks: Hook system types (inputs, outputs, matchers, callbacks)
-- mcp: MCP server and plugin configuration
-- settings: Generated settings models (Sandbox, Permissions, Hooks, etc.)
-- messages: Content blocks, message types, and stream events
-- options: ClaudeAgentOptions
-- control: SDK control protocol types
-"""
+"""Type definitions for Claude SDK."""
 
 from __future__ import annotations
 
@@ -127,7 +114,6 @@ from .input_types import (
     WebSearchInput,
 )
 from .mcp import (
-    JSONRPC_VERSION,
     JSONRPCError,
     JSONRPCErrorResponse,
     JSONRPCMessage,
@@ -314,7 +300,6 @@ from .system_messages import (
 Message = MiscMessages | SystemMessageUnion
 
 __all__ = [
-    "JSONRPC_VERSION",
     "TOOL_INPUT_TYPES",
     "TOOL_USE_RESULT_TYPES",
     "AgentAsyncLaunchedOutput",

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 
 RequestId = str | int
-JSONRPC_VERSION = "2.0"
 
 McpConnectionStatus = Literal["connected", "pending", "failed", "needs-auth", "disabled"]
 
