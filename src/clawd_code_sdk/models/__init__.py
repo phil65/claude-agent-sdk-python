@@ -7,7 +7,7 @@ Types are organized into submodules:
 - permissions: Permission system types
 - hooks: Hook system types (inputs, outputs, matchers, callbacks)
 - mcp: MCP server and plugin configuration
-- sandbox: Sandbox configuration
+- settings: Generated settings models (Sandbox, Permissions, Hooks, etc.)
 - messages: Content blocks, message types, and stream events
 - options: ClaudeAgentOptions
 - control: SDK control protocol types
@@ -281,7 +281,14 @@ from .permissions import (
     PermissionUpdateDestination,
     ToolPermissionContext,
 )
-from .sandbox import SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings
+from .settings import (
+    ClaudeCodeSettings,
+    Filesystem,
+    Hooks,
+    Network,
+    Permissions,
+    Sandbox,
+)
 from .server_info import ClaudeCodeAgentInfo, ClaudeCodeServerInfo, ClaudeCodeCommandInfo
 from .system_messages import (
     system_message_adapter,
@@ -347,6 +354,7 @@ __all__ = [
     "ClaudeCodeAgentInfo",
     "ClaudeCodeCommandInfo",
     "ClaudeCodeServerInfo",
+    "ClaudeCodeSettings",
     "CommandHookHandler",
     "CompactBoundarySystemMessage",
     "ConfigOutput",
@@ -378,6 +386,7 @@ __all__ = [
     "FileReadInput",
     "FileWriteInput",
     "FilesPersistedSystemMessage",
+    "Filesystem",
     "FromPR",
     "GitDiff",
     "GlobInput",
@@ -396,6 +405,7 @@ __all__ = [
     "HookResponseSystemMessage",
     "HookSpecificOutput",
     "HookStartedSystemMessage",
+    "Hooks",
     "ImageMediaType",
     "InitSystemMessage",
     "JSONRPCError",
@@ -427,6 +437,7 @@ __all__ = [
     "Message",
     "MiscMessages",
     "ModelUsage",
+    "Network",
     "NewSession",
     "NotebookEditInput",
     "NotebookEditOutput",
@@ -444,6 +455,7 @@ __all__ = [
     "PermissionRuleValue",
     "PermissionUpdate",
     "PermissionUpdateDestination",
+    "Permissions",
     "PlainTextMediaType",
     "PostToolUseFailureHookInput",
     "PostToolUseFailureHookSpecificOutput",
@@ -496,9 +508,7 @@ __all__ = [
     "SDKHookCallbackRequest",
     "SDKPermissionDenial",
     "SDKSessionInfo",
-    "SandboxIgnoreViolations",
-    "SandboxNetworkConfig",
-    "SandboxSettings",
+    "Sandbox",
     "SdkBeta",
     "SdkPluginConfig",
     "SessionConfig",

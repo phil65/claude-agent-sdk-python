@@ -20,8 +20,8 @@ from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITrans
 from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
-    SandboxNetworkConfig,
-    SandboxSettings,
+    Network,
+    Sandbox,
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
@@ -586,10 +586,10 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox settings (no existing settings)."""
         import json
 
-        sandbox = SandboxSettings(
+        sandbox = Sandbox(
             enabled=True,
             auto_allow_bash_if_sandboxed=True,
-            network=SandboxNetworkConfig(
+            network=Network(
                 allow_local_binding=True,
                 allow_unix_sockets=["/var/run/docker.sock"],
             ),
@@ -613,7 +613,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox merged into existing settings JSON."""
         # Existing settings as JSON string
         existing_settings = '{"permissions": {"allow": ["Bash(ls:*)"]}, "verbose": true}'
-        sandbox = SandboxSettings(enabled=True, excluded_commands=["git", "docker"])
+        sandbox = Sandbox(enabled=True, excluded_commands=["git", "docker"])
         opts = make_options(settings=existing_settings, sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
@@ -642,7 +642,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_sandbox_minimal(self):
         """Test sandbox with minimal configuration."""
-        sandbox = SandboxSettings(enabled=True)
+        sandbox = Sandbox(enabled=True)
         opts = make_options(sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
@@ -650,13 +650,13 @@ class TestSubprocessCLITransport:
         settings_idx = cmd.index("--settings")
         settings_value = cmd[settings_idx + 1]
         parsed = json.loads(settings_value)
-        assert parsed == {"sandbox": {"enabled": True}}
+        assert parsed == {"sandbox": {"autoAllowBashIfSandboxed": True, "enabled": True}}
 
     def test_sandbox_network_config(self):
         """Test sandbox with full network configuration."""
-        sandbox = SandboxSettings(
+        sandbox = Sandbox(
             enabled=True,
-            network=SandboxNetworkConfig(
+            network=Network(
                 allow_unix_sockets=["/tmp/ssh-agent.sock"],
                 allow_all_unix_sockets=False,
                 allow_local_binding=True,

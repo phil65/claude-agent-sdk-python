@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .hooks import HookEvent, HookMatcher
     from .mcp import McpServerConfig, SdkPluginConfig
     from .permissions import CanUseTool
-    from .sandbox import SandboxSettings
+    from .settings import Sandbox
     from .thinking import ThinkingConfig
 
 logger = logging.getLogger(__name__)
@@ -226,7 +226,7 @@ class ClaudeAgentOptions:
     """Path to a settings JSON file or a JSON string."""
     setting_sources: list[SettingSource] | None = None
     """List of sources to load settings from."""
-    sandbox: SandboxSettings | None = None
+    sandbox: Sandbox | None = None
     """Sandbox configuration for bash command isolation.
 
     Filesystem and network restrictions are derived from permission rules (Read/Edit/WebFetch),
