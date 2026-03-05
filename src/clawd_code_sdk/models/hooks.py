@@ -143,6 +143,8 @@ class PreToolUseHookInput(BaseHookInput):
     tool_name: str
     tool_input: dict[str, Any]
     tool_use_id: str
+    agent_id: NotRequired[str]
+    agent_type: NotRequired[str]
 
 
 class PostToolUseHookInput(BaseHookInput):
@@ -153,6 +155,8 @@ class PostToolUseHookInput(BaseHookInput):
     tool_input: dict[str, Any]
     tool_response: Any
     tool_use_id: str
+    agent_id: NotRequired[str]
+    agent_type: NotRequired[str]
 
 
 class PostToolUseFailureHookInput(BaseHookInput):
@@ -164,6 +168,8 @@ class PostToolUseFailureHookInput(BaseHookInput):
     tool_use_id: str
     error: str
     is_interrupt: NotRequired[bool]
+    agent_id: NotRequired[str]
+    agent_type: NotRequired[str]
 
 
 class UserPromptSubmitHookInput(BaseHookInput):
@@ -222,6 +228,8 @@ class PermissionRequestHookInput(BaseHookInput):
     tool_name: str
     tool_input: dict[str, Any]
     permission_suggestions: NotRequired[list[Any]]
+    agent_id: NotRequired[str]
+    agent_type: NotRequired[str]
 
 
 class SessionStartHookInput(BaseHookInput):
