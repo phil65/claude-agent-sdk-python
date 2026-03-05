@@ -38,6 +38,7 @@ HookEvent = Literal[
     "ConfigChange",
     "WorktreeCreate",
     "WorktreeRemove",
+    "InstructionsLoaded",
 ]
 
 
@@ -321,6 +322,18 @@ class ElicitationResultHookInput(BaseHookInput):
     content: NotRequired[dict[str, Any]]
 
 
+class InstructionsLoadedHookInput(BaseHookInput):
+    """Input data for InstructionsLoaded hook events."""
+
+    hook_event_name: Literal["InstructionsLoaded"]
+    file_path: str
+    memory_type: Literal["User", "Project", "Local", "Managed"]
+    load_reason: Literal["session_start", "nested_traversal", "path_glob_match", "include"]
+    globs: NotRequired[list[str]]
+    trigger_file_path: NotRequired[str]
+    parent_file_path: NotRequired[str]
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -341,6 +354,7 @@ HookInput = (
     | ElicitationHookInput
     | ElicitationResultHookInput
     | ConfigChangeHookInput
+    | InstructionsLoadedHookInput
     | WorktreeCreateHookInput
     | WorktreeRemoveHookInput
 )

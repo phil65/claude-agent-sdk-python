@@ -108,18 +108,7 @@ class AgentAsyncLaunchedOutput(TypedDict):
     """Whether the calling agent has Read/Bash tools to check progress."""
 
 
-class AgentSubAgentEnteredOutput(TypedDict):
-    """Output from the Task tool when entering a sub-agent context."""
-
-    status: Literal["sub_agent_entered"]
-    """Indicates a sub-agent context was entered."""
-    description: str
-    """Description of the sub-agent task."""
-    message: str
-    """Status message."""
-
-
-AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput | AgentSubAgentEnteredOutput
+AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput
 
 
 # ---------------------------------------------------------------------------

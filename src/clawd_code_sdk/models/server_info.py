@@ -34,6 +34,9 @@ class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     supports_adaptive_thinking: bool | None = None
     """Whether the model supports adaptive thinking."""
 
+    supports_fast_mode: bool | None = None
+    """Whether the model supports fast mode."""
+
 
 class ClaudeCodeCommandInfo(ClaudeCodeBaseModel):
     """Information about an available slash command from Claude Code."""

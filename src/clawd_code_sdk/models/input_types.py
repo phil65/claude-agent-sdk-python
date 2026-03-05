@@ -10,7 +10,7 @@ from typing import Literal, NotRequired, TypedDict
 
 from pydantic import ConfigDict, with_config
 
-from clawd_code_sdk.models.base import ModelName, PermissionMode  # noqa: TC001
+from clawd_code_sdk.models.base import PermissionMode  # noqa: TC001
 
 
 _extra_allow = with_config(ConfigDict(extra="allow"))
@@ -28,16 +28,10 @@ class AgentInput(TypedDict):
     """The task for the agent to perform."""
     subagent_type: str
     """The type of specialized agent to use for this task."""
-    model: NotRequired[ModelName]
-    """Optional model to use for the agent."""
     resume: NotRequired[str]
     """Optional agent ID to resume from in order to continue from the previous exec transcript."""
     run_in_background: NotRequired[bool]
     """Whether to run the agent in the background."""
-    max_turns: NotRequired[int]
-    """Maximum number of agentic turns (API round-trips) before stopping.
-
-    Used internally for warmup."""
     name: NotRequired[str]
     """Name for the spawned agent."""
     team_name: NotRequired[str]
@@ -54,6 +48,8 @@ class AskUserQuestionOption(TypedDict):
     """Display text for this option (1-5 words)."""
     description: str
     """Explanation of what this option means."""
+    preview: NotRequired[str]
+    """Optional preview content rendered when this option is focused."""
 
 
 @_extra_allow

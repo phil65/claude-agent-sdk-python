@@ -24,6 +24,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+@dataclass(kw_only=True)
+class AskUserQuestionToolConfig:
+    """Configuration for the AskUserQuestion tool."""
+
+    preview_format: Literal["markdown", "html"] | None = None
+    """Content format for the preview field on question options."""
+
+
+@dataclass(kw_only=True)
+class ToolConfig:
+    """Per-tool configuration for built-in tools."""
+
+    ask_user_question: AskUserQuestionToolConfig | None = None
+
+
 # ============================================================================
 # Session configuration
 # ============================================================================
@@ -275,6 +290,11 @@ class ClaudeAgentOptions:
     When enabled, files can be rewound to their state at any user message
     using `ClaudeSDKClient.rewind_files()`.
     """
+    # TODO: tool_config is defined in upstream sdk.d.ts Options but not yet
+    # present in the CC settings JSON schema. Uncomment once settings.py is
+    # regenerated with the toolConfig field so it flows through --settings.
+    # tool_config: ToolConfig | None = None
+    # """Per-tool configuration for built-in tools."""
     agent: str | None = None
     """Agent name for the main thread. The agent must be defined in `agents` or settings."""
     context_1m: bool = False

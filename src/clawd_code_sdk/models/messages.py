@@ -181,6 +181,7 @@ class UserMessage(BaseMessage):
     ) = None
     isReplay: bool | None = None  # noqa: N815
     isSynthetic: bool | None = None  # noqa: N815
+    priority: Literal["now", "next", "later"] | None = None
 
     def parse_command_output(self) -> str | None:
         """Extract output from legacy XML-tagged command output in user messages."""

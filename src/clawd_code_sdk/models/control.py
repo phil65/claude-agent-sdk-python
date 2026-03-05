@@ -206,6 +206,20 @@ class SDKControlElicitationRequest:
     requested_schema: dict[str, Any] | None = None
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlGetSettingsRequest:
+    """Returns the effective merged settings and the raw per-source settings."""
+
+    subtype: Literal["get_settings"] = "get_settings"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlSetProactiveRequest:
+    """Sets proactive mode configuration."""
+
+    subtype: Literal["set_proactive"] = "set_proactive"
+
+
 ControlRequestUnion = Annotated[
     SDKControlInterruptRequest
     | SDKControlPermissionRequest
@@ -224,8 +238,10 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpClearAuthRequest
     | SDKControlMcpOAuthCallbackUrlRequest
     | SDKControlRemoteControlRequest
+    | SDKControlSetProactiveRequest
     | SDKControlStopTaskRequest
     | SDKControlApplyFlagSettingsRequest
+    | SDKControlGetSettingsRequest
     | SDKControlElicitationRequest,
     Discriminator("subtype"),
 ]
