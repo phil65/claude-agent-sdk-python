@@ -151,6 +151,33 @@ class UserPlainTextDocumentPrompt:
         return block
 
 
+@dataclass
+class UserFilePrompt:
+    """A user prompt referencing a file uploaded via the Anthropic Files API."""
+
+    file_id: str
+    """Anthropic file identifier (e.g. 'file_abc123')."""
+    title: str | None = None
+    """Optional document title."""
+    context: str | None = None
+    """Optional context about the document."""
+
+    def to_content_block(self) -> dict[str, Any]:
+        """Return the Anthropic API content block dict."""
+        block: dict[str, Any] = {
+            "type": "document",
+            "source": {
+                "type": "file",
+                "file_id": self.file_id,
+            },
+        }
+        if self.title is not None:
+            block["title"] = self.title
+        if self.context is not None:
+            block["context"] = self.context
+        return block
+
+
 UserPrompt = (
     UserTextPrompt
     | UserImagePrompt
@@ -158,5 +185,6 @@ UserPrompt = (
     | UserDocumentPrompt
     | UserDocumentURLPrompt
     | UserPlainTextDocumentPrompt
+    | UserFilePrompt
 )
 """Union type for all user prompt dataclasses."""
