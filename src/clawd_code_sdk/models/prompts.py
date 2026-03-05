@@ -57,10 +57,7 @@ class UserImageURLPrompt:
         """Return the Anthropic API content block dict."""
         return {
             "type": "image",
-            "source": {
-                "type": "url",
-                "url": self.url,
-            },
+            "source": {"type": "url", "url": self.url},
         }
 
 
@@ -86,12 +83,10 @@ class UserDocumentPrompt:
                 "media_type": self.media_type,
                 "data": self.document_data,
             },
+            "title": self.title,
+            "context": self.context,
         }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
+        return {k: v for k, v in block.items() if v is not None}
 
 
 @dataclass
@@ -109,16 +104,11 @@ class UserDocumentURLPrompt:
         """Return the Anthropic API content block dict."""
         block: dict[str, Any] = {
             "type": "document",
-            "source": {
-                "type": "url",
-                "url": self.url,
-            },
+            "source": {"type": "url", "url": self.url},
+            "title": self.title,
+            "context": self.context,
         }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
+        return {k: v for k, v in block.items() if v is not None}
 
 
 @dataclass
@@ -143,12 +133,10 @@ class UserPlainTextDocumentPrompt:
                 "media_type": self.media_type,
                 "data": self.data,
             },
+            "title": self.title,
+            "context": self.context,
         }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
+        return {k: v for k, v in block.items() if v is not None}
 
 
 @dataclass
@@ -166,16 +154,11 @@ class UserFilePrompt:
         """Return the Anthropic API content block dict."""
         block: dict[str, Any] = {
             "type": "document",
-            "source": {
-                "type": "file",
-                "file_id": self.file_id,
-            },
+            "source": {"type": "file", "file_id": self.file_id},
+            "title": self.title,
+            "context": self.context,
         }
-        if self.title is not None:
-            block["title"] = self.title
-        if self.context is not None:
-            block["context"] = self.context
-        return block
+        return {k: v for k, v in block.items() if v is not None}
 
 
 UserPrompt = (
