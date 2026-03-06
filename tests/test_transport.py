@@ -656,7 +656,13 @@ class TestSubprocessCLITransport:
         settings_idx = cmd.index("--settings")
         settings_value = cmd[settings_idx + 1]
         parsed = json.loads(settings_value)
-        assert parsed == {"sandbox": {"autoAllowBashIfSandboxed": True, "enabled": True}}
+        assert parsed == {
+            "sandbox": {
+                "autoAllowBashIfSandboxed": True,
+                "enableWeakerNetworkIsolation": False,
+                "enabled": True,
+            }
+        }
 
     def test_sandbox_network_config(self):
         """Test sandbox with full network configuration."""
