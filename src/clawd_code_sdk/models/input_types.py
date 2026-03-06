@@ -26,7 +26,7 @@ class AgentInput(TypedDict):
     """A short (3-5 word) description of the task."""
     prompt: str
     """The task for the agent to perform."""
-    subagent_type: str
+    subagent_type: NotRequired[str]
     """The type of specialized agent to use for this task."""
     resume: NotRequired[str]
     """Optional agent ID to resume from in order to continue from the previous exec transcript."""

@@ -145,6 +145,8 @@ class BashOutput(TypedDict):
     """Path to persisted full output (when output is too large for inline)."""
     persistedOutputSize: NotRequired[int]
     """Total size of the output in bytes (when output is too large for inline)."""
+    tokenSaverOutput: NotRequired[str]
+    """Compressed output sent to model when token-saver is active (UI still uses stdout)."""
 
 
 # ---------------------------------------------------------------------------
