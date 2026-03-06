@@ -94,18 +94,46 @@ class McpHttpServerConfig(TypedDict):
 
 
 class McpSdkServerConfig(TypedDict):
-    """SDK MCP server configuration."""
+    """SDK MCP server configuration (serializable, no instance)."""
 
     type: Literal["sdk"]
     name: str
+
+
+class McpSdkServerConfigWithInstance(McpSdkServerConfig):
+    """SDK MCP server config with a live McpServer instance. Not serializable."""
+
     instance: McpServer
 
 
 ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
 
 McpServerConfig = (
+    McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfigWithInstance
+)
+
+
+class McpClaudeAIProxyServerConfig(TypedDict):
+    """MCP Claude AI proxy server configuration."""
+
+    type: Literal["claudeai-proxy"]
+    url: str
+    id: str
+
+
+McpServerConfigForProcessTransport = (
     McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfig
 )
+
+McpServerStatusConfig = McpServerConfigForProcessTransport | McpClaudeAIProxyServerConfig
+
+
+class McpSetServersResult(ClaudeCodeBaseModel):
+    """Result of a setMcpServers operation."""
+
+    added: list[str] = Field(default_factory=list)
+    removed: list[str] = Field(default_factory=list)
+    errors: dict[str, str] = Field(default_factory=dict)
 
 
 class SdkPluginConfig(ClaudeCodeBaseModel):
@@ -161,7 +189,8 @@ class McpServerStatusEntry(ClaudeCodeBaseModel):
     name: str
     status: McpConnectionStatus
     server_info: McpServerVersionInfo | None = None
-    config: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+    config: McpServerStatusConfig | None = None
     scope: Literal["project", "user", "local", "claudeai", "managed"] | str | None = None  # noqa: PYI051
     tools: list[McpToolStatus] = Field(default_factory=list)
 

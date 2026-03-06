@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, assert_never
 
 from pydantic import AnyUrl, TypeAdapter
 
-from clawd_code_sdk.models import McpSdkServerConfig
+from clawd_code_sdk.models import McpSdkServerConfigWithInstance
 
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ def create_sdk_mcp_server(
     name: str,
     version: str = "1.0.0",
     tools: list[SdkMcpTool[Any]] | None = None,
-) -> McpSdkServerConfig:
+) -> McpSdkServerConfigWithInstance:
     """Create an in-process MCP server that runs within your Python application.
 
     Server lifecycle is managed automatically by the SDK
@@ -107,7 +107,7 @@ def create_sdk_mcp_server(
             If None or empty, the server will have no tools (rarely useful).
 
     Returns:
-        McpSdkServerConfig: A configuration object that can be passed to
+        McpSdkServerConfigWithInstance: A configuration object that can be passed to
         ClaudeAgentOptions.mcp_servers. This config contains the server
         instance and metadata needed for the SDK to route tool calls.
 
@@ -231,4 +231,4 @@ def create_sdk_mcp_server(
             return content
 
     # Return SDK server configuration
-    return McpSdkServerConfig(type="sdk", name=name, instance=server)
+    return McpSdkServerConfigWithInstance(type="sdk", name=name, instance=server)

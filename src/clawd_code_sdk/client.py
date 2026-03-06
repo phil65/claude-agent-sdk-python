@@ -14,6 +14,7 @@ from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
+    McpSetServersResult,
     McpStatusResponse,
     ResultErrorMessage,
     ResultMessage,
@@ -286,7 +287,7 @@ class ClaudeSDKClient:
         result = await query.get_mcp_status()
         return McpStatusResponse.model_validate(result)
 
-    async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> dict[str, Any]:
+    async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> McpSetServersResult:
         """Add, replace, or remove MCP servers dynamically mid-session.
 
         Allows dynamic registration of MCP servers without restarting the session.
@@ -312,7 +313,8 @@ class ClaudeSDKClient:
             server_dict = dict(config)
             server_dict["name"] = name
             wire_servers[name] = server_dict
-        return await query.set_mcp_servers(wire_servers)
+        result = await query.set_mcp_servers(wire_servers)
+        return McpSetServersResult.model_validate(result)
 
     async def mcp_reconnect(self, server_name: str) -> None:
         """Reconnect to an MCP server."""
