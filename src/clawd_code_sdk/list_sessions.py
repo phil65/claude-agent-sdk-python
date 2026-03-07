@@ -97,12 +97,13 @@ def _extract_session_metadata(
                     try:
                         entry = anyenv.load_json(line, return_type=dict)
                         msg = entry.get("message")
-                        if isinstance(msg, dict):
-                            content = msg.get("content", "")
-                            if isinstance(content, str) and content:
-                                first_line = content.split("\n")[0].strip()
-                                if first_line:
-                                    first_prompt = first_line
+                        if (
+                            isinstance(msg, dict)
+                            and (content := msg.get("content"))
+                            and isinstance(content, str)
+                            and (first_line := content.split("\n")[0].strip())
+                        ):
+                            first_prompt = first_line
                     except anyenv.JsonLoadError:
                         pass
 
@@ -134,14 +135,11 @@ def _build_session_info(session_path: Path, project_cwd: str | None) -> SDKSessi
     session_id = session_path.stem
     last_modified = int(stat.st_mtime * 1000)  # milliseconds since epoch
     file_size = stat.st_size
-
     custom_title, first_prompt = _extract_session_metadata(session_path)
-
     # Get git branch from the tail of the file.
     # The raw JSONL uses camelCase ("gitBranch") per ClaudeCodeBaseModel alias config.
     # Not all entry types carry gitBranch, so we scan backward until we find one.
     git_branch = _read_git_branch_from_tail(session_path)
-
     # Build display summary: prefer custom title, then first prompt, then session ID
     summary = custom_title or first_prompt or session_id
 
@@ -231,13 +229,11 @@ def list_sessions(options: ListSessionsOptions | None = None) -> list[SDKSession
     # Build session info for each file
     sessions: list[SDKSessionInfo] = []
     for session_path, cwd in session_files:
-        info = _build_session_info(session_path, cwd)
-        if info is not None:
+        if info := _build_session_info(session_path, cwd):
             sessions.append(info)
 
     # Sort by last_modified descending (newest first)
     sessions.sort(key=lambda s: s.last_modified, reverse=True)
-
     # Apply limit
     if limit is not None and limit > 0:
         sessions = sessions[:limit]
