@@ -179,6 +179,7 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     tool_use_id: str | None = None
     description: str
     task_type: str | None = None
+    prompt: str | None = None
 
 
 class TaskNotificationSystemMessage(BaseSystemMessage):

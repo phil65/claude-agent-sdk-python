@@ -973,6 +973,7 @@ export declare type Options = {
     plugins?: SdkPluginConfig[];
 
 
+
     /**
      * Enable prompt suggestions. When true, the agent emits a `prompt_suggestion`
      * message after each turn with a predicted next user prompt.
@@ -2166,6 +2167,7 @@ export declare type SDKTaskStartedMessage = {
     tool_use_id?: string;
     description: string;
     task_type?: string;
+    prompt?: string;
     uuid: UUID;
     session_id: string;
 };
