@@ -255,6 +255,12 @@ class SubprocessCLITransport(Transport):
         if self._options.enable_agent_teams:
             process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
 
+        # Enable fine-grained tool streaming. --include-partial-messages emits
+        # stream_event messages, but tool input parameters are still buffered
+        # by the API unless eager_input_streaming is also enabled at the
+        # per-tool level via this env var.
+        process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
+
         if self._cwd:
             process_env["PWD"] = self._cwd
 
