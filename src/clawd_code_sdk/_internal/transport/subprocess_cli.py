@@ -78,160 +78,16 @@ class SubprocessCLITransport(Transport):
 
     def _build_command(self) -> list[str]:
         """Build CLI command with arguments."""
-        cmd = [self._cli_path, "--output-format", "stream-json", "--verbose"]
-
-        # system_prompt is now sent via initialize request
-
-        match self._options.tools:
-            case []:
-                cmd.extend(["--tools", ""])
-            case list() as tools:
-                cmd.extend(["--tools", ",".join(tools)])
-            case {"type": "preset"}:
-                cmd.extend(["--tools", "default"])
-
-        if self._options.allowed_tools is not None:
-            cmd.extend(["--allowedTools", ",".join(self._options.allowed_tools)])
-
-        if self._options.max_turns:
-            cmd.extend(["--max-turns", str(self._options.max_turns)])
-
-        if self._options.max_budget_usd is not None:
-            cmd.extend(["--max-budget-usd", str(self._options.max_budget_usd)])
-
-        if self._options.disallowed_tools:
-            cmd.extend(["--disallowedTools", ",".join(self._options.disallowed_tools)])
-
-        if self._options.model:
-            cmd.extend(["--model", self._options.model])
-
-        if self._options.fallback_model:
-            cmd.extend(["--fallback-model", self._options.fallback_model])
-
-        if self._options.context_1m:
-            cmd.extend(["--betas", "context-1m-2025-08-07"])
-
-        if self._options.permission_prompt_tool_name:
-            cmd.extend(["--permission-prompt-tool", self._options.permission_prompt_tool_name])
-
-        if self._options.permission_mode:
-            cmd.extend(["--permission-mode", self._options.permission_mode])
-
-        # Session configuration
-        from clawd_code_sdk.models import (
-            BaseSessionConfig,
-            ContinueLatest,
-            FromPR,
-            NewSession,
-            ResumeSession,
-        )
-
-        match self._options.session:
-            case None:
-                session = NewSession()
-            case str() as session_id:
-                session = ResumeSession(session_id=session_id)
-            case BaseSessionConfig() as config:
-                session = config
-            case _ as unreachable:
-                assert_never(unreachable)
-        match session:
-            case NewSession(session_id=sid) if sid is not None:
-                cmd.extend(["--session-id", sid])
-            case ResumeSession(session_id=sid, fork=fork, at_message=at_msg):
-                cmd.extend(["--resume", sid])
-                if fork:
-                    cmd.append("--fork-session")
-                if at_msg is not None:
-                    cmd.extend(["--resume-session-at", at_msg])
-            case ContinueLatest(fork=fork):
-                cmd.append("--continue")
-                if fork:
-                    cmd.append("--fork-session")
-            case FromPR(pr=pr, fork=fork):
-                cmd.extend(["--from-pr", str(pr)])
-                if fork:
-                    cmd.append("--fork-session")
-        if not session.persist:
-            cmd.append("--no-persist-session")
-
-        # Handle settings and sandbox: merge sandbox into settings if both are provided
-        if settings_value := self._options.build_settings_value():
-            cmd.extend(["--settings", settings_value])
-
-        if self._options.add_dirs:
-            # Convert all paths to strings and add each directory
-            for directory in self._options.add_dirs:
-                cmd.extend(["--add-dir", str(directory)])
-
-        match self._options.mcp_servers:
-            case dict() as servers if servers:
-                servers_for_cli = {
-                    name: {k: v for k, v in cfg.items() if k != "instance"}
-                    for name, cfg in servers.items()
-                }
-                dct = anyenv.dump_json({"mcpServers": servers_for_cli})
-                cmd.extend(["--mcp-config", dct])
-            case str() | Path() as path if str(path):
-                cmd.extend(["--mcp-config", str(path)])
-
-        cmd.append("--include-partial-messages")
-
-        if self._options.agent:
-            cmd.extend(["--agent", self._options.agent])
-
-        if self._options.allow_dangerously_skip_permissions:
-            cmd.append("--dangerously-skip-permissions")
-
-        if self._options.debug_file:
-            cmd.extend(["--debug-file", self._options.debug_file])
-
-        if self._options.strict_mcp_config:
-            cmd.append("--strict-mcp-config")
-
-        match self._options.worktree:
-            case True:
-                cmd.append("--worktree")
-            case str():
-                cmd.extend(["--worktree", self._options.worktree])
-
-        if self._options.chrome:
-            cmd.append("--chrome")
-
-        sources_value = ",".join(self._options.setting_sources or [])
-        cmd.extend(["--setting-sources", sources_value])
-
-        # Add plugin directories
-        for plugin in self._options.plugins:
-            if plugin.type == "local":
-                cmd.extend(["--plugin-dir", plugin.path])
-            else:
-                raise ValueError(f"Unsupported plugin type: {plugin.type}")
-
-        # Add extra args for future CLI flags
-        for flag, value in self._options.extra_args.items():
-            if value is None:  # Boolean flag without value
-                cmd.append(f"--{flag}")
-            else:  # Flag with value
-                cmd.extend([f"--{flag}", str(value)])
-
-        # Resolve thinking config → --max-thinking-tokens
-        match self._options.thinking:
-            case ThinkingConfigAdaptive():
-                cmd.extend(["--max-thinking-tokens", "32000"])
-            case ThinkingConfigEnabled(budget_tokens=budget):
-                cmd.extend(["--max-thinking-tokens", str(budget)])
-            case ThinkingConfigDisabled():
-                cmd.extend(["--max-thinking-tokens", "0"])
-
-        if self._options.effort is not None:
-            cmd.extend(["--effort", self._options.effort])
-
-        if self._options.disable_parallel_tool_use:
-            cmd.append("--disable-parallel-tool-use")
-        # Always use streaming mode with stdin (matching TypeScript SDK)
-        # This allows agents and other large configs to be sent via initialize request
-        cmd.extend(["--input-format", "stream-json"])
+        cmd = [
+            self._cli_path,
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--input-format",
+            "stream-json",
+            "--include-partial-messages",
+        ]
+        cmd.extend(to_cli_args(self._options))
         return cmd
 
     async def connect(self) -> None:
@@ -246,7 +102,6 @@ class SubprocessCLITransport(Transport):
         # Remove CLAUDECODE from parent environment to prevent nesting detection
         # This allows SDK usage from within Claude Code (hooks, plugins, subagents)
         parent_env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-
         # Merge environment variables: system -> user -> SDK required
         process_env = {
             **parent_env,
@@ -268,7 +123,6 @@ class SubprocessCLITransport(Transport):
         # by the API unless eager_input_streaming is also enabled at the
         # per-tool level via this env var.
         process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
-
         if self._cwd:
             process_env["PWD"] = self._cwd
 
@@ -564,3 +418,152 @@ def _find_cli() -> str:
         "\nOr provide the path via ClaudeAgentOptions:\n"
         "  ClaudeAgentOptions(cli_path='/path/to/claude')"
     )
+
+
+def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
+    from clawd_code_sdk.models import (
+        BaseSessionConfig,
+        ContinueLatest,
+        FromPR,
+        NewSession,
+        ResumeSession,
+    )
+
+    cmd = []
+    match options.tools:
+        case []:
+            cmd.extend(["--tools", ""])
+        case list() as tools:
+            cmd.extend(["--tools", ",".join(tools)])
+        case {"type": "preset"}:
+            cmd.extend(["--tools", "default"])
+
+    if options.allowed_tools is not None:
+        cmd.extend(["--allowedTools", ",".join(options.allowed_tools)])
+
+    if options.max_turns:
+        cmd.extend(["--max-turns", str(options.max_turns)])
+
+    if options.max_budget_usd is not None:
+        cmd.extend(["--max-budget-usd", str(options.max_budget_usd)])
+
+    if options.disallowed_tools:
+        cmd.extend(["--disallowedTools", ",".join(options.disallowed_tools)])
+
+    if options.model:
+        cmd.extend(["--model", options.model])
+
+    if options.fallback_model:
+        cmd.extend(["--fallback-model", options.fallback_model])
+
+    if options.context_1m:
+        cmd.extend(["--betas", "context-1m-2025-08-07"])
+
+    if options.permission_prompt_tool_name:
+        cmd.extend(["--permission-prompt-tool", options.permission_prompt_tool_name])
+
+    if options.permission_mode:
+        cmd.extend(["--permission-mode", options.permission_mode])
+
+    match options.session:
+        case None:
+            session = NewSession()
+        case str() as session_id:
+            session = ResumeSession(session_id=session_id)
+        case BaseSessionConfig() as config:
+            session = config
+        case _ as unreachable:
+            assert_never(unreachable)
+    match session:
+        case NewSession(session_id=sid) if sid is not None:
+            cmd.extend(["--session-id", sid])
+        case ResumeSession(session_id=sid, fork=fork, at_message=at_msg):
+            cmd.extend(["--resume", sid])
+            if fork:
+                cmd.append("--fork-session")
+            if at_msg is not None:
+                cmd.extend(["--resume-session-at", at_msg])
+        case ContinueLatest(fork=fork):
+            cmd.append("--continue")
+            if fork:
+                cmd.append("--fork-session")
+        case FromPR(pr=pr, fork=fork):
+            cmd.extend(["--from-pr", str(pr)])
+            if fork:
+                cmd.append("--fork-session")
+    if not session.persist:
+        cmd.append("--no-persist-session")
+
+    # Handle settings and sandbox: merge sandbox into settings if both are provided
+    if settings_value := options.build_settings_value():
+        cmd.extend(["--settings", settings_value])
+
+    if options.add_dirs:
+        # Convert all paths to strings and add each directory
+        for directory in options.add_dirs:
+            cmd.extend(["--add-dir", str(directory)])
+
+    match options.mcp_servers:
+        case dict() as servers if servers:
+            servers_for_cli = {
+                name: {k: v for k, v in cfg.items() if k != "instance"}
+                for name, cfg in servers.items()
+            }
+            dct = anyenv.dump_json({"mcpServers": servers_for_cli})
+            cmd.extend(["--mcp-config", dct])
+        case str() | Path() as path if str(path):
+            cmd.extend(["--mcp-config", str(path)])
+
+    if options.agent:
+        cmd.extend(["--agent", options.agent])
+
+    if options.allow_dangerously_skip_permissions:
+        cmd.append("--dangerously-skip-permissions")
+
+    if options.debug_file:
+        cmd.extend(["--debug-file", options.debug_file])
+
+    if options.strict_mcp_config:
+        cmd.append("--strict-mcp-config")
+
+    match options.worktree:
+        case True:
+            cmd.append("--worktree")
+        case str():
+            cmd.extend(["--worktree", options.worktree])
+
+    if options.chrome:
+        cmd.append("--chrome")
+
+    sources_value = ",".join(options.setting_sources or [])
+    cmd.extend(["--setting-sources", sources_value])
+
+    # Add plugin directories
+    for plugin in options.plugins:
+        if plugin.type == "local":
+            cmd.extend(["--plugin-dir", plugin.path])
+        else:
+            raise ValueError(f"Unsupported plugin type: {plugin.type}")
+
+    # Add extra args for future CLI flags
+    for flag, value in options.extra_args.items():
+        flags = [f"--{flag}"] if value is None else [f"--{flag}", value]
+        cmd.extend(flags)
+
+    # Resolve thinking config → --max-thinking-tokens
+    match options.thinking:
+        case ThinkingConfigAdaptive():
+            cmd.extend(["--max-thinking-tokens", "32000"])
+        case ThinkingConfigEnabled(budget_tokens=budget):
+            cmd.extend(["--max-thinking-tokens", str(budget)])
+        case ThinkingConfigDisabled():
+            cmd.extend(["--max-thinking-tokens", "0"])
+
+    if options.effort is not None:
+        cmd.extend(["--effort", options.effort])
+
+    if options.disable_parallel_tool_use:
+        cmd.append("--disable-parallel-tool-use")
+    # Always use streaming mode with stdin (matching TypeScript SDK)
+    # This allows agents and other large configs to be sent via initialize request
+    return cmd
