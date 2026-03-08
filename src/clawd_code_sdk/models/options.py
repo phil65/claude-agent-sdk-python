@@ -39,11 +39,6 @@ class ToolConfig:
     ask_user_question: AskUserQuestionToolConfig | None = None
 
 
-# ============================================================================
-# Session configuration
-# ============================================================================
-
-
 @dataclass(kw_only=True)
 class BaseSessionConfig:
     """Common fields for all session configurations."""
@@ -123,30 +118,6 @@ class ListSessionsOptions(TypedDict, total=False):
 
     limit: int
     """Maximum number of sessions to return."""
-
-
-def resolve_session_config(value: str | SessionConfig | None) -> SessionConfig:
-    """Normalize a session config value.
-
-    Args:
-        value: A SessionConfig instance, a session ID string (shortcut for
-            ResumeSession), or None (defaults to NewSession).
-
-    Returns:
-        A concrete SessionConfig instance.
-    """
-    match value:
-        case None:
-            return NewSession()
-        case str() as session_id:
-            return ResumeSession(session_id=session_id)
-        case BaseSessionConfig() as config:
-            return config
-
-
-# ============================================================================
-# Main options
-# ============================================================================
 
 
 @dataclass
@@ -305,6 +276,8 @@ class ClaudeAgentOptions:
     """Create a new git worktree for the session (with optional name)."""
     enable_agent_teams: bool = False
     """Enable the experimental agent teams feature."""
+    disable_parallel_tool_use: bool = False
+    """Disable parallel too use (only one tool_use block per response)."""
 
     def build_settings_value(self) -> str | None:
         """Build the CLI ``--settings`` value, merging sandbox if provided.

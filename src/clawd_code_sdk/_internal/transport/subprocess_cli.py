@@ -11,7 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 import anyenv
 import anyio
@@ -119,14 +119,22 @@ class SubprocessCLITransport(Transport):
 
         # Session configuration
         from clawd_code_sdk.models import (
+            BaseSessionConfig,
             ContinueLatest,
             FromPR,
             NewSession,
             ResumeSession,
-            resolve_session_config,
         )
 
-        session = resolve_session_config(self._options.session)
+        match self._options.session:
+            case None:
+                session = NewSession()
+            case str() as session_id:
+                session = ResumeSession(session_id=session_id)
+            case BaseSessionConfig() as config:
+                session = config
+            case _ as unreachable:
+                assert_never(unreachable)
         match session:
             case NewSession(session_id=sid) if sid is not None:
                 cmd.extend(["--session-id", sid])
@@ -219,8 +227,8 @@ class SubprocessCLITransport(Transport):
         if self._options.effort is not None:
             cmd.extend(["--effort", self._options.effort])
 
-        # json_schema is now sent via initialize request
-
+        if self._options.disable_parallel_tool_use:
+            cmd.append("--disable-parallel-tool-use")
         # Always use streaming mode with stdin (matching TypeScript SDK)
         # This allows agents and other large configs to be sent via initialize request
         cmd.extend(["--input-format", "stream-json"])
