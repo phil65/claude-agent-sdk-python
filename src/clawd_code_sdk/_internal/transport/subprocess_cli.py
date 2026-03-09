@@ -25,8 +25,13 @@ from clawd_code_sdk._errors import (
     ProcessError,
 )
 from clawd_code_sdk._internal.transport import Transport
-from clawd_code_sdk._version import __version__
-from clawd_code_sdk.models.thinking import (
+from clawd_code_sdk.models import (
+    BaseSessionConfig,
+    ContinueLatest,
+    FromPR,
+    NewSession,
+    ResumeSession,
+    SdkPluginConfig,
     ThinkingConfigAdaptive,
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
@@ -92,6 +97,8 @@ class SubprocessCLITransport(Transport):
 
     async def connect(self) -> None:
         """Start subprocess."""
+        from clawd_code_sdk import __version__
+
         if self._process:
             return
 
@@ -268,12 +275,8 @@ class SubprocessCLITransport(Transport):
                     await self._stdin_stream.aclose()
                 self._stdin_stream = None
 
-    def read_messages(self) -> AsyncIterator[dict[str, Any]]:
+    async def read_messages(self) -> AsyncIterator[dict[str, Any]]:
         """Read and parse messages from the transport."""
-        return self._read_messages_impl()
-
-    async def _read_messages_impl(self) -> AsyncIterator[dict[str, Any]]:
-        """Internal implementation of read_messages."""
         if not self._process or not self._stdout_stream:
             raise CLIConnectionError("Not connected")
 
@@ -316,12 +319,10 @@ class SubprocessCLITransport(Transport):
 
         except anyio.ClosedResourceError:
             pass
-        except GeneratorExit:
-            # Client disconnected
+        except GeneratorExit:  # Client disconnected
             pass
 
-        # Check process completion and handle errors
-        try:
+        try:  # Check process completion and handle errors
             returncode = await self._process.wait()
         except Exception:
             returncode = -1
@@ -351,8 +352,7 @@ async def _check_claude_version(cli_path: str) -> None:
             if proc.stdout:
                 stdout_bytes = await proc.stdout.receive()
                 version_output = stdout_bytes.decode().strip()
-                match = re.match(r"([0-9]+\.[0-9]+\.[0-9]+)", version_output)
-                if match:
+                if match := re.match(r"([0-9]+\.[0-9]+\.[0-9]+)", version_output):
                     version = match.group(1)
                     version_parts = [int(x) for x in version.split(".")]
                     min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
@@ -396,16 +396,15 @@ def _find_cli() -> str:
     # Fall back to system-wide search
     if cli := shutil.which("claude"):
         return cli
-
+    home_path = Path.home()
     locations = [
-        Path.home() / ".npm-global/bin/claude",
+        home_path / ".npm-global/bin/claude",
         Path("/usr/local/bin/claude"),
-        Path.home() / ".local/bin/claude",
-        Path.home() / "node_modules/.bin/claude",
-        Path.home() / ".yarn/bin/claude",
-        Path.home() / ".claude/local/claude",
+        home_path / ".local/bin/claude",
+        home_path / "node_modules/.bin/claude",
+        home_path / ".yarn/bin/claude",
+        home_path / ".claude/local/claude",
     ]
-
     for path in locations:
         if path.exists() and path.is_file():
             return str(path)
@@ -421,13 +420,6 @@ def _find_cli() -> str:
 
 
 def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
-    from clawd_code_sdk.models import (
-        BaseSessionConfig,
-        ContinueLatest,
-        FromPR,
-        NewSession,
-        ResumeSession,
-    )
 
     cmd = []
     match options.tools:
@@ -540,10 +532,11 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     # Add plugin directories
     for plugin in options.plugins:
-        if plugin.type == "local":
-            cmd.extend(["--plugin-dir", plugin.path])
-        else:
-            raise ValueError(f"Unsupported plugin type: {plugin.type}")
+        match plugin:
+            case SdkPluginConfig():
+                cmd.extend(["--plugin-dir", plugin.path])
+            case _:
+                raise ValueError(f"Unsupported plugin type: {plugin.type}")
 
     # Add extra args for future CLI flags
     for flag, value in options.extra_args.items():
