@@ -27,9 +27,7 @@ async def test_sdk_mcp_tool_execution():
 
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__test__echo tool with any text")
-
-        async for _message in client.receive_response():
-            pass  # Just consume messages
+        _msgs = [msg async for msg in client.receive_response()]
 
     # Check if the actual Python function was called
     assert "echo" in executions, "Echo tool function was not executed"
@@ -62,9 +60,7 @@ async def test_sdk_mcp_permission_enforcement():
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Use the echo tool to echo 'test' and use greet tool to greet 'Alice'")
 
-        async for _message in client.receive_response():
-            pass  # Just consume messages
-
+    _msgs = [msg async for msg in client.receive_response()]
     # Check actual function executions
     assert "echo" not in executions, "Disallowed echo tool was executed"
     assert "greet" in executions, "Allowed greet tool was not executed"
@@ -88,19 +84,13 @@ async def test_sdk_mcp_multiple_tools():
         return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
 
     server = create_sdk_mcp_server(name="multi", version="1.0.0", tools=[echo_tool, greet_tool])
-    options = ClaudeAgentOptions(
-        mcp_servers={"multi": server},
-        allowed_tools=["mcp__multi__echo", "mcp__multi__greet"],
-    )
-
+    tools = ["mcp__multi__echo", "mcp__multi__greet"]
+    options = ClaudeAgentOptions(mcp_servers={"multi": server}, allowed_tools=tools)
     async with ClaudeSDKClient(options=options) as client:
         await client.query(
             "Call mcp__multi__echo with text='test' and mcp__multi__greet with name='Bob'"
         )
-
-        async for _message in client.receive_response():
-            pass  # Just consume messages
-
+    _msgs = [msg async for msg in client.receive_response()]
     # Both tools should have been executed
     assert "echo" in executions, "Echo tool was not executed"
     assert "greet" in executions, "Greet tool was not executed"
@@ -123,9 +113,7 @@ async def test_sdk_mcp_without_permissions():
     async with ClaudeSDKClient(options=options) as client:
         await client.query("Call the mcp__noperm__echo tool")
 
-        async for _message in client.receive_response():
-            pass  # Just consume messages
-
+    _msgs = [msg async for msg in client.receive_response()]
     assert "echo" not in executions, "SDK MCP tool was executed"
 
 
