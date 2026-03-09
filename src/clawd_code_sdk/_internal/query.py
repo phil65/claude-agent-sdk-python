@@ -6,20 +6,19 @@ from contextlib import suppress
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Any, Self, assert_never
+from typing import TYPE_CHECKING, Any, Self
 
 import anyenv
 import anyio
 
 from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
+from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
     ClaudeCodeServerInfo,
     ControlErrorResponse,
     ControlResponse,
     ElicitationRequest,
     JSONRPCError,
-    JSONRPCErrorResponse,
-    JSONRPCResultResponse,
     PermissionResultAllow,
     SDKControlElicitationRequest,
     SDKControlInitializeRequest,
@@ -37,11 +36,10 @@ from clawd_code_sdk.models import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterator, Iterator
+    from collections.abc import AsyncGenerator, AsyncIterator
 
     from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
-    from mcp.types import ContentBlock
 
     from clawd_code_sdk._internal.transport import Transport
     from clawd_code_sdk.models import (
@@ -600,96 +598,3 @@ class Query:
         async for message in self.receive_messages():
             return message
         raise StopAsyncIteration
-
-
-async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
-    from mcp.types import CallToolRequest, CallToolRequestParams, CallToolResult, ListToolsRequest
-
-    msg_id = get_jsonrpc_request_id(message)
-    try:
-        # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
-        # TypeScript: server.connect(transport) allows custom transports
-        # Python: server.run(read_stream, write_stream) requires actual streams
-        #
-        # This forces us to manually route methods. When Python MCP adds Transport
-        # support, we can refactor to match the TypeScript approach.
-        match message:
-            case {"method": "initialize"}:
-                # Handle MCP initialization - hardcoded for tools only, no listChanged
-                init_result = {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},  # Tools capability without listChanged
-                    "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
-                }
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=init_result)
-
-            case {"method": "tools/list"} if handler := server.request_handlers.get(
-                ListToolsRequest
-            ):
-                request = ListToolsRequest()
-                result = await handler(request)
-                # Convert MCP result to JSONRPC response
-                data = [i.model_dump(exclude_none=True, by_alias=True) for i in result.root.tools]  # type: ignore[union-attr]
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": data})
-
-            case {"method": "tools/call", "params": dict() as params} if (
-                handler := server.request_handlers.get(CallToolRequest)
-            ):
-                call_params = CallToolRequestParams(**params)
-                call_request = CallToolRequest(params=call_params)
-                result = await handler(call_request)
-                # Convert MCP result to JSONRPC response
-                assert isinstance(result.root, CallToolResult)
-                content = list(process_content_blocks(result.root.content))
-                response_data: dict[str, Any] = {"content": content}
-                if result.root.isError:
-                    response_data["is_error"] = True
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=response_data)
-            case {"method": "notifications/initialized"}:
-                # Handle initialized notification - just acknowledge it
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={})
-            # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
-            # This is the limitation Ashwin pointed out - we have to manually update
-            case {"method": method}:
-                error = JSONRPCError(code=-32601, message=f"Method '{method}' not found")
-                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-            case _ as msg:
-                error = JSONRPCError(code=-32601, message=f"Invalid JSON message {msg}")
-                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-    except Exception as e:
-        error = JSONRPCError(code=-32603, message=str(e))
-        return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-
-
-def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, Any]]:
-    from mcp.types import (
-        AudioContent,
-        BlobResourceContents,
-        EmbeddedResource,
-        ImageContent,
-        ResourceLink,
-        TextContent,
-        TextResourceContents,
-    )
-
-    for item in content:
-        match item:
-            case TextContent() | ImageContent() | AudioContent():
-                yield item.model_dump(exclude_none=True, by_alias=True)
-            case EmbeddedResource(
-                resource=BlobResourceContents(mimeType=mime, uri=uri)
-                | TextResourceContents(mimeType=mime, uri=uri) as resource
-            ) if (uri_str := str(uri)).startswith("document://") or mime == "application/pdf":
-                # EmbeddedResource - check if it's a document (PDF, etc.)
-                typ = (
-                    uri_str.removeprefix("document://")
-                    if uri_str.startswith("document://")
-                    else "base64"
-                )
-                data = resource.blob if isinstance(resource, BlobResourceContents) else ""
-                dct = {"type": typ, "media_type": mime, "data": data}
-                yield {"type": "document", "source": dct}
-            case ResourceLink() | EmbeddedResource():
-                pass
-            case _ as unreachable:
-                assert_never(unreachable)

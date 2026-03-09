@@ -64,9 +64,7 @@ def _read_git_branch_from_tail(path: Path) -> str | None:
     return None
 
 
-def _extract_session_metadata(
-    session_path: Path,
-) -> tuple[str | None, str | None]:
+def _extract_session_metadata(session_path: Path) -> tuple[str | None, str | None]:
     """Extract custom_title and first_prompt from a session file.
 
     Reads the file line by line, stopping as early as possible.
