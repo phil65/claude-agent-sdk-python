@@ -32,14 +32,19 @@ class SdkMcpTool[T]:
     description: str
     input_schema: type[T] | dict[str, Any]
     handler: Callable[[T], Awaitable[dict[str, Any]]]
+    title: str | None = None
     annotations: ToolAnnotations | None = None
+    output_schema: dict[str, Any] | None = None
 
 
 def tool(
     name: str,
     description: str,
     input_schema: type | dict[str, Any],
+    *,
+    title: str | None = None,
     annotations: ToolAnnotations | None = None,
+    output_schema: dict[str, Any] | None = None,
 ) -> Callable[[Callable[[Any], Awaitable[dict[str, Any]]]], SdkMcpTool[Any]]:
     """Decorator for defining MCP tools with type safety.
 
@@ -57,7 +62,10 @@ def tool(
             - A dictionary mapping parameter names to types (e.g., {"text": str})
             - A TypedDict class for more complex schemas
             - A JSON Schema dictionary for full validation
+        title: Optional human-readable display name for the tool.
+            If not set, clients typically use the name.
         annotations: Optional annotations for the tool.
+        output_schema: Optional JSON Schema describing the tool's output format.
 
     Returns:
         A decorator function that wraps the tool implementation and returns
@@ -76,7 +84,9 @@ def tool(
             description=description,
             input_schema=input_schema,
             handler=handler,
+            title=title,
             annotations=annotations,
+            output_schema=output_schema,
         )
 
     return decorator
@@ -186,8 +196,10 @@ def create_sdk_mcp_server(
                         assert_never(unreachable)
                 mcp_tool = Tool(
                     name=tool_def.name,
+                    title=tool_def.title,
                     description=tool_def.description,
                     inputSchema=schema,  # type: ignore[arg-type]
+                    outputSchema=tool_def.output_schema,
                     annotations=tool_def.annotations,
                 )
                 tool_list.append(mcp_tool)
