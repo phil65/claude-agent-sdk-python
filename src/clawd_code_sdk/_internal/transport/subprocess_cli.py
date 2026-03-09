@@ -467,7 +467,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     match options.session:
         case None:
-            session = NewSession()
+            session: BaseSessionConfig = NewSession()
         case str() as session_id:
             session = ResumeSession(session_id=session_id)
         case BaseSessionConfig() as config:

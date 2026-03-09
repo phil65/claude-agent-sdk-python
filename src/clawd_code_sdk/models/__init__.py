@@ -260,7 +260,6 @@ from .options import (
     ResumeSession,
     SessionConfig,
     ToolConfig,
-    resolve_session_config,
 )
 from .permissions import (
     CanUseTool,
@@ -588,6 +587,5 @@ __all__ = [
     "WriteToolUseResult",
     "content_block_adapter",
     "control_request_adapter",
-    "resolve_session_config",
     "system_message_adapter",
 ]
