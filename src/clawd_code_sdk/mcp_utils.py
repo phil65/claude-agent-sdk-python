@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, assert_never
 
-from pydantic import AnyUrl, TypeAdapter
+from pydantic import AnyUrl, TypeAdapter, create_model
 
 from clawd_code_sdk.models import (
     JSONRPCError,
@@ -22,14 +22,6 @@ if TYPE_CHECKING:
     from mcp.types import ContentBlock, ToolAnnotations
 
     from clawd_code_sdk.models import JSONRPCMessage, JSONRPCResponse
-
-
-MMAPPING = {
-    str: {"type": "string"},
-    int: {"type": "integer"},
-    float: {"type": "number"},
-    bool: {"type": "boolean"},
-}
 
 
 @dataclass
@@ -182,12 +174,12 @@ def create_sdk_mcp_server(
                     case {"type": _typ, "properties": _props} as dct:
                         schema = dct
                     case dict() as input_schema:
-                        # Simple dict mapping names to types - convert to JSON schema
-                        properties = {}
-                        for param_name, param_type in input_schema.items():
-                            properties[param_name] = MMAPPING.get(param_type, {"type": "string"})
-                        required = list(properties.keys())
-                        schema = {"type": "object", "properties": properties, "required": required}
+                        # Simple dict mapping names to types - build a Pydantic model
+                        # This handles required/optional, nested types, unions, etc.
+
+                        fields = {k: (v, ...) for k, v in input_schema.items()}
+                        model = create_model("Input", **fields)  # pyright: ignore[reportCallIssue, reportArgumentType]
+                        schema = TypeAdapter(model).json_schema()
                     case type() as tp:
                         schema = TypeAdapter(tp).json_schema()
                     case _ as unreachable:
