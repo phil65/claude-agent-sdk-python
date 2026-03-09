@@ -576,6 +576,14 @@ class Query:
                 self._tg_entered_in_current_task = False
 
         await self.transport.close()
+        # clean up
+        self.hook_callbacks.clear()
+        self.pending_control_responses.clear()
+        self.pending_control_results.clear()
+        with suppress(Exception):
+            await self._message_send.aclose()
+        with suppress(Exception):
+            await self._message_receive.aclose()
 
     # Make Query an async context manager
     async def __aenter__(self) -> Self:
