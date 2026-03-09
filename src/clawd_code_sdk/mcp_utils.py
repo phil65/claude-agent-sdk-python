@@ -188,7 +188,7 @@ def create_sdk_mcp_server(
                         # This handles required/optional, nested types, unions, etc.
 
                         fields = {k: (v, ...) for k, v in input_schema.items()}
-                        model = create_model("Input", **fields)  # pyright: ignore[reportCallIssue, reportArgumentType]
+                        model = create_model("Input", **fields)  # type: ignore[call-overload]
                         schema = TypeAdapter(model).json_schema()
                     case type() as tp:
                         schema = TypeAdapter(tp).json_schema()
