@@ -48,6 +48,7 @@ class SDKControlInitializeRequest:
     append_system_prompt: str | None = None
     json_schema: dict[str, Any] | None = None
     prompt_suggestions: bool | None = None
+    agent_progress_summaries: bool | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -151,6 +152,13 @@ class SDKControlMcpToggleRequest:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlEndSessionRequest:
+    """Ends the current session."""
+
+    subtype: Literal["end_session"] = "end_session"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlMcpAuthenticateRequest:
     """Authenticates with an MCP server."""
 
@@ -234,6 +242,7 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpSetServersRequest
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest
+    | SDKControlEndSessionRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest
     | SDKControlMcpOAuthCallbackUrlRequest

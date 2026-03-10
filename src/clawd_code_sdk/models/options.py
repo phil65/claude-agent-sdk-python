@@ -271,7 +271,17 @@ class ClaudeAgentOptions:
     context_1m: bool = False
     """Enable 1M token context window (Sonnet 4/4.5 only)."""
     prompt_suggestions: bool | None = None
-    """Whether to  create prompt suggestions."""
+    """Whether to create prompt suggestions."""
+    agent_progress_summaries: bool | None = None
+    """Enable periodic AI-generated progress summaries for running subagents.
+
+    When True, the subagent's conversation is forked every ~30s to produce a short
+    present-tense description (e.g. 'Analyzing authentication module'), emitted
+    on task_progress events via the summary field. The fork reuses the
+    subagent's model and prompt cache, so cost is typically minimal.
+
+    Applies to both foreground and background subagents. Defaults to False.
+    """
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
     enable_agent_teams: bool = False

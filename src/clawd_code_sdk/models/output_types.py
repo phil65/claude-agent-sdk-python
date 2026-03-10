@@ -711,6 +711,27 @@ class EnterWorktreeOutput(TypedDict):
     """A message indicating the result of the operation."""
 
 
+class ExitWorktreeOutput(TypedDict):
+    """``tool_use_result`` for the ExitWorktree tool."""
+
+    action: Literal["keep", "remove"]
+    """The action that was taken."""
+    originalCwd: str
+    """The original working directory before the worktree was entered."""
+    worktreePath: str
+    """The path to the worktree."""
+    worktreeBranch: NotRequired[str]
+    """The branch of the worktree."""
+    tmuxSessionName: NotRequired[str]
+    """The tmux session name if applicable."""
+    discardedFiles: NotRequired[int]
+    """Number of files discarded."""
+    discardedCommits: NotRequired[int]
+    """Number of commits discarded."""
+    message: str
+    """A message indicating the result of the operation."""
+
+
 # ---------------------------------------------------------------------------
 # Union of all tool_use_result types
 # ---------------------------------------------------------------------------
@@ -740,6 +761,7 @@ ToolUseResult = (
     | UnsubscribePollingOutput
     | ConfigOutput
     | EnterWorktreeOutput
+    | ExitWorktreeOutput
     | SkillOutput
     | EnterPlanModeOutput
 )
@@ -780,6 +802,7 @@ TOOL_USE_RESULT_TYPES: dict[str, type[Any]] = {
     "UnsubscribePolling": UnsubscribePollingOutput,
     "Config": ConfigOutput,
     "EnterWorktree": EnterWorktreeOutput,
+    "ExitWorktree": ExitWorktreeOutput,
     "Skill": SkillOutput,
     "EnterPlanMode": EnterPlanModeOutput,
 }

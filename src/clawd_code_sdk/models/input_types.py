@@ -10,7 +10,7 @@ from typing import Literal, NotRequired, TypedDict
 
 from pydantic import ConfigDict, with_config
 
-from clawd_code_sdk.models.base import PermissionMode  # noqa: TC001
+from clawd_code_sdk.models.base import ModelName, PermissionMode  # noqa: TC001
 
 
 _extra_allow = with_config(ConfigDict(extra="allow"))
@@ -28,6 +28,11 @@ class AgentInput(TypedDict):
     """The task for the agent to perform."""
     subagent_type: NotRequired[str]
     """The type of specialized agent to use for this task."""
+    model: NotRequired[ModelName]
+    """Optional model override for this agent.
+
+    Takes precedence over the agent definition's model frontmatter.
+    If omitted, uses the agent definition's model, or inherits from the parent."""
     resume: NotRequired[str]
     """Optional agent ID to resume from in order to continue from the previous exec transcript."""
     run_in_background: NotRequired[bool]
@@ -255,6 +260,18 @@ class EnterWorktreeInput(TypedDict):
 
 
 @_extra_allow
+class ExitWorktreeInput(TypedDict):
+    """Input for the ExitWorktree tool."""
+
+    action: Literal["keep", "remove"]
+    """'keep' leaves the worktree and branch on disk; 'remove' deletes both."""
+    discard_changes: NotRequired[bool]
+    """Required true when action is 'remove' and worktree has uncommitted files / unmerged commits.
+
+    The tool will refuse and list them otherwise."""
+
+
+@_extra_allow
 class SkillInput(TypedDict):
     """Input for the Skill tool. Invokes a named skill (slash command).
 
@@ -319,6 +336,7 @@ ToolInput = (
     | WebSearchInput
     | TodoWriteInput
     | EnterWorktreeInput
+    | ExitWorktreeInput
     | ExitPlanModeInput
     | ListMcpResourcesInput
     | ReadMcpResourceInput
@@ -343,6 +361,7 @@ TOOL_INPUT_TYPES: dict[str, type[ToolInput]] = {
     "WebSearch": WebSearchInput,
     "TodoWrite": TodoWriteInput,
     "EnterWorktree": EnterWorktreeInput,
+    "ExitWorktree": ExitWorktreeInput,
     "ExitPlanMode": ExitPlanModeInput,
     "ListMcpResources": ListMcpResourcesInput,
     "ReadMcpResource": ReadMcpResourceInput,

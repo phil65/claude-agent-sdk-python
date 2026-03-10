@@ -37,6 +37,9 @@ class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     supports_fast_mode: bool | None = None
     """Whether the model supports fast mode."""
 
+    supports_auto_mode: bool | None = None
+    """Whether the model supports auto mode."""
+
 
 class ClaudeCodeCommandInfo(ClaudeCodeBaseModel):
     """Information about an available slash command from Claude Code."""

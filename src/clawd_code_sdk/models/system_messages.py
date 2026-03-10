@@ -203,6 +203,8 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     description: str
     usage: TaskProgressUsage
     last_tool_name: ToolName | str | None = None
+    summary: str | None = None
+    """AI-generated progress summary when agentProgressSummaries is enabled."""
 
 
 SystemMessageUnion = (

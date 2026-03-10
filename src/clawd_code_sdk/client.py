@@ -150,6 +150,7 @@ class ClaudeSDKClient:
             append_system_prompt=append_system_prompt,
             json_schema=json_schema,
             prompt_suggestions=self.options.prompt_suggestions,
+            agent_progress_summaries=self.options.agent_progress_summaries,
         )
         # Start reading messages and initialize
         await self._query.start()
@@ -325,6 +326,11 @@ class ClaudeSDKClient:
         """Enable or disable an MCP server."""
         query = self._ensure_connected()
         await query.mcp_toggle(server_name, enabled=enabled)
+
+    async def end_session(self) -> None:
+        """End the current session."""
+        query = self._ensure_connected()
+        await query.end_session()
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking."""
