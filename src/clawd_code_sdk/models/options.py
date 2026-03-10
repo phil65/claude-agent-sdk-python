@@ -146,7 +146,24 @@ class ClaudeAgentOptions:
     permission_prompt_tool_name: str | None = None
     """MCP tool to handle permission prompts."""
     can_use_tool: CanUseTool | None = None
-    """Tool permission callback."""
+    """Tool permission callback.
+
+    When set, the SDK automatically adds ``--permission-prompt-tool stdio`` to
+    the CLI, which tells the CLI to route permission requests through the
+    control protocol to this callback.
+
+    Interaction with ``permission_mode``:
+
+    - ``"default"``: All tool calls are routed to this callback.
+    - ``"acceptEdits"``: All tool calls are routed to this callback.
+      The callback is responsible for implementing the auto-approve-edits policy.
+    - ``"plan"``: Only the synthetic ``ExitPlanMode`` tool is routed here.
+      Actual modification tools are blocked by the CLI before reaching the callback.
+    - ``"dontAsk"``: This callback is NEVER invoked. The CLI auto-denies all
+      tools not pre-approved via the permissions config internally.
+    - ``"bypassPermissions"``: This callback is NEVER invoked. The CLI
+      auto-approves all tools internally.
+    """
     on_user_question: OnUserQuestion | None = None
     """Callback for handling AskUserQuestion elicitation requests.
 
