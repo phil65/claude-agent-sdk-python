@@ -14,6 +14,7 @@ PermissionMode = Literal[
     "acceptEdits",  # Auto-accept file edit operations
     "bypassPermissions",  # Bypass all permission checks (requires allowDangerouslySkipPermissions)
     "plan",  # Planning mode, no actual tool execution
+    # "delegate",  # Delegate mode, restricts to only Teammate and Task tools
     "dontAsk",  # Don't prompt for permissions, deny if not pre-approved
 ]
 SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/api/beta-headers
