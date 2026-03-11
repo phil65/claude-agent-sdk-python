@@ -125,6 +125,13 @@ class SubprocessCLITransport(Transport):
         if self._options.enable_agent_teams:
             process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
 
+        # Set question preview format from toolConfig
+        if fmt := (
+            self._options.tool_config
+            and self._options.tool_config.ask_user_question
+            and self._options.tool_config.ask_user_question.preview_format
+        ):
+            process_env["CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"] = fmt
         # Enable fine-grained tool streaming. --include-partial-messages emits
         # stream_event messages, but tool input parameters are still buffered
         # by the API unless eager_input_streaming is also enabled at the
