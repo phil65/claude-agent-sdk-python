@@ -76,29 +76,26 @@ def parse_message(data: dict[str, Any]) -> Message:
             except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in result message: {e}"
                 raise MessageParseError(msg, data) from e
-        case {"type": "stream_event", "event": event, **event_data}:
-            from anthropic.types import RawMessageStreamEvent
-
+        case {"type": "stream_event"}:
             try:
-                event = TypeAdapter(RawMessageStreamEvent).validate_python(event)
-                return StreamEvent(event=event, **event_data)
+                return StreamEvent(**data)
             except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in stream_event message: {e}"
                 raise MessageParseError(msg, data) from e
-        case {"type": "rate_limit_event", **event_data}:
+        case {"type": "rate_limit_event"}:
             try:
-                return RateLimitMessage(**event_data)
+                return RateLimitMessage(**data)
             except (TypeError, ValidationError) as e:
                 msg = f"Missing required field in rate_limit message: {e}"
                 raise MessageParseError(msg, data) from e
-        case {"type": "tool_progress", **progress_data}:
-            return ToolProgressMessage(**progress_data)
-        case {"type": "tool_use_summary", **summary_data}:
-            return ToolUseSummaryMessage(**summary_data)
-        case {"type": "auth_status", **auth_data}:
-            return AuthStatusMessage(**auth_data)
-        case {"type": "prompt_suggestion", **suggestion_data}:
-            return PromptSuggestionMessage(**suggestion_data)
+        case {"type": "tool_progress"}:
+            return ToolProgressMessage(**data)
+        case {"type": "tool_use_summary"}:
+            return ToolUseSummaryMessage(**data)
+        case {"type": "auth_status"}:
+            return AuthStatusMessage(**data)
+        case {"type": "prompt_suggestion"}:
+            return PromptSuggestionMessage(**data)
         case {"type": unknown_type}:
             raise MessageParseError(f"Unknown message type: {unknown_type}", data)
         case dict():
