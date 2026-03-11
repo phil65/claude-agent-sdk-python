@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Literal
+
+from anthropic.types.beta import (
+    BetaImageBlockParam,
+    BetaRequestDocumentBlockParam,
+    BetaTextBlockParam,
+)
 
 
 # from anthropic.types import MessageParam
@@ -20,9 +26,9 @@ class UserTextPrompt:
 
     text: str
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaTextBlockParam:
         """Return the Anthropic API content block dict."""
-        return {"type": "text", "text": self.text}
+        return BetaTextBlockParam(type="text", text=self.text)
 
 
 @dataclass
@@ -34,16 +40,16 @@ class UserImagePrompt:
     media_type: ImageMediaType
     """MIME type of the image."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaImageBlockParam:
         """Return the Anthropic API content block dict."""
-        return {
-            "type": "image",
-            "source": {
+        return BetaImageBlockParam(
+            type="image",
+            source={
                 "type": "base64",
                 "media_type": self.media_type,
                 "data": self.image_data,
             },
-        }
+        )
 
 
 @dataclass
@@ -53,12 +59,12 @@ class UserImageURLPrompt:
     url: str
     """Public URL of the image."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaImageBlockParam:
         """Return the Anthropic API content block dict."""
-        return {
-            "type": "image",
-            "source": {"type": "url", "url": self.url},
-        }
+        return BetaImageBlockParam(
+            type="image",
+            source={"type": "url", "url": self.url},
+        )
 
 
 @dataclass
@@ -74,19 +80,19 @@ class UserDocumentPrompt:
     context: str | None = None
     """Optional context about the document."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaRequestDocumentBlockParam:
         """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {
+        block = BetaRequestDocumentBlockParam(
+            type="document",
+            source={
                 "type": "base64",
                 "media_type": self.media_type,
                 "data": self.document_data,
             },
-            "title": self.title,
-            "context": self.context,
-        }
-        return {k: v for k, v in block.items() if v is not None}
+            title=self.title,
+            context=self.context,
+        )
+        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
 
 
 @dataclass
@@ -100,15 +106,15 @@ class UserDocumentURLPrompt:
     context: str | None = None
     """Optional context about the document."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaRequestDocumentBlockParam:
         """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {"type": "url", "url": self.url},
-            "title": self.title,
-            "context": self.context,
-        }
-        return {k: v for k, v in block.items() if v is not None}
+        block = BetaRequestDocumentBlockParam(
+            type="document",
+            source={"type": "url", "url": self.url},
+            title=self.title,
+            context=self.context,
+        )
+        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
 
 
 @dataclass
@@ -124,19 +130,19 @@ class UserPlainTextDocumentPrompt:
     context: str | None = None
     """Optional context about the document."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaRequestDocumentBlockParam:
         """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {
+        block = BetaRequestDocumentBlockParam(
+            type="document",
+            source={
                 "type": "text",
                 "media_type": self.media_type,
                 "data": self.data,
             },
-            "title": self.title,
-            "context": self.context,
-        }
-        return {k: v for k, v in block.items() if v is not None}
+            title=self.title,
+            context=self.context,
+        )
+        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
 
 
 @dataclass
@@ -150,15 +156,18 @@ class UserFilePrompt:
     context: str | None = None
     """Optional context about the document."""
 
-    def to_content_block(self) -> dict[str, Any]:
+    def to_content_block(self) -> BetaRequestDocumentBlockParam:
         """Return the Anthropic API content block dict."""
-        block: dict[str, Any] = {
-            "type": "document",
-            "source": {"type": "file", "file_id": self.file_id},
-            "title": self.title,
-            "context": self.context,
-        }
-        return {k: v for k, v in block.items() if v is not None}
+        block = BetaRequestDocumentBlockParam(
+            type="document",
+            source={
+                "type": "file",
+                "file_id": self.file_id,
+            },
+            title=self.title,
+            context=self.context,
+        )
+        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
 
 
 UserPrompt = (

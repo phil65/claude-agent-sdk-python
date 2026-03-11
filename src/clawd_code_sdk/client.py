@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import os
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import anyenv
 from pydantic import TypeAdapter
@@ -205,7 +205,7 @@ class ClaudeSDKClient:
         if len(blocks) == 1 and isinstance(blocks[0], UserTextPrompt):
             message_content = blocks[0].text
         else:
-            message_content = [b.to_content_block() for b in blocks]
+            message_content = [cast(dict[str, Any], b.to_content_block()) for b in blocks]
         wire_message = {
             "type": "user",
             "message": {"role": "user", "content": message_content},
