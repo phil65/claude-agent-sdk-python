@@ -6,9 +6,15 @@ from dataclasses import dataclass
 from typing import Literal
 
 from anthropic.types.beta import (
+    BetaBase64ImageSourceParam,
+    BetaBase64PDFSourceParam,
+    BetaFileDocumentSourceParam,
     BetaImageBlockParam,
+    BetaPlainTextSourceParam,
     BetaRequestDocumentBlockParam,
     BetaTextBlockParam,
+    BetaURLImageSourceParam,
+    BetaURLPDFSourceParam,
 )
 
 
@@ -44,11 +50,11 @@ class UserImagePrompt:
         """Return the Anthropic API content block dict."""
         return BetaImageBlockParam(
             type="image",
-            source={
-                "type": "base64",
-                "media_type": self.media_type,
-                "data": self.image_data,
-            },
+            source=BetaBase64ImageSourceParam(
+                type="base64",
+                media_type=self.media_type,
+                data=self.image_data,
+            ),
         )
 
 
@@ -63,7 +69,7 @@ class UserImageURLPrompt:
         """Return the Anthropic API content block dict."""
         return BetaImageBlockParam(
             type="image",
-            source={"type": "url", "url": self.url},
+            source=BetaURLImageSourceParam(type="url", url=self.url),
         )
 
 
@@ -84,11 +90,11 @@ class UserDocumentPrompt:
         """Return the Anthropic API content block dict."""
         block = BetaRequestDocumentBlockParam(
             type="document",
-            source={
-                "type": "base64",
-                "media_type": self.media_type,
-                "data": self.document_data,
-            },
+            source=BetaBase64PDFSourceParam(
+                type="base64",
+                media_type=self.media_type,
+                data=self.document_data,
+            ),
             title=self.title,
             context=self.context,
         )
@@ -110,7 +116,7 @@ class UserDocumentURLPrompt:
         """Return the Anthropic API content block dict."""
         block = BetaRequestDocumentBlockParam(
             type="document",
-            source={"type": "url", "url": self.url},
+            source=BetaURLPDFSourceParam(type="url", url=self.url),
             title=self.title,
             context=self.context,
         )
@@ -134,11 +140,11 @@ class UserPlainTextDocumentPrompt:
         """Return the Anthropic API content block dict."""
         block = BetaRequestDocumentBlockParam(
             type="document",
-            source={
-                "type": "text",
-                "media_type": self.media_type,
-                "data": self.data,
-            },
+            source=BetaPlainTextSourceParam(
+                type="text",
+                media_type=self.media_type,
+                data=self.data,
+            ),
             title=self.title,
             context=self.context,
         )
@@ -160,10 +166,7 @@ class UserFilePrompt:
         """Return the Anthropic API content block dict."""
         block = BetaRequestDocumentBlockParam(
             type="document",
-            source={
-                "type": "file",
-                "file_id": self.file_id,
-            },
+            source=BetaFileDocumentSourceParam(type="file", file_id=self.file_id),
             title=self.title,
             context=self.context,
         )
