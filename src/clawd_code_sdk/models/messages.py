@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict, get_args
 
-from anthropic.types.beta import BetaRawMessageStreamEvent
+from anthropic.types.beta import (
+    BetaInputJSONDelta,
+    BetaMessageDeltaUsage,
+    BetaRawContentBlockDeltaEvent,
+    BetaRawMessageDeltaEvent,
+    BetaRawMessageStreamEvent,
+    BetaTextDelta,
+    BetaThinkingDelta,
+)
+from anthropic.types.beta.beta_raw_message_delta_event import Delta as BetaRawMessageDelta
 from pydantic import BaseModel, ConfigDict
 
 from clawd_code_sdk._errors import (
@@ -28,9 +37,7 @@ from clawd_code_sdk.models.output_types import ToolUseResult
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models.content_blocks import (
-        ContentBlock,
-    )
+    from clawd_code_sdk.models.content_blocks import ContentBlock
 
 
 # Message types
@@ -66,6 +73,16 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
+_AnthropicStopReason = Literal[
+    "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
+]
+
+
+def _coerce_stop_reason(value: str | None) -> _AnthropicStopReason | None:
+    """Coerce a stored stop_reason string to the Anthropic SDK literal type."""
+    if value is not None and value in get_args(_AnthropicStopReason):
+        return value  # type: ignore[return-value]
+    return None
 
 
 class SDKSessionInfo(BaseModel):
@@ -331,6 +348,66 @@ class StreamEvent(BaseMessage):
 
         stop_event = BetaRawMessageStopEvent(type="message_stop")
         return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_text_delta(cls, *, text: str, index: int, session_id: str, uuid: str) -> StreamEvent:
+        """Create a synthetic content_block_delta StreamEvent with full block content."""
+        delta_event = BetaRawContentBlockDeltaEvent(
+            type="content_block_delta",
+            index=index,
+            delta=BetaTextDelta(type="text_delta", text=text),
+        )
+        return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_thinking_delta(
+        cls,
+        *,
+        thinking: str,
+        index: int,
+        session_id: str,
+        uuid: str,
+    ) -> StreamEvent:
+        """Create a synthetic content_block_delta StreamEvent with full block content."""
+        delta_event = BetaRawContentBlockDeltaEvent(
+            type="content_block_delta",
+            index=index,
+            delta=BetaThinkingDelta(type="thinking_delta", thinking=thinking),
+        )
+        return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_tool_json_delta(
+        cls,
+        *,
+        tool_json: str,
+        index: int,
+        session_id: str,
+        uuid: str,
+    ) -> StreamEvent:
+        """Create a synthetic content_block_delta StreamEvent with full block content."""
+        delta_event = BetaRawContentBlockDeltaEvent(
+            type="content_block_delta",
+            index=index,
+            delta=BetaInputJSONDelta(type="input_json_delta", partial_json=tool_json),
+        )
+        return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def message_delta(
+        cls,
+        *,
+        stop_reason: str | None,
+        session_id: str,
+        uuid: str,
+    ) -> StreamEvent:
+        """Create a synthetic message_delta StreamEvent."""
+        usage = BetaMessageDeltaUsage(output_tokens=0)
+        delta = BetaRawMessageDelta(
+            stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None
+        )
+        delta_event = BetaRawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
+        return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
 class ToolProgressMessage(BaseMessage):
