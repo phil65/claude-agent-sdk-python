@@ -228,6 +228,7 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
+                "error": "invalid_request",
                 "message": make_beta_message(
                     content=[
                         {
@@ -236,7 +237,6 @@ class TestAPIErrorRaising:
                         }
                     ],
                     model="claude-invalid-model",
-                    error="invalid_request",
                 ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
@@ -257,6 +257,7 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
+                "error": "rate_limit",
                 "message": make_beta_message(
                     content=[
                         {
@@ -265,7 +266,6 @@ class TestAPIErrorRaising:
                         }
                     ],
                     model="claude-sonnet-4-5-20250514",
-                    error="rate_limit",
                 ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
@@ -284,10 +284,10 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
+                "error": "authentication_failed",
                 "message": make_beta_message(
                     content=[{"type": "text", "text": "API Error: Invalid API key"}],
                     model="claude-sonnet-4-5-20250514",
-                    error="authentication_failed",
                 ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
@@ -306,6 +306,7 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
+                "error": "server_error",
                 "message": make_beta_message(
                     content=[
                         {
@@ -314,7 +315,6 @@ class TestAPIErrorRaising:
                         }
                     ],
                     model="claude-sonnet-4-5-20250514",
-                    error="server_error",
                 ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])
@@ -333,10 +333,10 @@ class TestAPIErrorRaising:
         async def _test():
             error_message = {
                 "type": "assistant",
+                "error": "unknown",
                 "message": make_beta_message(
                     content=[{"type": "text", "text": "Unknown error"}],
                     model="claude-sonnet-4-5-20250514",
-                    error="unknown",
                 ),
             }
             mock_transport = create_mock_transport_with_messages([error_message])

@@ -91,19 +91,7 @@ class TestContentBlockDispatch:
 
 
 class TestAssistantErrorExtraction:
-    """Error field is extracted from both top-level and nested message."""
-
-    def test_error_from_message_level(self):
-        data = {
-            "type": "assistant",
-            "message": make_beta_message(
-                content=[{"type": "text", "text": "API Error: bad key"}],
-                error="authentication_failed",
-            ),
-        }
-        msg = parse_message(data)
-        assert isinstance(msg, AssistantMessage)
-        assert msg.error == "authentication_failed"
+    """Error field is extracted from the top-level assistant message."""
 
     def test_error_from_top_level(self):
         data = {
