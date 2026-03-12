@@ -318,6 +318,19 @@ def _message_discriminator(data: Any) -> str:
     return str(type(data).__name__)
 
 
+MessageUnion = (
+    UserMessage
+    | AssistantMessage
+    | ResultMessage
+    | StreamEvent
+    | RateLimitMessage
+    | ToolProgressMessage
+    | ToolUseSummaryMessage
+    | AuthStatusMessage
+    | PromptSuggestionMessage
+    | SystemMessageUnion
+)
+
 Message = Annotated[
     Annotated[UserMessage, Tag("user")]
     | Annotated[AssistantMessage, Tag("assistant")]
