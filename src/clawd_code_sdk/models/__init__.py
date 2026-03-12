@@ -14,6 +14,7 @@ from .base import (
     SettingSource,
     StopReason,
     FastModeState,
+    ToolName,
 )
 from .thinking import (
     ThinkingConfig,
@@ -559,6 +560,7 @@ __all__ = [
     "TodoWriteToolUseResult",
     "ToolConfig",
     "ToolInput",
+    "ToolName",
     "ToolPermissionContext",
     "ToolProgressMessage",
     "ToolResultBlock",
