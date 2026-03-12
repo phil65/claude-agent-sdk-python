@@ -197,7 +197,7 @@ class ClaudeSDKClient:
         if not self._transport:
             raise CLIConnectionError("Not connected. Call connect() first.")
         if not prompts:
-            return
+            raise ValueError("At least one prompt is required")
         # Collect content blocks
         blocks = [UserTextPrompt(text=p) if isinstance(p, str) else p for p in prompts]
         message_content = [cast(dict[str, Any], b.to_content_block()) for b in blocks]
