@@ -698,6 +698,31 @@ class EnterPlanModeOutput(TypedDict):
 
 
 # ---------------------------------------------------------------------------
+# ToolSearch
+# ---------------------------------------------------------------------------
+
+
+class ToolReference(TypedDict):
+    """A single tool reference returned by ToolSearch."""
+
+    type: Literal["tool_reference"]
+    """Always 'tool_reference'."""
+    tool_name: str
+    """The fully qualified tool name."""
+
+
+class ToolSearchOutput(TypedDict):
+    """``tool_use_result`` for the ToolSearch tool.
+
+    The result is a list of tool_reference content blocks returned
+    inside the tool_result content array.
+    """
+
+    references: list[ToolReference]
+    """Matched tool references."""
+
+
+# ---------------------------------------------------------------------------
 # EnterWorktree
 # ---------------------------------------------------------------------------
 
@@ -766,6 +791,7 @@ ToolUseResult = (
     | ExitWorktreeOutput
     | SkillOutput
     | EnterPlanModeOutput
+    | ToolSearchOutput
 )
 
 #: Backwards-compatible aliases for names previously in ``tool_use_results.py``.
@@ -807,4 +833,5 @@ TOOL_USE_RESULT_TYPES: dict[str, type[Any]] = {
     "ExitWorktree": ExitWorktreeOutput,
     "Skill": SkillOutput,
     "EnterPlanMode": EnterPlanModeOutput,
+    "ToolSearch": ToolSearchOutput,
 }

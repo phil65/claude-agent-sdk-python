@@ -286,6 +286,16 @@ class SkillInput(TypedDict):
 
 
 @_extra_allow
+class ToolSearchInput(TypedDict):
+    """Input for the ToolSearch tool. Searches for and selects tools by name or query."""
+
+    query: str
+    """Search query or 'select:<tool_name>' to select a specific tool."""
+    max_results: NotRequired[int]
+    """Maximum number of tool references to return."""
+
+
+@_extra_allow
 class EnterPlanModeInput(TypedDict):
     """Input for the EnterPlanMode tool. Enters planning mode.
 
@@ -342,6 +352,7 @@ ToolInput = (
     | ReadMcpResourceInput
     | SkillInput
     | EnterPlanModeInput
+    | ToolSearchInput
 )
 
 #: Mapping from tool name to its input type.
@@ -367,4 +378,5 @@ TOOL_INPUT_TYPES: dict[str, type[ToolInput]] = {
     "ReadMcpResource": ReadMcpResourceInput,
     "Skill": SkillInput,
     "EnterPlanMode": EnterPlanModeInput,
+    "ToolSearch": ToolSearchInput,
 }
