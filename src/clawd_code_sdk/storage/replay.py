@@ -51,7 +51,7 @@ Example::
 from __future__ import annotations
 
 import json as _json
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING, Literal, assert_never, get_args
 
 from anthropic.types.beta import (
     BetaInputJSONDelta,
@@ -258,7 +258,7 @@ def _make_block_start(
     index: int,
     session_id: str,
     uuid: str,
-) -> StreamEvent:
+) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_start StreamEvent for a stored block."""
     content_block: ATextBlock | AToolUseBlock | AThinkingBlock
     match block:
@@ -268,13 +268,14 @@ def _make_block_start(
             content_block = AThinkingBlock(type="thinking", thinking="", signature="")
         case ClaudeToolUseBlock(id=block_id, name=name):
             content_block = AToolUseBlock(type="tool_use", id=block_id, name=name, input={})
-        case _:
-            # No stream event for tool_result or image blocks
-            content_block = ATextBlock(type="text", text="")
+        case ClaudeToolResultBlock() | ClaudeImageBlock():
+            return
+        case _ as unreachable:
+            assert_never(unreachable)
     start_event = BetaRawContentBlockStartEvent(
         type="content_block_start", index=index, content_block=content_block
     )
-    return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
+    yield StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_delta(
@@ -283,24 +284,24 @@ def _make_block_delta(
     index: int,
     session_id: str,
     uuid: str,
-) -> StreamEvent:
+) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_delta StreamEvent with full block content."""
     delta: BetaTextDelta | BetaInputJSONDelta | BetaThinkingDelta
     match block:
-        case ClaudeTextBlock():
-            delta = BetaTextDelta(type="text_delta", text=block.text)
-        case ClaudeThinkingBlock():
-            delta = BetaThinkingDelta(type="thinking_delta", thinking=block.thinking)
-        case ClaudeToolUseBlock():
-            delta = BetaInputJSONDelta(
-                type="input_json_delta", partial_json=_json.dumps(block.input)
-            )
-        case _:
-            delta = BetaTextDelta(type="text_delta", text="")
+        case ClaudeTextBlock(text=text):
+            delta = BetaTextDelta(type="text_delta", text=text)
+        case ClaudeThinkingBlock(thinking=thinking):
+            delta = BetaThinkingDelta(type="thinking_delta", thinking=thinking)
+        case ClaudeToolUseBlock(input=input_):
+            delta = BetaInputJSONDelta(type="input_json_delta", partial_json=_json.dumps(input_))
+        case ClaudeToolResultBlock() | ClaudeImageBlock():
+            return
+        case _ as unreachable:
+            assert_never(unreachable)
     delta_event = BetaRawContentBlockDeltaEvent(
         type="content_block_delta", index=index, delta=delta
     )
-    return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
+    yield StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_synthetic_result(
@@ -500,13 +501,13 @@ def _replay_with_stream_events(
                     stored_block = _get_first_stored_block(assistant_entry)
 
                     if stored_block is not None:
-                        yield _make_block_start(
+                        yield from _make_block_start(
                             stored_block,
                             index=block_index,
                             session_id=assistant_entry.session_id,
                             uuid=assistant_entry.uuid,
                         )
-                        yield _make_block_delta(
+                        yield from _make_block_delta(
                             stored_block,
                             index=block_index,
                             session_id=assistant_entry.session_id,
