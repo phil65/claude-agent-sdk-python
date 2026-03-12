@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import re
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
-from anthropic.types import RawMessageStreamEvent
+from anthropic.types.beta import BetaRawMessageStreamEvent
 from pydantic import BaseModel, ConfigDict
 
 from clawd_code_sdk._errors import (
@@ -313,23 +313,23 @@ class StreamEvent(BaseMessage):
     """Stream event for partial message updates during streaming."""
 
     type: Literal["stream_event"] = "stream_event"
-    event: RawMessageStreamEvent
+    event: BetaRawMessageStreamEvent
     parent_tool_use_id: str | None = None
 
     @classmethod
     def block_stop(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:
         """Create a synthetic content_block_stop StreamEvent."""
-        from anthropic.types import RawContentBlockStopEvent
+        from anthropic.types.beta import BetaRawContentBlockStopEvent
 
-        stop_event = RawContentBlockStopEvent(type="content_block_stop", index=index)
+        stop_event = BetaRawContentBlockStopEvent(type="content_block_stop", index=index)
         return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
     @classmethod
     def message_stop(cls, *, session_id: str, uuid: str) -> StreamEvent:
         """Create a synthetic message_stop StreamEvent."""
-        from anthropic.types import RawMessageStopEvent
+        from anthropic.types.beta import BetaRawMessageStopEvent
 
-        stop_event = RawMessageStopEvent(type="message_stop")
+        stop_event = BetaRawMessageStopEvent(type="message_stop")
         return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
 

@@ -53,22 +53,22 @@ from __future__ import annotations
 import json as _json
 from typing import TYPE_CHECKING, Literal, get_args
 
-from anthropic.types import (
-    InputJSONDelta,
-    Message as AnthropicMessage,
-    MessageDeltaUsage,
-    RawContentBlockDeltaEvent,
-    RawContentBlockStartEvent,
-    RawMessageDeltaEvent,
-    RawMessageStartEvent,
-    TextBlock as ATextBlock,
-    TextDelta,
-    ThinkingBlock as AThinkingBlock,
-    ThinkingDelta,
-    ToolUseBlock as AToolUseBlock,
-    Usage as AnthropicUsage,
+from anthropic.types.beta import (
+    BetaInputJSONDelta,
+    BetaMessage,
+    BetaMessageDeltaUsage,
+    BetaRawContentBlockDeltaEvent,
+    BetaRawContentBlockStartEvent,
+    BetaRawMessageDeltaEvent,
+    BetaRawMessageStartEvent,
+    BetaTextBlock as ATextBlock,
+    BetaTextDelta,
+    BetaThinkingBlock as AThinkingBlock,
+    BetaThinkingDelta,
+    BetaToolUseBlock as AToolUseBlock,
+    BetaUsage,
 )
-from anthropic.types.raw_message_delta_event import Delta as RawMessageDelta
+from anthropic.types.beta.beta_raw_message_delta_event import Delta as BetaRawMessageDelta
 
 from clawd_code_sdk.models import (
     AssistantMessage,
@@ -214,15 +214,15 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
 
 def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic message_start StreamEvent."""
-    message = AnthropicMessage(
+    message = BetaMessage(
         id=msg_id,
         type="message",
         role="assistant",
         content=[],
         model=model,
-        usage=AnthropicUsage(input_tokens=0, output_tokens=0),
+        usage=BetaUsage(input_tokens=0, output_tokens=0),
     )
-    start_event = RawMessageStartEvent(type="message_start", message=message)
+    start_event = BetaRawMessageStartEvent(type="message_start", message=message)
     return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
 
@@ -246,9 +246,9 @@ def _make_message_delta(
     uuid: str,
 ) -> StreamEvent:
     """Create a synthetic message_delta StreamEvent."""
-    usage = MessageDeltaUsage(output_tokens=0)
-    delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
-    delta_event = RawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
+    usage = BetaMessageDeltaUsage(output_tokens=0)
+    delta = BetaRawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
+    delta_event = BetaRawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
     return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
@@ -271,7 +271,7 @@ def _make_block_start(
         case _:
             # No stream event for tool_result or image blocks
             content_block = ATextBlock(type="text", text="")
-    start_event = RawContentBlockStartEvent(
+    start_event = BetaRawContentBlockStartEvent(
         type="content_block_start", index=index, content_block=content_block
     )
     return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
@@ -285,17 +285,21 @@ def _make_block_delta(
     uuid: str,
 ) -> StreamEvent:
     """Create a synthetic content_block_delta StreamEvent with full block content."""
-    delta: TextDelta | InputJSONDelta | ThinkingDelta
+    delta: BetaTextDelta | BetaInputJSONDelta | BetaThinkingDelta
     match block:
         case ClaudeTextBlock():
-            delta = TextDelta(type="text_delta", text=block.text)
+            delta = BetaTextDelta(type="text_delta", text=block.text)
         case ClaudeThinkingBlock():
-            delta = ThinkingDelta(type="thinking_delta", thinking=block.thinking)
+            delta = BetaThinkingDelta(type="thinking_delta", thinking=block.thinking)
         case ClaudeToolUseBlock():
-            delta = InputJSONDelta(type="input_json_delta", partial_json=_json.dumps(block.input))
+            delta = BetaInputJSONDelta(
+                type="input_json_delta", partial_json=_json.dumps(block.input)
+            )
         case _:
-            delta = TextDelta(type="text_delta", text="")
-    delta_event = RawContentBlockDeltaEvent(type="content_block_delta", index=index, delta=delta)
+            delta = BetaTextDelta(type="text_delta", text="")
+    delta_event = BetaRawContentBlockDeltaEvent(
+        type="content_block_delta", index=index, delta=delta
+    )
     return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
