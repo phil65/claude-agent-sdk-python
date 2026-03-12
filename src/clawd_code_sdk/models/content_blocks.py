@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from pydantic import ConfigDict, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models import ToolInput  # noqa: TC001
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, ToolName  # noqa: TC001
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -76,4 +76,22 @@ class MessageParam(ClaudeCodeBaseModel):
 
     content: Sequence[ContentBlock] | str
     role: Literal["user", "assistant"]
+    model_config = ConfigDict(extra="allow")
+
+
+class AssistantMessageContent(ClaudeCodeBaseModel):
+    """Assistant message payload mirroring ``anthropic.types.beta.BetaMessage``.
+
+    Uses our own ``ContentBlock`` types instead of the Anthropic SDK's
+    ``BetaContentBlock`` variants. Extra fields from the wire format
+    (e.g. ``container``, ``context_management``) are preserved via ``extra="allow"``.
+    """
+
+    id: str
+    type: Literal["message"] = "message"
+    role: Literal["assistant"] = "assistant"
+    content: Sequence[ContentBlock]
+    model: str
+    stop_reason: StopReason | None = None
+    stop_sequence: str | None = None
     model_config = ConfigDict(extra="allow")

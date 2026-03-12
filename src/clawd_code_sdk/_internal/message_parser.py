@@ -19,7 +19,6 @@ from clawd_code_sdk.models import (
     ToolProgressMessage,
     ToolUseSummaryMessage,
     UserMessage,
-    content_block_adapter,
     system_message_adapter,
 )
 
@@ -45,13 +44,8 @@ def parse_message(data: dict[str, Any]) -> Message:
     match data:
         case {"type": "user"}:
             return UserMessage(**data)
-        case {"type": "assistant", "message": message}:
-            return AssistantMessage(
-                content=[content_block_adapter.validate_python(i) for i in message["content"]],
-                model=message["model"],
-                parent_tool_use_id=data.get("parent_tool_use_id"),
-                error=data.get("error") or message.get("error"),
-            )
+        case {"type": "assistant"}:
+            return AssistantMessage(**data)
 
         case {"type": "system", **system_data}:
             try:

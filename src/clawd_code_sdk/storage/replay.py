@@ -83,7 +83,7 @@ from clawd_code_sdk.models import (
     Usage,
     UserMessage,
 )
-from clawd_code_sdk.models.content_blocks import MessageParam
+from clawd_code_sdk.models.content_blocks import AssistantMessageContent, MessageParam
 from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
@@ -164,10 +164,15 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
 def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
     """Convert a stored assistant entry to a wire-format AssistantMessage."""
     content = _convert_content_blocks(entry.message.content)
-    # AssistantMessage.content must be Sequence[ContentBlock], not str.
+    blocks = [TextBlock(text=content)] if isinstance(content, str) else content
+    if isinstance(entry.message, ClaudeApiMessage):
+        model = entry.message.model
+        msg_id = entry.message.id
+    else:
+        model = "unknown"
+        msg_id = entry.uuid
     return AssistantMessage(
-        content=[TextBlock(text=content)] if isinstance(content, str) else content,
-        model=entry.message.model if isinstance(entry.message, ClaudeApiMessage) else "unknown",
+        message=AssistantMessageContent(content=blocks, model=model, id=msg_id),
         uuid=entry.uuid,
         session_id=entry.session_id,
         error="unknown" if entry.is_api_error_message else None,

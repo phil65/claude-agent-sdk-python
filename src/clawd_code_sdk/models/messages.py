@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from anthropic.types import RawMessageStreamEvent
-from anthropic.types.model import Model
 from pydantic import BaseModel, ConfigDict
 
 from clawd_code_sdk._errors import (
@@ -19,9 +18,19 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.base import FastModeState, StopReason, ToolName  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, MessageParam, TextBlock
+from clawd_code_sdk.models.content_blocks import (
+    AssistantMessageContent,
+    MessageParam,
+    TextBlock,
+)
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models.content_blocks import (
+        ContentBlock,
+    )
 
 
 # Message types
@@ -208,12 +217,21 @@ class AssistantMessage(BaseModel):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     type: Literal["assistant"] = "assistant"
-    content: Sequence[ContentBlock]
-    model: Model | str
+    message: AssistantMessageContent
     parent_tool_use_id: str | None = None
     error: AssistantMessageError | None = None
     session_id: str | None = None
     uuid: str | None = None
+
+    @property
+    def content(self) -> Sequence[ContentBlock]:
+        """Return the message content blocks."""
+        return self.message.content
+
+    @property
+    def model(self) -> str:
+        """Return the model name."""
+        return self.message.model
 
     def raise_if_api_error(self) -> None:
         """Raise the appropriate API exception if error is set."""
