@@ -131,6 +131,8 @@ class BashOutput(TypedDict):
     """Whether the command is expected to produce no output on success."""
     backgroundTaskId: NotRequired[str]
     """Task ID when ``run_in_background=true`` was used."""
+    assistantAutoBackgrounded: NotRequired[bool]
+    """True if assistant-mode auto-backgrounded a long-running blocking command."""
     backgroundedByUser: NotRequired[bool]
     """True if the user manually backgrounded the command with Ctrl+B."""
     rawOutputPath: NotRequired[str]

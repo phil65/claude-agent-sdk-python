@@ -49,9 +49,9 @@ export declare type AgentDefinition = {
      */
     prompt: string;
     /**
-     * Model to use for this agent. If omitted or 'inherit', uses the main model
+     * Model alias (e.g. 'sonnet', 'opus', 'haiku') or full model ID (e.g. 'claude-opus-4-5'). If omitted or 'inherit', uses the main model
      */
-    model?: 'sonnet' | 'opus' | 'haiku' | 'inherit';
+    model?: string;
     mcpServers?: AgentMcpServerSpec[];
     /**
      * Experimental: Critical reminder added to system prompt
@@ -1410,6 +1410,7 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
     rewindFiles(userMessageId: string, options?: {
         dryRun?: boolean;
     }): Promise<RewindFilesResult>;
+
 
 
     /**
@@ -2965,7 +2966,7 @@ export declare interface Settings {
      */
     alwaysThinkingEnabled?: boolean;
     /**
-     * Persisted effort level for supported models. "max" is session-scoped and not persisted.
+     * Persisted effort level for supported models.
      */
     effortLevel?: 'low' | 'medium' | 'high';
     /**

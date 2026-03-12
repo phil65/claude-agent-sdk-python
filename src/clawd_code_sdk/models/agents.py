@@ -55,7 +55,7 @@ class AgentDefinition:
     description: str
     prompt: str
     tools: list[str] | None = None
-    model: ModelName | Literal["inherit"] | None = None
+    model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
     mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
     disallowed_tools: list[str] | None = None
