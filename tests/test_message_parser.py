@@ -121,15 +121,15 @@ class TestErrorWrapping:
     """parse_message wraps errors as MessageParseError with original data."""
 
     def test_non_dict_input(self):
-        with pytest.raises(MessageParseError, match="Invalid message data type"):
+        with pytest.raises(MessageParseError, match="Failed to parse message"):
             parse_message("not a dict")  # type: ignore[arg-type]
 
     def test_missing_type_field(self):
-        with pytest.raises(MessageParseError, match="missing 'type' field"):
+        with pytest.raises(MessageParseError, match="Failed to parse message"):
             parse_message({"message": {"content": []}})
 
     def test_unknown_message_type(self):
-        with pytest.raises(MessageParseError, match="Unknown message type"):
+        with pytest.raises(MessageParseError, match="Failed to parse message"):
             parse_message({"type": "banana"})
 
     def test_error_preserves_original_data(self):
@@ -139,5 +139,5 @@ class TestErrorWrapping:
         assert exc_info.value.data == data
 
     def test_result_missing_required_fields(self):
-        with pytest.raises(MessageParseError, match="Missing required field"):
+        with pytest.raises(MessageParseError, match="Failed to parse message"):
             parse_message({"type": "result", "subtype": "success"})

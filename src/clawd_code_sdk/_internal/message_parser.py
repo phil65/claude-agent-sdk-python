@@ -8,19 +8,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from clawd_code_sdk._errors import MessageParseError
-from clawd_code_sdk.models import (
-    AssistantMessage,
-    AuthStatusMessage,
-    PromptSuggestionMessage,
-    RateLimitMessage,
-    ResultErrorMessage,
-    ResultSuccessMessage,
-    StreamEvent,
-    ToolProgressMessage,
-    ToolUseSummaryMessage,
-    UserMessage,
-    system_message_adapter,
-)
+from clawd_code_sdk.models import message_adapter
 
 
 if TYPE_CHECKING:
@@ -41,54 +29,8 @@ def parse_message(data: dict[str, Any]) -> Message:
     Raises:
         MessageParseError: If parsing fails or message type is unrecognized
     """
-    match data:
-        case {"type": "user"}:
-            return UserMessage(**data)
-        case {"type": "assistant"}:
-            return AssistantMessage(**data)
-
-        case {"type": "system", **system_data}:
-            try:
-                return system_message_adapter.validate_python(system_data)
-            except Exception as e:
-                raise MessageParseError(f"Failed to parse system message: {e}", data) from e
-
-        case {"type": "result", "subtype": "success", **result_data}:
-            try:
-                return ResultSuccessMessage(**result_data)
-            except (TypeError, ValidationError) as e:
-                msg = f"Missing required field in result message: {e}"
-                raise MessageParseError(msg, data) from e
-        case {"type": "result", **result_data}:
-            try:
-                return ResultErrorMessage(**result_data)
-            except (TypeError, ValidationError) as e:
-                msg = f"Missing required field in result message: {e}"
-                raise MessageParseError(msg, data) from e
-        case {"type": "stream_event"}:
-            try:
-                return StreamEvent(**data)
-            except (TypeError, ValidationError) as e:
-                msg = f"Missing required field in stream_event message: {e}"
-                raise MessageParseError(msg, data) from e
-        case {"type": "rate_limit_event"}:
-            try:
-                return RateLimitMessage(**data)
-            except (TypeError, ValidationError) as e:
-                msg = f"Missing required field in rate_limit message: {e}"
-                raise MessageParseError(msg, data) from e
-        case {"type": "tool_progress"}:
-            return ToolProgressMessage(**data)
-        case {"type": "tool_use_summary"}:
-            return ToolUseSummaryMessage(**data)
-        case {"type": "auth_status"}:
-            return AuthStatusMessage(**data)
-        case {"type": "prompt_suggestion"}:
-            return PromptSuggestionMessage(**data)
-        case {"type": unknown_type}:
-            raise MessageParseError(f"Unknown message type: {unknown_type}", data)
-        case dict():
-            raise MessageParseError("Message missing 'type' field", data)
-        case _ as unknown_type:
-            typ = type(unknown_type).__name__  # type: ignore[unreachable]
-            raise MessageParseError(f"Invalid message data type: expected dict, got {typ}", data)
+    try:
+        return message_adapter.validate_python(data)
+    except ValidationError as e:
+        msg_type = data.get("type", "<missing>") if isinstance(data, dict) else type(data).__name__
+        raise MessageParseError(f"Failed to parse message (type={msg_type}): {e}", data) from e

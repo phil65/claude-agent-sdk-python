@@ -303,7 +303,38 @@ from .system_messages import (
     ElicitationCompleteMessage,
 )
 
-Message = MiscMessages | SystemMessageUnion
+from typing import Annotated, Any
+
+from pydantic import Discriminator, Tag, TypeAdapter
+
+
+def _message_discriminator(data: Any) -> str:
+    """Route messages by ``type``, with ``subtype`` for result messages."""
+    if isinstance(data, dict):
+        msg_type: str = data.get("type", "")
+        if msg_type == "result":
+            return "result_success" if data.get("subtype") == "success" else "result_error"
+        return msg_type
+    return str(type(data).__name__)
+
+
+Message = Annotated[
+    Annotated[UserMessage, Tag("user")]
+    | Annotated[AssistantMessage, Tag("assistant")]
+    | Annotated[ResultSuccessMessage, Tag("result_success")]
+    | Annotated[ResultErrorMessage, Tag("result_error")]
+    | Annotated[StreamEvent, Tag("stream_event")]
+    | Annotated[RateLimitMessage, Tag("rate_limit_event")]
+    | Annotated[ToolProgressMessage, Tag("tool_progress")]
+    | Annotated[ToolUseSummaryMessage, Tag("tool_use_summary")]
+    | Annotated[AuthStatusMessage, Tag("auth_status")]
+    | Annotated[PromptSuggestionMessage, Tag("prompt_suggestion")]
+    | Annotated[SystemMessageUnion, Tag("system")],
+    Discriminator(_message_discriminator),
+]
+"""Discriminated union of all wire-format message types."""
+
+message_adapter: TypeAdapter[Message] = TypeAdapter(Message)
 
 __all__ = [
     "TOOL_INPUT_TYPES",
@@ -583,5 +614,6 @@ __all__ = [
     "WriteOutput",
     "content_block_adapter",
     "control_request_adapter",
+    "message_adapter",
     "system_message_adapter",
 ]
