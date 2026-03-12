@@ -200,12 +200,7 @@ class ClaudeSDKClient:
             return
         # Collect content blocks
         blocks = [UserTextPrompt(text=p) if isinstance(p, str) else p for p in prompts]
-        # Single text block → plain string, otherwise list of content block dicts
-        message_content: str | list[dict[str, Any]]
-        if len(blocks) == 1 and isinstance(blocks[0], UserTextPrompt):
-            message_content = blocks[0].text
-        else:
-            message_content = [cast(dict[str, Any], b.to_content_block()) for b in blocks]
+        message_content = [cast(dict[str, Any], b.to_content_block()) for b in blocks]
         wire_message = {
             "type": "user",
             "message": {"role": "user", "content": message_content},
