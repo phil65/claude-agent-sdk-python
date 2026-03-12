@@ -125,6 +125,10 @@ class SubprocessCLITransport(Transport):
         if self._options.enable_agent_teams:
             process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
 
+        # Control ToolSearch behavior
+        if self._options.enable_tool_search is not None:
+            process_env["ENABLE_TOOL_SEARCH"] = str(self._options.enable_tool_search).lower()
+
         # Set question preview format from toolConfig
         if fmt := (
             self._options.tool_config

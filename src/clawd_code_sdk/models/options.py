@@ -302,6 +302,13 @@ class ClaudeAgentOptions:
     """Enable the experimental agent teams feature."""
     disable_parallel_tool_use: bool = False
     """Disable parallel too use (only one tool_use block per response)."""
+    enable_tool_search: bool | None = None
+    """Enable or disable the ToolSearch tool.
+
+    When True, Claude Code uses ToolSearch to discover tools before calling them.
+    When False, tools are called directly by name.
+    When None (default), uses Claude Code's default behavior.
+    """
 
     def build_settings_value(self) -> str | None:
         """Build the CLI ``--settings`` value, merging sandbox if provided.

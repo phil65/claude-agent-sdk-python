@@ -43,6 +43,7 @@ async def test_mcp_image_tool_wire_format():
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
         max_turns=3,
+        enable_tool_search=False,
     )
 
     async with ClaudeSDKClient(options=options) as client:
@@ -124,6 +125,7 @@ async def test_mcp_progress_tool_wire_format():
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
         max_turns=3,
+        enable_tool_search=False,
     )
 
     async with ClaudeSDKClient(options=options) as client:
