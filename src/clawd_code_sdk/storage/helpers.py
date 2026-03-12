@@ -284,3 +284,42 @@ def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
 #         walk(root)
 
 #     return result
+
+
+if __name__ == "__main__":
+    import sys
+
+    projects_dir = get_claude_projects_dir()
+    if not projects_dir.exists():
+        print(f"No projects directory found at {projects_dir}")
+        sys.exit(1)
+
+    total_entries = 0
+    total_sessions = 0
+    errors = 0
+
+    for project_dir in sorted(projects_dir.iterdir()):
+        if not project_dir.is_dir():
+            continue
+        session_files = sorted(
+            project_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True
+        )
+        if not session_files:
+            continue
+        project_path = decode_project_path(project_dir.name)
+        print(f"\nProject: {project_path} ({len(session_files)} sessions)")
+        for session_file in session_files:
+            total_sessions += 1
+            try:
+                entries = read_session(session_file)
+                total_entries += len(entries)
+                title = extract_title(session_file) or "(no title)"
+                print(f"  {session_file.stem}: {len(entries)} entries - {title}")
+            except Exception as e:
+                errors += 1
+                print(f"  {session_file.stem}: ERROR - {e}")
+
+    print("\n--- Summary ---")
+    print(f"Sessions: {total_sessions}")
+    print(f"Total entries: {total_entries}")
+    print(f"Errors: {errors}")

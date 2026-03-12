@@ -230,7 +230,7 @@ class ClaudeEnqueueOperation(ClaudeCodeBaseModel):
 
     type: Literal["queue-operation"]
     operation: Literal["enqueue"]
-    content: str | list[str | ClaudeQueueContent]
+    content: str | list[str | ClaudeQueueContent] | None = None
     session_id: str
     timestamp: str
 
@@ -607,6 +607,35 @@ class ClaudeSavedHookContextEntry(ClaudeEntryBase):
 
 
 # =============================================================================
+# Last prompt entry
+# =============================================================================
+
+
+class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
+    """Last prompt entry tracking the most recent user prompt."""
+
+    type: Literal["last-prompt"]
+    last_prompt: str = Field(alias="lastPrompt")
+    session_id: str = Field(alias="sessionId")
+
+
+# =============================================================================
+# PR link entry
+# =============================================================================
+
+
+class ClaudePrLinkEntry(ClaudeCodeBaseModel):
+    """PR link entry recording a pull request created during a session."""
+
+    type: Literal["pr-link"]
+    session_id: str = Field(alias="sessionId")
+    pr_number: int = Field(alias="prNumber")
+    pr_url: str = Field(alias="prUrl")
+    pr_repository: str = Field(alias="prRepository")
+    timestamp: str
+
+
+# =============================================================================
 # Top-level discriminated union
 # =============================================================================
 
@@ -618,7 +647,9 @@ ClaudeJSONLEntry = Annotated[
     | ClaudeSummaryEntry
     | ClaudeFileHistoryEntry
     | ClaudeProgressEntry
-    | ClaudeSavedHookContextEntry,
+    | ClaudeSavedHookContextEntry
+    | ClaudeLastPromptEntry
+    | ClaudePrLinkEntry,
     Field(discriminator="type"),
 ]
 """Discriminated union for all JSONL entry types."""
