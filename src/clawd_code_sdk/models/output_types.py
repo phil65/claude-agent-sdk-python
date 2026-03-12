@@ -11,9 +11,13 @@ The shapes are derived from the ``ToolOutputSchemas`` type definitions in the
 
 from __future__ import annotations
 
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models import AskUserQuestionOption, TodoItem  # noqa: TC001
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models.base import ToolName
 
 
 # ---------------------------------------------------------------------------
@@ -804,7 +808,7 @@ TodoWriteToolUseResult = TodoWriteOutput
 
 
 #: Mapping from tool name to its ``tool_use_result`` type.
-TOOL_USE_RESULT_TYPES: dict[str, type[Any]] = {
+TOOL_USE_RESULT_TYPES: dict[ToolName, type[Any]] = {
     "Task": AgentCompletedOutput,
     "Bash": BashOutput,
     "BashOutput": BashOutputOutput,

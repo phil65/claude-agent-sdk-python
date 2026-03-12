@@ -42,6 +42,8 @@ ToolName = Literal[
     "Task",
     "TaskOutput",
     "Bash",
+    "BashOutput",
+    "KillBash",
     "Glob",
     "Grep",
     "ExitPlanMode",
@@ -57,6 +59,14 @@ ToolName = Literal[
     "Skill",
     "EnterPlanMode",
     "EnterWorktree",
+    "ExitWorktree",
+    "ListMcpResources",
+    "ReadMcpResource",
+    "SubscribeMcpResource",
+    "UnsubscribeMcpResource",
+    "SubscribePolling",
+    "UnsubscribePolling",
+    "Config",
     "ToolSearch",
 ]
 IS_DEV = "pytest" in sys.modules

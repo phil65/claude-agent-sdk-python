@@ -10,7 +10,7 @@ from typing import Literal, NotRequired, TypedDict
 
 from pydantic import ConfigDict, with_config
 
-from clawd_code_sdk.models.base import ModelName, PermissionMode  # noqa: TC001
+from clawd_code_sdk.models.base import ModelName, PermissionMode, ToolName  # noqa: TC001
 
 
 _extra_allow = with_config(ConfigDict(extra="allow"))
@@ -356,7 +356,7 @@ ToolInput = (
 )
 
 #: Mapping from tool name to its input type.
-TOOL_INPUT_TYPES: dict[str, type[ToolInput]] = {
+TOOL_INPUT_TYPES: dict[ToolName, type[ToolInput]] = {
     "Task": AgentInput,
     "AskUserQuestion": AskUserQuestionInput,
     "Bash": BashInput,
