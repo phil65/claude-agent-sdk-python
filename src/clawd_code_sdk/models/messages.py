@@ -380,7 +380,7 @@ class StreamEvent(BaseMessage):
     def block_tool_json_delta(
         cls,
         *,
-        tool_json: str,
+        partial_json: str,
         index: int,
         session_id: str,
         uuid: str,
@@ -389,7 +389,7 @@ class StreamEvent(BaseMessage):
         delta_event = BetaRawContentBlockDeltaEvent(
             type="content_block_delta",
             index=index,
-            delta=BetaInputJSONDelta(type="input_json_delta", partial_json=tool_json),
+            delta=BetaInputJSONDelta(type="input_json_delta", partial_json=partial_json),
         )
         return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 

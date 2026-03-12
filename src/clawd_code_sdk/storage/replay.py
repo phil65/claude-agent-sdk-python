@@ -54,15 +54,11 @@ import json as _json
 from typing import TYPE_CHECKING, assert_never
 
 from anthropic.types.beta import (
-    BetaInputJSONDelta,
     BetaMessage,
-    BetaRawContentBlockDeltaEvent,
     BetaRawContentBlockStartEvent,
     BetaRawMessageStartEvent,
     BetaTextBlock as ATextBlock,
-    BetaTextDelta,
     BetaThinkingBlock as AThinkingBlock,
-    BetaThinkingDelta,
     BetaToolUseBlock as AToolUseBlock,
     BetaUsage,
 )
@@ -257,22 +253,32 @@ def _make_block_delta(
     uuid: str,
 ) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_delta StreamEvent with full block content."""
-    delta: BetaTextDelta | BetaInputJSONDelta | BetaThinkingDelta
     match block:
         case ClaudeTextBlock(text=text):
-            delta = BetaTextDelta(type="text_delta", text=text)
+            yield StreamEvent.block_text_delta(
+                text=text,
+                index=index,
+                session_id=session_id,
+                uuid=uuid,
+            )
         case ClaudeThinkingBlock(thinking=thinking):
-            delta = BetaThinkingDelta(type="thinking_delta", thinking=thinking)
+            yield StreamEvent.block_thinking_delta(
+                thinking=thinking,
+                index=index,
+                session_id=session_id,
+                uuid=uuid,
+            )
         case ClaudeToolUseBlock(input=input_):
-            delta = BetaInputJSONDelta(type="input_json_delta", partial_json=_json.dumps(input_))
+            yield StreamEvent.block_tool_json_delta(
+                partial_json=_json.dumps(input_),
+                index=index,
+                session_id=session_id,
+                uuid=uuid,
+            )
         case ClaudeToolResultBlock() | ClaudeImageBlock():
             return
         case _ as unreachable:
             assert_never(unreachable)
-    delta_event = BetaRawContentBlockDeltaEvent(
-        type="content_block_delta", index=index, delta=delta
-    )
-    yield StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
 def _make_synthetic_result(
