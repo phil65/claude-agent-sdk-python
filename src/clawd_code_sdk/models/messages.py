@@ -19,7 +19,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.base import FastModeState, StopReason, ToolName  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock
+from clawd_code_sdk.models.content_blocks import ContentBlock, MessageParam, TextBlock
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult
 
@@ -73,7 +73,7 @@ class SDKSessionInfo(BaseModel):
     last_modified: int
     """Last modified time in milliseconds since epoch."""
 
-    file_size: int
+    file_size: int | None = None
     """Session file size in bytes."""
 
     custom_title: str | None = None
@@ -87,6 +87,12 @@ class SDKSessionInfo(BaseModel):
 
     cwd: str | None = None
     """Working directory for the session."""
+
+    tag: str | None = None
+    """User-set session tag."""
+
+    created_at: float | None = None
+    """Creation time in milliseconds since epoch."""
 
 
 class RateLimitInfo(TypedDict):
