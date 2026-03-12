@@ -68,11 +68,12 @@ ContentBlock = Annotated[
     Discriminator("type"),
 ]
 
-content_block_adapter: TypeAdapter[ContentBlock] = TypeAdapter(ContentBlock)
+content_block_adapter = TypeAdapter[ContentBlock](ContentBlock)
 
 
 class MessageParam(ClaudeCodeBaseModel):
     """Replacement for Anthropic MessageParam which serializes to our own content blocks."""
 
     content: Sequence[ContentBlock] | str
+    role: Literal["user", "assistant"]
     model_config = ConfigDict(extra="allow")

@@ -193,7 +193,8 @@ class TestClaudeSDKClientStreaming:
                         try:
                             msg = json.loads(data.strip())
                             if msg.get("type") == "user":
-                                assert msg["message"]["content"] == "Test message"
+                                content = msg["message"]["content"]
+                                assert content == [{"type": "text", "text": "Test message"}]
                                 assert msg["session_id"] == "default"
                                 user_msg_found = True
                                 break

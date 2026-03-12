@@ -19,7 +19,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.base import FastModeState, StopReason, ToolName  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock
+from clawd_code_sdk.models.content_blocks import ContentBlock, MessageParam, TextBlock
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult
 
@@ -180,7 +180,6 @@ class UserMessage(BaseMessage):
     """User message."""
 
     type: Literal["user"] = "user"
-    content: str | Sequence[ContentBlock]
     parent_tool_use_id: str | None = None
     tool_use_result: (
         Sequence[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
@@ -188,6 +187,12 @@ class UserMessage(BaseMessage):
     isReplay: bool | None = None  # noqa: N815
     isSynthetic: bool | None = None  # noqa: N815
     priority: Literal["now", "next", "later"] | None = None
+    message: MessageParam
+
+    @property
+    def content(self) -> str | Sequence[ContentBlock]:
+        """Return the message content."""
+        return self.message.content
 
     def parse_command_output(self) -> str | None:
         """Extract output from legacy XML-tagged command output in user messages."""

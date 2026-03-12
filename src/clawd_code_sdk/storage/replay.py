@@ -83,6 +83,7 @@ from clawd_code_sdk.models import (
     Usage,
     UserMessage,
 )
+from clawd_code_sdk.models.content_blocks import MessageParam
 from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
@@ -154,7 +155,7 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
     return UserMessage(
         uuid=entry.uuid,
         session_id=entry.session_id,
-        content=content,
+        message=MessageParam(content=content, role="user"),
         tool_use_result=entry.tool_use_result,
         isReplay=True,
     )
@@ -196,7 +197,7 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
     return UserMessage(
         uuid=entry.leaf_uuid,
         session_id=entry.session_id or "",
-        content=entry.summary,
+        message=MessageParam(content=entry.summary, role="user"),
         isSynthetic=True,
     )
 

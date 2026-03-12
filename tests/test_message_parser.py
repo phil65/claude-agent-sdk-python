@@ -28,6 +28,7 @@ class TestContentBlockDispatch:
             "uuid": "u1",
             "session_id": "s1",
             "message": {
+                "role": "user",
                 "content": [
                     {"type": "text", "text": "intro"},
                     {"type": "tool_use", "id": "t1", "name": "Read", "input": {"path": "/x"}},
@@ -82,7 +83,7 @@ class TestContentBlockDispatch:
             "type": "user",
             "uuid": "u1",
             "session_id": "s1",
-            "message": {"content": "plain text"},
+            "message": {"role": "user", "content": "plain text"},
         }
         msg = parse_message(data)
         assert isinstance(msg, UserMessage)

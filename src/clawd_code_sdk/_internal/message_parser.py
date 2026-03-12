@@ -43,13 +43,8 @@ def parse_message(data: dict[str, Any]) -> Message:
         MessageParseError: If parsing fails or message type is unrecognized
     """
     match data:
-        case {"type": "user", "message": {"content": content}, **user_data}:
-            content_ = (
-                [content_block_adapter.validate_python(i) for i in content]
-                if isinstance(content, list)
-                else content
-            )
-            return UserMessage(content=content_, **user_data)
+        case {"type": "user"}:
+            return UserMessage(**data)
         case {"type": "assistant", "message": message}:
             return AssistantMessage(
                 content=[content_block_adapter.validate_python(i) for i in message["content"]],
