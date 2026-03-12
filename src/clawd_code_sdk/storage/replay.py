@@ -51,7 +51,24 @@ Example::
 from __future__ import annotations
 
 import json as _json
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
+
+from anthropic.types import (
+    InputJSONDelta,
+    Message as AnthropicMessage,
+    MessageDeltaUsage,
+    RawContentBlockDeltaEvent,
+    RawContentBlockStartEvent,
+    RawMessageDeltaEvent,
+    RawMessageStartEvent,
+    TextBlock as ATextBlock,
+    TextDelta,
+    ThinkingBlock as AThinkingBlock,
+    ThinkingDelta,
+    ToolUseBlock as AToolUseBlock,
+    Usage as AnthropicUsage,
+)
+from anthropic.types.raw_message_delta_event import Delta as RawMessageDelta
 
 from clawd_code_sdk.models import (
     AssistantMessage,
@@ -191,12 +208,6 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
 
 def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) -> StreamEvent:
     """Create a synthetic message_start StreamEvent."""
-    from anthropic.types import (
-        Message as AnthropicMessage,
-        RawMessageStartEvent,
-        Usage as AnthropicUsage,
-    )
-
     message = AnthropicMessage(
         id=msg_id,
         type="message",
@@ -214,14 +225,10 @@ _AnthropicStopReason = Literal[
     "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
 ]
 
-_VALID_STOP_REASONS: frozenset[str] = frozenset(
-    {"end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"}
-)
-
 
 def _coerce_stop_reason(value: str | None) -> _AnthropicStopReason | None:
     """Coerce a stored stop_reason string to the Anthropic SDK literal type."""
-    if value is not None and value in _VALID_STOP_REASONS:
+    if value is not None and value in get_args(_AnthropicStopReason):
         return value  # type: ignore[return-value]
     return None
 
@@ -233,21 +240,10 @@ def _make_message_delta(
     uuid: str,
 ) -> StreamEvent:
     """Create a synthetic message_delta StreamEvent."""
-    from anthropic.types import MessageDeltaUsage, RawMessageDeltaEvent
-    from anthropic.types.raw_message_delta_event import Delta as RawMessageDelta
-
     usage = MessageDeltaUsage(output_tokens=0)
     delta = RawMessageDelta(stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None)
     delta_event = RawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
     return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
-
-
-def _make_message_stop(*, session_id: str, uuid: str) -> StreamEvent:
-    """Create a synthetic message_stop StreamEvent."""
-    from anthropic.types import RawMessageStopEvent
-
-    stop_event = RawMessageStopEvent(type="message_stop")
-    return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_start(
@@ -258,13 +254,6 @@ def _make_block_start(
     uuid: str,
 ) -> StreamEvent:
     """Create a synthetic content_block_start StreamEvent for a stored block."""
-    from anthropic.types import (
-        RawContentBlockStartEvent,
-        TextBlock as ATextBlock,
-        ThinkingBlock as AThinkingBlock,
-        ToolUseBlock as AToolUseBlock,
-    )
-
     content_block: ATextBlock | AToolUseBlock | AThinkingBlock
     match block:
         case ClaudeTextBlock():
@@ -290,8 +279,6 @@ def _make_block_delta(
     uuid: str,
 ) -> StreamEvent:
     """Create a synthetic content_block_delta StreamEvent with full block content."""
-    from anthropic.types import InputJSONDelta, RawContentBlockDeltaEvent, TextDelta, ThinkingDelta
-
     delta: TextDelta | InputJSONDelta | ThinkingDelta
     match block:
         case ClaudeTextBlock():
@@ -304,19 +291,6 @@ def _make_block_delta(
             delta = TextDelta(type="text_delta", text="")
     delta_event = RawContentBlockDeltaEvent(type="content_block_delta", index=index, delta=delta)
     return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
-
-
-def _make_block_stop(*, index: int, session_id: str, uuid: str) -> StreamEvent:
-    """Create a synthetic content_block_stop StreamEvent."""
-    from anthropic.types import RawContentBlockStopEvent
-
-    stop_event = RawContentBlockStopEvent(type="content_block_stop", index=index)
-    return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
-
-
-# =============================================================================
-# Synthetic ResultMessage
-# =============================================================================
 
 
 def _make_synthetic_result(
@@ -488,7 +462,6 @@ def _replay_with_stream_events(
                 # Start of an API response group — collect all entries with same msg_id
                 msg_id = _get_assistant_msg_id(entry) or uuid
                 model = _get_assistant_model(entry)
-
                 # Find extent of this group (consecutive assistant entries with same msg_id)
                 group_start = i
                 while i < len(entry_list):
@@ -533,12 +506,11 @@ def _replay_with_stream_events(
                     yield _convert_assistant_entry(assistant_entry)
 
                     if stored_block is not None:
-                        yield _make_block_stop(
+                        yield StreamEvent.block_stop(
                             index=block_index,
                             session_id=assistant_entry.session_id,
                             uuid=assistant_entry.uuid,
                         )
-
                 # → message_delta
                 yield _make_message_delta(
                     stop_reason=stop_reason,
@@ -562,7 +534,7 @@ def _replay_with_stream_events(
                             break
 
                 # → message_stop
-                yield _make_message_stop(
+                yield StreamEvent.message_stop(
                     session_id=last_assistant.session_id, uuid=last_assistant.uuid
                 )
 
@@ -759,11 +731,6 @@ def replay_session(
         exclude_sidechains=exclude_sidechains,
         leaf_uuid=leaf_uuid,
     )
-
-
-# =============================================================================
-# Usage extraction
-# =============================================================================
 
 
 def extract_usage(entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:

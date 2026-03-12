@@ -19,7 +19,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.base import FastModeState, StopReason, ToolName  # noqa: TC001
-from clawd_code_sdk.models.content_blocks import ContentBlock, MessageParam, TextBlock
+from clawd_code_sdk.models.content_blocks import ContentBlock, TextBlock
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import ToolUseResult
 
@@ -292,6 +292,22 @@ class StreamEvent(BaseMessage):
     type: Literal["stream_event"] = "stream_event"
     event: RawMessageStreamEvent
     parent_tool_use_id: str | None = None
+
+    @classmethod
+    def block_stop(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:
+        """Create a synthetic content_block_stop StreamEvent."""
+        from anthropic.types import RawContentBlockStopEvent
+
+        stop_event = RawContentBlockStopEvent(type="content_block_stop", index=index)
+        return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def message_stop(cls, *, session_id: str, uuid: str) -> StreamEvent:
+        """Create a synthetic message_stop StreamEvent."""
+        from anthropic.types import RawMessageStopEvent
+
+        stop_event = RawMessageStopEvent(type="message_stop")
+        return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
 
 
 class ToolProgressMessage(BaseMessage):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import ValidationError
 
 from clawd_code_sdk._errors import MessageParseError
 from clawd_code_sdk.models import (

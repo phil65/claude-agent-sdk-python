@@ -106,59 +106,6 @@ ClaudeContentBlock = Annotated[
 """Discriminated union of all content block types in message content arrays."""
 
 
-# =============================================================================
-# Legacy flat content model (for backward compatibility)
-# =============================================================================
-
-
-class ClaudeMessageContent(BaseModel):
-    """Content block in Claude message (flat model).
-
-    This is kept for backward compatibility with code that accesses
-    content blocks via a single model with optional fields.
-    Prefer using ClaudeContentBlock for new code.
-    """
-
-    type: Literal["text", "tool_use", "tool_result", "thinking", "image"]
-    # For text blocks
-    text: str | None = None
-    # For tool_use blocks
-    id: str | None = None
-    name: str | None = None
-    input: dict[str, Any] | None = None
-    # For tool_result blocks
-    tool_use_id: str | None = None
-    content: list[dict[str, Any]] | str | None = None
-    is_error: bool | None = None
-    # For thinking blocks
-    thinking: str | None = None
-    signature: str | None = None
-    # For image blocks
-    source: ClaudeImageSource | None = None
-
-    def extract_tool_result_content(self) -> str:
-        """Extract content from a tool_result block."""
-        match self.content:
-            case None:
-                return ""
-            case str():
-                return self.content
-            case list():
-                text_parts = [
-                    tc.get("text", "")
-                    for tc in self.content
-                    if isinstance(tc, dict) and tc.get("type") == "text"
-                ]
-                return "\n".join(text_parts)
-            case _ as unreachable:
-                assert_never(unreachable)
-
-
-# =============================================================================
-# Token usage
-# =============================================================================
-
-
 class ClaudeUsage(BaseModel):
     """Token usage from Claude API response."""
 
