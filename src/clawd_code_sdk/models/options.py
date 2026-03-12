@@ -302,14 +302,20 @@ class ClaudeAgentOptions:
     """Enable the experimental agent teams feature."""
     disable_parallel_tool_use: bool = False
     """Disable parallel too use (only one tool_use block per response)."""
-    enable_tool_search: bool | int | None = None
-    """Enable or disable the ToolSearch tool.
+    enable_tool_search: bool | int | Literal["auto"] | None = None
+    """Enable or disable MCP tool search.
+
+    When many MCP tools are configured, tool definitions can consume a
+    significant portion of the context window. Tool search dynamically
+    loads tools on-demand instead of preloading all of them.
 
     - ``True``: Always enabled.
-    - ``False``: Always disabled.
-    - ``int``: Auto-enabled when deferred tool descriptions exceed this
-      percentage of the context window (e.g. ``10`` for 10%).
-    - ``None`` (default): Uses Claude Code's default behavior (auto mode).
+    - ``False``: Always disabled, all MCP tools loaded upfront.
+    - ``"auto"``: Activates when MCP tools exceed 10% of context (default behavior).
+    - ``int``: Auto-activates at this percentage threshold (e.g. ``5`` for 5%).
+    - ``None`` (default): Uses Claude Code's default (auto at 10%).
+
+    Requires models that support ``tool_reference`` blocks (Sonnet 4+, Opus 4+).
     """
 
     def build_settings_value(self) -> str | None:

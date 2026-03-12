@@ -129,8 +129,10 @@ class SubprocessCLITransport(Transport):
         match self._options.enable_tool_search:
             case bool() as flag:
                 process_env["ENABLE_TOOL_SEARCH"] = str(flag).lower()
+            case "auto":
+                process_env["ENABLE_TOOL_SEARCH"] = "auto"
             case int() as threshold:
-                process_env["ENABLE_TOOL_SEARCH"] = str(threshold)
+                process_env["ENABLE_TOOL_SEARCH"] = f"auto:{threshold}"
             case None:
                 pass
 
