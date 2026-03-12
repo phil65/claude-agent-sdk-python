@@ -796,6 +796,7 @@ ToolUseResult = (
     | SkillOutput
     | EnterPlanModeOutput
     | ToolSearchOutput
+    | McpResourceEntry
 )
 
 #: Backwards-compatible aliases for names previously in ``tool_use_results.py``.
@@ -808,7 +809,7 @@ TodoWriteToolUseResult = TodoWriteOutput
 
 
 #: Mapping from tool name to its ``tool_use_result`` type.
-TOOL_USE_RESULT_TYPES: dict[ToolName, type[Any]] = {
+TOOL_USE_RESULT_TYPES: dict[ToolName, type[ToolUseResult]] = {
     "Task": AgentCompletedOutput,
     "Bash": BashOutput,
     "BashOutput": BashOutputOutput,
