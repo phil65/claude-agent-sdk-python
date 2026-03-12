@@ -6,6 +6,7 @@ Tests whether content blocks from an external MCP server
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Any
@@ -181,6 +182,59 @@ async def test_mcp_progress_tool_wire_format():
     for pm in progress_messages:
         assert pm.tool_name, "Progress message should have a tool_name"
         assert pm.elapsed_time_seconds >= 0, "elapsed_time_seconds should be non-negative"
+
+
+@pytest.mark.e2e
+async def test_mcp_structured_data_returns_str():
+    """Test that structured MCP tool output (dict) is serialized to a string on the wire.
+
+    MCP tools can return dicts, lists, etc., but Claude Code serializes them
+    to JSON strings in the tool_result content. This test verifies that behavior.
+    """
+    mcp_server_path = str(Path(__file__).parent.parent / "mcp_server.py")
+
+    options = ClaudeAgentOptions(
+        mcp_servers={
+            "data_test": {"type": "stdio", "command": sys.executable, "args": [mcp_server_path]},
+        },
+        permission_mode="bypassPermissions",
+        allow_dangerously_skip_permissions=True,
+        max_turns=3,
+        enable_tool_search=False,
+    )
+
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query("Call the mcp__data_test__get_structured_data tool. Nothing else.")
+        messages = [msg async for msg in client.receive_response()]
+
+    # Verify successful result
+    result_messages = [m for m in messages if isinstance(m, ResultMessage)]
+    assert result_messages, f"No ResultMessage. Got: {[type(m).__name__ for m in messages]}"
+    assert not result_messages[0].is_error
+
+    # Find tool_result blocks from user messages
+    tool_result_blocks: list[ToolResultBlock] = [
+        block
+        for msg in messages
+        if isinstance(msg, UserMessage) and isinstance(msg.content, list)
+        for block in msg.content
+        if isinstance(block, ToolResultBlock)
+    ]
+
+    assert tool_result_blocks, "No tool_result blocks found"
+
+    result_block = tool_result_blocks[0]
+    # The structured dict should be serialized to a plain string
+    assert isinstance(result_block.content, str), (
+        f"Expected str content, got {type(result_block.content).__name__}: {result_block.content}"
+    )
+    # Verify the JSON content is parseable and contains expected data
+    data = json.loads(result_block.content)
+    assert isinstance(data, dict)
+    assert data["name"] == "test"
+    assert data["count"] == 42
+    assert data["nested"] == {"key": "value"}
+    assert data["items"] == ["a", "b", "c"]
 
 
 if __name__ == "__main__":

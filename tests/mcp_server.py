@@ -31,5 +31,16 @@ async def test_progress(ctx: Context, message: str) -> str:
     return f"Progress test completed with message: {message}"
 
 
+@mcp.tool
+async def get_structured_data() -> dict:
+    """Return a structured dictionary with various data types."""
+    return {
+        "name": "test",
+        "count": 42,
+        "nested": {"key": "value"},
+        "items": ["a", "b", "c"],
+    }
+
+
 if __name__ == "__main__":
     mcp.run(show_banner=False, log_level="error")
