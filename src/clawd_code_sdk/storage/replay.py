@@ -55,11 +55,7 @@ from typing import TYPE_CHECKING, assert_never
 
 from anthropic.types.beta import (
     BetaMessage,
-    BetaRawContentBlockStartEvent,
     BetaRawMessageStartEvent,
-    BetaTextBlock as ATextBlock,
-    BetaThinkingBlock as AThinkingBlock,
-    BetaToolUseBlock as AToolUseBlock,
     BetaUsage,
 )
 
@@ -227,22 +223,19 @@ def _make_block_start(
     uuid: str,
 ) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_start StreamEvent for a stored block."""
-    content_block: ATextBlock | AToolUseBlock | AThinkingBlock
     match block:
         case ClaudeTextBlock():
-            content_block = ATextBlock(type="text", text="")
+            yield StreamEvent.block_start_text(index=index, session_id=session_id, uuid=uuid)
         case ClaudeThinkingBlock():
-            content_block = AThinkingBlock(type="thinking", thinking="", signature="")
+            yield StreamEvent.block_start_thinking(index=index, session_id=session_id, uuid=uuid)
         case ClaudeToolUseBlock(id=block_id, name=name):
-            content_block = AToolUseBlock(type="tool_use", id=block_id, name=name, input={})
+            yield StreamEvent.block_start_tool_use(
+                tool_use_id=block_id, name=name, index=index, session_id=session_id, uuid=uuid
+            )
         case ClaudeToolResultBlock() | ClaudeImageBlock():
             return
         case _ as unreachable:
             assert_never(unreachable)
-    start_event = BetaRawContentBlockStartEvent(
-        type="content_block_start", index=index, content_block=content_block
-    )
-    yield StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
 
 def _make_block_delta(

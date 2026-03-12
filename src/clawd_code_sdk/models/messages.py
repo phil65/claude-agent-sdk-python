@@ -10,10 +10,14 @@ from anthropic.types.beta import (
     BetaInputJSONDelta,
     BetaMessageDeltaUsage,
     BetaRawContentBlockDeltaEvent,
+    BetaRawContentBlockStartEvent,
     BetaRawMessageDeltaEvent,
     BetaRawMessageStreamEvent,
+    BetaTextBlock as ATextBlock,
     BetaTextDelta,
+    BetaThinkingBlock as AThinkingBlock,
     BetaThinkingDelta,
+    BetaToolUseBlock as AToolUseBlock,
 )
 from anthropic.types.beta.beta_raw_message_delta_event import Delta as BetaRawMessageDelta
 from pydantic import BaseModel, ConfigDict
@@ -348,6 +352,35 @@ class StreamEvent(BaseMessage):
 
         stop_event = BetaRawMessageStopEvent(type="message_stop")
         return StreamEvent(event=stop_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_start_text(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:
+        """Create a synthetic content_block_start StreamEvent for a text block."""
+        content_block = ATextBlock(type="text", text="")
+        start_event = BetaRawContentBlockStartEvent(
+            type="content_block_start", index=index, content_block=content_block
+        )
+        return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_start_thinking(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:
+        """Create a synthetic content_block_start StreamEvent for a thinking block."""
+        content_block = AThinkingBlock(type="thinking", thinking="", signature="")
+        start_event = BetaRawContentBlockStartEvent(
+            type="content_block_start", index=index, content_block=content_block
+        )
+        return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
+
+    @classmethod
+    def block_start_tool_use(
+        cls, *, tool_use_id: str, name: str, index: int, session_id: str, uuid: str
+    ) -> StreamEvent:
+        """Create a synthetic content_block_start StreamEvent for a tool_use block."""
+        content_block = AToolUseBlock(type="tool_use", id=tool_use_id, name=name, input={})
+        start_event = BetaRawContentBlockStartEvent(
+            type="content_block_start", index=index, content_block=content_block
+        )
+        return StreamEvent(event=start_event, session_id=session_id, uuid=uuid)
 
     @classmethod
     def block_text_delta(cls, *, text: str, index: int, session_id: str, uuid: str) -> StreamEvent:
