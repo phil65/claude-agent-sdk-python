@@ -63,7 +63,7 @@ def _make_result(
         total_cost_usd=total_cost_usd,
         permission_denials=permission_denials or [],
         stop_reason=stop_reason,
-        modelUsage=model_usage
+        model_usage=model_usage
         or {
             "opus": ModelUsage(
                 inputTokens=200,

@@ -25,7 +25,7 @@ Partially reconstructible (with ``include_result=True``):
     - ResultMessage: Synthetic messages are emitted at each turn boundary.
       Token usage (deduplicated) and error status are available. Cost
       (``total_cost_usd``), duration (``duration_ms``, ``duration_api_ms``),
-      and ``modelUsage`` are not stored and are set to zero/None.
+      and ``model_usage`` are not stored and are set to zero/None.
 
 Example::
 
@@ -104,7 +104,7 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
         session_id=entry.session_id,
         message=MessageParam(content=entry.message.content, role="user"),
         tool_use_result=entry.tool_use_result,
-        isReplay=True,
+        is_replay=True,
     )
 
 
@@ -146,7 +146,7 @@ def _convert_summary_entry(entry: ClaudeSummaryEntry) -> UserMessage:
         uuid=entry.leaf_uuid,
         session_id=entry.session_id or "",
         message=MessageParam(content=entry.summary, role="user"),
-        isSynthetic=True,
+        is_synthetic=True,
     )
 
 
@@ -241,7 +241,7 @@ def _make_synthetic_result(
     - ``num_turns``: Number of distinct API calls (unique ``message.id``).
 
     Fields that cannot be reconstructed are set to zero or ``None``:
-    ``duration_ms``, ``duration_api_ms``, ``total_cost_usd``, ``modelUsage``.
+    ``duration_ms``, ``duration_api_ms``, ``total_cost_usd``, ``model_usage``.
     """
     seen_msg_ids: set[str] = set()
     total_usage = ClaudeUsage()

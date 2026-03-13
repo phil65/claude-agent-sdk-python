@@ -108,7 +108,7 @@ RESULT_MSG = {
     "num_turns": 1,
     "total_cost_usd": 0.005,
     "stop_reason": None,
-    "modelUsage": {
+    "model_usage": {
         "opus": {
             "inputTokens": 200,
             "outputTokens": 100,
@@ -156,7 +156,7 @@ class TestConversationTurn:
             total_cost_usd=0.01,
             stop_reason=None,
             permission_denials=[],
-            modelUsage={
+            model_usage={
                 "opus": ModelUsage(
                     inputTokens=100,
                     outputTokens=50,

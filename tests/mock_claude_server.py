@@ -62,7 +62,7 @@ def main() -> None:
                     "total_cost_usd": 0.001,
                     "stop_reason": None,
                     "permission_denials": [],
-                    "modelUsage": {
+                    "model_usage": {
                         "opus": ModelUsage(
                             inputTokens=100,
                             outputTokens=50,

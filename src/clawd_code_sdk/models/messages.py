@@ -21,7 +21,7 @@ from anthropic.types.beta import (
     BetaToolUseBlock as AToolUseBlock,
 )
 from anthropic.types.beta.beta_raw_message_delta_event import Delta as BetaRawMessageDelta
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from clawd_code_sdk._errors import (
     APIError,
@@ -205,8 +205,8 @@ class UserMessage(BaseMessage):
     tool_use_result: (
         Sequence[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
-    isReplay: bool | None = None  # noqa: N815
-    isSynthetic: bool | None = None  # noqa: N815
+    is_replay: bool | None = Field(default=None, serialization_alias="isReplay")
+    is_synthetic: bool | None = Field(default=None, serialization_alias="isSynthetic")
     priority: Literal["now", "next", "later"] | None = None
     message: MessageParam
 
@@ -295,7 +295,9 @@ class BaseResultMessage(BaseMessage):
     usage: Usage
     """Token usage from the last API call only (per-turn)."""
     stop_reason: StopReason | None
-    modelUsage: dict[str, ModelUsage] = {}  # noqa: N815
+    model_usage: dict[str, ModelUsage] = Field(
+        default_factory=dict, serialization_alias="modelUsage"
+    )
     """Cumulative token usage per model across the entire session."""
     permission_denials: list[SDKPermissionDenial] = []
     """Permission denials from the last API call only (per-turn)."""
