@@ -130,21 +130,17 @@ def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
     )
 
 
-def _convert_progress_entry(entry: ClaudeProgressEntry) -> ToolProgressMessage | None:
-    """Convert a stored progress entry to a wire-format ToolProgressMessage.
-
-    Only converts tool_progress data; returns None for other progress types
-    (bash_progress, mcp_progress, hook_progress, etc.).
-    """
-    if not isinstance(entry.data, ClaudeToolProgressData):
-        return None
+def _convert_progress_entry(
+    entry: ClaudeProgressEntry, data: ClaudeToolProgressData
+) -> ToolProgressMessage:
+    """Convert a stored tool_progress entry to a wire-format ToolProgressMessage."""
     return ToolProgressMessage(
         uuid=entry.uuid,
         session_id=entry.session_id,
-        tool_use_id=entry.data.tool_use_id or "",
-        tool_name=entry.data.tool_name or "",
-        parent_tool_use_id=entry.data.parent_tool_use_id,
-        elapsed_time_seconds=entry.data.elapsed_time_seconds or 0.0,
+        tool_use_id=data.tool_use_id or "",
+        tool_name=data.tool_name or "",
+        parent_tool_use_id=data.parent_tool_use_id,
+        elapsed_time_seconds=data.elapsed_time_seconds or 0.0,
     )
 
 
@@ -326,9 +322,8 @@ def _replay_basic(
             case ClaudeAssistantEntry():
                 turn_entries.append(entry)
                 yield _convert_assistant_entry(entry)
-            case ClaudeProgressEntry() if include_progress:
-                if (msg := _convert_progress_entry(entry)) is not None:
-                    yield msg
+            case ClaudeProgressEntry(data=ClaudeToolProgressData() as data) if include_progress:
+                yield _convert_progress_entry(entry, data)
             case ClaudeSummaryEntry() if include_summaries:
                 yield _convert_summary_entry(entry)
 
@@ -460,9 +455,10 @@ def _replay_with_stream_events(
                         case ClaudeUserEntry() as e if e.is_tool_result:
                             yield _convert_user_entry(e)
                             i += 1
-                        case ClaudeProgressEntry() as e if include_progress:
-                            if (msg := _convert_progress_entry(e)) is not None:
-                                yield msg
+                        case ClaudeProgressEntry(data=ClaudeToolProgressData() as data) as e if (
+                            include_progress
+                        ):
+                            yield _convert_progress_entry(e, data)
                             i += 1
                         case ClaudeProgressEntry():
                             i += 1
@@ -483,9 +479,10 @@ def _replay_with_stream_events(
                 yield _convert_user_entry(entry)
                 i += 1
 
-            case ClaudeProgressEntry() as entry if include_progress:
-                if (msg := _convert_progress_entry(entry)) is not None:
-                    yield msg
+            case ClaudeProgressEntry(data=ClaudeToolProgressData() as data) as entry if (
+                include_progress
+            ):
+                yield _convert_progress_entry(entry, data)
                 i += 1
 
             case ClaudeSummaryEntry() as entry if include_summaries:
