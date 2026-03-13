@@ -500,10 +500,6 @@ def _replay_with_stream_events(
         yield _make_synthetic_result(turn_entries)
 
 
-# Entry types that carry a uuid for parent-chain traversal
-_UuidEntry = ClaudeUserEntry | ClaudeAssistantEntry | ClaudeProgressEntry
-
-
 def _resolve_thread(
     entries: list[ClaudeJSONLEntry],
     leaf_uuid: str | None = None,
@@ -667,32 +663,3 @@ def replay_session(
         exclude_sidechains=exclude_sidechains,
         leaf_uuid=leaf_uuid,
     )
-
-
-def extract_usage(entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
-    """Extract deduplicated aggregate token usage from stored entries.
-
-    Storage duplicates usage data across all content-block entries that
-    share the same API ``message.id``. This function deduplicates by
-    ``message.id`` and sums across all unique API calls.
-
-    Args:
-        entries: JSONL entries (from ``read_session`` or similar).
-
-    Returns:
-        Aggregate :class:`~clawd_code_sdk.storage.models.ClaudeUsage`
-        with deduplicated totals.
-    """
-    seen_ids: set[str] = set()
-    total = ClaudeUsage()
-    for entry in entries:
-        if not isinstance(entry, ClaudeAssistantEntry):
-            continue
-        msg = entry.message
-        if not isinstance(msg, ClaudeApiMessage):
-            continue
-        if msg.id in seen_ids:
-            continue
-        seen_ids.add(msg.id)
-        total.accumulate(msg.usage)
-    return total

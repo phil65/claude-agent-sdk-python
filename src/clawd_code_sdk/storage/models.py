@@ -16,7 +16,7 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, Discriminator, Field, Tag
 
@@ -32,6 +32,10 @@ from clawd_code_sdk.models.content_blocks import (
 from clawd_code_sdk.models.messages import Usage
 
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
 
 UserType = Literal["external", "internal"]
@@ -43,6 +47,28 @@ class ClaudeUsage(Usage):
 
     service_tier: str | None = None
     server_tool_use: dict[str, Any] | None = None
+
+    @classmethod
+    def from_entries(cls, entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
+        """Extract deduplicated aggregate token usage from stored entries.
+
+        Storage duplicates usage data across all content-block entries that
+        share the same API ``message.id``. This deduplicates by ``message.id``
+        and sums across all unique API calls.
+        """
+        seen_ids: set[str] = set()
+        total = cls()
+        for entry in entries:
+            if not isinstance(entry, ClaudeAssistantEntry):
+                continue
+            msg = entry.message
+            if not isinstance(msg, ClaudeApiMessage):
+                continue
+            if msg.id in seen_ids:
+                continue
+            seen_ids.add(msg.id)
+            total.accumulate(msg.usage)
+        return total
 
 
 # =============================================================================
