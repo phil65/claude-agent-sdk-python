@@ -338,7 +338,7 @@ def _get_assistant_model(entry: ClaudeAssistantEntry) -> str:
     return entry.message.model if isinstance(entry.message, ClaudeApiMessage) else "unknown"
 
 
-def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> str | None:
+def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> StopReason | None:
     """Extract the stop reason from an assistant entry."""
     return entry.message.stop_reason if isinstance(entry.message, ClaudeApiMessage) else None
 
