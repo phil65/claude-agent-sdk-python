@@ -28,7 +28,9 @@ if TYPE_CHECKING:
 class _ContentBlockBase(BaseModel):
     """Shared base for all content block types."""
 
-    model_config = ConfigDict(extra="forbid", defer_build=True)
+    # extra="allow": storage JSONL includes all union fields on every block
+    # with null for fields belonging to other block types.
+    model_config = ConfigDict(extra="allow", defer_build=True)
 
 
 class TextBlock(_ContentBlockBase):

@@ -54,11 +54,7 @@ from __future__ import annotations
 import json as _json
 from typing import TYPE_CHECKING, assert_never
 
-from anthropic.types.beta import (
-    BetaMessage,
-    BetaRawMessageStartEvent,
-    BetaUsage,
-)
+from anthropic.types.beta import BetaMessage, BetaRawMessageStartEvent, BetaUsage
 
 from clawd_code_sdk.models import (
     AssistantMessage,
@@ -347,11 +343,6 @@ def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> str | None:
     return entry.message.stop_reason if isinstance(entry.message, ClaudeApiMessage) else None
 
 
-def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ContentBlock | None:
-    """Get the first content block from a stored assistant entry."""
-    return content[0] if isinstance((content := entry.message.content), list) and content else None
-
-
 def _replay_with_stream_events(
     entries: Iterable[ClaudeJSONLEntry],
     *,
@@ -418,7 +409,11 @@ def _replay_with_stream_events(
                 # → per-block events
                 for block_index, assistant_entry in enumerate(group):
                     assert isinstance(assistant_entry, ClaudeAssistantEntry)
-                    stored_block = _get_first_stored_block(assistant_entry)
+                    stored_block = (
+                        c[0]
+                        if isinstance((c := assistant_entry.message.content), list) and c
+                        else None
+                    )
 
                     if stored_block is not None:
                         yield from _make_block_start(
