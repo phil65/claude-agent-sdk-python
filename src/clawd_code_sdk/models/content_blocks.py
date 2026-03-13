@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
+from anthropic.types.beta.beta_tool_use_block import Caller
 from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models import ToolInput
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class _ContentBlockBase(BaseModel):
+class BaseContentBlock(BaseModel):
     """Shared base for all content block types."""
 
     # extra="allow": storage JSONL includes all union fields on every block
@@ -33,14 +34,14 @@ class _ContentBlockBase(BaseModel):
     model_config = ConfigDict(extra="allow", defer_build=True)
 
 
-class TextBlock(_ContentBlockBase):
+class TextBlock(BaseContentBlock):
     """Text content block."""
 
     type: Literal["text"] = "text"
     text: str
 
 
-class ThinkingBlock(_ContentBlockBase):
+class ThinkingBlock(BaseContentBlock):
     """Thinking/reasoning content block."""
 
     type: Literal["thinking"] = "thinking"
@@ -48,17 +49,17 @@ class ThinkingBlock(_ContentBlockBase):
     signature: str = ""
 
 
-class ToolUseBlock(_ContentBlockBase):
+class ToolUseBlock(BaseContentBlock):
     """Tool use content block."""
 
     type: Literal["tool_use"] = "tool_use"
     id: str = ""
     name: ToolName | str = ""
     input: ToolInput | dict[str, Any] = {}
-    caller: dict[str, str] | None = None
+    caller: Caller | None = None
 
 
-class ToolResultBlock(_ContentBlockBase):
+class ToolResultBlock(BaseContentBlock):
     """Tool result content block."""
 
     type: Literal["tool_result"] = "tool_result"
@@ -88,7 +89,7 @@ class ToolResultBlock(_ContentBlockBase):
         return "\n".join(text_parts)
 
 
-class ImageSource(_ContentBlockBase):
+class ImageSource(BaseContentBlock):
     """Base64-encoded image source data."""
 
     type: Literal["base64"]
@@ -96,7 +97,7 @@ class ImageSource(_ContentBlockBase):
     data: str
 
 
-class ImageBlock(_ContentBlockBase):
+class ImageBlock(BaseContentBlock):
     """Image content block (storage-only, not emitted on the wire)."""
 
     type: Literal["image"] = "image"
