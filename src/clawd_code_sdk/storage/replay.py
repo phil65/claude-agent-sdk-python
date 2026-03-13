@@ -1,8 +1,9 @@
 """Replay Claude Code sessions from stored JSONL transcripts.
 
-Converts stored JSONL entries back into wire-format Message types,
-enabling consumers to process historical sessions with the same code
-that handles live streams.
+Reassembles stored JSONL entries into SDK Message types, enabling consumers
+to process historical sessions with the same code that handles live streams.
+Storage and wire formats share the same content block types, so no conversion
+is needed at the block level.
 
 The storage format saves one entry per content block, chained via parentUuid.
 This module preserves that granularity: each stored assistant entry becomes
@@ -61,6 +62,7 @@ from anthropic.types.beta import (
 
 from clawd_code_sdk.models import (
     AssistantMessage,
+    ImageBlock,
     ResultErrorMessage,
     ResultSuccessMessage,
     StreamEvent,
@@ -77,14 +79,9 @@ from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
     ClaudeAssistantEntry,
-    ClaudeImageBlock,
     ClaudeProgressEntry,
     ClaudeSummaryEntry,
-    ClaudeTextBlock,
-    ClaudeThinkingBlock,
     ClaudeToolProgressData,
-    ClaudeToolResultBlock,
-    ClaudeToolUseBlock,
     ClaudeUsage,
     ClaudeUserEntry,
 )
@@ -96,41 +93,7 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk.models import ContentBlock, Message
     from clawd_code_sdk.models.base import StopReason
-    from clawd_code_sdk.storage.models import ClaudeContentBlock, ClaudeJSONLEntry
-
-
-# =============================================================================
-# Content block conversion (storage → wire format)
-# =============================================================================
-
-
-def _convert_content_block(block: ClaudeContentBlock) -> ContentBlock | None:
-    """Convert a stored content block to a wire-format ContentBlock.
-
-    Returns None for block types with no wire-format equivalent (e.g. images).
-    """
-    match block:
-        case ClaudeTextBlock():
-            return TextBlock(text=block.text)
-        case ClaudeThinkingBlock(thinking=thinking, signature=signature):
-            return ThinkingBlock(thinking=thinking, signature=signature or "")
-        case ClaudeToolUseBlock(id=block_id, name=name, input=tool_input):
-            return ToolUseBlock(id=block_id, name=name, input=tool_input)
-        case ClaudeToolResultBlock(tool_use_id=tool_use_id, content=content, is_error=is_error):
-            return ToolResultBlock(tool_use_id=tool_use_id, content=content, is_error=is_error)
-        case ClaudeImageBlock():
-            # No wire-format ContentBlock for images; they typically appear
-            # inside tool_result content as nested dicts, not as top-level blocks.
-            return None
-
-
-def _convert_content_blocks(
-    content: str | Sequence[ClaudeContentBlock],
-) -> str | Sequence[ContentBlock]:
-    """Convert message content, handling both string and block-list forms."""
-    if isinstance(content, str):
-        return content
-    return [converted for blk in content if (converted := _convert_content_block(blk)) is not None]
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
 # =============================================================================
@@ -140,11 +103,10 @@ def _convert_content_blocks(
 
 def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
     """Convert a stored user entry to a wire-format UserMessage."""
-    content = _convert_content_blocks(entry.message.content)
     return UserMessage(
         uuid=entry.uuid,
         session_id=entry.session_id,
-        message=MessageParam(content=content, role="user"),
+        message=MessageParam(content=entry.message.content, role="user"),
         tool_use_result=entry.tool_use_result,
         isReplay=True,
     )
@@ -152,8 +114,8 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
 
 def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
     """Convert a stored assistant entry to a wire-format AssistantMessage."""
-    content = _convert_content_blocks(entry.message.content)
-    blocks = [TextBlock(text=content)] if isinstance(content, str) else content
+    raw = entry.message.content
+    blocks: Sequence[ContentBlock] = [TextBlock(text=raw)] if isinstance(raw, str) else raw
     if isinstance(entry.message, ClaudeApiMessage):
         model = entry.message.model
         msg_id = entry.message.id
@@ -216,7 +178,7 @@ def _make_message_start(*, msg_id: str, model: str, session_id: str, uuid: str) 
 
 
 def _make_block_start(
-    block: ClaudeContentBlock,
+    block: ContentBlock,
     *,
     index: int,
     session_id: str,
@@ -224,22 +186,22 @@ def _make_block_start(
 ) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_start StreamEvent for a stored block."""
     match block:
-        case ClaudeTextBlock():
+        case TextBlock():
             yield StreamEvent.block_start_text(index=index, session_id=session_id, uuid=uuid)
-        case ClaudeThinkingBlock():
+        case ThinkingBlock():
             yield StreamEvent.block_start_thinking(index=index, session_id=session_id, uuid=uuid)
-        case ClaudeToolUseBlock(id=block_id, name=name):
+        case ToolUseBlock(id=block_id, name=name):
             yield StreamEvent.block_start_tool_use(
                 tool_use_id=block_id, name=name, index=index, session_id=session_id, uuid=uuid
             )
-        case ClaudeToolResultBlock() | ClaudeImageBlock():
+        case ToolResultBlock() | ImageBlock():
             return
         case _ as unreachable:
             assert_never(unreachable)
 
 
 def _make_block_delta(
-    block: ClaudeContentBlock,
+    block: ContentBlock,
     *,
     index: int,
     session_id: str,
@@ -247,28 +209,28 @@ def _make_block_delta(
 ) -> Iterator[StreamEvent]:
     """Create a synthetic content_block_delta StreamEvent with full block content."""
     match block:
-        case ClaudeTextBlock(text=text):
+        case TextBlock(text=text):
             yield StreamEvent.block_text_delta(
                 text=text,
                 index=index,
                 session_id=session_id,
                 uuid=uuid,
             )
-        case ClaudeThinkingBlock(thinking=thinking):
+        case ThinkingBlock(thinking=thinking):
             yield StreamEvent.block_thinking_delta(
                 thinking=thinking,
                 index=index,
                 session_id=session_id,
                 uuid=uuid,
             )
-        case ClaudeToolUseBlock(input=input_):
+        case ToolUseBlock(input=input_):
             yield StreamEvent.block_tool_json_delta(
                 partial_json=_json.dumps(input_),
                 index=index,
                 session_id=session_id,
                 uuid=uuid,
             )
-        case ClaudeToolResultBlock() | ClaudeImageBlock():
+        case ToolResultBlock() | ImageBlock():
             return
         case _ as unreachable:
             assert_never(unreachable)
@@ -397,7 +359,7 @@ def _get_assistant_stop_reason(entry: ClaudeAssistantEntry) -> str | None:
     return entry.message.stop_reason if isinstance(entry.message, ClaudeApiMessage) else None
 
 
-def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ClaudeContentBlock | None:
+def _get_first_stored_block(entry: ClaudeAssistantEntry) -> ContentBlock | None:
     """Get the first content block from a stored assistant entry."""
     return content[0] if isinstance((content := entry.message.content), list) and content else None
 

@@ -1,55 +1,65 @@
-"""Content blocks, message types, and stream events."""
+"""Content block types shared by both wire-format messages and JSONL storage.
+
+Claude Code uses the same content block schema on the wire (SDK ↔ CLI JSON
+messages) and in persisted JSONL session transcripts.  A single set of models
+therefore serves both purposes, avoiding a redundant conversion layer.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import ConfigDict, Discriminator, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
 
-from clawd_code_sdk.models import ToolInput  # noqa: TC001
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName  # noqa: TC001
+from clawd_code_sdk.models import ToolInput
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName
 
 
 if TYPE_CHECKING:
     from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 
+# =============================================================================
 # Content block types
-@dataclass(kw_only=True)
-class TextBlock:
+# =============================================================================
+
+
+class _ContentBlockBase(BaseModel):
+    """Shared base for all content block types."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TextBlock(_ContentBlockBase):
     """Text content block."""
 
-    type: Literal["text"] = field(default="text", repr=False)
+    type: Literal["text"] = "text"
     text: str
 
 
-@dataclass(kw_only=True)
-class ThinkingBlock:
-    """Thinking content block."""
+class ThinkingBlock(_ContentBlockBase):
+    """Thinking/reasoning content block."""
 
-    type: Literal["thinking"] = field(default="thinking", repr=False)
+    type: Literal["thinking"] = "thinking"
     thinking: str
-    signature: str
+    signature: str = ""
 
 
-@dataclass(kw_only=True)
-class ToolUseBlock:
+class ToolUseBlock(_ContentBlockBase):
     """Tool use content block."""
 
-    type: Literal["tool_use"] = field(default="tool_use", repr=False)
+    type: Literal["tool_use"] = "tool_use"
     id: str = ""
     name: ToolName | str = ""
-    input: ToolInput | dict[str, Any] = field(default_factory=dict)
+    input: ToolInput | dict[str, Any] = {}
     caller: dict[str, str] | None = None
 
 
-@dataclass(kw_only=True)
-class ToolResultBlock:
+class ToolResultBlock(_ContentBlockBase):
     """Tool result content block."""
 
-    type: Literal["tool_result"] = field(default="tool_result", repr=False)
+    type: Literal["tool_result"] = "tool_result"
     tool_use_id: str = ""
     content: str | list[dict[str, Any]] | None = None  # BetaContentBlock
     is_error: bool | None = None
@@ -62,13 +72,50 @@ class ToolResultBlock:
         # Validate list content against Anthropic SDK types
         return validate_tool_result_content(self.content)
 
+    def extract_text(self) -> str:
+        """Extract text content from this tool result."""
+        if self.content is None:
+            return ""
+        if isinstance(self.content, str):
+            return self.content
+        text_parts = [
+            tc.get("text", "")
+            for tc in self.content
+            if isinstance(tc, dict) and tc.get("type") == "text"
+        ]
+        return "\n".join(text_parts)
+
+
+class ImageSource(_ContentBlockBase):
+    """Base64-encoded image source data."""
+
+    type: Literal["base64"]
+    media_type: str
+    data: str
+
+
+class ImageBlock(_ContentBlockBase):
+    """Image content block (storage-only, not emitted on the wire)."""
+
+    type: Literal["image"] = "image"
+    source: ImageSource
+
+
+# =============================================================================
+# Unions and adapters
+# =============================================================================
 
 ContentBlock = Annotated[
-    TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock,
+    TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | ImageBlock,
     Discriminator("type"),
 ]
 
 content_block_adapter = TypeAdapter[ContentBlock](ContentBlock)
+
+
+# =============================================================================
+# Message-level models
+# =============================================================================
 
 
 class MessageParam(ClaudeCodeBaseModel):

@@ -16,94 +16,25 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Annotated, Any, Literal, assert_never
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Discriminator, Field, Tag
 
 from clawd_code_sdk.models import ToolUseResult
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
+from clawd_code_sdk.models.content_blocks import (
+    ContentBlock,
+    ImageBlock,
+    ImageSource,
+    TextBlock,
+    ToolResultBlock,
+)
 
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
 
 UserType = Literal["external", "internal"]
 MCPToolCallStatus = Literal["started", "completed", "failed"]
-
-
-class ClaudeTextBlock(BaseModel):
-    """Text content block."""
-
-    type: Literal["text"]
-    text: str
-
-
-class ClaudeToolUseBlock(BaseModel):
-    """Tool use content block."""
-
-    type: Literal["tool_use"]
-    id: str
-    name: str
-    input: dict[str, Any]
-
-
-class ClaudeToolResultBlock(BaseModel):
-    """Tool result content block."""
-
-    type: Literal["tool_result"]
-    tool_use_id: str
-    content: list[dict[str, Any]] | str | None = None
-    is_error: bool | None = None
-
-    def extract_text(self) -> str:
-        """Extract text content from this tool result."""
-        match self.content:
-            case None:
-                return ""
-            case str():
-                return self.content
-            case list():
-                text_parts = [
-                    tc.get("text", "")
-                    for tc in self.content
-                    if isinstance(tc, dict) and tc.get("type") == "text"
-                ]
-                return "\n".join(text_parts)
-            case _ as unreachable:
-                assert_never(unreachable)
-
-
-class ClaudeThinkingBlock(BaseModel):
-    """Thinking/reasoning content block."""
-
-    type: Literal["thinking"]
-    thinking: str
-    signature: str | None = None
-
-
-class ClaudeImageSource(BaseModel):
-    """Base64-encoded image source data."""
-
-    type: Literal["base64"]
-    media_type: str
-    data: str
-
-
-class ClaudeImageBlock(BaseModel):
-    """Image content block."""
-
-    type: Literal["image"]
-    source: ClaudeImageSource
-
-
-ClaudeContentBlock = Annotated[
-    ClaudeTextBlock
-    | ClaudeToolUseBlock
-    | ClaudeToolResultBlock
-    | ClaudeThinkingBlock
-    | ClaudeImageBlock,
-    Field(discriminator="type"),
-]
-"""Discriminated union of all content block types in message content arrays."""
 
 
 class ClaudeUsage(BaseModel):
@@ -135,7 +66,7 @@ class ClaudeApiMessage(BaseModel):
     id: str
     type: Literal["message"] = "message"
     role: Literal["assistant"]
-    content: str | Sequence[ClaudeContentBlock]
+    content: str | Sequence[ContentBlock]
     stop_reason: StopReason | None = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
@@ -145,7 +76,7 @@ class ClaudeUserMessage(BaseModel):
     """User message content."""
 
     role: Literal["user"]
-    content: str | Sequence[ClaudeContentBlock]
+    content: str | Sequence[ContentBlock]
     usage: ClaudeUsage | None = None
     """Usage info (for type compatibility with ClaudeApiMessage)."""
 
@@ -217,12 +148,10 @@ class ClaudeDocumentContent(ClaudeCodeBaseModel):
     """Document content block."""
 
     type: Literal["document"]
-    source: ClaudeImageSource
+    source: ImageSource
 
 
-ClaudeQueueContent = (
-    str | ClaudeTextBlock | ClaudeImageBlock | ClaudeDocumentContent | ClaudeToolResultBlock
-)
+type ClaudeQueueContent = str | TextBlock | ImageBlock | ClaudeDocumentContent | ToolResultBlock
 
 
 class ClaudeEnqueueOperation(ClaudeCodeBaseModel):

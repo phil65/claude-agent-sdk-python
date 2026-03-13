@@ -206,6 +206,8 @@ from .output_types import (
 )
 from .content_blocks import (
     ContentBlock,
+    ImageBlock,
+    ImageSource,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
@@ -440,7 +442,9 @@ __all__ = [
     "HookSpecificOutput",
     "HookStartedSystemMessage",
     "Hooks",
+    "ImageBlock",
     "ImageMediaType",
+    "ImageSource",
     "InitSystemMessage",
     "InstructionsLoadedHookInput",
     "JSONRPCError",
