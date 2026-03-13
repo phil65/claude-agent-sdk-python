@@ -29,6 +29,7 @@ from clawd_code_sdk.models.content_blocks import (
     TextBlock,
     ToolResultBlock,
 )
+from clawd_code_sdk.models.messages import Usage
 
 
 # See https://github.com/daaain/claude-code-log/blob/main/claude_code_log/models.py
@@ -37,21 +38,11 @@ UserType = Literal["external", "internal"]
 MCPToolCallStatus = Literal["started", "completed", "failed"]
 
 
-class ClaudeUsage(BaseModel):
-    """Token usage from Claude API response."""
+class ClaudeUsage(Usage):
+    """Token usage from Claude API response, with additional storage fields."""
 
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
     service_tier: str | None = None
     server_tool_use: dict[str, Any] | None = None
-
-    def add(self, other: ClaudeUsage) -> None:
-        self.input_tokens += other.input_tokens
-        self.output_tokens += other.output_tokens
-        self.cache_creation_input_tokens += other.cache_creation_input_tokens
-        self.cache_read_input_tokens += other.cache_read_input_tokens
 
 
 # =============================================================================

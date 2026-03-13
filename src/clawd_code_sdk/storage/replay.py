@@ -270,7 +270,7 @@ def _make_synthetic_result(
                     is_error = True
                 if msg_id not in seen_msg_ids:
                     seen_msg_ids.add(msg_id)
-                    total_usage.add(usage)
+                    total_usage.accumulate(usage)
                 if reason is not None:
                     stop_reason = reason
 
@@ -701,5 +701,5 @@ def extract_usage(entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
         if msg.id in seen_ids:
             continue
         seen_ids.add(msg.id)
-        total.add(msg.usage)
+        total.accumulate(msg.usage)
     return total
