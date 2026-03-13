@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict, get_args
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from anthropic.types.beta import (
     BetaInputJSONDelta,
@@ -13,6 +13,7 @@ from anthropic.types.beta import (
     BetaRawContentBlockStartEvent,
     BetaRawMessageDeltaEvent,
     BetaRawMessageStreamEvent,
+    BetaStopReason,  # noqa: TC002
     BetaTextBlock as ATextBlock,
     BetaTextDelta,
     BetaThinkingBlock as AThinkingBlock,
@@ -77,16 +78,6 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
-_AnthropicStopReason = Literal[
-    "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
-]
-
-
-def _coerce_stop_reason(value: str | None) -> _AnthropicStopReason | None:
-    """Coerce a stored stop_reason string to the Anthropic SDK literal type."""
-    if value is not None and value in get_args(_AnthropicStopReason):
-        return value  # type: ignore[return-value]
-    return None
 
 
 class SDKSessionInfo(BaseModel):
@@ -430,15 +421,13 @@ class StreamEvent(BaseMessage):
     def message_delta(
         cls,
         *,
-        stop_reason: str | None,
+        stop_reason: BetaStopReason | None,
         session_id: str,
         uuid: str,
     ) -> StreamEvent:
         """Create a synthetic message_delta StreamEvent."""
         usage = BetaMessageDeltaUsage(output_tokens=0)
-        delta = BetaRawMessageDelta(
-            stop_reason=_coerce_stop_reason(stop_reason), stop_sequence=None
-        )
+        delta = BetaRawMessageDelta(stop_reason=stop_reason)
         delta_event = BetaRawMessageDeltaEvent(type="message_delta", delta=delta, usage=usage)
         return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
