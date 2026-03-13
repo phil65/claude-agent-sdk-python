@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 class _ContentBlockBase(BaseModel):
     """Shared base for all content block types."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", defer_build=True)
 
 
 class TextBlock(_ContentBlockBase):

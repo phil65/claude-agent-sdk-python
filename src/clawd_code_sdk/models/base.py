@@ -79,4 +79,5 @@ class ClaudeCodeBaseModel(BaseModel):
         populate_by_name=True,
         alias_generator=to_camel,
         extra="forbid" if IS_DEV else "ignore",
+        defer_build=True,
     )
