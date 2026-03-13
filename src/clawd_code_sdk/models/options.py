@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, assert_never
 
 
 if TYPE_CHECKING:
@@ -335,28 +335,21 @@ class ClaudeAgentOptions:
             return None
 
         # Resolve settings to a dict (or pass through as file path)
-        settings_obj: dict[str, Any] | None = None
-
         match self.settings:
             case _Settings() as model:
                 settings_obj = model.model_dump(by_alias=True, exclude_none=True)
-            case str() | Path() as path:
-                if has_sandbox:
-                    # Need to load file to merge sandbox into it
-                    settings_path = Path(path)
-                    if settings_path.exists():
-                        with settings_path.open(encoding="utf-8") as f:
-                            settings_obj = json.load(f)
-                    else:
-                        logger.warning("Settings file not found: %s", settings_path)
-                        settings_obj = {}
-                else:
-                    # No sandbox to merge, pass file path directly to CLI
-                    return str(path)
+            case str() | Path() as path if has_sandbox and Path(path).exists():
+                with Path(path).open(encoding="utf-8") as f:
+                    settings_obj = json.load(f)
+            case str() | Path() as path if has_sandbox:
+                logger.warning("Settings file not found: %s", path)
+                settings_obj = {}
+            case str() | Path() as path:  # No sandbox to merge, pass file path directly to CLI
+                return str(path)
             case None:
                 settings_obj = {}
-
-        assert settings_obj is not None
+            case _ as unreachable:
+                assert_never(unreachable)
 
         # Merge sandbox settings
         if has_sandbox:
