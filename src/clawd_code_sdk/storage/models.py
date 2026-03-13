@@ -119,6 +119,13 @@ class ClaudeUserEntry(ClaudeMessageEntryBase):
         list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
 
+    @property
+    def is_tool_result(self) -> bool:
+        """Whether this is a synthetic tool_result entry (vs. an actual user prompt)."""
+        if isinstance(self.message.content, str):
+            return False
+        return all(b.type == "tool_result" for b in self.message.content)
+
 
 class ClaudeAssistantEntry(ClaudeMessageEntryBase):
     """Assistant message entry."""

@@ -301,13 +301,6 @@ def _make_synthetic_result(
 # =============================================================================
 
 
-def _is_tool_result_entry(entry: ClaudeUserEntry) -> bool:
-    """Check if a user entry is a synthetic tool_result (vs. an actual user prompt)."""
-    if isinstance(entry.message.content, str):
-        return False
-    return all(b.type == "tool_result" for b in entry.message.content)
-
-
 def _replay_basic(
     entries: Iterable[ClaudeJSONLEntry],
     *,
@@ -320,7 +313,7 @@ def _replay_basic(
 
     for entry in entries:
         match entry:
-            case ClaudeUserEntry() if not _is_tool_result_entry(entry):
+            case ClaudeUserEntry() if not entry.is_tool_result:
                 # Non-tool-result user entry = new turn boundary
                 if include_result and turn_entries:
                     yield _make_synthetic_result(turn_entries)
@@ -464,7 +457,7 @@ def _replay_with_stream_events(
                 # Collect tool_result user entries that follow this group
                 while i < len(entry_list):
                     match entry_list[i]:
-                        case ClaudeUserEntry() as e if _is_tool_result_entry(e):
+                        case ClaudeUserEntry() as e if e.is_tool_result:
                             yield _convert_user_entry(e)
                             i += 1
                         case ClaudeProgressEntry() as e if include_progress:
