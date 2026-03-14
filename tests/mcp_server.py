@@ -12,6 +12,18 @@ from fastmcp.utilities.types import Image
 mcp = FastMCP("Image Test Server")
 
 
+@mcp.resource("test://greeting")
+def get_greeting() -> str:
+    """A simple test resource that returns a greeting."""
+    return "Hello from MCP resource!"
+
+
+@mcp.resource("test://data/{item_id}")
+def get_data_item(item_id: str) -> str:
+    """A parameterized test resource."""
+    return f"Data for item: {item_id}"
+
+
 @mcp.tool
 async def get_test_image() -> Image:
     """Return a small test PNG image."""
