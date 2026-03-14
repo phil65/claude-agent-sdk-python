@@ -191,7 +191,7 @@ class Usage(BaseModel):
 class BaseMessage(BaseModel):
     """Base class for messages."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True, populate_by_name=True)
 
     uuid: str
     session_id: str
