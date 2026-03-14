@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -15,6 +16,9 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import Message
 
 logger = logging.getLogger(__name__)
+
+_RECORD_PATH = os.environ.get("CLAWD_RECORD_MESSAGES")
+_record_file = open(_RECORD_PATH, "a") if _RECORD_PATH else None  # noqa: SIM115
 
 
 def parse_message(data: dict[str, Any]) -> Message:
@@ -29,6 +33,11 @@ def parse_message(data: dict[str, Any]) -> Message:
     Raises:
         MessageParseError: If parsing fails or message type is unrecognized
     """
+    if _record_file is not None:
+        import json
+
+        _record_file.write(json.dumps(data) + "\n")
+        _record_file.flush()
     try:
         return message_adapter.validate_python(data)
     except ValidationError as e:
