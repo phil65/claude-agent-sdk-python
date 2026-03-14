@@ -131,6 +131,27 @@ class ClaudeAgentOptions:
     """Tools which execute without prompting for permission."""
     disallowed_tools: list[str] | None = None
     """Tools that are removed from agent context and cant be used."""
+    enable_agent_teams: bool = False
+    """Enable the experimental agent teams feature."""
+    disable_parallel_tool_use: bool = False
+    """Disable parallel too use (only one tool_use block per response)."""
+    tool_config: ToolConfig | None = None
+    """Per-tool configuration for built-in tools."""
+    enable_tool_search: bool | int | Literal["auto"] | None = None
+    """Enable or disable MCP tool search.
+
+    When many MCP tools are configured, tool definitions can consume a
+    significant portion of the context window. Tool search dynamically
+    loads tools on-demand instead of preloading all of them.
+
+    - ``True``: Always enabled.
+    - ``False``: Always disabled, all MCP tools loaded upfront.
+    - ``"auto"``: Activates when MCP tools exceed 10% of context (default behavior).
+    - ``int``: Auto-activates at this percentage threshold (e.g. ``5`` for 5%).
+    - ``None`` (default): Uses Claude Code's default (auto at 10%).
+
+    Requires models that support ``tool_reference`` blocks (Sonnet 4+, Opus 4+).
+    """
     # MCP
     mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
     """MCP servers for the agent."""
@@ -278,8 +299,6 @@ class ClaudeAgentOptions:
     When enabled, files can be rewound to their state at any user message
     using `ClaudeSDKClient.rewind_files()`.
     """
-    tool_config: ToolConfig | None = None
-    """Per-tool configuration for built-in tools."""
     agent: str | None = None
     """Agent name for the main thread. The agent must be defined in `agents` or settings."""
     context_1m: bool = False
@@ -298,25 +317,6 @@ class ClaudeAgentOptions:
     """
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
-    enable_agent_teams: bool = False
-    """Enable the experimental agent teams feature."""
-    disable_parallel_tool_use: bool = False
-    """Disable parallel too use (only one tool_use block per response)."""
-    enable_tool_search: bool | int | Literal["auto"] | None = None
-    """Enable or disable MCP tool search.
-
-    When many MCP tools are configured, tool definitions can consume a
-    significant portion of the context window. Tool search dynamically
-    loads tools on-demand instead of preloading all of them.
-
-    - ``True``: Always enabled.
-    - ``False``: Always disabled, all MCP tools loaded upfront.
-    - ``"auto"``: Activates when MCP tools exceed 10% of context (default behavior).
-    - ``int``: Auto-activates at this percentage threshold (e.g. ``5`` for 5%).
-    - ``None`` (default): Uses Claude Code's default (auto at 10%).
-
-    Requires models that support ``tool_reference`` blocks (Sonnet 4+, Opus 4+).
-    """
 
     def build_settings_value(self) -> str | None:
         """Build the CLI ``--settings`` value, merging sandbox if provided.
