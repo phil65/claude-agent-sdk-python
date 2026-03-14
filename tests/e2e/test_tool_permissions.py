@@ -40,7 +40,7 @@ async def test_permission_callback_gets_called():
         callback_invocations.append((tool_name, input_data))
         return PermissionResultAllow()
 
-    options = ClaudeAgentOptions(can_use_tool=permission_callback)
+    options = ClaudeAgentOptions(on_permission=permission_callback)
 
     try:
         async with ClaudeSDKClient(options=options) as client:

@@ -94,10 +94,13 @@ class ClaudeSDKClient:
         # Validate and configure permission settings (matching TypeScript SDK logic)
         self.options.validate()
 
-        if self.options.can_use_tool:
-            # Automatically set permission_prompt_tool_name to "stdio" for control protocol
-            options = replace(self.options, permission_prompt_tool_name="stdio")
+        # If on_permission is a callback, extract it for Query and replace with
+        # "stdio" so the CLI routes permission requests through the control protocol.
+        if callable(self.options.on_permission):
+            can_use_tool = self.options.on_permission
+            options = replace(self.options, on_permission="stdio")
         else:
+            can_use_tool = None
             options = self.options
 
         # Use provided custom transport or create subprocess transport
@@ -140,7 +143,7 @@ class ClaudeSDKClient:
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
-            can_use_tool=self.options.can_use_tool,
+            can_use_tool=can_use_tool,
             on_user_question=self.options.on_user_question,
             on_elicitation=self.options.on_elicitation,
             hooks=self.options.hooks,

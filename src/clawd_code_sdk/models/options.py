@@ -164,25 +164,27 @@ class ClaudeAgentOptions:
     """Permission mode."""
     allow_dangerously_skip_permissions: bool = False
     """Must be True when using permission_mode='bypassPermissions'."""
-    permission_prompt_tool_name: str | None = None
-    """MCP tool to handle permission prompts."""
-    can_use_tool: CanUseTool | None = None
-    """Tool permission callback.
+    on_permission: CanUseTool | str | None = None
+    """Permission handler for tool execution.
 
-    When set, the SDK automatically adds ``--permission-prompt-tool stdio`` to
-    the CLI, which tells the CLI to route permission requests through the
-    control protocol to this callback.
+    Accepts either:
+    - A callback function (``CanUseTool``): The SDK routes permission requests
+      through the control protocol to this callback. Automatically adds
+      ``--permission-prompt-tool stdio`` to the CLI.
+    - A string: Name of an MCP tool to handle permission prompts
+      (passed as ``--permission-prompt-tool <name>`` to the CLI).
+    - ``None``: Default behavior.
 
     Interaction with ``permission_mode``:
 
-    - ``"default"``: All tool calls are routed to this callback.
-    - ``"acceptEdits"``: All tool calls are routed to this callback.
-      The callback is responsible for implementing the auto-approve-edits policy.
+    - ``"default"``: All tool calls are routed to this handler.
+    - ``"acceptEdits"``: All tool calls are routed to this handler.
+      The handler is responsible for implementing the auto-approve-edits policy.
     - ``"plan"``: Only the synthetic ``ExitPlanMode`` tool is routed here.
-      Actual modification tools are blocked by the CLI before reaching the callback.
-    - ``"dontAsk"``: This callback is NEVER invoked. The CLI auto-denies all
+      Actual modification tools are blocked by the CLI before reaching the handler.
+    - ``"dontAsk"``: This handler is NEVER invoked. The CLI auto-denies all
       tools not pre-approved via the permissions config internally.
-    - ``"bypassPermissions"``: This callback is NEVER invoked. The CLI
+    - ``"bypassPermissions"``: This handler is NEVER invoked. The CLI
       auto-approves all tools internally.
     """
     on_user_question: OnUserQuestion | None = None
@@ -190,7 +192,7 @@ class ClaudeAgentOptions:
 
     Called when Claude asks the user a clarifying question via the
     AskUserQuestion tool. If not set, these requests fall through
-    to can_use_tool (if set) for backwards compatibility.
+    to on_permission (if it's a callback) for backwards compatibility.
     """
     on_elicitation: OnElicitation | None = None
     """Callback for handling MCP elicitation requests.
@@ -328,20 +330,14 @@ class ClaudeAgentOptions:
 
         from clawd_code_sdk.models.settings import ClaudeCodeSettings as _Settings
 
-        has_settings = self.settings is not None
-        has_sandbox = self.sandbox is not None
-
-        if not has_settings and not has_sandbox:
-            return None
-
         # Resolve settings to a dict (or pass through as file path)
         match self.settings:
             case _Settings() as model:
                 settings_obj = model.model_dump(by_alias=True, exclude_none=True)
-            case str() | Path() as path if has_sandbox and Path(path).exists():
+            case str() | Path() as path if self.sandbox and Path(path).exists():
                 with Path(path).open(encoding="utf-8") as f:
                     settings_obj = json.load(f)
-            case str() | Path() as path if has_sandbox:
+            case str() | Path() as path if self.sandbox:
                 logger.warning("Settings file not found: %s", path)
                 settings_obj = {}
             case str() | Path() as path:  # No sandbox to merge, pass file path directly to CLI
@@ -352,21 +348,10 @@ class ClaudeAgentOptions:
                 assert_never(unreachable)
 
         # Merge sandbox settings
-        if has_sandbox:
-            assert self.sandbox is not None
+        if self.sandbox is not None:
             settings_obj["sandbox"] = self.sandbox.model_dump(by_alias=True, exclude_none=True)
 
-        return anyenv.dump_json(settings_obj)
+        return anyenv.dump_json(settings_obj) if settings_obj else None
 
     def validate(self) -> None:
-        """Validate option constraints.
-
-        Raises:
-            ValueError: If mutually exclusive options are set.
-        """
-        if self.can_use_tool and self.permission_prompt_tool_name:
-            msg = (
-                "can_use_tool callback cannot be used with permission_prompt_tool_name. "
-                "Please use one or the other."
-            )
-            raise ValueError(msg)
+        """Validate option constraints."""

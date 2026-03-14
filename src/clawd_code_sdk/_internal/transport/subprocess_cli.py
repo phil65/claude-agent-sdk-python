@@ -469,8 +469,8 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.context_1m:
         cmd.extend(["--betas", "context-1m-2025-08-07"])
 
-    if options.permission_prompt_tool_name:
-        cmd.extend(["--permission-prompt-tool", options.permission_prompt_tool_name])
+    if isinstance(options.on_permission, str):
+        cmd.extend(["--permission-prompt-tool", options.on_permission])
 
     if options.permission_mode:
         cmd.extend(["--permission-mode", options.permission_mode])
