@@ -25,6 +25,7 @@ from clawd_code_sdk import (
 from clawd_code_sdk.models import (
     McpServerStatusEntry,
     McpStatusResponse,
+    McpStdioServerConfig,
     ModelUsage,
     TextBlock,
     Usage,
@@ -480,11 +481,10 @@ class TestGetMcpStatus:
                 assert server.server_info is not None
                 assert server.server_info.name == "mcp-git"
                 assert server.server_info.version == "1.26.0"
-                assert server.config == {
-                    "type": "stdio",
-                    "command": "uvx",
-                    "args": ["mcp-server-git"],
-                }
+                assert server.config == McpStdioServerConfig(
+                    command="uvx",
+                    args=["mcp-server-git"],
+                )
                 assert len(server.tools) == 2
                 assert server.tools[0].name == "git_status"
                 assert server.tools[1].name == "git_log"

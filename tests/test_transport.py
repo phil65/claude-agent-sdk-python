@@ -356,12 +356,13 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_mcp_servers(self):
         """Test building CLI command with mcp_servers option."""
+        from clawd_code_sdk.models import McpStdioServerConfig
+
         mcp_servers = {
-            "test-server": {
-                "type": "stdio",
-                "command": "/path/to/server",
-                "args": ["--option", "value"],
-            }
+            "test-server": McpStdioServerConfig(
+                command="/path/to/server",
+                args=["--option", "value"],
+            )
         }
         opts = make_options(mcp_servers=mcp_servers)
         transport = SubprocessCLITransport(options=opts)
@@ -373,7 +374,9 @@ class TestSubprocessCLITransport:
         # Parse the JSON and verify structure
         config = json.loads(mcp_config_value)
         assert "mcpServers" in config
-        assert config["mcpServers"] == mcp_servers
+        server = config["mcpServers"]["test-server"]
+        assert server["command"] == "/path/to/server"
+        assert server["args"] == ["--option", "value"]
 
     def test_build_command_with_mcp_servers_as_file_path(self):
         """Test building CLI command with mcp_servers as file path."""

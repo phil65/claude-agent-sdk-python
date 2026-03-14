@@ -11,7 +11,7 @@ from mcp.types import CallToolRequest, CallToolRequestParams, ToolAnnotations
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
-from clawd_code_sdk.models import JSONRPCRequest
+from clawd_code_sdk.models import JSONRPCRequest, McpStdioServerConfig
 
 
 async def test_sdk_mcp_server_handlers():
@@ -38,11 +38,11 @@ async def test_sdk_mcp_server_handlers():
     )
 
     # Verify server configuration
-    assert server_config["type"] == "sdk"
-    assert server_config["name"] == "test-sdk-server"
-    assert "instance" in server_config
+    assert server_config.type == "sdk"
+    assert server_config.name == "test-sdk-server"
+    assert server_config.instance is not None
     # Get the server instance
-    server = server_config["instance"]
+    server = server_config.instance
     # Verify handlers are registered
     assert ListToolsRequest in server.request_handlers
     assert CallToolRequest in server.request_handlers
@@ -108,7 +108,7 @@ async def test_error_handling():
         await fail_tool.handler({})
     # Test error handling through the server
     server_config = create_sdk_mcp_server(name="error-test", tools=[fail_tool])
-    server = server_config["instance"]
+    server = server_config.instance
     from mcp.types import CallToolRequest
 
     call_handler = server.request_handlers[CallToolRequest]
@@ -132,13 +132,13 @@ async def test_mixed_servers():
 
     sdk_server = create_sdk_mcp_server(name="sdk-server", tools=[sdk_tool])
     # Create configuration with both SDK and external servers
-    external_server = {"type": "stdio", "command": "echo", "args": ["test"]}
+    external_server = McpStdioServerConfig(command="echo", args=["test"])
     options = ClaudeAgentOptions(mcp_servers={"sdk": sdk_server, "external": external_server})
     # Verify both server types are in the configuration
     assert "sdk" in options.mcp_servers
     assert "external" in options.mcp_servers
-    assert options.mcp_servers["sdk"]["type"] == "sdk"
-    assert options.mcp_servers["external"]["type"] == "stdio"
+    assert options.mcp_servers["sdk"].type == "sdk"
+    assert options.mcp_servers["external"].type == "stdio"
 
 
 async def test_server_creation():
@@ -146,13 +146,12 @@ async def test_server_creation():
     server = create_sdk_mcp_server(name="test-server", version="2.0.0", tools=[])
 
     # Verify server configuration
-    assert server["type"] == "sdk"
-    assert server["name"] == "test-server"
-    assert "instance" in server
-    assert server["instance"] is not None
+    assert server.type == "sdk"
+    assert server.name == "test-server"
+    assert server.instance is not None
 
     # Verify the server instance has the right attributes
-    instance = server["instance"]
+    instance = server.instance
     assert instance.name == "test-server"
     assert instance.version == "2.0.0"
 
@@ -196,7 +195,7 @@ async def test_image_content_support():
     )
 
     # Get the server instance
-    server = server_config["instance"]
+    server = server_config.instance
     call_handler = server.request_handlers[CallToolRequest]
     # Call the chart generation tool
     params = CallToolRequestParams(name="generate_chart", arguments={"title": "Sales Report"})
@@ -254,7 +253,7 @@ async def test_document_content_support():
         name="document-test-server", version="1.0.0", tools=[read_document]
     )
 
-    server = server_config["instance"]
+    server = server_config.instance
     call_handler = server.request_handlers[CallToolRequest]
     params = CallToolRequestParams(name="read_document", arguments={"filename": "report.pdf"})
     doc_request = CallToolRequest(method="tools/call", params=params)
@@ -288,7 +287,7 @@ async def test_error_handling_through_jsonrpc():
 
     server_config = create_sdk_mcp_server(name="error-test", tools=[fail_tool])
     # Extract the SDK MCP server instance
-    sdk_mcp_servers = {"error": server_config["instance"]}
+    sdk_mcp_servers = {"error": server_config.instance}
 
     # We need a mock transport
     class MockTransport(Transport):
@@ -379,7 +378,7 @@ async def test_tool_annotations():
         name="annotations-test",
         tools=[read_data, delete_item, search, no_annotations],
     )
-    server = server_config["instance"]
+    server = server_config.instance
     list_handler = server.request_handlers[ListToolsRequest]
     request = ListToolsRequest(method="tools/list")
     response = await list_handler(request)
@@ -417,7 +416,7 @@ async def test_tool_annotations_in_jsonrpc():
     )
     # Simulate the JSONRPC tools/list request
     query_instance = Query.__new__(Query)
-    query_instance.sdk_mcp_servers = {"test": server_config["instance"]}
+    query_instance.sdk_mcp_servers = {"test": server_config.instance}
     request = JSONRPCRequest(jsonrpc="2.0", id=1, method="tools/list", params={})
     response = await query_instance._handle_sdk_mcp_request("test", request)
     assert response is not None

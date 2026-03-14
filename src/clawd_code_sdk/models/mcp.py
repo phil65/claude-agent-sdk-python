@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from pydantic import Field
@@ -68,42 +69,49 @@ JSONRPCMessage = JSONRPCRequest | JSONRPCNotification | JSONRPCResponse
 
 
 # MCP Server config
-class McpStdioServerConfig(TypedDict):
+
+
+@dataclass(kw_only=True)
+class McpStdioServerConfig:
     """MCP stdio server configuration."""
 
-    type: NotRequired[Literal["stdio"]]  # Optional for backwards compatibility
+    type: Literal["stdio"] = "stdio"
     command: str
-    args: NotRequired[list[str]]
-    env: NotRequired[dict[str, str]]
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
 
 
-class McpSSEServerConfig(TypedDict):
+@dataclass(kw_only=True)
+class McpSSEServerConfig:
     """MCP SSE server configuration."""
 
-    type: Literal["sse"]
+    type: Literal["sse"] = "sse"
     url: str
-    headers: NotRequired[dict[str, str]]
+    headers: dict[str, str] = field(default_factory=dict)
 
 
-class McpHttpServerConfig(TypedDict):
+@dataclass(kw_only=True)
+class McpHttpServerConfig:
     """MCP HTTP server configuration."""
 
-    type: Literal["http"]
+    type: Literal["http"] = "http"
     url: str
-    headers: NotRequired[dict[str, str]]
+    headers: dict[str, str] = field(default_factory=dict)
 
 
-class McpSdkServerConfig(TypedDict):
+@dataclass(kw_only=True)
+class McpSdkServerConfig:
     """SDK MCP server configuration (serializable, no instance)."""
 
-    type: Literal["sdk"]
+    type: Literal["sdk"] = "sdk"
     name: str
 
 
+@dataclass(kw_only=True)
 class McpSdkServerConfigWithInstance(McpSdkServerConfig):
     """SDK MCP server config with a live McpServer instance. Not serializable."""
 
-    instance: McpServer
+    instance: McpServer = field(repr=False)
 
 
 ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
@@ -113,10 +121,11 @@ McpServerConfig = (
 )
 
 
-class McpClaudeAIProxyServerConfig(TypedDict):
+@dataclass(kw_only=True)
+class McpClaudeAIProxyServerConfig:
     """MCP Claude AI proxy server configuration."""
 
-    type: Literal["claudeai-proxy"]
+    type: Literal["claudeai-proxy"] = "claudeai-proxy"
     url: str
     id: str
 

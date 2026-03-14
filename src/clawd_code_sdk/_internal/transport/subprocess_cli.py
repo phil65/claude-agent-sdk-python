@@ -515,8 +515,10 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     match options.mcp_servers:
         case dict() as servers if servers:
+            import dataclasses
+
             servers_for_cli = {
-                name: {k: v for k, v in cfg.items() if k != "instance"}
+                name: {k: v for k, v in dataclasses.asdict(cfg).items() if k != "instance"}
                 for name, cfg in servers.items()
             }
             dct = anyenv.dump_json({"mcpServers": servers_for_cli})

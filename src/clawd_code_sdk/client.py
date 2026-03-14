@@ -14,6 +14,7 @@ from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
+    McpSdkServerConfigWithInstance,
     McpSetServersResult,
     McpStatusResponse,
     ResultErrorMessage,
@@ -107,8 +108,8 @@ class ClaudeSDKClient:
         sdk_mcp_servers = {}
         if isinstance(self.options.mcp_servers, dict):
             for name, config in self.options.mcp_servers.items():
-                if config.get("type") == "sdk":
-                    sdk_mcp_servers[name] = config["instance"]  # type: ignore[typeddict-item]
+                if isinstance(config, McpSdkServerConfigWithInstance):
+                    sdk_mcp_servers[name] = config.instance
 
         # Calculate initialize timeout from CLAUDE_CODE_STREAM_CLOSE_TIMEOUT env var if set
         # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
@@ -304,9 +305,11 @@ class ClaudeSDKClient:
             - 'errors': Dict mapping server names to error messages (if any)
         """
         query = self._ensure_connected()
+        import dataclasses
+
         wire_servers: dict[str, dict[str, Any]] = {}
         for name, config in servers.items():
-            server_dict = dict(config)
+            server_dict = dataclasses.asdict(config)
             server_dict["name"] = name
             wire_servers[name] = server_dict
         result = await query.set_mcp_servers(wire_servers)
