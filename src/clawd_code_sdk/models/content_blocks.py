@@ -68,6 +68,7 @@ class ToolResultBlock(BaseContentBlock):
     is_error: bool | None = None
 
     def get_parsed_content(self) -> list[ToolResultContentBlock] | str | None:
+        # TODO: or is it anthropic.types.beta.beta_tool_result_block_param.Content?
         from clawd_code_sdk.anthropic_types import validate_tool_result_content
 
         if self.content is None or isinstance(self.content, str):
