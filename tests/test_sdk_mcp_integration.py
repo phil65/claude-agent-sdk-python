@@ -7,7 +7,14 @@ matching the TypeScript SDK test/sdk.test.ts pattern.
 import base64
 from typing import Any
 
-from mcp.types import CallToolRequest, CallToolRequestParams, ToolAnnotations
+from mcp.types import (
+    CallToolRequest,
+    CallToolRequestParams,
+    EmbeddedResource,
+    ImageContent,
+    TextContent,
+    ToolAnnotations,
+)
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
@@ -205,11 +212,11 @@ async def test_image_content_support():
     assert len(result.root.content) == 2
     # Check text content
     text_content = result.root.content[0]
-    assert text_content.type == "text"
+    assert isinstance(text_content, TextContent)
     assert text_content.text == "Generated chart: Sales Report"
     # Check image content
     image_content = result.root.content[1]
-    assert image_content.type == "image"
+    assert isinstance(image_content, ImageContent)
     assert image_content.data == png_data
     assert image_content.mimeType == "image/png"
     # Verify the tool was executed correctly
@@ -262,11 +269,11 @@ async def test_document_content_support():
     assert len(result.root.content) == 2
     # Check text content
     text_content = result.root.content[0]
-    assert text_content.type == "text"
+    assert isinstance(text_content, TextContent)
     assert text_content.text == "Document: report.pdf"
     # Check document content (stored as EmbeddedResource with BlobResourceContents)
     doc_content = result.root.content[1]
-    assert doc_content.type == "resource"
+    assert isinstance(doc_content, EmbeddedResource)
     assert hasattr(doc_content, "resource")
     assert str(doc_content.resource.uri) == "document://base64"
     assert doc_content.resource.mimeType == "application/pdf"
