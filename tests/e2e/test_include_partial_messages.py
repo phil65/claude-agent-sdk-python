@@ -4,7 +4,7 @@ These tests verify that the SDK properly handles partial message streaming,
 including StreamEvent parsing and message interleaving.
 """
 
-from anthropic.types import RawContentBlockDeltaEvent, ThinkingDelta
+from anthropic.types.beta import BetaRawContentBlockDeltaEvent, BetaThinkingDelta
 import pytest
 
 from clawd_code_sdk import ClaudeSDKClient
@@ -66,14 +66,14 @@ async def test_include_partial_messages_thinking_deltas():
     thinking = ThinkingConfigEnabled(budget_tokens=8000)
     options = ClaudeAgentOptions(model="claude-sonnet-4-5", max_turns=2, thinking=thinking)
     async with ClaudeSDKClient(options) as client:
-        await client.query("Think step by step about what 2 + 2 equals")
+        await client.query("Ultrathink step by step about what 2 + 2 equals")
         thinking_deltas = [
             msg.event.delta.thinking
             async for msg in client.receive_response()
             if (
                 isinstance(msg, StreamEvent)
-                and isinstance(msg.event, RawContentBlockDeltaEvent)
-                and isinstance(msg.event.delta, ThinkingDelta)
+                and isinstance(msg.event, BetaRawContentBlockDeltaEvent)
+                and isinstance(msg.event.delta, BetaThinkingDelta)
             )
         ]
 

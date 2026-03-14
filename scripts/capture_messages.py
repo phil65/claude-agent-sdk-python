@@ -10,8 +10,8 @@ Usage:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
+import sys
 
 import anyio
 
@@ -34,7 +34,7 @@ async def main() -> None:
     raw_messages: list[dict] = []
 
     async with client:
-        query = client._query  # noqa: SLF001
+        query = client._query
         assert query is not None
         original_receive = query.receive_messages
 

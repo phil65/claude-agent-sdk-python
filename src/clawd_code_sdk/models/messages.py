@@ -205,8 +205,8 @@ class UserMessage(BaseMessage):
     tool_use_result: (
         Sequence[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
-    is_replay: bool | None = Field(default=None, alias="isReplay")
-    is_synthetic: bool | None = Field(default=None, alias="isSynthetic")
+    is_replay: bool | None = Field(default=None, validation_alias="isReplay")
+    is_synthetic: bool | None = Field(default=None, validation_alias="isSynthetic")
     priority: Literal["now", "next", "later"] | None = None
     message: MessageParam
 
@@ -295,7 +295,7 @@ class BaseResultMessage(BaseMessage):
     usage: Usage
     """Token usage from the last API call only (per-turn)."""
     stop_reason: StopReason | None
-    model_usage: dict[str, ModelUsage] = Field(default_factory=dict, alias="modelUsage")
+    model_usage: dict[str, ModelUsage] = Field(default_factory=dict, validation_alias="modelUsage")
     """Cumulative token usage per model across the entire session."""
     permission_denials: list[SDKPermissionDenial] = []
     """Permission denials from the last API call only (per-turn)."""

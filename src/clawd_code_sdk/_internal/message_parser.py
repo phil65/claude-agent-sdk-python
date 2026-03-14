@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _RECORD_PATH = os.environ.get("CLAWD_RECORD_MESSAGES")
-_record_file = open(_RECORD_PATH, "a") if _RECORD_PATH else None  # noqa: SIM115
+_record_file = Path(_RECORD_PATH).open("a") if _RECORD_PATH else None  # noqa: SIM115
 
 
 def parse_message(data: dict[str, Any]) -> Message:

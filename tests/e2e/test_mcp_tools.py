@@ -21,6 +21,7 @@ from clawd_code_sdk import (
     UserMessage,
 )
 from clawd_code_sdk.models import TextBlock, ToolProgressMessage, ToolResultBlock, ToolUseBlock
+from clawd_code_sdk.models.mcp import McpStdioServerConfig
 
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ async def test_mcp_image_tool_wire_format():
 
     options = ClaudeAgentOptions(
         mcp_servers={
-            "image_test": {"type": "stdio", "command": sys.executable, "args": [mcp_server_path]},
+            "image_test": McpStdioServerConfig(command=sys.executable, args=[mcp_server_path]),
         },
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
@@ -117,11 +118,10 @@ async def test_mcp_progress_tool_wire_format():
 
     options = ClaudeAgentOptions(
         mcp_servers={
-            "progress_test": {
-                "type": "stdio",
-                "command": sys.executable,
-                "args": [mcp_server_path],
-            },
+            "progress_test": McpStdioServerConfig(
+                command=sys.executable,
+                args=[mcp_server_path],
+            ),
         },
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,
@@ -195,7 +195,7 @@ async def test_mcp_structured_data_returns_str():
 
     options = ClaudeAgentOptions(
         mcp_servers={
-            "data_test": {"type": "stdio", "command": sys.executable, "args": [mcp_server_path]},
+            "data_test": McpStdioServerConfig(command=sys.executable, args=[mcp_server_path]),
         },
         permission_mode="bypassPermissions",
         allow_dangerously_skip_permissions=True,

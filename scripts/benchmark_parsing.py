@@ -10,24 +10,31 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import json
 from pathlib import Path
 import sys
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import ValidationError
 
-from clawd_code_sdk.models import Message, message_adapter
+from clawd_code_sdk.models import message_adapter
+
+
+if TYPE_CHECKING:
+    from pydantic import TypeAdapter
+
+    from clawd_code_sdk.models import Message
 
 
 def load_messages(path: Path) -> list[dict[str, Any]]:
     """Load recorded raw message dicts from JSONL file."""
     messages = []
     for line in path.read_text().splitlines():
-        line = line.strip()
-        if line:
-            messages.append(json.loads(line))
+        stripped = line.strip()
+        if stripped:
+            messages.append(json.loads(stripped))
     print(f"Loaded {len(messages)} messages from {path}")
 
     # Show message type distribution
@@ -48,12 +55,9 @@ def benchmark_validate_python(
     start = time.perf_counter()
     for _ in range(iterations):
         for msg in messages:
-            try:
+            with contextlib.suppress(ValidationError):
                 adapter.validate_python(msg)
-            except ValidationError:
-                pass
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_validate_json(
@@ -65,12 +69,9 @@ def benchmark_validate_json(
     start = time.perf_counter()
     for _ in range(iterations):
         for data in json_bytes_list:
-            try:
+            with contextlib.suppress(ValidationError):
                 adapter.validate_json(data)
-            except ValidationError:
-                pass
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_json_then_validate(
@@ -87,8 +88,7 @@ def benchmark_json_then_validate(
                 adapter.validate_python(d)
             except (ValidationError, json.JSONDecodeError):
                 pass
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_dump_python(
@@ -101,8 +101,7 @@ def benchmark_dump_python(
     for _ in range(iterations):
         for msg in parsed_messages:
             adapter.dump_python(msg)
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_dump_json(
@@ -115,8 +114,7 @@ def benchmark_dump_json(
     for _ in range(iterations):
         for msg in parsed_messages:
             adapter.dump_json(msg)
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_model_dump(
@@ -128,8 +126,7 @@ def benchmark_model_dump(
     for _ in range(iterations):
         for msg in parsed_messages:
             msg.model_dump()  # type: ignore[union-attr]
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_model_construct(
@@ -158,8 +155,7 @@ def benchmark_model_construct(
             cls = type_map.get(msg.get("type", ""))
             if cls:
                 cls.model_construct(**msg)
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def benchmark_no_validation(messages: list[dict[str, Any]], iterations: int) -> float:
@@ -169,8 +165,7 @@ def benchmark_no_validation(messages: list[dict[str, Any]], iterations: int) -> 
         for msg in messages:
             _ = msg.get("type")
             _ = msg.get("message", {})
-    elapsed = time.perf_counter() - start
-    return elapsed
+    return time.perf_counter() - start
 
 
 def main() -> None:
@@ -200,19 +195,22 @@ def main() -> None:
     # 1. Current approach: validate_python(dict)
     elapsed = benchmark_validate_python(message_adapter, messages, iterations)
     print(
-        f"{'validate_python(dict)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'validate_python(dict)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 2. validate_json(bytes) — skips json.loads, Pydantic parses JSON directly
     elapsed = benchmark_validate_json(message_adapter, json_bytes_list, iterations)
     print(
-        f"{'validate_json(bytes)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'validate_json(bytes)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 3. json.loads + validate_python (simulates reading from transport)
     elapsed = benchmark_json_then_validate(message_adapter, json_bytes_list, iterations)
     print(
-        f"{'json.loads + validate_python':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'json.loads + validate_python':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 4. Parse once for serialization benchmarks
@@ -221,31 +219,36 @@ def main() -> None:
     # 5. dump_python (serialization to dict)
     elapsed = benchmark_dump_python(message_adapter, parsed, iterations)
     print(
-        f"{'dump_python (to dict)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'dump_python (to dict)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 6. dump_json (serialization to JSON bytes)
     elapsed = benchmark_dump_json(message_adapter, parsed, iterations)
     print(
-        f"{'dump_json (to bytes)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'dump_json (to bytes)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 7. model_dump (per-instance)
     elapsed = benchmark_model_dump(parsed, iterations)
     print(
-        f"{'model.model_dump()':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'model.model_dump()':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 8. model_construct (no validation, manual type dispatch)
     elapsed = benchmark_model_construct(messages, iterations)
     print(
-        f"{'model_construct (no validation)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'model_construct (no validation)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
     # 9. Raw dict access (baseline)
     elapsed = benchmark_no_validation(messages, iterations)
     print(
-        f"{'raw dict access (baseline)':<40} {elapsed:>10.3f} {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
+        f"{'raw dict access (baseline)':<40} {elapsed:>10.3f}"
+        f" {elapsed / total_msgs * 1e6:>14.1f} {total_msgs / elapsed:>12.0f}"
     )
 
 
