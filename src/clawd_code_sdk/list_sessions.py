@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import anyenv
 
-from clawd_code_sdk.models import SDKSessionInfo
 from clawd_code_sdk.storage.helpers import (
     decode_project_path,
     get_claude_projects_dir,
@@ -17,7 +16,8 @@ from clawd_code_sdk.storage.helpers import (
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models.options import ListSessionsOptions
+    from clawd_code_sdk.models import SDKSessionInfo
+    from clawd_code_sdk.models.session import ListSessionsOptions
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +53,9 @@ def _read_git_branch_from_tail(path: Path) -> str | None:
                 if "gitBranch" not in stripped and "git_branch" not in stripped:
                     continue
                 try:
-                    entry: dict[str, object] = anyenv.load_json(stripped, return_type=dict)
-                    branch = entry.get("gitBranch") or entry.get("git_branch")
-                    if isinstance(branch, str) and branch:
-                        return branch
+                    match anyenv.load_json(stripped, return_type=dict):
+                        case {"gitBranch": str(branch)} | {"git_branch": str(branch)} if branch:
+                            return branch
                 except anyenv.JsonLoadError:
                     continue
     except OSError:
@@ -85,7 +84,7 @@ def _extract_session_metadata(session_path: Path) -> tuple[str | None, str | Non
             for line in fp:
                 if '"type":"summary"' in line or '"type": "summary"' in line:
                     try:
-                        entry: dict[str, object] = anyenv.load_json(line, return_type=dict)
+                        entry = anyenv.load_json(line, return_type=dict)
                         if summary := entry.get("summary"):
                             custom_title = str(summary)
                     except anyenv.JsonLoadError:
@@ -93,15 +92,10 @@ def _extract_session_metadata(session_path: Path) -> tuple[str | None, str | Non
 
                 elif first_prompt is None and ('"type":"user"' in line or '"type": "user"' in line):
                     try:
-                        entry = anyenv.load_json(line, return_type=dict)
-                        msg = entry.get("message")
-                        if (
-                            isinstance(msg, dict)
-                            and (content := msg.get("content"))
-                            and isinstance(content, str)
-                            and (first_line := content.split("\n")[0].strip())
-                        ):
-                            first_prompt = first_line
+                        match anyenv.load_json(line, return_type=dict):
+                            case {"message": {"content": str(content)}}:
+                                if first_line := content.split("\n")[0].strip():
+                                    first_prompt = first_line
                     except anyenv.JsonLoadError:
                         pass
 
@@ -174,25 +168,15 @@ def list_sessions(options: ListSessionsOptions | None = None) -> list[SDKSession
         # List all sessions across all projects
         all_sessions = list_sessions()
     """
+    from clawd_code_sdk.models import SDKSessionInfo
+
     opts = options or {}
-    directory = opts.get("dir")
+    dir_ = opts.get("dir")
     limit = opts.get("limit")
     # Collect session files
-    session_files: list[tuple[Path, str | None]]
-    if directory is not None:
-        session_files = _list_session_files_for_dir(directory)
-    else:
-        session_files = _list_all_session_files()
-    # Build session info for each file
-    sessions: list[SDKSessionInfo] = []
-    for session_path, cwd in session_files:
-        if session_path.exists():
-            info = SDKSessionInfo.from_session_file(session_path, cwd)
-            sessions.append(info)
-    # Sort by last_modified descending (newest first)
+    files = _list_all_session_files() if dir_ is None else _list_session_files_for_dir(dir_)
+    sessions = [SDKSessionInfo.from_session_file(p, cwd) for p, cwd in files if p.exists()]
     sessions.sort(key=lambda s: s.last_modified, reverse=True)
-    # Apply limit
     if limit is not None and limit > 0:
         sessions = sessions[:limit]
-
     return sessions

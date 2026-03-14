@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Self, TypedDict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -76,3 +76,22 @@ class SDKSessionInfo(BaseModel):
             git_branch=_read_git_branch_from_tail(session_path),
             cwd=project_cwd,
         )
+
+
+class ListSessionsOptions(TypedDict, total=False):
+    """Options for listing sessions.
+
+    When ``dir`` is provided, returns sessions for that project directory
+    and its git worktrees. When omitted, returns sessions across all projects.
+    """
+
+    dir: str
+    """Directory to list sessions for.
+
+    When provided, returns sessions for this project directory
+    (and its git worktrees). When omitted, returns sessions
+    across all projects.
+    """
+
+    limit: int
+    """Maximum number of sessions to return."""

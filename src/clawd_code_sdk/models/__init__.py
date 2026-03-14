@@ -216,7 +216,7 @@ from .content_blocks import (
     ToolUseBlock,
     content_block_adapter,
 )
-from .session import SDKSessionInfo
+from .session import SDKSessionInfo, ListSessionsOptions
 from .messages import (
     AssistantMessage,
     AssistantMessageError,
@@ -256,7 +256,6 @@ from .options import (
     BaseSessionConfig,
     ContinueLatest,
     FromPR,
-    ListSessionsOptions,
     NewSession,
     ResumeSession,
     SessionConfig,
