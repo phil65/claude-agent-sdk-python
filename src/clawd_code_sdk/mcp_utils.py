@@ -247,8 +247,52 @@ def create_sdk_mcp_server(
     return McpSdkServerConfigWithInstance(type="sdk", name=name, instance=server)
 
 
+def _detect_capabilities(server: McpServer) -> dict[str, Any]:
+    """Detect which MCP capabilities a server supports based on registered handlers."""
+    from mcp.types import (
+        CallToolRequest,
+        GetPromptRequest,
+        ListPromptsRequest,
+        ListResourcesRequest,
+        ListResourceTemplatesRequest,
+        ListToolsRequest,
+        ReadResourceRequest,
+    )
+
+    capabilities: dict[str, Any] = {}
+    handlers = server.request_handlers
+    if handlers.get(ListToolsRequest) or handlers.get(CallToolRequest):
+        capabilities["tools"] = {}
+    if (
+        handlers.get(ListResourcesRequest)
+        or handlers.get(ReadResourceRequest)
+        or handlers.get(ListResourceTemplatesRequest)
+    ):
+        capabilities["resources"] = {}
+    if handlers.get(ListPromptsRequest) or handlers.get(GetPromptRequest):
+        capabilities["prompts"] = {}
+    return capabilities
+
+
 async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
-    from mcp.types import CallToolRequest, CallToolRequestParams, CallToolResult, ListToolsRequest
+    from mcp.types import (
+        CallToolRequest,
+        CallToolRequestParams,
+        CallToolResult,
+        GetPromptRequest,
+        GetPromptRequestParams,
+        GetPromptResult,
+        ListPromptsRequest,
+        ListPromptsResult,
+        ListResourcesRequest,
+        ListResourcesResult,
+        ListResourceTemplatesRequest,
+        ListResourceTemplatesResult,
+        ListToolsRequest,
+        ReadResourceRequest,
+        ReadResourceRequestParams,
+        ReadResourceResult,
+    )
 
     raw_id = message.get("id")
     msg_id = raw_id if isinstance(raw_id, str | int) else 0
@@ -264,7 +308,7 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 # Handle MCP initialization - hardcoded for tools only, no listChanged
                 init_result = {
                     "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},  # Tools capability without listChanged
+                    "capabilities": _detect_capabilities(server),
                     "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
                 }
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=init_result)
@@ -291,11 +335,70 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 if result.root.isError:
                     response_data["is_error"] = True
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=response_data)
+            case {"method": "resources/list"} if handler := server.request_handlers.get(
+                ListResourcesRequest
+            ):
+                list_resources_request = ListResourcesRequest()
+                result = await handler(list_resources_request)
+                assert isinstance(result.root, ListResourcesResult)
+                data = [
+                    r.model_dump(exclude_none=True, by_alias=True) for r in result.root.resources
+                ]
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"resources": data})
+
+            case {"method": "resources/read", "params": dict() as params} if (
+                handler := server.request_handlers.get(ReadResourceRequest)
+            ):
+                read_params = ReadResourceRequestParams(**params)
+                read_resource_request = ReadResourceRequest(params=read_params)
+                result = await handler(read_resource_request)
+                assert isinstance(result.root, ReadResourceResult)
+                contents = [
+                    c.model_dump(exclude_none=True, by_alias=True) for c in result.root.contents
+                ]
+                return JSONRPCResultResponse(
+                    jsonrpc="2.0", id=msg_id, result={"contents": contents}
+                )
+
+            case {"method": "resources/templates/list"} if handler := server.request_handlers.get(
+                ListResourceTemplatesRequest
+            ):
+                list_templates_request = ListResourceTemplatesRequest()
+                result = await handler(list_templates_request)
+                assert isinstance(result.root, ListResourceTemplatesResult)
+                data = [
+                    t.model_dump(exclude_none=True, by_alias=True)
+                    for t in result.root.resourceTemplates
+                ]
+                return JSONRPCResultResponse(
+                    jsonrpc="2.0", id=msg_id, result={"resourceTemplates": data}
+                )
+
+            case {"method": "prompts/list"} if handler := server.request_handlers.get(
+                ListPromptsRequest
+            ):
+                list_prompts_request = ListPromptsRequest()
+                result = await handler(list_prompts_request)
+                assert isinstance(result.root, ListPromptsResult)
+                data = [p.model_dump(exclude_none=True, by_alias=True) for p in result.root.prompts]
+                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"prompts": data})
+
+            case {"method": "prompts/get", "params": dict() as params} if (
+                handler := server.request_handlers.get(GetPromptRequest)
+            ):
+                get_params = GetPromptRequestParams(**params)
+                get_prompt_request = GetPromptRequest(params=get_params)
+                result = await handler(get_prompt_request)
+                assert isinstance(result.root, GetPromptResult)
+                return JSONRPCResultResponse(
+                    jsonrpc="2.0",
+                    id=msg_id,
+                    result=result.root.model_dump(exclude_none=True, by_alias=True),
+                )
+
             case {"method": "notifications/initialized"}:
                 # Handle initialized notification - just acknowledge it
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={})
-            # Add more methods here as MCP SDK adds them (resources, prompts, etc.)
-            # This is the limitation Ashwin pointed out - we have to manually update
             case {"method": method}:
                 error = JSONRPCError(code=-32601, message=f"Method '{method}' not found")
                 return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)

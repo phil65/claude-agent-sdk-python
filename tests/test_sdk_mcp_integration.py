@@ -437,5 +437,131 @@ async def test_tool_annotations_in_jsonrpc():
     assert "annotations" not in tools_by_name["plain_tool"]
 
 
+async def test_process_mcp_request_resources_list():
+    """Test that process_mcp_request routes resources/list correctly."""
+    from mcp.server.fastmcp import FastMCP
+
+    from clawd_code_sdk.mcp_utils import process_mcp_request
+
+    mcp = FastMCP("res_test")
+
+    @mcp.resource("test://greeting")
+    def get_greeting() -> str:
+        return "Hello from resource!"
+
+    server = mcp._mcp_server
+
+    # Test resources/list
+    msg = {"jsonrpc": "2.0", "id": 1, "method": "resources/list"}
+    resp = await process_mcp_request(msg, server)
+    assert resp.get("id") == 1
+    assert "result" in resp
+    resources = resp["result"]["resources"]
+    assert len(resources) == 1
+    assert resources[0]["name"] == "get_greeting"
+    assert str(resources[0]["uri"]) == "test://greeting"
+
+
+async def test_process_mcp_request_resources_read():
+    """Test that process_mcp_request routes resources/read correctly."""
+    from mcp.server.fastmcp import FastMCP
+
+    from clawd_code_sdk.mcp_utils import process_mcp_request
+
+    mcp = FastMCP("res_test")
+
+    @mcp.resource("test://greeting")
+    def get_greeting() -> str:
+        return "Hello from resource!"
+
+    server = mcp._mcp_server
+
+    msg = JSONRPCRequest(
+        jsonrpc="2.0",
+        id=2,
+        method="resources/read",
+        params={"uri": "test://greeting"},
+    )
+    resp = await process_mcp_request(msg, server)
+    assert resp.get("id") == 2
+    assert "result" in resp
+    contents = resp["result"]["contents"]
+    assert len(contents) == 1
+    assert contents[0]["text"] == "Hello from resource!"
+    assert contents[0]["mimeType"] == "text/plain"
+
+
+async def test_process_mcp_request_resource_templates_list():
+    """Test that process_mcp_request routes resources/templates/list correctly."""
+    from mcp.server.fastmcp import FastMCP
+
+    from clawd_code_sdk.mcp_utils import process_mcp_request
+
+    mcp = FastMCP("res_test")
+
+    @mcp.resource("test://data/{item_id}")
+    def get_data(item_id: str) -> str:
+        return f"Data for {item_id}"
+
+    server = mcp._mcp_server
+
+    msg = JSONRPCRequest(jsonrpc="2.0", id=3, method="resources/templates/list")
+    resp = await process_mcp_request(msg, server)
+    assert resp.get("id") == 3
+    assert "result" in resp
+    templates = resp["result"]["resourceTemplates"]
+    assert len(templates) == 1
+    assert "test://data/{item_id}" in templates[0]["uriTemplate"]
+
+
+async def test_detect_capabilities():
+    """Test that _detect_capabilities correctly detects server capabilities."""
+    from mcp.server import Server
+    from mcp.server.fastmcp import FastMCP
+
+    from clawd_code_sdk.mcp_utils import _detect_capabilities
+
+    # Empty server
+    empty = Server("empty")
+    caps = _detect_capabilities(empty)
+    assert caps == {}
+
+    # Server with tools + resources + prompts
+    mcp = FastMCP("full")
+
+    @mcp.resource("test://r")
+    def res() -> str:
+        return "r"
+
+    @mcp.tool()
+    def t() -> str:
+        return "t"
+
+    caps = _detect_capabilities(mcp._mcp_server)
+    assert "tools" in caps
+    assert "resources" in caps
+    assert "prompts" in caps  # FastMCP registers prompt handlers by default
+
+
+async def test_process_mcp_request_initialize_advertises_capabilities():
+    """Test that initialize response includes detected capabilities."""
+    from mcp.server.fastmcp import FastMCP
+
+    from clawd_code_sdk.mcp_utils import process_mcp_request
+
+    mcp = FastMCP("cap_test")
+
+    @mcp.resource("test://r")
+    def res() -> str:
+        return "r"
+
+    server = mcp._mcp_server
+    msg = JSONRPCRequest(jsonrpc="2.0", id=1, method="initialize", params={})
+    resp = await process_mcp_request(msg, server)
+    caps = resp["result"]["capabilities"]
+    assert "resources" in caps
+    assert "tools" in caps
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
