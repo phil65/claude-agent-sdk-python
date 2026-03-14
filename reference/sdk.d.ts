@@ -224,6 +224,7 @@ declare namespace coreTypes {
         PermissionRuleValue,
         PermissionUpdateDestination,
         PermissionUpdate,
+        PostCompactHookInput,
         PostToolUseFailureHookInput,
         PostToolUseFailureHookSpecificOutput,
         PostToolUseHookInput,
@@ -306,6 +307,9 @@ declare type CreateSdkMcpServerOptions = {
     tools?: Array<SdkMcpToolDefinition<any>>;
 };
 
+/**
+ * Hook input for the Elicitation event. Fired when an MCP server requests user input. Hooks can auto-respond (accept/decline) instead of showing the dialog.
+ */
 export declare type ElicitationHookInput = BaseHookInput & {
     hook_event_name: 'Elicitation';
     mcp_server_name: string;
@@ -316,6 +320,9 @@ export declare type ElicitationHookInput = BaseHookInput & {
     requested_schema?: Record<string, unknown>;
 };
 
+/**
+ * Hook-specific output for the Elicitation event. Return this to programmatically accept or decline an MCP elicitation request.
+ */
 export declare type ElicitationHookSpecificOutput = {
     hookEventName: 'Elicitation';
     action?: 'accept' | 'decline' | 'cancel';
@@ -346,6 +353,9 @@ export declare type ElicitationRequest = {
  */
 export declare type ElicitationResult = ElicitResult;
 
+/**
+ * Hook input for the ElicitationResult event. Fired after the user responds to an MCP elicitation. Hooks can observe or override the response before it is sent to the server.
+ */
 export declare type ElicitationResultHookInput = BaseHookInput & {
     hook_event_name: 'ElicitationResult';
     mcp_server_name: string;
@@ -355,6 +365,9 @@ export declare type ElicitationResultHookInput = BaseHookInput & {
     content?: Record<string, unknown>;
 };
 
+/**
+ * Hook-specific output for the ElicitationResult event. Return this to override the action or content before the response is sent to the MCP server.
+ */
 export declare type ElicitationResultHookSpecificOutput = {
     hookEventName: 'ElicitationResult';
     action?: 'accept' | 'decline' | 'cancel';
@@ -394,7 +407,7 @@ export declare type GetSessionMessagesOptions = {
     offset?: number;
 };
 
-export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "SubagentStart", "SubagentStop", "PreCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded"];
+export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded"];
 
 /**
  * Hook callback function for responding to events during execution.
@@ -413,9 +426,9 @@ export declare interface HookCallbackMatcher {
     timeout?: number;
 }
 
-export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded';
+export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded';
 
-export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput;
+export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput;
 
 export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
@@ -1226,6 +1239,15 @@ export declare type PermissionUpdate = {
 
 export declare type PermissionUpdateDestination = 'userSettings' | 'projectSettings' | 'localSettings' | 'session' | 'cliArg';
 
+export declare type PostCompactHookInput = BaseHookInput & {
+    hook_event_name: 'PostCompact';
+    trigger: 'manual' | 'auto';
+    /**
+     * The conversation summary produced by compaction
+     */
+    compact_summary: string;
+};
+
 export declare type PostToolUseFailureHookInput = BaseHookInput & {
     hook_event_name: 'PostToolUseFailure';
     tool_name: string;
@@ -1575,6 +1597,14 @@ export declare type SDKCompactBoundaryMessage = {
     compact_metadata: {
         trigger: 'manual' | 'auto';
         pre_tokens: number;
+        /**
+         * Relink info for messagesToKeep. Loaders splice the preserved segment at anchor_uuid (summary for suffix-preserving, boundary for prefix-preserving partial compact) so resume includes preserved content. Unset when compaction summarizes everything (no messagesToKeep).
+         */
+        preserved_segment?: {
+            head_uuid: UUID;
+            anchor_uuid: UUID;
+            tail_uuid: UUID;
+        };
     };
     uuid: UUID;
     session_id: string;
@@ -1586,6 +1616,14 @@ export declare type SDKCompactBoundaryMessage = {
 declare type SDKControlApplyFlagSettingsRequest = {
     subtype: 'apply_flag_settings';
     settings: Record<string, unknown>;
+};
+
+/**
+ * Drops a pending async user message from the command queue by uuid. No-op if already dequeued for execution.
+ */
+declare type SDKControlCancelAsyncMessageRequest = {
+    subtype: 'cancel_async_message';
+    message_uuid: string;
 };
 
 /**
@@ -1768,6 +1806,9 @@ declare type SDKControlStopTaskRequest = {
     task_id: string;
 };
 
+/**
+ * Emitted when an MCP server confirms that a URL-mode elicitation is complete.
+ */
 export declare type SDKElicitationCompleteMessage = {
     type: 'system';
     subtype: 'elicitation_complete';
@@ -2047,6 +2088,14 @@ export declare type SDKSessionInfo = {
      * Working directory for the session.
      */
     cwd?: string;
+    /**
+     * User-set session tag.
+     */
+    tag?: string;
+    /**
+     * Creation time in milliseconds since epoch, extracted from the first entry's timestamp.
+     */
+    createdAt?: number;
 };
 
 /**
@@ -2871,7 +2920,7 @@ export declare interface Settings {
      */
     outputStyle?: string;
     /**
-     * Preferred language for Claude responses (e.g., "japanese", "spanish")
+     * Preferred language for Claude responses and voice dictation (e.g., "japanese", "spanish")
      */
     language?: string;
     /**
@@ -3212,6 +3261,7 @@ export declare type SyncHookJSONOutput = {
     decision?: 'approve' | 'block';
     systemMessage?: string;
     reason?: string;
+
     hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput;
 };
 

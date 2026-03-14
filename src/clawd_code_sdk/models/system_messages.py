@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
 
 from anthropic.types.model import Model
 from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
@@ -157,11 +157,20 @@ class StatusSystemMessage(BaseSystemMessage):
     permissionMode: PermissionMode | None = None  # noqa: N815
 
 
+class PreservedSegment(TypedDict):
+    """Relink info for preserved messages during compaction."""
+
+    head_uuid: str
+    anchor_uuid: str
+    tail_uuid: str
+
+
 class TriggerMetadata(TypedDict):
     """Trigger metadata."""
 
     trigger: CompactionTrigger
     pre_tokens: int
+    preserved_segment: NotRequired[PreservedSegment]
 
 
 class CompactBoundarySystemMessage(BaseSystemMessage):

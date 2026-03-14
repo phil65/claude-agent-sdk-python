@@ -88,6 +88,14 @@ class SDKControlRewindFilesRequest:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlCancelAsyncMessageRequest:
+    """Drops a pending async user message from the command queue by uuid."""
+
+    subtype: Literal["cancel_async_message"] = "cancel_async_message"
+    message_uuid: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SDKControlStopTaskRequest:
     """SDK control stop task request."""
 
@@ -239,6 +247,7 @@ ControlRequestUnion = Annotated[
     | SDKHookCallbackRequest
     | SDKControlMcpMessageRequest
     | SDKControlRewindFilesRequest
+    | SDKControlCancelAsyncMessageRequest
     | SDKControlMcpSetServersRequest
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest

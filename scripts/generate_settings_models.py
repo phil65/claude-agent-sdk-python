@@ -118,11 +118,11 @@ def generate_models() -> None:
     print("Generating Pydantic models...")
 
     cmd = [
-        "uv",
-        "tool",
-        "run",
+        "uvx",
+        "--python",
+        "3.13",
         "--from",
-        "datamodel-code-generator",
+        "datamodel-code-generator==0.54.1",
         "datamodel-codegen",
         "--input",
         TEMP_SCHEMA_TITLED,

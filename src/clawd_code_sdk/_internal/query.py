@@ -508,6 +508,12 @@ class Query:
         """Change the AI model."""
         return await self._send_control_request({"subtype": "set_model", "model": model})
 
+    async def cancel_async_message(self, message_uuid: str) -> dict[str, Any]:
+        """Drop a pending async user message from the command queue by uuid."""
+        return await self._send_control_request(
+            {"subtype": "cancel_async_message", "message_uuid": message_uuid}
+        )
+
     async def stop_task(self, task_id: str) -> dict[str, Any]:
         """Stop a running task."""
         return await self._send_control_request({"subtype": "stop_task", "task_id": task_id})

@@ -25,6 +25,7 @@ HookEvent = Literal[
     "Stop",
     "SubagentStop",
     "PreCompact",
+    "PostCompact",
     "Notification",
     "SubagentStart",
     "PermissionRequest",
@@ -205,6 +206,14 @@ class PreCompactHookInput(BaseHookInput):
     custom_instructions: str | None
 
 
+class PostCompactHookInput(BaseHookInput):
+    """Input data for PostCompact hook events."""
+
+    hook_event_name: Literal["PostCompact"]
+    trigger: CompactionTrigger
+    compact_summary: str
+
+
 class NotificationHookInput(BaseHookInput):
     """Input data for Notification hook events."""
 
@@ -343,6 +352,7 @@ HookInput = (
     | StopHookInput
     | SubagentStopHookInput
     | PreCompactHookInput
+    | PostCompactHookInput
     | NotificationHookInput
     | SubagentStartHookInput
     | PermissionRequestHookInput

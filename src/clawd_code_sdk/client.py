@@ -237,6 +237,11 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         await query.set_model(model)
 
+    async def cancel_async_message(self, message_uuid: str) -> None:
+        """Drop a pending async user message from the command queue by uuid."""
+        query = self._ensure_connected()
+        await query.cancel_async_message(message_uuid)
+
     async def stop_task(self, task_id: str) -> None:
         """Stop a running task."""
         query = self._ensure_connected()
