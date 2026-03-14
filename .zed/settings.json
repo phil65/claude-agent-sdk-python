@@ -1,0 +1,9 @@
+{
+	"languages": {
+		"Python": { "language_servers": ["ty", "ruff"] },
+		"TypeScript": {
+			"language_servers": ["!biome", "!eslint"],
+			"formatter": null
+		}
+	}
+}
