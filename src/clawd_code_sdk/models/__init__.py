@@ -216,7 +216,7 @@ from .content_blocks import (
     ToolUseBlock,
     content_block_adapter,
 )
-
+from .session import SDKSessionInfo
 from .messages import (
     AssistantMessage,
     AssistantMessageError,
@@ -229,7 +229,6 @@ from .messages import (
     ResultMessage,
     ResultSuccessMessage,
     SDKPermissionDenial,
-    SDKSessionInfo,
     StreamEvent,
     AuthStatusMessage,
     ToolProgressMessage,

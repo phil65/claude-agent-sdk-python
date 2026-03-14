@@ -114,45 +114,6 @@ def _extract_session_metadata(session_path: Path) -> tuple[str | None, str | Non
     return custom_title, first_prompt
 
 
-def _build_session_info(session_path: Path, project_cwd: str | None) -> SDKSessionInfo | None:
-    """Build an SDKSessionInfo from a session JSONL file.
-
-    Args:
-        session_path: Path to the ``.jsonl`` session file.
-        project_cwd: Working directory derived from the project folder name,
-            or None if unknown.
-
-    Returns:
-        Populated SDKSessionInfo, or None if the file cannot be read.
-    """
-    try:
-        stat = session_path.stat()
-    except OSError:
-        return None
-
-    session_id = session_path.stem
-    last_modified = int(stat.st_mtime * 1000)  # milliseconds since epoch
-    file_size = stat.st_size
-    custom_title, first_prompt = _extract_session_metadata(session_path)
-    # Get git branch from the tail of the file.
-    # The raw JSONL uses camelCase ("gitBranch") per ClaudeCodeBaseModel alias config.
-    # Not all entry types carry gitBranch, so we scan backward until we find one.
-    git_branch = _read_git_branch_from_tail(session_path)
-    # Build display summary: prefer custom title, then first prompt, then session ID
-    summary = custom_title or first_prompt or session_id
-
-    return SDKSessionInfo(
-        session_id=session_id,
-        summary=summary,
-        last_modified=last_modified,
-        file_size=file_size,
-        custom_title=custom_title,
-        first_prompt=first_prompt,
-        git_branch=git_branch,
-        cwd=project_cwd,
-    )
-
-
 def _list_session_files_for_dir(directory: str) -> list[tuple[Path, str | None]]:
     """List session files for a specific project directory.
 
@@ -216,20 +177,18 @@ def list_sessions(options: ListSessionsOptions | None = None) -> list[SDKSession
     opts = options or {}
     directory = opts.get("dir")
     limit = opts.get("limit")
-
     # Collect session files
     session_files: list[tuple[Path, str | None]]
     if directory is not None:
         session_files = _list_session_files_for_dir(directory)
     else:
         session_files = _list_all_session_files()
-
     # Build session info for each file
     sessions: list[SDKSessionInfo] = []
     for session_path, cwd in session_files:
-        if info := _build_session_info(session_path, cwd):
+        if session_path.exists():
+            info = SDKSessionInfo.from_session_file(session_path, cwd)
             sessions.append(info)
-
     # Sort by last_modified descending (newest first)
     sessions.sort(key=lambda s: s.last_modified, reverse=True)
     # Apply limit
