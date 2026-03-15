@@ -522,6 +522,17 @@ class Query:
         """End the current session."""
         return await self._send_control_request({"subtype": "end_session"})
 
+    async def remote_control(self, *, enabled: bool) -> dict[str, Any]:
+        """Toggle the remote control REPL bridge for external session access.
+
+        When enabled, starts a bridge that allows remote clients to send prompts,
+        permission responses, interrupts, and model changes into the session.
+        The response includes ``session_url``, ``connect_url``, and
+        ``environment_id`` when enabling.
+        """
+        req = {"subtype": "remote_control", "enabled": enabled}
+        return await self._send_control_request(req)
+
     async def rewind_files(self, user_message_id: str) -> dict[str, Any]:
         """Rewind tracked files to their state at a specific user message.
 

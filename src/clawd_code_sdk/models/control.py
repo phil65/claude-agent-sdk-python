@@ -5,10 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal, TypedDict
 
-from pydantic import Discriminator, TypeAdapter
+from pydantic import BaseModel, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models.agents import AgentDefinition  # noqa: TC001
-from clawd_code_sdk.models.base import ElicitationMode, PermissionMode  # noqa: TC001
+from clawd_code_sdk.models.base import (  # noqa: TC001
+    ElicitationMode,
+    PermissionMode,
+)
 from clawd_code_sdk.models.hooks import HookEvent, HookInput  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
 
@@ -207,6 +210,23 @@ class SDKControlRemoteControlRequest:
 
     subtype: Literal["remote_control"] = "remote_control"
     enabled: bool = False
+
+
+class RemoteControlResponse(BaseModel):
+    """Response from enabling remote control.
+
+    Contains the URLs and identifiers needed for remote clients to connect
+    to the session.
+    """
+
+    session_url: str
+    """URL for the remote control session."""
+
+    connect_url: str
+    """URL for remote clients to connect to the session."""
+
+    environment_id: str
+    """Identifier for the environment hosting the session."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

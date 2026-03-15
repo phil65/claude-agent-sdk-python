@@ -17,6 +17,7 @@ from clawd_code_sdk.models import (
     McpSdkServerConfigWithInstance,
     McpSetServersResult,
     McpStatusResponse,
+    RemoteControlResponse,
     ResultErrorMessage,
     ResultMessage,
     ResultSuccessMessage,
@@ -337,6 +338,22 @@ class ClaudeSDKClient:
         """End the current session."""
         query = self._ensure_connected()
         await query.end_session()
+
+    async def remote_control(self, *, enabled: bool) -> RemoteControlResponse | None:
+        """Toggle the remote control REPL bridge for external session access.
+
+        When enabled, starts a bridge that allows remote clients to send prompts,
+        permission responses, interrupts, and model changes into the session.
+
+        Returns:
+            A ``RemoteControlResponse`` with session URLs and environment ID
+            when enabling, or ``None`` when disabling.
+        """
+        query = self._ensure_connected()
+        result = await query.remote_control(enabled=enabled)
+        if not result:
+            return None
+        return RemoteControlResponse.model_validate(result)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking."""
