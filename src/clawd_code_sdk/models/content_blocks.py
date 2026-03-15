@@ -82,11 +82,7 @@ class ToolResultBlock(BaseContentBlock):
             return ""
         if isinstance(self.content, str):
             return self.content
-        text_parts = [
-            tc.get("text", "")
-            for tc in self.content
-            if isinstance(tc, dict) and tc.get("type") == "text"
-        ]
+        text_parts = [tc.get("text", "") for tc in self.content if tc.get("type") == "text"]
         return "\n".join(text_parts)
 
 
