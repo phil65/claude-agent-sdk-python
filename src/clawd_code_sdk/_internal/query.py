@@ -533,6 +533,34 @@ class Query:
         req = {"subtype": "remote_control", "enabled": enabled}
         return await self._send_control_request(req)
 
+    async def apply_flag_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
+        """Apply runtime flag settings."""
+        req = {"subtype": "apply_flag_settings", "settings": settings}
+        return await self._send_control_request(req)
+
+    async def get_settings(self) -> dict[str, Any]:
+        """Get the effective merged settings and raw per-source settings."""
+        return await self._send_control_request({"subtype": "get_settings"})
+
+    async def mcp_authenticate(self, server_name: str) -> dict[str, Any]:
+        """Trigger OAuth authentication for an MCP server."""
+        req = {"subtype": "mcp_authenticate", "serverName": server_name}
+        return await self._send_control_request(req)
+
+    async def mcp_clear_auth(self, server_name: str) -> dict[str, Any]:
+        """Clear OAuth credentials for an MCP server."""
+        req = {"subtype": "mcp_clear_auth", "serverName": server_name}
+        return await self._send_control_request(req)
+
+    async def mcp_oauth_callback_url(self, server_name: str, callback_url: str) -> dict[str, Any]:
+        """Provide an OAuth redirect callback URL to complete an MCP server OAuth flow."""
+        req = {
+            "subtype": "mcp_oauth_callback_url",
+            "serverName": server_name,
+            "callbackUrl": callback_url,
+        }
+        return await self._send_control_request(req)
+
     async def rewind_files(self, user_message_id: str) -> dict[str, Any]:
         """Rewind tracked files to their state at a specific user message.
 

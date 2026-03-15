@@ -14,6 +14,8 @@ from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
+    GetSettingsResponse,
+    McpAuthenticateResponse,
     McpSdkServerConfigWithInstance,
     McpSetServersResult,
     McpStatusResponse,
@@ -354,6 +356,41 @@ class ClaudeSDKClient:
         if not result:
             return None
         return RemoteControlResponse.model_validate(result)
+
+    async def apply_flag_settings(self, settings: dict[str, Any]) -> None:
+        """Apply runtime flag settings."""
+        query = self._ensure_connected()
+        await query.apply_flag_settings(settings)
+
+    async def get_settings(self) -> GetSettingsResponse:
+        """Get the effective merged settings and raw per-source settings."""
+        query = self._ensure_connected()
+        result = await query.get_settings()
+        return GetSettingsResponse.model_validate(result)
+
+    async def mcp_authenticate(self, server_name: str) -> McpAuthenticateResponse:
+        """Trigger OAuth authentication for an MCP server.
+
+        Returns:
+            Response indicating whether user action is required and the auth URL if so.
+        """
+        query = self._ensure_connected()
+        result = await query.mcp_authenticate(server_name)
+        return McpAuthenticateResponse.model_validate(result)
+
+    async def mcp_clear_auth(self, server_name: str) -> None:
+        """Clear OAuth credentials for an MCP server."""
+        query = self._ensure_connected()
+        await query.mcp_clear_auth(server_name)
+
+    async def mcp_oauth_callback_url(self, server_name: str, callback_url: str) -> None:
+        """Provide an OAuth redirect callback URL to complete an MCP server OAuth flow.
+
+        After the user completes browser-based OAuth, call this with the full
+        redirect URL (containing the authorization code) to finish the flow.
+        """
+        query = self._ensure_connected()
+        await query.mcp_oauth_callback_url(server_name, callback_url)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking."""

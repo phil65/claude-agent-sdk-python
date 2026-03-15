@@ -9,6 +9,7 @@ from pydantic import BaseModel, Discriminator, TypeAdapter
 
 from clawd_code_sdk.models.agents import AgentDefinition  # noqa: TC001
 from clawd_code_sdk.models.base import (  # noqa: TC001
+    ClaudeCodeBaseModel,
     ElicitationMode,
     PermissionMode,
 )
@@ -227,6 +228,49 @@ class RemoteControlResponse(BaseModel):
 
     environment_id: str
     """Identifier for the environment hosting the session."""
+
+
+class McpAuthenticateResponse(ClaudeCodeBaseModel):
+    """Response from authenticating with an MCP server."""
+
+    auth_url: str | None = None
+    """OAuth authorization URL for the user to visit, if user action is required."""
+
+    requires_user_action: bool
+    """Whether the user needs to complete an OAuth flow in the browser."""
+
+
+class AppliedSettings(BaseModel):
+    """The currently applied model and effort settings."""
+
+    model: str
+    """The active model identifier."""
+
+    effort: str | None = None
+    """The active effort level, or None if not set."""
+
+
+class SettingsSource(BaseModel):
+    """A single settings source with its raw settings."""
+
+    source: str
+    """The source name (e.g. 'user', 'project', 'flagSettings')."""
+
+    settings: dict[str, Any]
+    """The raw settings from this source."""
+
+
+class GetSettingsResponse(BaseModel):
+    """Response from get_settings() containing effective and per-source settings."""
+
+    effective: dict[str, Any]
+    """The merged effective settings (ClaudeCodeSettings shape, camelCase keys)."""
+
+    sources: list[SettingsSource]
+    """Raw settings from each source."""
+
+    applied: AppliedSettings
+    """The currently applied model and effort."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
