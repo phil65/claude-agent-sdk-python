@@ -14,6 +14,7 @@ from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
+    ClaudeCodeSettings,
     GetSettingsResponse,
     McpAuthenticateResponse,
     McpSdkServerConfigWithInstance,
@@ -357,10 +358,18 @@ class ClaudeSDKClient:
             return None
         return RemoteControlResponse.model_validate(result)
 
-    async def apply_flag_settings(self, settings: dict[str, Any]) -> None:
-        """Apply runtime flag settings."""
+    async def apply_flag_settings(self, settings: ClaudeCodeSettings) -> None:
+        """Apply runtime settings overrides without restarting the session.
+
+        Flag settings are an in-memory settings source that gets merged with
+        other sources (user, project, etc.) to produce the effective settings.
+
+        Args:
+            settings: Settings to apply. Only non-None fields will be sent.
+        """
         query = self._ensure_connected()
-        await query.apply_flag_settings(settings)
+        serialized = settings.model_dump(by_alias=True, exclude_none=True)
+        await query.apply_flag_settings(serialized)
 
     async def get_settings(self) -> GetSettingsResponse:
         """Get the effective merged settings and raw per-source settings."""

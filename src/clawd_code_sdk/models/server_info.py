@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from anthropic.types import Model
 from pydantic import Field
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, FastModeState
-
-
-EffortLevel = Literal["low", "medium", "high", "max"]
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, EffortLevel, FastModeState
 
 
 class ClaudeCodeModelInfo(ClaudeCodeBaseModel):

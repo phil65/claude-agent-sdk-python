@@ -6,7 +6,6 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from clawd_code_sdk.models import AskUserQuestionInput, ToolInput
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
     ElicitationAction,  # noqa: TC001
@@ -14,6 +13,7 @@ from clawd_code_sdk.models.base import (
     PermissionBehavior,
     PermissionMode,
 )
+from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
 
 
 # Permission Update types (matching TypeScript SDK)

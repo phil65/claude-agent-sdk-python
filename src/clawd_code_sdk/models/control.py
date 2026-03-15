@@ -10,11 +10,14 @@ from pydantic import BaseModel, Discriminator, TypeAdapter
 from clawd_code_sdk.models.agents import AgentDefinition  # noqa: TC001
 from clawd_code_sdk.models.base import (  # noqa: TC001
     ClaudeCodeBaseModel,
+    EffortLevel,
     ElicitationMode,
+    ModelName,
     PermissionMode,
 )
 from clawd_code_sdk.models.hooks import HookEvent, HookInput  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
+from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
 
 
 # SDK Control Protocol
@@ -33,7 +36,7 @@ class SDKControlPermissionRequest:
     tool_name: str
     input: dict[str, Any]
     tool_use_id: str
-    permission_suggestions: list[Any] | None = None
+    permission_suggestions: list[PermissionUpdate] | None = None
     blocked_path: str | None = None
     decision_reason: str | None = None
     agent_id: str | None = None
@@ -243,10 +246,10 @@ class McpAuthenticateResponse(ClaudeCodeBaseModel):
 class AppliedSettings(BaseModel):
     """The currently applied model and effort settings."""
 
-    model: str
+    model: ModelName | str
     """The active model identifier."""
 
-    effort: str | None = None
+    effort: EffortLevel | None = None
     """The active effort level, or None if not set."""
 
 

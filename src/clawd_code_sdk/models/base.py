@@ -26,6 +26,8 @@ CompactionTrigger = Literal["auto", "manual"]
 ElicitationMode = Literal["form", "url"]
 ElicitationAction = Literal["accept", "decline", "cancel"]
 FastModeState = Literal["off", "cooldown", "on"]
+EffortLevel = Literal["low", "medium", "high", "max"]
+
 
 StopReason = Literal[
     "end_turn",

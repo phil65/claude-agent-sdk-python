@@ -11,6 +11,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     ElicitationAction,
     ElicitationMode,
 )
+from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
 
 
 if TYPE_CHECKING:
@@ -237,7 +238,7 @@ class PermissionRequestHookInput(BaseHookInput):
     hook_event_name: Literal["PermissionRequest"]
     tool_name: str
     tool_input: dict[str, Any]
-    permission_suggestions: NotRequired[list[Any]]
+    permission_suggestions: NotRequired[list[PermissionUpdate]]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
 

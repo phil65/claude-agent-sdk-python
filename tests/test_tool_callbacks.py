@@ -114,7 +114,7 @@ class TestToolPermissionCallbacks:
                 "tool_name": "DangerousTool",
                 "input": {"command": "rm -rf /"},
                 "tool_use_id": "tu-2",
-                "permission_suggestions": ["deny"],
+                "permission_suggestions": [],
                 "blocked_path": None,
             }
         )
