@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from anthropic.types.beta.beta_tool_use_block import Caller
-from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Discriminator
 
 from clawd_code_sdk.models import ToolInput
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName
@@ -109,8 +109,6 @@ ContentBlock = Annotated[
     TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | ImageBlock,
     Discriminator("type"),
 ]
-
-content_block_adapter = TypeAdapter[ContentBlock](ContentBlock)
 
 
 # =============================================================================

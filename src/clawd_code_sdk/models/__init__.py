@@ -219,7 +219,6 @@ from .content_blocks import (
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
-    content_block_adapter,
 )
 from .session import SDKSessionInfo, ListSessionsOptions
 from .messages import (
@@ -641,7 +640,6 @@ __all__ = [
     "WorktreeCreateHookInput",
     "WorktreeRemoveHookInput",
     "WriteOutput",
-    "content_block_adapter",
     "control_request_adapter",
     "message_adapter",
     "system_message_adapter",
