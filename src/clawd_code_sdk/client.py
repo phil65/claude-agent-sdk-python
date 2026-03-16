@@ -14,7 +14,6 @@ from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeCodeAgentInfo,  # noqa: TC001
-    ClaudeCodeSettings,
     GetSettingsResponse,
     McpAuthenticateResponse,
     McpSdkServerConfigWithInstance,
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import (
         ClaudeCodeServerInfo,
+        ClaudeCodeSettings,
         McpServerConfig,
         Message,
         PermissionMode,
