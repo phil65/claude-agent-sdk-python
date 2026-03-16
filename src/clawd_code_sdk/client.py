@@ -7,7 +7,6 @@ import os
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import anyenv
-from pydantic import TypeAdapter
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
@@ -95,9 +94,6 @@ class ClaudeSDKClient:
         from clawd_code_sdk._internal.query import Query
         from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 
-        # Validate and configure permission settings (matching TypeScript SDK logic)
-        self.options.validate()
-
         # If on_permission is a callback, extract it for Query and replace with
         # "stdio" so the CLI routes permission requests through the control protocol.
         if callable(self.options.on_permission):
@@ -134,16 +130,6 @@ class ClaudeSDKClient:
         else:
             system_prompt = self.options.system_prompt
 
-        # JSON schema for structured output
-        json_schema: dict[str, Any] | None
-        match self.options.output_schema:
-            case type() as typ:
-                json_schema = TypeAdapter(typ).json_schema()
-            case dict() as schema:
-                json_schema = schema
-            case None:
-                json_schema = None
-
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
@@ -156,7 +142,7 @@ class ClaudeSDKClient:
             agents=self.options.agents,
             system_prompt=system_prompt,
             append_system_prompt=append_system_prompt,
-            json_schema=json_schema,
+            json_schema=self.options.get_json_schema(),
             prompt_suggestions=self.options.prompt_suggestions,
             agent_progress_summaries=self.options.agent_progress_summaries,
         )

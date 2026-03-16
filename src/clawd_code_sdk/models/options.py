@@ -334,5 +334,15 @@ class ClaudeAgentOptions:
 
         return anyenv.dump_json(settings_obj) if settings_obj else None
 
-    def validate(self) -> None:
-        """Validate option constraints."""
+    def get_json_schema(self) -> dict[str, Any] | None:
+        from pydantic import TypeAdapter
+
+        match self.output_schema:
+            case type() as typ:
+                return TypeAdapter(typ).json_schema()
+            case dict() as schema:
+                return schema
+            case None:
+                return None
+            case _ as unreachable:
+                assert_never(unreachable)
