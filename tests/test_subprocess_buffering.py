@@ -92,8 +92,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 2
             assert messages[0]["content"] == "Line 1\nLine 2\nLine 3"
@@ -113,8 +113,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream([buffered_line])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 2
             assert messages[0]["id"] == "msg1"
@@ -150,8 +150,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([part1, part2, part3])  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream([part1, part2, part3])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 1
             assert messages[0]["type"] == "assistant"
@@ -187,8 +187,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream(chunks)  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream(chunks)  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 1
             assert messages[0]["type"] == "user"
@@ -209,8 +209,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             with pytest.raises(Exception) as exc_info:  # noqa: PT011
                 _messages = [msg async for msg in transport.read_messages()]
 
@@ -231,8 +231,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream([huge_incomplete])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
 
             with pytest.raises(CLIJSONDecodeError) as exc_info:
                 async for _ in transport.read_messages():
@@ -264,8 +264,8 @@ class TestSubprocessBuffering:
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
             transport._process = mock_process
-            transport._stdout_stream = MockTextReceiveStream(lines)  # pyright: ignore[reportAttributeAccessIssue]
-            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]
+            transport._stdout_stream = MockTextReceiveStream(lines)  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
+            transport._stderr_stream = MockTextReceiveStream([])  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
             messages = [msg async for msg in transport.read_messages()]
             assert len(messages) == 3
             assert messages[0]["type"] == "system"

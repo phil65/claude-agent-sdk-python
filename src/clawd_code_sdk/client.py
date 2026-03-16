@@ -133,7 +133,7 @@ class ClaudeSDKClient:
         # Create Query to handle control protocol
         self._query = Query(
             transport=self._transport,
-            can_use_tool=can_use_tool,
+            can_use_tool=can_use_tool,  # ty:ignore[invalid-argument-type]
             on_user_question=self.options.on_user_question,
             on_elicitation=self.options.on_elicitation,
             hooks=self.options.hooks,

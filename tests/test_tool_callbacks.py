@@ -26,7 +26,14 @@ async def _dispatch(query: Query, request: dict[str, Any]) -> None:
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk import HookContext, HookInput, HookJSONOutput, ToolPermissionContext
+    from clawd_code_sdk import (
+        HookContext,
+        HookInput,
+        HookJSONOutput,
+        PermissionResult,
+        ToolPermissionContext,
+    )
+    from clawd_code_sdk.models import HookEvent, ToolInput
 
 
 class MockTransport(Transport):
@@ -65,7 +72,7 @@ class TestToolPermissionCallbacks:
         callback_invoked = False
 
         async def allow_callback(
-            tool_name: str, input_data: dict, context: ToolPermissionContext
+            tool_name: str, input_data: ToolInput | dict[str, Any], context: ToolPermissionContext
         ) -> PermissionResultAllow:
             nonlocal callback_invoked
             callback_invoked = True
@@ -97,7 +104,7 @@ class TestToolPermissionCallbacks:
         """Test callback that denies tool execution."""
 
         async def deny_callback(
-            tool_name: str, input_data: dict, context: ToolPermissionContext
+            tool_name: str, input_data: ToolInput | dict[str, Any], context: ToolPermissionContext
         ) -> PermissionResultDeny:
             return PermissionResultDeny(message="Security policy violation")
 
@@ -130,7 +137,7 @@ class TestToolPermissionCallbacks:
         """Test callback that modifies tool input."""
 
         async def modify_callback(
-            tool_name: str, input_data: dict, context: ToolPermissionContext
+            tool_name: str, input_data: ToolInput | dict[str, Any], context: ToolPermissionContext
         ) -> PermissionResultAllow:
             # Modify the input to add safety flag
             modified_input = input_data.copy()
@@ -138,11 +145,7 @@ class TestToolPermissionCallbacks:
             return PermissionResultAllow(updated_input=modified_input)
 
         transport = MockTransport()
-        query = Query(
-            transport=transport,
-            can_use_tool=modify_callback,
-            hooks=None,
-        )
+        query = Query(transport=transport, can_use_tool=modify_callback)
         request_data = SDKControlPermissionRequest(
             tool_name="WriteTool",
             input={"file_path": "/etc/passwd"},
@@ -161,16 +164,12 @@ class TestToolPermissionCallbacks:
         """Test that callback exceptions are properly handled."""
 
         async def error_callback(
-            tool_name: str, input_data: dict, context: ToolPermissionContext
-        ) -> PermissionResultAllow:
+            tool_name: str, input_data: ToolInput | dict[str, Any], context: ToolPermissionContext
+        ) -> PermissionResult:
             raise ValueError("Callback error")
 
         transport = MockTransport()
-        query = Query(
-            transport=transport,
-            can_use_tool=error_callback,
-            hooks=None,
-        )
+        query = Query(transport=transport, can_use_tool=error_callback)
         request_data = SDKControlPermissionRequest(
             tool_name="TestTool",
             input={},
@@ -201,7 +200,9 @@ class TestHookCallbacks:
 
         transport = MockTransport()
         # Create hooks configuration
-        hooks = {"tool_use_start": [HookMatcher(matcher="TestTool", hooks=[test_hook])]}
+        hooks: dict[HookEvent, list[HookMatcher]] = {
+            "tool_use_start": [HookMatcher(matcher="TestTool", hooks=[test_hook])]
+        }
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         # Manually register the hook callback to avoid needing the full initialize flow
         callback_id = "test_hook_0"
@@ -261,7 +262,9 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [HookMatcher(matcher="TestTool", hooks=[comprehensive_hook])]}
+        hooks: dict[HookEvent, list[HookMatcher]] = {
+            "PreToolUse": [HookMatcher(matcher="TestTool", hooks=[comprehensive_hook])]
+        }
 
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
 
@@ -319,7 +322,9 @@ class TestHookCallbacks:
             return {"async_": True, "asyncTimeout": 5000}
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [HookMatcher(hooks=[async_hook])]}
+        hooks: dict[HookEvent, list[HookMatcher]] = {
+            "PreToolUse": [HookMatcher(hooks=[async_hook])]
+        }
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
@@ -369,7 +374,9 @@ class TestHookCallbacks:
             }
 
         transport = MockTransport()
-        hooks = {"PreToolUse": [HookMatcher(hooks=[conversion_test_hook])]}
+        hooks: dict[HookEvent, list[HookMatcher]] = {
+            "PreToolUse": [HookMatcher(hooks=[conversion_test_hook])]
+        }
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook

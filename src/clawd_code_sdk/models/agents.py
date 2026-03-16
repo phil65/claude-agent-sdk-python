@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from anthropic.types import Model  # noqa: TC002
 
 from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
 from clawd_code_sdk.models.hooks import AgentHooksConfig  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig  # noqa: TC001
+
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
@@ -57,7 +61,7 @@ class AgentDefinition:
     tools: list[str] | None = None
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
-    mcp_servers: list[AgentMcpServerSpec] | dict[str, ExternalMcpServerConfig] | None = None
+    mcp_servers: list[AgentMcpServerSpec] | Mapping[str, ExternalMcpServerConfig] | None = None
     disallowed_tools: list[str] | None = None
     critical_system_reminder_experimental: str | None = None
     skills: list[str] | None = None

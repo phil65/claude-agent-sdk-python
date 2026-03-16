@@ -21,6 +21,7 @@ from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
     ClaudeCodeSettings,
+    McpStdioServerConfig,
     Network,
     Permissions,
     Sandbox,
@@ -28,6 +29,7 @@ from clawd_code_sdk.models import (
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
 )
+from clawd_code_sdk.models.mcp import McpSSEServerConfig
 
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"
@@ -797,7 +799,7 @@ class TestSubprocessCLITransport:
                 async def __aexit__(self, *args):
                     pass
 
-            transport._write_lock = NoOpLock()  # pyright: ignore[reportAttributeAccessIssue]
+            transport._write_lock = NoOpLock()  # pyright: ignore[reportAttributeAccessIssue]  # ty:ignore[invalid-assignment]
 
             # Without the lock, writes may interleave. We verify the lock
             # exists and is used by checking the serialized test passes
@@ -983,7 +985,7 @@ class TestSubprocessCLITransport:
             description="Agent with MCP servers",
             prompt="You have MCP tools",
             mcp_servers={
-                "git": {"command": "uvx", "args": ["mcp-server-git"]},
+                "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),
             },
         )
         serialized = agent_with_mcp.to_dict()
@@ -1042,7 +1044,7 @@ class TestSubprocessCLITransport:
             model="sonnet",
             memory="project",
             mcp_servers={
-                "git": {"command": "uvx", "args": ["mcp-server-git"]},
+                "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),
             },
         )
         serialized = agent.to_dict()
@@ -1063,8 +1065,8 @@ class TestSubprocessCLITransport:
             description="Multi-MCP agent",
             prompt="You have many tools",
             mcp_servers={
-                "git": {"command": "uvx", "args": ["mcp-server-git"]},
-                "remote": {"type": "sse", "url": "http://localhost:8080/sse"},
+                "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),
+                "remote": McpSSEServerConfig(type="sse", url="http://localhost:8080/sse"),
             },
         )
         serialized = agent.to_dict()
