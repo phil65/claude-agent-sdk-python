@@ -7,6 +7,7 @@ used to provide proper typing for ToolResultBlock.content.
 
 from __future__ import annotations
 
+import functools
 from typing import Annotated
 
 from anthropic.types.beta import (
@@ -73,35 +74,32 @@ ToolResultContentBlock = Annotated[
     | BetaTextEditorCodeExecutionToolResultError,
     Field(discriminator="type"),
 ]
-_tool_result_content_adapter: TypeAdapter[list[ToolResultContentBlock]] | None = None
 
 
+@functools.cache
 def _get_adapter() -> TypeAdapter[list[ToolResultContentBlock]]:
-    global _tool_result_content_adapter  # noqa: PLW0603
-    if _tool_result_content_adapter is None:
-        # Force schema build for Anthropic models (deferred by default)
-        for model in [
-            BetaTextBlock,
-            BetaWebSearchResultBlock,
-            BetaWebSearchToolResultError,
-            BetaBashCodeExecutionResultBlock,
-            BetaBashCodeExecutionToolResultError,
-            BetaCodeExecutionResultBlock,
-            BetaCodeExecutionToolResultError,
-            BetaTextEditorCodeExecutionCreateResultBlock,
-            BetaTextEditorCodeExecutionStrReplaceResultBlock,
-            BetaTextEditorCodeExecutionToolResultError,
-            BetaTextEditorCodeExecutionViewResultBlock,
-            BetaToolReferenceBlock,
-            BetaToolSearchToolResultError,
-            BetaToolSearchToolSearchResultBlock,
-            BetaWebFetchBlock,
-            BetaWebFetchToolResultErrorBlock,
-        ]:
-            if isinstance(model, type) and issubclass(model, BaseModel):
-                model.model_rebuild()
-        _tool_result_content_adapter = TypeAdapter(list[ToolResultContentBlock])
-    return _tool_result_content_adapter
+    # Force schema build for Anthropic models (deferred by default)
+    for model in [
+        BetaTextBlock,
+        BetaWebSearchResultBlock,
+        BetaWebSearchToolResultError,
+        BetaBashCodeExecutionResultBlock,
+        BetaBashCodeExecutionToolResultError,
+        BetaCodeExecutionResultBlock,
+        BetaCodeExecutionToolResultError,
+        BetaTextEditorCodeExecutionCreateResultBlock,
+        BetaTextEditorCodeExecutionStrReplaceResultBlock,
+        BetaTextEditorCodeExecutionToolResultError,
+        BetaTextEditorCodeExecutionViewResultBlock,
+        BetaToolReferenceBlock,
+        BetaToolSearchToolResultError,
+        BetaToolSearchToolSearchResultBlock,
+        BetaWebFetchBlock,
+        BetaWebFetchToolResultErrorBlock,
+    ]:
+        if isinstance(model, type) and issubclass(model, BaseModel):
+            model.model_rebuild()
+    return TypeAdapter(list[ToolResultContentBlock])
 
 
 def validate_tool_result_content(content: list[dict[str, object]]) -> list[ToolResultContentBlock]:
