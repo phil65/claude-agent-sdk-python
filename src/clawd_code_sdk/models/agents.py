@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, Literal, TypedDict
 
 from anthropic.types import Model
@@ -16,7 +16,7 @@ from clawd_code_sdk.models.base import (
     SettingSource,
 )
 from clawd_code_sdk.models.hooks import AgentHooksConfig
-from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, McpServerConfigForProcessTransport
+from clawd_code_sdk.models.mcp import McpServerConfigForProcessTransport
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
@@ -67,7 +67,7 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
     tools: list[str] | None = None
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
-    mcp_servers: list[AgentMcpServerSpec] | None = None
+    mcp_servers: Sequence[AgentMcpServerSpec] | None = None
     disallowed_tools: list[str] | None = None
     critical_system_reminder_experimental: str | None = Field(
         default=None, serialization_alias="criticalSystemReminder_EXPERIMENTAL"
@@ -94,7 +94,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
     """Persistent cross-session memory scope for this agent."""
-    mcp_servers: Mapping[str, ExternalMcpServerConfig | None] | None = None
+    mcp_servers: Mapping[str, McpServerConfigForProcessTransport | None] | None = None
     """MCP servers for this agent.
 
     Maps server names to configs. Use ``None`` as the value to reference
@@ -131,19 +131,17 @@ class AgentDefinition(ClaudeCodeBaseModel):
 
         Returns a camelCase dict with None values excluded.
         """
-        mcp: list[AgentMcpServerSpec] | None = None
-        if self.mcp_servers is not None:
-            mcp = [
-                name if config is None else {name: config}
-                for name, config in self.mcp_servers.items()
-            ]
+        mcp = [
+            name if config is None else {name: config}
+            for name, config in (self.mcp_servers or {}).items()
+        ]
         return AgentWireDefinition(
             description=self.description,
             prompt=self.prompt,
             tools=self.tools,
             model=self.model,
             memory=self.memory,
-            mcp_servers=mcp,
+            mcp_servers=mcp or None,
             disallowed_tools=self.disallowed_tools,
             critical_system_reminder_experimental=self.critical_system_reminder_experimental,
             skills=self.skills,

@@ -114,12 +114,6 @@ class McpSdkServerConfigWithInstance(McpSdkServerConfig):
     instance: McpServer = field(repr=False)
 
 
-ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
-McpServerConfig = (
-    McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfigWithInstance
-)
-
-
 @dataclass(kw_only=True)
 class McpClaudeAIProxyServerConfig:
     """MCP Claude AI proxy server configuration."""
@@ -129,10 +123,9 @@ class McpClaudeAIProxyServerConfig:
     id: str
 
 
-McpServerConfigForProcessTransport = (
-    McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfig
-)
-
+ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
+McpServerConfig = ExternalMcpServerConfig | McpSdkServerConfigWithInstance
+McpServerConfigForProcessTransport = ExternalMcpServerConfig | McpSdkServerConfig
 McpServerStatusConfig = McpServerConfigForProcessTransport | McpClaudeAIProxyServerConfig
 
 
