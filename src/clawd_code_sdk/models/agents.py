@@ -8,14 +8,18 @@ from typing import Any, Literal, TypedDict
 from anthropic.types import Model
 from pydantic import Field
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, ModelName, SettingSource
+from clawd_code_sdk.models.base import (
+    ClaudeCodeBaseModel,
+    ModelName,
+    PermissionMode,
+    ReasoningEffort,
+    SettingSource,
+)
 from clawd_code_sdk.models.hooks import AgentHooksConfig
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, McpServerConfigForProcessTransport
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
-# Matches the TypeScript type: AgentMcpServerSpec =
-# string | Record<string, McpServerConfigForProcessTransport>
 # Matches the TypeScript type: AgentMcpServerSpec =
 # string | Record<string, McpServerConfigForProcessTransport>
 AgentMcpServerSpec = str | dict[str, McpServerConfigForProcessTransport]
@@ -45,7 +49,17 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
     """Wire-format agent definition matching the CLI control protocol.
 
     This is the strict camelCase representation sent over the wire
-    in the initialize request. Fields match the TypeScript AgentDefinition.
+    in the initialize request.
+
+    The CLI's *public* Zod schema (``sdk.d.ts``) only defines::
+
+        description, prompt, tools, disallowedTools, model, mcpServers,
+        criticalSystemReminder_EXPERIMENTAL, skills, maxTurns
+
+    However, the CLI's *internal* parse schema (``Rff`` / ``parseAgentFromJson``)
+    also accepts these additional fields, which are fully functional::
+
+        memory, background, hooks, effort, permissionMode, isolation
     """
 
     description: str
@@ -62,6 +76,9 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
     max_turns: int | None = None
     background: bool | None = None
     hooks: AgentHooksConfig | None = None
+    effort: ReasoningEffort | int | None = None
+    permission_mode: PermissionMode | None = None
+    isolation: Literal["worktree"] | None = None
 
 
 class AgentDefinition(ClaudeCodeBaseModel):
@@ -76,6 +93,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
     tools: list[str] | None = None
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
+    """Persistent cross-session memory scope for this agent."""
     mcp_servers: Mapping[str, ExternalMcpServerConfig | None] | None = None
     """MCP servers for this agent.
 
@@ -93,8 +111,17 @@ class AgentDefinition(ClaudeCodeBaseModel):
     )
     skills: list[str] | None = None
     max_turns: int | None = None
+    """Maximum number of agentic turns (API round-trips) before stopping."""
     background: bool | None = None
+    """Whether this agent runs in the background."""
     hooks: AgentHooksConfig | None = None
+    """Hook configurations for this agent."""
+    effort: ReasoningEffort | int | None = None
+    """Effort level for thinking depth."""
+    permission_mode: PermissionMode | None = None
+    """Permission mode for this agent."""
+    isolation: Literal["worktree"] | None = None
+    """Isolation mode. ``"worktree"`` runs the agent in a separate git worktree."""
 
     def to_wire(self) -> dict[str, Any]:
         """Serialize to the wire-format dict for the CLI control protocol.
@@ -123,4 +150,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
             max_turns=self.max_turns,
             background=self.background,
             hooks=self.hooks,
+            effort=self.effort,
+            permission_mode=self.permission_mode,
+            isolation=self.isolation,
         ).model_dump(by_alias=True, exclude_none=True)
