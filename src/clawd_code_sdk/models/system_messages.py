@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 from anthropic.types.model import Model
-from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
 
 from clawd_code_sdk.models import McpConnectionStatus
 from clawd_code_sdk.models.base import (  # noqa: TC001
@@ -125,12 +125,12 @@ class InitSystemMessage(BaseSystemMessage):
     """System init message with session metadata."""
 
     subtype: Literal["init"] = "init"
-    apiKeySource: ApiKeySource | None  # noqa: N815
+    api_key_source: ApiKeySource | None = Field(..., validation_alias="apiKeySource")
     cwd: str
     tools: list[str]
     mcp_servers: list[McpServerStatus]
     model: Model
-    permissionMode: PermissionMode  # noqa: N815
+    permission_mode: PermissionMode = Field(..., validation_alias="permissionMode")
     slash_commands: list[str]
     output_style: Literal["default", "json"] | str  # noqa: PYI051
     claude_code_version: str
@@ -155,7 +155,7 @@ class StatusSystemMessage(BaseSystemMessage):
 
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | None
-    permissionMode: PermissionMode | None = None  # noqa: N815
+    permission_mode: PermissionMode | None = Field(None, validation_alias="permissionMode")
 
 
 class PreservedSegment(TypedDict):

@@ -416,7 +416,7 @@ class AuthStatusMessage(BaseMessage):
     """Authentication status update."""
 
     type: Literal["auth_status"] = "auth_status"
-    isAuthenticating: bool = False  # noqa: N815
+    is_authenticating: bool = Field(False, validation_alias="isAuthenticating")
     output: list[str] | None = None
     error: str | None = None
 
