@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal, TypedDict
 
 from pydantic import BaseModel, Discriminator, TypeAdapter
 
-from clawd_code_sdk.models.agents import AgentDefinition  # noqa: TC001
+from clawd_code_sdk.models.agents import AgentWireDefinition  # noqa: TC001
 from clawd_code_sdk.models.base import (  # noqa: TC001
     ClaudeCodeBaseModel,
     EffortLevel,
@@ -51,7 +51,7 @@ class SDKControlInitializeRequest:
 
     subtype: Literal["initialize"] = "initialize"
     hooks: dict[HookEvent, Any] | None = None
-    agents: dict[str, AgentDefinition] | None = None
+    agents: dict[str, AgentWireDefinition] | None = None
     sdk_mcp_servers: list[str] | None = None
     system_prompt: str | None = None
     append_system_prompt: str | None = None

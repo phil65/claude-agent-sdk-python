@@ -115,7 +115,6 @@ class McpSdkServerConfigWithInstance(McpSdkServerConfig):
 
 
 ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
-
 McpServerConfig = (
     McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig | McpSdkServerConfigWithInstance
 )

@@ -2,34 +2,26 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping  # noqa: TC003
-from dataclasses import dataclass, fields
+from collections.abc import Mapping
 from typing import Any, Literal, TypedDict
 
-from anthropic.types import Model  # noqa: TC002
+from anthropic.types import Model
+from pydantic import Field
 
-from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
-from clawd_code_sdk.models.hooks import AgentHooksConfig  # noqa: TC001
-from clawd_code_sdk.models.mcp import ExternalMcpServerConfig  # noqa: TC001
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, ModelName, SettingSource
+from clawd_code_sdk.models.hooks import AgentHooksConfig
+from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, McpServerConfigForProcessTransport
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
 # Matches the TypeScript type: AgentMcpServerSpec =
 # string | Record<string, McpServerConfigForProcessTransport>
-AgentMcpServerSpec = str | dict[str, Any]
-
-# Fields on AgentDefinition that need snake_case -> camelCase conversion
-_FIELD_RENAMES: dict[str, str] = {
-    "mcp_servers": "mcpServers",
-    "disallowed_tools": "disallowedTools",
-    "critical_system_reminder_experimental": "criticalSystemReminder_EXPERIMENTAL",
-    "max_turns": "maxTurns",
-    "permission_mode": "permissionMode",
-}
+# Matches the TypeScript type: AgentMcpServerSpec =
+# string | Record<string, McpServerConfigForProcessTransport>
+AgentMcpServerSpec = str | dict[str, McpServerConfigForProcessTransport]
 
 
-@dataclass
-class AgentInfo:
+class AgentInfo(ClaudeCodeBaseModel):
     """Information about an available subagent that can be invoked via the Agent tool."""
 
     name: str
@@ -49,43 +41,86 @@ class ToolsPreset(TypedDict):
     preset: Literal["claude_code"]
 
 
-@dataclass
-class AgentDefinition:
-    """Agent definition configuration."""
+class AgentWireDefinition(ClaudeCodeBaseModel):
+    """Wire-format agent definition matching the CLI control protocol.
+
+    This is the strict camelCase representation sent over the wire
+    in the initialize request. Fields match the TypeScript AgentDefinition.
+    """
 
     description: str
     prompt: str
     tools: list[str] | None = None
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
-    mcp_servers: list[AgentMcpServerSpec] | Mapping[str, ExternalMcpServerConfig] | None = None
+    mcp_servers: list[AgentMcpServerSpec] | None = None
     disallowed_tools: list[str] | None = None
-    critical_system_reminder_experimental: str | None = None
+    critical_system_reminder_experimental: str | None = Field(
+        default=None, serialization_alias="criticalSystemReminder_EXPERIMENTAL"
+    )
     skills: list[str] | None = None
     max_turns: int | None = None
     background: bool | None = None
     hooks: AgentHooksConfig | None = None
-    # permission_mode: PermissionMode | None = None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize to a dict suitable for the CLI wire format.
 
-        Drops None values and converts Python field names to the camelCase keys
-        expected by the Claude Code CLI (e.g. mcp_servers -> mcpServers).
+class AgentDefinition(ClaudeCodeBaseModel):
+    """User-facing agent definition configuration.
 
-        For mcp_servers, accepts either:
-        - A dict mapping server names to configs (Pythonic) -> converted to
-          [{name: config}, ...] array for the CLI
-        - A list of AgentMcpServerSpec (raw CLI format) -> passed through as-is
+    Accepts ergonomic Python inputs (e.g. dict-style mcp_servers)
+    and converts to the wire format via ``to_wire()``.
+    """
+
+    description: str
+    prompt: str
+    tools: list[str] | None = None
+    model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
+    memory: SettingSource | None = None
+    mcp_servers: Mapping[str, ExternalMcpServerConfig | None] | None = None
+    """MCP servers for this agent.
+
+    Maps server names to configs. Use ``None`` as the value to reference
+    a server already configured in settings::
+
+        {
+            "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),
+            "already-configured": None,  # reference by name
+        }
+    """
+    disallowed_tools: list[str] | None = None
+    critical_system_reminder_experimental: str | None = Field(
+        default=None, alias="criticalSystemReminder_EXPERIMENTAL"
+    )
+    skills: list[str] | None = None
+    max_turns: int | None = None
+    background: bool | None = None
+    hooks: AgentHooksConfig | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        """Serialize to the wire-format dict for the CLI control protocol.
+
+        Converts dict-style mcp_servers to the array format the CLI expects:
+        ``{"git": config}`` -> ``[{"git": config}]``
+
+        Returns a camelCase dict with None values excluded.
         """
-        result: dict[str, Any] = {}
-        for f in fields(self):
-            value = getattr(self, f.name)
-            if value is None:
-                continue
-            key = _FIELD_RENAMES.get(f.name, f.name)
-            # Convert dict-style mcp_servers to the array format the CLI expects
-            if f.name == "mcp_servers" and isinstance(value, dict):
-                value = [{name: config} for name, config in value.items()]
-            result[key] = value
-        return result
+        mcp: list[AgentMcpServerSpec] | None = None
+        if self.mcp_servers is not None:
+            mcp = [
+                name if config is None else {name: config}
+                for name, config in self.mcp_servers.items()
+            ]
+        return AgentWireDefinition(
+            description=self.description,
+            prompt=self.prompt,
+            tools=self.tools,
+            model=self.model,
+            memory=self.memory,
+            mcp_servers=mcp,
+            disallowed_tools=self.disallowed_tools,
+            critical_system_reminder_experimental=self.critical_system_reminder_experimental,
+            skills=self.skills,
+            max_turns=self.max_turns,
+            background=self.background,
+            hooks=self.hooks,
+        ).model_dump(by_alias=True, exclude_none=True)

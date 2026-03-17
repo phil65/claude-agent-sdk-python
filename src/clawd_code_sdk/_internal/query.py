@@ -136,7 +136,7 @@ class Query:
         self.on_elicitation = on_elicitation
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
-        self._agents = {name: agent_def.to_dict() for name, agent_def in (agents or {}).items()}
+        self._agents = {name: agent_def.to_wire() for name, agent_def in (agents or {}).items()}
         self._system_prompt = system_prompt
         self._append_system_prompt = append_system_prompt
         self._json_schema = json_schema

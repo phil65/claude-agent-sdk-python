@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .agents import AgentDefinition, AgentInfo, ToolsPreset
+from .agents import AgentDefinition, AgentInfo, AgentWireDefinition, ToolsPreset
 from .base import (
     ApiKeySource,
     AssistantMessageError,
@@ -370,6 +370,7 @@ __all__ = [
     "AgentOutputTextContent",
     "AgentOutputUsage",
     "AgentServerToolUse",
+    "AgentWireDefinition",
     "ApiKeySource",
     "AppliedSettings",
     "AskUserQuestion",
