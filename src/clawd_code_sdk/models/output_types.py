@@ -699,7 +699,7 @@ class SkillOutput(TypedDict):
     """Whether the skill was invoked successfully."""
     commandName: str
     """The name of the skill that was invoked."""
-    allowedTools: list[str]
+    allowedTools: list[ToolName | str]
     """Tools that the skill is allowed to use."""
 
 

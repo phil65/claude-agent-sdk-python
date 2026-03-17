@@ -14,6 +14,7 @@ from clawd_code_sdk.models.base import (
     PermissionMode,
     ReasoningEffort,
     SettingSource,
+    ToolName,
 )
 from clawd_code_sdk.models.hooks import AgentHooksConfig
 from clawd_code_sdk.models.mcp import McpServerConfigForProcessTransport
@@ -64,11 +65,11 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
 
     description: str
     prompt: str
-    tools: list[str] | None = None
+    tools: list[ToolName | str] | None = None
     model: ModelName | Literal["inherit"] | str | None = None  # noqa: PYI051
     memory: SettingSource | None = None
     mcp_servers: Sequence[AgentMcpServerSpec] | None = None
-    disallowed_tools: list[str] | None = None
+    disallowed_tools: list[ToolName | str] | None = None
     critical_system_reminder_experimental: str | None = Field(
         default=None, serialization_alias="criticalSystemReminder_EXPERIMENTAL"
     )
@@ -94,7 +95,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
     prompt: str = Field(..., title="Agent Prompt", examples=["Do XY"])
     """The prompt to use for this agent."""
 
-    tools: list[str] | None = Field(default=None, title="Agent Tools", examples=["Bash"])
+    tools: list[ToolName | str] | None = Field(default=None, title="Agent Tools", examples=["Bash"])
     """The tools this agent has access to."""
 
     model: ModelName | Literal["inherit"] | str | None = Field(  # noqa: PYI051
@@ -117,7 +118,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
     a server already configured in settings::
     """
 
-    disallowed_tools: list[str] | None = Field(
+    disallowed_tools: list[ToolName | str] | None = Field(
         default=None,
         title="Disallowed Tools",
         examples=["Bash"],
@@ -137,7 +138,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
     max_turns: int | None = Field(default=None, title="Max Turns")
     """Maximum number of agentic turns (API round-trips) before stopping."""
 
-    background: bool | None = Field(default=None, title="Run inBackground")
+    background: bool | None = Field(default=None, title="Run in Background")
     """Whether this agent runs in the background."""
 
     hooks: AgentHooksConfig | None = Field(default=None, title="Agent Hooks")

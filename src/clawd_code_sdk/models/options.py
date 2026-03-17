@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk.models import OnElicitation, OnUserQuestion
     from clawd_code_sdk.models.agents import AgentDefinition, ToolsPreset
-    from clawd_code_sdk.models.base import ModelName, PermissionMode, ReasoningEffort, SettingSource
+    from clawd_code_sdk.models.base import (
+        ModelName,
+        PermissionMode,
+        ReasoningEffort,
+        SettingSource,
+        ToolName,
+    )
     from clawd_code_sdk.models.hooks import HookEvent, HookMatcher
     from clawd_code_sdk.models.mcp import McpServerConfig, SdkPluginConfig
     from clawd_code_sdk.models.permissions import CanUseTool
@@ -106,11 +112,11 @@ class ClaudeAgentOptions:
     """Query options for Claude SDK."""
 
     # Tools
-    tools: list[str] | ToolsPreset | None = None
+    tools: list[ToolName | str] | ToolsPreset | None = None
     """Tools available to the agent."""
-    allowed_tools: list[str] | None = None
+    allowed_tools: list[ToolName | str] | None = None
     """Tools which execute without prompting for permission."""
-    disallowed_tools: list[str] | None = None
+    disallowed_tools: list[ToolName | str] | None = None
     """Tools that are removed from agent context and cant be used."""
     enable_agent_teams: bool = False
     """Enable the experimental agent teams feature."""

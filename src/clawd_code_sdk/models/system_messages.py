@@ -131,7 +131,7 @@ class InitSystemMessage(BaseSystemMessage):
     subtype: Literal["init"] = "init"
     api_key_source: ApiKeySource | None = Field(..., validation_alias="apiKeySource")
     cwd: str
-    tools: list[str]
+    tools: list[ToolName | str]
     mcp_servers: list[McpServerStatus]
     model: Model
     permission_mode: PermissionMode = Field(..., validation_alias="permissionMode")
