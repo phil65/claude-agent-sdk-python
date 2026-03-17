@@ -333,7 +333,7 @@ ControlRequestUnion = Annotated[
     Discriminator("subtype"),
 ]
 
-control_request_adapter: TypeAdapter[ControlRequestUnion] = TypeAdapter(ControlRequestUnion)
+control_request_adapter = TypeAdapter[ControlRequestUnion](ControlRequestUnion)
 
 
 @dataclass(frozen=True, slots=True)

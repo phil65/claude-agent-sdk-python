@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping  # noqa: TC003
 from dataclasses import dataclass, fields
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 from anthropic.types import Model  # noqa: TC002
 
 from clawd_code_sdk.models.base import ModelName, SettingSource  # noqa: TC001
 from clawd_code_sdk.models.hooks import AgentHooksConfig  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
 
 
 # Agent MCP server spec: either a string name or a {name: config} dict.
