@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from anthropic.types import Model
 from pydantic import Field
 
@@ -66,6 +68,13 @@ class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
 
     organization: str | None = None
     """Organization name."""
+
+    api_provider: Literal["firstParty", "bedrock", "vertex", "foundry"] | None = None
+    """Active API backend.
+
+    Anthropic OAuth login only applies when "firstParty"; for 3P providers
+    the other fields are absent and auth is external (AWS creds, gcloud ADC, etc.).
+    """
 
 
 class ClaudeCodeAgentInfo(ClaudeCodeBaseModel):

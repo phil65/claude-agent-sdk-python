@@ -35,10 +35,12 @@ class SDKControlPermissionRequest:
     subtype: Literal["can_use_tool"] = "can_use_tool"
     tool_name: str
     input: dict[str, Any]
-    tool_use_id: str
     permission_suggestions: list[PermissionUpdate] | None = None
     blocked_path: str | None = None
     decision_reason: str | None = None
+    title: str | None = None
+    display_name: str | None = None
+    tool_use_id: str
     agent_id: str | None = None
     description: str | None = None
 

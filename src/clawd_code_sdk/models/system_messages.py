@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Discriminator, TypeAdapter
 from clawd_code_sdk.models import McpConnectionStatus
 from clawd_code_sdk.models.base import (  # noqa: TC001
     ApiKeySource,
+    AssistantMessageError,
     CompactionTrigger,
     FastModeState,
     PermissionMode,
@@ -216,6 +217,17 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     """AI-generated progress summary when agentProgressSummaries is enabled."""
 
 
+class APIRetrySystemMessage(BaseSystemMessage):
+    """System message emitted when an API call fails and is retried."""
+
+    subtype: Literal["api_retry"] = "api_retry"
+    attempt: int
+    max_retries: int
+    retry_delay_ms: int
+    error_status: int | None
+    error: AssistantMessageError
+
+
 SystemMessageUnion = (
     InitSystemMessage
     | HookStartedSystemMessage
@@ -229,6 +241,7 @@ SystemMessageUnion = (
     | FilesPersistedSystemMessage
     | ElicitationCompleteMessage
     | LocalCommandOutputMessage
+    | APIRetrySystemMessage
 )
 
 SystemMessages = Annotated[
@@ -243,7 +256,8 @@ SystemMessages = Annotated[
     | TaskProgressSystemMessage
     | FilesPersistedSystemMessage
     | ElicitationCompleteMessage
-    | LocalCommandOutputMessage,
+    | LocalCommandOutputMessage
+    | APIRetrySystemMessage,
     Discriminator("subtype"),
 ]
 

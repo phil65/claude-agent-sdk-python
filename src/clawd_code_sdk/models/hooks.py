@@ -42,7 +42,7 @@ HookEvent = Literal[
     "WorktreeRemove",
     "InstructionsLoaded",
 ]
-
+LoadReason = Literal["session_start", "nested_traversal", "path_glob_match", "include", "compact"]
 
 # ---------------------------------------------------------------------------
 # Declarative hook handler configs (for agent/skill frontmatter & settings)
@@ -338,7 +338,7 @@ class InstructionsLoadedHookInput(BaseHookInput):
     hook_event_name: Literal["InstructionsLoaded"]
     file_path: str
     memory_type: Literal["User", "Project", "Local", "Managed"]
-    load_reason: Literal["session_start", "nested_traversal", "path_glob_match", "include"]
+    load_reason: LoadReason
     globs: NotRequired[list[str]]
     trigger_file_path: NotRequired[str]
     parent_file_path: NotRequired[str]

@@ -90,6 +90,25 @@ class ToolPermissionContext:
     For example, when a Bash command tries to access a path outside allowed directories.
     """
 
+    title: str | None = None
+    """Full permission prompt sentence rendered by the bridge.
+
+    E.g. "Claude wants to read foo.txt". Use this as the primary prompt
+    text when present instead of reconstructing from toolName+input.
+    """
+
+    display_name: str | None = None
+    """Short noun phrase for the tool action (e.g. "Read file").
+
+    Suitable for button labels or compact UI.
+    """
+
+    description: str | None = None
+    """Human-readable subtitle from the bridge.
+
+    E.g. "Claude will have read and write access to files in ~/Downloads".
+    """
+
 
 # Match TypeScript's PermissionResult structure
 class PermissionResultAllow(ClaudeCodeBaseModel):

@@ -112,18 +112,18 @@ class AgentAsyncLaunchedOutput(TypedDict):
     """Whether the calling agent has Read/Bash tools to check progress."""
 
 
-class AgentQueuedToRunningOutput(TypedDict):
-    """Output from the Task tool when an agent is queued to run."""
+# class AgentQueuedToRunningOutput(TypedDict):
+#     """Output from the Task tool when an agent is queued to run."""
 
-    status: Literal["queued_to_running"]
-    """Indicates the agent is queued to run."""
-    agentId: str
-    """The ID of the async agent."""
-    prompt: str
-    """The prompt for the agent."""
+#     status: Literal["queued_to_running"]
+#     """Indicates the agent is queued to run."""
+#     agentId: str
+#     """The ID of the async agent."""
+#     prompt: str
+#     """The prompt for the agent."""
 
 
-AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput | AgentQueuedToRunningOutput
+AgentOutput = AgentCompletedOutput | AgentAsyncLaunchedOutput  # | AgentQueuedToRunningOutput
 
 
 # ---------------------------------------------------------------------------

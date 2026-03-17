@@ -27,8 +27,14 @@ ElicitationMode = Literal["form", "url"]
 ElicitationAction = Literal["accept", "decline", "cancel"]
 FastModeState = Literal["off", "cooldown", "on"]
 EffortLevel = Literal["low", "medium", "high", "max"]
-
-
+AssistantMessageError = Literal[
+    "authentication_failed",
+    "billing_error",
+    "rate_limit",
+    "invalid_request",
+    "server_error",
+    "unknown",
+]
 StopReason = Literal[
     "end_turn",
     "max_tokens",

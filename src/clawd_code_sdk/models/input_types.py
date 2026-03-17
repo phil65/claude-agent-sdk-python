@@ -33,8 +33,8 @@ class AgentInput(TypedDict):
 
     Takes precedence over the agent definition's model frontmatter.
     If omitted, uses the agent definition's model, or inherits from the parent."""
-    resume: NotRequired[str]
-    """Optional agent ID to resume from in order to continue from the previous exec transcript."""
+    # resume: NotRequired[str]
+    # """Optional agent ID to resume from in order to continue from the previous exec transcript."""
     run_in_background: NotRequired[bool]
     """Whether to run the agent in the background."""
     name: NotRequired[str]

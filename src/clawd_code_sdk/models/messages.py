@@ -31,7 +31,12 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
-from clawd_code_sdk.models.base import FastModeState, StopReason, ToolName  # noqa: TC001
+from clawd_code_sdk.models.base import (  # noqa: TC001
+    AssistantMessageError,
+    FastModeState,
+    StopReason,
+    ToolName,
+)
 from clawd_code_sdk.models.content_blocks import (
     AssistantMessageContent,
     MessageParam,
@@ -46,15 +51,6 @@ if TYPE_CHECKING:
 
 
 # Message types
-AssistantMessageError = Literal[
-    "authentication_failed",
-    "billing_error",
-    "rate_limit",
-    "invalid_request",
-    "server_error",
-    "unknown",
-]
-
 ErrorSubType = Literal[
     "error_during_execution",
     "error_max_turns",
@@ -173,6 +169,7 @@ class UserMessage(BaseMessage):
     is_synthetic: bool | None = Field(default=None, validation_alias="isSynthetic")
     priority: Literal["now", "next", "later"] | None = None
     message: MessageParam
+    timestamp: str | None = None
 
     @property
     def content(self) -> str | Sequence[ContentBlock]:
