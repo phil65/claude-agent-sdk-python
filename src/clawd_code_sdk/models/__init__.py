@@ -300,6 +300,7 @@ from .system_messages import (
     HookStartedSystemMessage,
     InitSystemMessage,
     FilesPersistedSystemMessage,
+    APIRetrySystemMessage,
     HookProgressSystemMessage,
     TaskNotificationSystemMessage,
     TaskProgressSystemMessage,
@@ -358,6 +359,7 @@ message_adapter: TypeAdapter[Message] = TypeAdapter(Message)
 __all__ = [
     "TOOL_INPUT_TYPES",
     "TOOL_USE_RESULT_TYPES",
+    "APIRetrySystemMessage",
     "AgentAsyncLaunchedOutput",
     "AgentCacheCreation",
     "AgentCompletedOutput",
