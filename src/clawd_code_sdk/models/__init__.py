@@ -5,6 +5,7 @@ from __future__ import annotations
 from .agents import AgentDefinition, AgentInfo, ToolsPreset
 from .base import (
     ApiKeySource,
+    AssistantMessageError,
     ElicitationAction,
     ElicitationMode,
     PermissionMode,
@@ -223,7 +224,6 @@ from .content_blocks import (
 from .session import SDKSessionInfo, ListSessionsOptions
 from .messages import (
     AssistantMessage,
-    AssistantMessageError,
     ModelUsage,
     BaseResultMessage,
     PromptSuggestionMessage,
