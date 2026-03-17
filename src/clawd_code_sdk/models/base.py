@@ -88,4 +88,5 @@ class ClaudeCodeBaseModel(BaseModel):
         alias_generator=to_camel,
         extra="forbid" if IS_DEV else "ignore",
         defer_build=True,
+        use_attribute_docstrings=True,
     )
