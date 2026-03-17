@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 from anthropic.types.model import Model
@@ -17,6 +18,9 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     TaskStatus,
     ToolName,
 )
+
+
+IS_DEV = "pytest" in sys.modules
 
 
 Outcome = Literal["success", "error", "cancelled"]
@@ -61,7 +65,7 @@ class FilePersistedFailure(TypedDict):
 class BaseSystemMessage(BaseModel):
     """Base class for all system messages."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore")
 
     type: Literal["system"] = "system"
     uuid: str
