@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence  # noqa: TC003
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models.base import (  # noqa: TC001
     AssistantMessageError,
@@ -13,10 +13,6 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     ElicitationMode,
 )
 from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 HookEvent = Literal[

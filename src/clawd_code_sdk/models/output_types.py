@@ -11,13 +11,10 @@ The shapes are derived from the ``ToolOutputSchemas`` type definitions in the
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models import AskUserQuestionOption, TodoItem  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from clawd_code_sdk.models.base import ToolName
+from clawd_code_sdk.models.base import ToolName  # noqa: TC001
 
 
 # ---------------------------------------------------------------------------

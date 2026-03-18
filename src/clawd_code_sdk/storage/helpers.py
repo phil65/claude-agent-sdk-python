@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import anyenv
 from pydantic import TypeAdapter, ValidationError
 
-from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +55,8 @@ def count_session_messages(session_path: Path) -> int:
 
 def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
     """Read all entries from a session file."""
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+
     entries: list[ClaudeJSONLEntry] = []
     if not session_path.exists():
         return entries
