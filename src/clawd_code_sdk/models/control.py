@@ -18,6 +18,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
 from clawd_code_sdk.models.hooks import HookEvent, HookInput  # noqa: TC001
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
 from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
+from clawd_code_sdk.models.server_info import ClaudeCodeAccountInfo
 
 
 # SDK Control Protocol
@@ -245,6 +246,20 @@ class McpAuthenticateResponse(ClaudeCodeBaseModel):
     """Whether the user needs to complete an OAuth flow in the browser."""
 
 
+class ClaudeOAuthWaitForCompletionResponse(ClaudeCodeBaseModel):
+    """Response from waiting for a Claude OAuth flow to complete."""
+
+    account: ClaudeCodeAccountInfo
+    """Authenticated account details."""
+
+
+class SideQuestionResponse(ClaudeCodeBaseModel):
+    """Response from a side question."""
+
+    response: str | None = None
+    """The model's answer, or None if no context was available."""
+
+
 class AppliedSettings(BaseModel):
     """The currently applied model and effort settings."""
 
@@ -305,6 +320,32 @@ class SDKControlSetProactiveRequest:
     subtype: Literal["set_proactive"] = "set_proactive"
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlClaudeOAuthWaitForCompletionRequest:
+    """Waits for an in-progress Claude OAuth flow to complete.
+
+    Unlike ``claude_oauth_callback``, this does not provide an authorization
+    code — it simply waits for the existing OAuth flow (started by
+    ``claude_authenticate``) to finish.  The response contains the
+    authenticated account details.
+    """
+
+    subtype: Literal["claude_oauth_wait_for_completion"] = "claude_oauth_wait_for_completion"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SDKControlSideQuestionRequest:
+    """Sends a side question to the model using the current conversation context.
+
+    This allows the SDK consumer to ask the model a question without adding
+    it to the main conversation history.  The CLI executes the question
+    against the current context and returns the model's response.
+    """
+
+    subtype: Literal["side_question"] = "side_question"
+    question: str
+
+
 ControlRequestUnion = Annotated[
     SDKControlInterruptRequest
     | SDKControlPermissionRequest
@@ -326,6 +367,8 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpOAuthCallbackUrlRequest
     | SDKControlRemoteControlRequest
     | SDKControlSetProactiveRequest
+    | SDKControlClaudeOAuthWaitForCompletionRequest
+    | SDKControlSideQuestionRequest
     | SDKControlStopTaskRequest
     | SDKControlApplyFlagSettingsRequest
     | SDKControlGetSettingsRequest

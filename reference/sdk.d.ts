@@ -296,6 +296,7 @@ declare namespace coreTypes {
         SetupHookInput,
         SetupHookSpecificOutput,
         SlashCommand,
+        StopFailureHookInput,
         StopHookInput,
         SubagentStartHookInput,
         SubagentStartHookSpecificOutput,
@@ -395,14 +396,70 @@ export declare type ElicitationResultHookSpecificOutput = {
     content?: Record<string, unknown>;
 };
 
-export declare const EXIT_REASONS: readonly ["clear", "logout", "prompt_input_exit", "other", "bypass_permissions_disabled"];
+export declare const EXIT_REASONS: readonly ["clear", "resume", "logout", "prompt_input_exit", "other", "bypass_permissions_disabled"];
 
-export declare type ExitReason = 'clear' | 'logout' | 'prompt_input_exit' | 'other' | 'bypass_permissions_disabled';
+export declare type ExitReason = 'clear' | 'resume' | 'logout' | 'prompt_input_exit' | 'other' | 'bypass_permissions_disabled';
 
 /**
  * Fast mode state: off, in cooldown after rate limit, or actively enabled.
  */
 export declare type FastModeState = 'off' | 'cooldown' | 'on';
+
+/**
+ * Fork a session into a new branch with fresh UUIDs.
+ *
+ * Copies transcript messages from the source session into a new session file,
+ * remapping every message UUID and preserving the parentUuid chain. Supports
+ * `upToMessageId` for branching from a specific point in the conversation.
+ *
+ * Forked sessions start without undo history (file-history snapshots are not
+ * copied).
+ *
+ * @param sessionId - UUID of the source session
+ * @param options - `{ dir?, upToMessageId?, title? }`
+ * @returns `{ sessionId }` — UUID of the new forked session
+ */
+export declare function forkSession(_sessionId: string, _options?: ForkSessionOptions): Promise<ForkSessionResult>;
+
+/**
+ * Options for forking a session into a new branch.
+ */
+export declare type ForkSessionOptions = SessionMutationOptions & {
+    /** Slice transcript up to this message UUID (inclusive). If omitted, full copy. */
+    upToMessageId?: string;
+    /** Custom title for the fork. If omitted, derives from original title + " (fork)". */
+    title?: string;
+};
+
+/**
+ * Result of a fork operation.
+ */
+export declare type ForkSessionResult = {
+    /** New session UUID. Resumable via `resumeSession(sessionId)`. */
+    sessionId: string;
+};
+
+/**
+ * Reads metadata for a single session by ID. Unlike `listSessions`, this only
+ * reads the single session file rather than every session in the project.
+ * Returns undefined if the session file is not found, is a sidechain session,
+ * or has no extractable summary.
+ *
+ * @param sessionId - UUID of the session
+ * @param options - `{ dir?: string }` project path; omit to search all project directories
+ */
+export declare function getSessionInfo(_sessionId: string, _options?: GetSessionInfoOptions): Promise<SDKSessionInfo | undefined>;
+
+/**
+ * Options for getSessionInfo.
+ */
+export declare type GetSessionInfoOptions = {
+    /**
+     * Project directory path (same semantics as `listSessions({ dir })`).
+     * When omitted, all project directories are searched for the session file.
+     */
+    dir?: string;
+};
 
 /**
  * Reads a session's conversation messages from its JSONL transcript file.
@@ -428,7 +485,7 @@ export declare type GetSessionMessagesOptions = {
     offset?: number;
 };
 
-export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded"];
+export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded"];
 
 /**
  * Hook callback function for responding to events during execution.
@@ -447,9 +504,9 @@ export declare interface HookCallbackMatcher {
     timeout?: number;
 }
 
-export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded';
+export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded';
 
-export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput;
+export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput;
 
 export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
@@ -481,13 +538,16 @@ export declare type JsonSchemaOutputFormat = {
  * and its git worktrees. When omitted, returns sessions across all
  * projects.
  *
+ * Use `limit` and `offset` for pagination.
+ *
  * @example
  * ```typescript
  * // List sessions for a specific project
  * const sessions = await listSessions({ dir: '/path/to/project' })
  *
- * // List all sessions across all projects
- * const allSessions = await listSessions()
+ * // Paginate
+ * const page1 = await listSessions({ limit: 50 })
+ * const page2 = await listSessions({ limit: 50, offset: 50 })
  * ```
  */
 export declare function listSessions(_options?: ListSessionsOptions): Promise<SDKSessionInfo[]>;
@@ -504,6 +564,11 @@ export declare type ListSessionsOptions = {
     dir?: string;
     /** Maximum number of sessions to return. */
     limit?: number;
+    /**
+     * Number of sessions to skip from the start of the sorted result set.
+     * Use with `limit` for pagination. Defaults to 0.
+     */
+    offset?: number;
     /**
      * When `dir` is provided and the directory is inside a git repository,
      * include sessions from all git worktree paths. Defaults to `true`.
@@ -1487,6 +1552,9 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
 
 
 
+
+
+
     /**
      * Dynamically set the MCP servers for this session.
      * This replaces the current set of dynamically-added MCP servers with the provided set.
@@ -1532,6 +1600,14 @@ export declare function query(_params: {
 }): Query;
 
 /**
+ * Rename a session. Appends a custom-title entry to the session's JSONL file.
+ * @param sessionId - UUID of the session
+ * @param title - New title
+ * @param options - `{ dir?: string }` project path; omit to search all projects
+ */
+export declare function renameSession(_sessionId: string, _title: string, _options?: SessionMutationOptions): Promise<void>;
+
+/**
  * Result of a rewindFiles operation.
  */
 export declare type RewindFilesResult = {
@@ -1551,6 +1627,8 @@ declare const SandboxFilesystemConfigSchema: () => z.ZodOptional<z.ZodObject<{
     allowWrite: z.ZodOptional<z.ZodArray<z.ZodString>>;
     denyWrite: z.ZodOptional<z.ZodArray<z.ZodString>>;
     denyRead: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    allowRead: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    allowManagedReadPathsOnly: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>>;
 
 export declare type SandboxIgnoreViolations = NonNullable<SandboxSettings['ignoreViolations']>;
@@ -1592,6 +1670,8 @@ declare const SandboxSettingsSchema: () => z.ZodObject<{
         allowWrite: z.ZodOptional<z.ZodArray<z.ZodString>>;
         denyWrite: z.ZodOptional<z.ZodArray<z.ZodString>>;
         denyRead: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        allowRead: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        allowManagedReadPathsOnly: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>>;
     ignoreViolations: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>>;
     enableWeakerNestedSandbox: z.ZodOptional<z.ZodBoolean>;
@@ -1806,7 +1886,7 @@ declare type SDKControlRequest = {
     request: SDKControlRequestInner;
 };
 
-declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlMcpSetServersRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
+declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlMcpSetServersRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
 
 declare type SDKControlResponse = {
     type: 'control_response';
@@ -2356,6 +2436,18 @@ export declare type SessionMessage = {
     parent_tool_use_id: null;
 };
 
+/**
+ * Options shared by session mutation functions (renameSession, tagSession,
+ * deleteSession, forkSession).
+ */
+export declare type SessionMutationOptions = {
+    /**
+     * Project directory path (same semantics as `listSessions({ dir })`).
+     * When omitted, all project directories are searched for the session file.
+     */
+    dir?: string;
+};
+
 export declare type SessionStartHookInput = BaseHookInput & {
     hook_event_name: 'SessionStart';
     source: 'startup' | 'resume' | 'clear' | 'compact';
@@ -2409,7 +2501,7 @@ export declare interface Settings {
      */
     respectGitignore?: boolean;
     /**
-     * Number of days to retain chat transcripts (0 to disable cleanup)
+     * Number of days to retain chat transcripts (default: 30). Setting to 0 disables session persistence entirely: no transcripts are written and existing transcripts are deleted at startup.
      */
     cleanupPeriodDays?: number;
     /**
@@ -2477,6 +2569,12 @@ export declare interface Settings {
      * Allowlist of models that users can select. Accepts family aliases ("opus" allows any opus version), version prefixes ("opus-4-5" allows only that version), and full model IDs. If undefined, all models are available. If empty array, only the default model is available. Typically set in managed settings by enterprise administrators.
      */
     availableModels?: string[];
+    /**
+     * Override mapping from Anthropic model ID (e.g. "claude-opus-4-6") to provider-specific model ID (e.g. a Bedrock inference profile ARN). Typically set in managed settings by enterprise administrators.
+     */
+    modelOverrides?: {
+        [k: string]: string;
+    };
     /**
      * Whether to automatically approve all MCP servers in the project
      */
@@ -2653,13 +2751,17 @@ export declare interface Settings {
         }[];
     };
     /**
-     * Git worktree configuration for --worktree flag. Symlinks prevent duplicating large directories like node_modules across worktrees.
+     * Git worktree configuration for --worktree flag.
      */
     worktree?: {
         /**
          * Directories to symlink from main repository to worktrees to avoid disk bloat. Must be explicitly configured - no directories are symlinked by default. Common examples: "node_modules", ".cache", ".bin"
          */
         symlinkDirectories?: string[];
+        /**
+         * Directories to include when creating worktrees, via git sparse-checkout (cone mode). Dramatically faster in large monorepos — only the listed paths are written to disk.
+         */
+        sparsePaths?: string[];
     };
     /**
      * Disable all hooks and statusLine execution
@@ -3024,6 +3126,14 @@ export declare interface Settings {
              * Additional paths to deny reading within the sandbox. Merged with paths from Read(...) deny permission rules.
              */
             denyRead?: string[];
+            /**
+             * Paths to re-allow reading within denyRead regions. Takes precedence over denyRead for matching paths.
+             */
+            allowRead?: string[];
+            /**
+             * When true (set in managed settings), only allowRead paths from policySettings are used.
+             */
+            allowManagedReadPathsOnly?: boolean;
         };
         ignoreViolations?: {
             [k: string]: string[];
@@ -3043,6 +3153,10 @@ export declare interface Settings {
         };
         [k: string]: unknown;
     };
+    /**
+     * Probability (0–1) that the session quality survey appears when eligible. 0.05 is a reasonable starting point.
+     */
+    feedbackSurveyRate?: number;
     /**
      * Whether to show tips in the spinner
      */
@@ -3110,6 +3224,12 @@ export declare interface Settings {
                     [k: string]: string | number | boolean | string[];
                 };
             };
+            /**
+             * Non-sensitive option values from plugin manifest userConfig, keyed by option name. Sensitive values go to secure storage instead.
+             */
+            options?: {
+                [k: string]: string | number | boolean | string[];
+            };
         };
     };
     /**
@@ -3142,6 +3262,10 @@ export declare interface Settings {
      */
     autoMemoryEnabled?: boolean;
     /**
+     * Custom directory path for auto-memory storage. Supports ~/ prefix for home directory expansion. Ignored if set in projectSettings (checked-in .claude/settings.json) for security. When unset, defaults to ~/.claude/projects/<sanitized-cwd>/memory/.
+     */
+    autoMemoryDirectory?: string;
+    /**
      * Show thinking summaries in the transcript view (ctrl+o). Default: false.
      */
     showThinkingSummaries?: boolean;
@@ -3149,6 +3273,10 @@ export declare interface Settings {
      * Whether the user has accepted the bypass permissions mode dialog
      */
     skipDangerousModePermissionPrompt?: boolean;
+    /**
+     * Disable auto mode
+     */
+    disableAutoMode?: 'disable';
     /**
      * SSH connection configurations for remote environments. Typically set in managed settings by enterprise administrators to pre-configure SSH connections for team members.
      */
@@ -3173,6 +3301,10 @@ export declare interface Settings {
          * Path to SSH identity file (private key)
          */
         sshIdentityFile?: string;
+        /**
+         * Default working directory on the remote host. Supports tilde expansion (e.g. ~/projects). If not specified, defaults to the remote user home directory. Can be overridden by the [dir] positional argument in `claude ssh <config> [dir]`.
+         */
+        startDirectory?: string;
     }[];
     /**
      * Glob patterns or absolute paths of CLAUDE.md files to exclude from loading. Patterns are matched against absolute file paths using picomatch. Only applies to User, Project, and Local memory types (Managed/policy files cannot be excluded). Examples: "/home/user/monorepo/CLAUDE.md", "** /code/CLAUDE.md", "** /some-dir/.claude/rules/**"
@@ -3281,6 +3413,13 @@ export declare interface SpawnOptions {
 
 declare type StdoutMessage = coreTypes.SDKMessage | coreTypes.SDKStreamlinedTextMessage | coreTypes.SDKStreamlinedToolUseSummaryMessage | SDKControlResponse | SDKControlRequest | SDKControlCancelRequest | SDKKeepAliveMessage;
 
+export declare type StopFailureHookInput = BaseHookInput & {
+    hook_event_name: 'StopFailure';
+    error: SDKAssistantMessageError;
+    error_details?: string;
+    last_assistant_message?: string;
+};
+
 export declare type StopHookInput = BaseHookInput & {
     hook_event_name: 'Stop';
     stop_hook_active: boolean;
@@ -3323,6 +3462,14 @@ export declare type SyncHookJSONOutput = {
 
     hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput;
 };
+
+/**
+ * Tag a session. Pass null to clear the tag.
+ * @param sessionId - UUID of the session
+ * @param tag - Tag string, or null to clear
+ * @param options - `{ dir?: string }` project path; omit to search all projects
+ */
+export declare function tagSession(_sessionId: string, _tag: string | null, _options?: SessionMutationOptions): Promise<void>;
 
 export declare type TaskCompletedHookInput = BaseHookInput & {
     hook_event_name: 'TaskCompleted';

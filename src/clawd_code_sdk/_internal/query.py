@@ -15,6 +15,7 @@ from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutErr
 from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
     ClaudeCodeServerInfo,
+    ClaudeOAuthWaitForCompletionResponse,
     ControlErrorResponse,
     ControlResponse,
     ElicitationRequest,
@@ -30,6 +31,7 @@ from clawd_code_sdk.models import (
     SDKControlSetPermissionModeRequest,
     SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
+    SideQuestionResponse,
     ToolPermissionContext,
     control_request_adapter,
 )
@@ -560,6 +562,27 @@ class Query:
             "callbackUrl": callback_url,
         }
         return await self._send_control_request(req)
+
+    async def claude_oauth_wait_for_completion(self) -> ClaudeOAuthWaitForCompletionResponse:
+        """Wait for an in-progress Claude OAuth flow to complete.
+
+        Returns account details (email, organization, subscriptionType, etc.)
+        once the OAuth flow finishes.
+        """
+        data = await self._send_control_request({"subtype": "claude_oauth_wait_for_completion"})
+        return ClaudeOAuthWaitForCompletionResponse.model_validate(data)
+
+    async def side_question(self, question: str) -> SideQuestionResponse:
+        """Send a side question to the model using the current conversation context.
+
+        The model answers the question without it being added to the main
+        conversation history.
+
+        Args:
+            question: The question to ask the model.
+        """
+        data = await self._send_control_request({"subtype": "side_question", "question": question})
+        return SideQuestionResponse.model_validate(data)
 
     async def rewind_files(self, user_message_id: str) -> dict[str, Any]:
         """Rewind tracked files to their state at a specific user message.

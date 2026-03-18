@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models.base import (  # noqa: TC001
+    AssistantMessageError,
     CompactionTrigger,
     ElicitationAction,
     ElicitationMode,
@@ -24,6 +25,7 @@ HookEvent = Literal[
     "PostToolUseFailure",
     "UserPromptSubmit",
     "Stop",
+    "StopFailure",
     "SubagentStop",
     "PreCompact",
     "PostCompact",
@@ -43,7 +45,14 @@ HookEvent = Literal[
     "InstructionsLoaded",
 ]
 LoadReason = Literal["session_start", "nested_traversal", "path_glob_match", "include", "compact"]
-
+SessionEndReason = Literal[
+    "clear",
+    "resume",
+    "logout",
+    "prompt_input_exit",
+    "other",
+    "bypass_permissions_disabled",
+]
 # ---------------------------------------------------------------------------
 # Declarative hook handler configs (for agent/skill frontmatter & settings)
 # ---------------------------------------------------------------------------
@@ -189,6 +198,15 @@ class StopHookInput(BaseHookInput):
     stop_hook_active: bool
 
 
+class StopFailureHookInput(BaseHookInput):
+    """Input data for StopFailure hook events."""
+
+    hook_event_name: Literal["StopFailure"]
+    error: AssistantMessageError
+    error_details: NotRequired[str]
+    last_assistant_message: NotRequired[str]
+
+
 class SubagentStopHookInput(BaseHookInput):
     """Input data for SubagentStop hook events."""
 
@@ -256,7 +274,7 @@ class SessionEndHookInput(BaseHookInput):
     """Input data for SessionEnd hook events."""
 
     hook_event_name: Literal["SessionEnd"]
-    reason: Literal["clear", "logout", "prompt_input_exit", "other", "bypass_permissions_disabled"]
+    reason: SessionEndReason
 
 
 class SetupHookInput(BaseHookInput):
@@ -351,6 +369,7 @@ HookInput = (
     | PostToolUseFailureHookInput
     | UserPromptSubmitHookInput
     | StopHookInput
+    | StopFailureHookInput
     | SubagentStopHookInput
     | PreCompactHookInput
     | PostCompactHookInput

@@ -293,8 +293,8 @@ class ReadFileInfo(TypedDict):
     """The line number where reading started from."""
     totalLines: int
     """The total number of lines in the file."""
-    resultWasTruncated: NotRequired[bool]
-    """Whether the result was truncated due to the maximum token limit."""
+    # resultWasTruncated: NotRequired[bool]
+    # """Whether the result was truncated due to the maximum token limit."""
 
 
 class ReadTextOutput(TypedDict):

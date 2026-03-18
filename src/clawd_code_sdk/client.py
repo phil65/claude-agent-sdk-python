@@ -12,7 +12,6 @@ from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
-    ClaudeCodeAgentInfo,  # noqa: TC001
     GetSettingsResponse,
     McpAuthenticateResponse,
     McpSdkServerConfigWithInstance,
@@ -34,11 +33,14 @@ if TYPE_CHECKING:
     from clawd_code_sdk import Transport
     from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import (
+        ClaudeCodeAgentInfo,
         ClaudeCodeServerInfo,
         ClaudeCodeSettings,
+        ClaudeOAuthWaitForCompletionResponse,
         McpServerConfig,
         Message,
         PermissionMode,
+        SideQuestionResponse,
         UserPrompt,
     )
 
@@ -386,6 +388,30 @@ class ClaudeSDKClient:
         """
         query = self._ensure_connected()
         await query.mcp_oauth_callback_url(server_name, callback_url)
+
+    async def claude_oauth_wait_for_completion(self) -> ClaudeOAuthWaitForCompletionResponse:
+        """Wait for an in-progress Claude OAuth flow to complete.
+
+        Returns:
+            Account details (email, organization, subscriptionType, etc.).
+        """
+        query = self._ensure_connected()
+        return await query.claude_oauth_wait_for_completion()
+
+    async def side_question(self, question: str) -> SideQuestionResponse:
+        """Send a side question to the model using the current conversation context.
+
+        The model answers the question without it being added to the main
+        conversation history.
+
+        Args:
+            question: The question to ask the model.
+
+        Returns:
+            The model's answer, or None if no context was available.
+        """
+        query = self._ensure_connected()
+        return await query.side_question(question)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking."""
