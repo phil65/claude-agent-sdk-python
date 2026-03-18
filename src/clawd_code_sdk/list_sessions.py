@@ -16,8 +16,7 @@ from clawd_code_sdk.storage.helpers import (
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models import SDKSessionInfo
-    from clawd_code_sdk.models.session import ListSessionsOptions
+    from clawd_code_sdk.models import ListSessionsOptions, SDKSessionInfo
 
 logger = logging.getLogger(__name__)
 

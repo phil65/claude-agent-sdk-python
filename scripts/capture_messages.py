@@ -16,7 +16,7 @@ import sys
 import anyio
 
 from clawd_code_sdk import ClaudeSDKClient
-from clawd_code_sdk.models.options import ClaudeAgentOptions
+from clawd_code_sdk.models import ClaudeAgentOptions
 
 
 OUTPUT_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/recorded_messages.jsonl")

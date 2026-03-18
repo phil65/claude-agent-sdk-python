@@ -16,7 +16,7 @@ from clawd_code_sdk import (
     ClaudeSDKClient,
     ResultMessage,
 )
-from clawd_code_sdk.models.mcp import McpStdioServerConfig
+from clawd_code_sdk.models import McpStdioServerConfig
 
 
 @pytest.mark.e2e

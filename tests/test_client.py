@@ -35,8 +35,7 @@ from .conftest import make_beta_message
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.models import SDKPermissionDenial
-    from clawd_code_sdk.models.base import StopReason
+    from clawd_code_sdk.models import SDKPermissionDenial, StopReason
 
 
 def _make_result(

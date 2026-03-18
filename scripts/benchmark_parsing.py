@@ -134,13 +134,13 @@ def benchmark_model_construct(
     iterations: int,
 ) -> float:
     """Benchmark model_construct() — no validation, manual dispatch + direct attribute set."""
-    from clawd_code_sdk.models.messages import (
+    from clawd_code_sdk.models import (
         AssistantMessage,
+        InitSystemMessage,
         ResultSuccessMessage,
         StreamEvent,
         UserMessage,
     )
-    from clawd_code_sdk.models.system_messages import InitSystemMessage
 
     type_map: dict[str, type] = {
         "stream_event": StreamEvent,

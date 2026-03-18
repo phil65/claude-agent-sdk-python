@@ -21,6 +21,7 @@ from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
     ClaudeCodeSettings,
+    McpSSEServerConfig,
     McpStdioServerConfig,
     Network,
     Permissions,
@@ -29,7 +30,6 @@ from clawd_code_sdk.models import (
     ThinkingConfigDisabled,
     ThinkingConfigEnabled,
 )
-from clawd_code_sdk.models.mcp import McpSSEServerConfig
 
 
 DEFAULT_CLI_PATH = "/usr/bin/claude"

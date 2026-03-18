@@ -58,7 +58,9 @@ from anthropic.types.beta import BetaMessage, BetaRawMessageStartEvent, BetaUsag
 
 from clawd_code_sdk.models import (
     AssistantMessage,
+    AssistantMessageContent,
     ImageBlock,
+    MessageParam,
     ResultErrorMessage,
     ResultSuccessMessage,
     StreamEvent,
@@ -70,7 +72,6 @@ from clawd_code_sdk.models import (
     Usage,
     UserMessage,
 )
-from clawd_code_sdk.models.content_blocks import AssistantMessageContent, MessageParam
 from clawd_code_sdk.storage.helpers import read_session
 from clawd_code_sdk.storage.models import (
     ClaudeApiMessage,
@@ -87,8 +88,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
-    from clawd_code_sdk.models import ContentBlock, Message
-    from clawd_code_sdk.models.base import StopReason
+    from clawd_code_sdk.models import ContentBlock, Message, StopReason
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
