@@ -335,12 +335,12 @@ class Query:
                     pass  # Handled elsewhere
             dct = ControlResponse(subtype="success", request_id=request_id, response=response_data)
             success_response = SDKControlResponse(type="control_response", response=dct)
-            await self.transport.write(anyenv.dump_json(success_response) + "\n")
+            await self.write_json(success_response)
 
         except Exception as e:
             response = ControlErrorResponse(subtype="error", request_id=request_id, error=str(e))
             error_response = SDKControlResponse(type="control_response", response=response)
-            await self.transport.write(anyenv.dump_json(error_response) + "\n")
+            await self.write_json(error_response)
 
     async def _handle_permission_request(
         self, req: SDKControlPermissionRequest
@@ -424,7 +424,7 @@ class Query:
         self.pending_control_responses[request_id] = event
         # Build and send request
         control_request = {"type": "control_request", "request_id": request_id, "request": request}
-        await self.transport.write(anyenv.dump_json(control_request) + "\n")
+        await self.write_json(control_request)
         # Wait for response
         try:
             with anyio.fail_after(timeout):
@@ -683,3 +683,7 @@ class Query:
         async for message in self.receive_messages():
             return message
         raise StopAsyncIteration
+
+    async def write_json(self, data: Any) -> None:
+        """Write a JSON-serializable object to the transport."""
+        await self.transport.write(anyenv.dump_json(data) + "\n")
