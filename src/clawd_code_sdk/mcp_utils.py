@@ -193,7 +193,7 @@ def create_sdk_mcp_server(
                     case type() as tp:
                         schema = TypeAdapter(tp).json_schema()
                     case _ as unreachable:
-                        assert_never(unreachable)
+                        assert_never(unreachable)  # ty:ignore[type-assertion-failure]
                 mcp_tool = Tool(
                     name=tool_def.name,
                     title=tool_def.title,

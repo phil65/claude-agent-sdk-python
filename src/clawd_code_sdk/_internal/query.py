@@ -72,9 +72,9 @@ def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
 
 def convert_hooks_to_internal_format(
     hooks: dict[HookEvent, list[HookMatcher]],
-) -> dict[str, list[dict[str, Any]]]:
+) -> dict[HookEvent, list[dict[str, Any]]]:
     """Convert HookMatcher format to internal Query format."""
-    internal_hooks: dict[str, list[dict[str, Any]]] = {}
+    internal_hooks: dict[HookEvent, list[dict[str, Any]]] = {}
     for event, matchers in hooks.items():
         internal_hooks[event] = []
         for matcher in matchers:
@@ -180,7 +180,7 @@ class Query:
             Parsed server info with supported commands and capabilities
         """
         # Build hooks configuration for initialization
-        hooks_config: dict[str, Any] = {}
+        hooks_config: dict[HookEvent, Any] = {}
         for event, matchers in self.hooks.items():
             if not matchers:
                 continue
