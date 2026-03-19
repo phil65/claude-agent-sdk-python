@@ -2,35 +2,38 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Annotated, Any, Literal, TypedDict
 
-from pydantic import BaseModel, Discriminator, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
 
-from clawd_code_sdk.models.agents import AgentWireDefinition  # noqa: TC001
-from clawd_code_sdk.models.base import (  # noqa: TC001
+from clawd_code_sdk.models.agents import AgentWireDefinition
+from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
     EffortLevel,
     ElicitationMode,
     ModelName,
     PermissionMode,
 )
-from clawd_code_sdk.models.hooks import HookEvent, HookInput  # noqa: TC001
-from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage  # noqa: TC001
-from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
+from clawd_code_sdk.models.hooks import HookEvent, HookInput
+from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage
+from clawd_code_sdk.models.permissions import PermissionUpdate
 from clawd_code_sdk.models.server_info import ClaudeCodeAccountInfo
 
 
+class _ControlBase(BaseModel):
+    """Frozen base for all SDK control request models."""
+
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+
 # SDK Control Protocol
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlInterruptRequest:
+class SDKControlInterruptRequest(_ControlBase):
     """SDK control interrupt request."""
 
     subtype: Literal["interrupt"] = "interrupt"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlPermissionRequest:
+class SDKControlPermissionRequest(_ControlBase):
     """SDK control permission request."""
 
     subtype: Literal["can_use_tool"] = "can_use_tool"
@@ -46,31 +49,30 @@ class SDKControlPermissionRequest:
     description: str | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlInitializeRequest:
+class SDKControlInitializeRequest(_ControlBase):
     """SDK control initialize request."""
 
     subtype: Literal["initialize"] = "initialize"
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentWireDefinition] | None = None
-    sdk_mcp_servers: list[str] | None = None
-    system_prompt: str | None = None
-    append_system_prompt: str | None = None
-    json_schema: dict[str, Any] | None = None
-    prompt_suggestions: bool | None = None
-    agent_progress_summaries: bool | None = None
+    sdk_mcp_servers: list[str] | None = Field(default=None, serialization_alias="sdkMcpServers")
+    system_prompt: str | None = Field(default=None, serialization_alias="systemPrompt")
+    append_system_prompt: str | None = Field(default=None, serialization_alias="appendSystemPrompt")
+    json_schema: dict[str, Any] | None = Field(default=None, serialization_alias="jsonSchema")
+    prompt_suggestions: bool | None = Field(default=None, serialization_alias="promptSuggestions")
+    agent_progress_summaries: bool | None = Field(
+        default=None, serialization_alias="agentProgressSummaries"
+    )
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlSetPermissionModeRequest:
+class SDKControlSetPermissionModeRequest(_ControlBase):
     """SDK control set permission mode request."""
 
     subtype: Literal["set_permission_mode"] = "set_permission_mode"
     mode: PermissionMode
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKHookCallbackRequest:
+class SDKHookCallbackRequest(_ControlBase):
     """SDK hook callback request."""
 
     subtype: Literal["hook_callback"] = "hook_callback"
@@ -79,8 +81,7 @@ class SDKHookCallbackRequest:
     tool_use_id: str | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpMessageRequest:
+class SDKControlMcpMessageRequest(_ControlBase):
     """SDK control MCP message request."""
 
     subtype: Literal["mcp_message"] = "mcp_message"
@@ -88,8 +89,7 @@ class SDKControlMcpMessageRequest:
     message: JSONRPCMessage
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlRewindFilesRequest:
+class SDKControlRewindFilesRequest(_ControlBase):
     """SDK control rewind files request."""
 
     subtype: Literal["rewind_files"] = "rewind_files"
@@ -97,103 +97,90 @@ class SDKControlRewindFilesRequest:
     dry_run: bool | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlCancelAsyncMessageRequest:
+class SDKControlCancelAsyncMessageRequest(_ControlBase):
     """Drops a pending async user message from the command queue by uuid."""
 
     subtype: Literal["cancel_async_message"] = "cancel_async_message"
     message_uuid: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlStopTaskRequest:
+class SDKControlStopTaskRequest(_ControlBase):
     """SDK control stop task request."""
 
     subtype: Literal["stop_task"] = "stop_task"
     task_id: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlApplyFlagSettingsRequest:
+class SDKControlApplyFlagSettingsRequest(_ControlBase):
     """SDK control apply flag settings request."""
 
     subtype: Literal["apply_flag_settings"] = "apply_flag_settings"
     settings: dict[str, Any]
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlSetModelRequest:
+class SDKControlSetModelRequest(_ControlBase):
     """Sets the model to use for subsequent conversation turns."""
 
     subtype: Literal["set_model"] = "set_model"
     model: str | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlSetMaxThinkingTokensRequest:
+class SDKControlSetMaxThinkingTokensRequest(_ControlBase):
     """Sets the maximum number of thinking tokens for extended thinking."""
 
     subtype: Literal["set_max_thinking_tokens"] = "set_max_thinking_tokens"
     max_thinking_tokens: int | None = None
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpStatusRequest:
+class SDKControlMcpStatusRequest(_ControlBase):
     """Requests the current status of all MCP server connections."""
 
     subtype: Literal["mcp_status"] = "mcp_status"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpSetServersRequest:
+class SDKControlMcpSetServersRequest(_ControlBase):
     """Replaces the set of dynamically managed MCP servers."""
 
     subtype: Literal["mcp_set_servers"] = "mcp_set_servers"
     servers: dict[str, ExternalMcpServerConfig]
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpReconnectRequest:
+class SDKControlMcpReconnectRequest(_ControlBase):
     """Reconnects a disconnected or failed MCP server."""
 
     subtype: Literal["mcp_reconnect"] = "mcp_reconnect"
-    server_name: str
+    server_name: str = Field(serialization_alias="serverName")
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpToggleRequest:
+class SDKControlMcpToggleRequest(_ControlBase):
     """Enables or disables an MCP server."""
 
     subtype: Literal["mcp_toggle"] = "mcp_toggle"
-    server_name: str
+    server_name: str = Field(serialization_alias="serverName")
     enabled: bool
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlEndSessionRequest:
+class SDKControlEndSessionRequest(_ControlBase):
     """Ends the current session."""
 
     subtype: Literal["end_session"] = "end_session"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpAuthenticateRequest:
+class SDKControlMcpAuthenticateRequest(_ControlBase):
     """Authenticates with an MCP server."""
 
     subtype: Literal["mcp_authenticate"] = "mcp_authenticate"
     server_name: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpClearAuthRequest:
+class SDKControlMcpClearAuthRequest(_ControlBase):
     """Clears authentication for an MCP server."""
 
     subtype: Literal["mcp_clear_auth"] = "mcp_clear_auth"
     server_name: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlMcpOAuthCallbackUrlRequest:
+class SDKControlMcpOAuthCallbackUrlRequest(_ControlBase):
     """Provides an OAuth redirect callback URL to complete an MCP server OAuth flow.
 
     Sent by the SDK to the CLI with the full redirect URL (containing the
@@ -205,8 +192,7 @@ class SDKControlMcpOAuthCallbackUrlRequest:
     callback_url: str
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlRemoteControlRequest:
+class SDKControlRemoteControlRequest(_ControlBase):
     """Toggles the remote control REPL bridge for external session access.
 
     When enabled, starts a bridge that allows remote clients to send prompts,
@@ -293,8 +279,7 @@ class GetSettingsResponse(BaseModel):
     """The currently applied model and effort."""
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlElicitationRequest:
+class SDKControlElicitationRequest(_ControlBase):
     """Requests the SDK consumer to handle an MCP elicitation (user input request)."""
 
     subtype: Literal["elicitation"] = "elicitation"
@@ -312,22 +297,19 @@ class SDKControlElicitationRequest:
     """JSON Schema for the requested input (only for 'form' mode)."""
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlGetSettingsRequest:
+class SDKControlGetSettingsRequest(_ControlBase):
     """Returns the effective merged settings and the raw per-source settings."""
 
     subtype: Literal["get_settings"] = "get_settings"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlSetProactiveRequest:
+class SDKControlSetProactiveRequest(_ControlBase):
     """Sets proactive mode configuration."""
 
     subtype: Literal["set_proactive"] = "set_proactive"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlClaudeOAuthWaitForCompletionRequest:
+class SDKControlClaudeOAuthWaitForCompletionRequest(_ControlBase):
     """Waits for an in-progress Claude OAuth flow to complete.
 
     Unlike ``claude_oauth_callback``, this does not provide an authorization
@@ -339,8 +321,7 @@ class SDKControlClaudeOAuthWaitForCompletionRequest:
     subtype: Literal["claude_oauth_wait_for_completion"] = "claude_oauth_wait_for_completion"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class SDKControlSideQuestionRequest:
+class SDKControlSideQuestionRequest(_ControlBase):
     """Sends a side question to the model using the current conversation context.
 
     This allows the SDK consumer to ask the model a question without adding
@@ -385,8 +366,7 @@ ControlRequestUnion = Annotated[
 control_request_adapter = TypeAdapter[ControlRequestUnion](ControlRequestUnion)
 
 
-@dataclass(frozen=True, slots=True)
-class SDKControlRequest:
+class SDKControlRequest(_ControlBase):
     """SDK control request."""
 
     type: Literal["control_request"]
@@ -394,8 +374,7 @@ class SDKControlRequest:
     request: ControlRequestUnion
 
 
-@dataclass(frozen=True, slots=True)
-class SDKControlCancelRequest:
+class SDKControlCancelRequest(_ControlBase):
     """Cancels a currently open control request."""
 
     type: Literal["control_cancel_request"]
