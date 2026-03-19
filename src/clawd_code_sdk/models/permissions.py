@@ -9,7 +9,6 @@ from typing import Any, Literal
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
     ElicitationAction,  # noqa: TC001
-    ElicitationMode,  # noqa: TC001
     PermissionBehavior,
     PermissionMode,
 )
@@ -145,24 +144,6 @@ containing the answers, or a PermissionResultDeny to cancel.
 
 
 @dataclass
-class ElicitationRequest:
-    """Elicitation request from an MCP server, asking the SDK consumer for user input."""
-
-    server_name: str
-    """Name of the MCP server requesting elicitation."""
-    message: str
-    """Message to display to the user."""
-    mode: ElicitationMode | None = None
-    """Elicitation mode: 'form' for structured input, 'url' for browser-based auth."""
-    url: str | None = None
-    """URL to open (only for 'url' mode)."""
-    elicitation_id: str | None = None
-    """Elicitation ID for correlating URL elicitations with completion notifications."""
-    requested_schema: dict[str, Any] | None = None
-    """JSON Schema for the requested input (only for 'form' mode)."""
-
-
-@dataclass
 class ElicitationResult:
     """Elicitation response from the SDK consumer."""
 
@@ -170,11 +151,3 @@ class ElicitationResult:
     """The action taken: accept, decline, or cancel."""
     content: dict[str, Any] | None = None
     """Form field values (only for 'accept' action with 'form' mode)."""
-
-
-OnElicitation = Callable[[ElicitationRequest], Awaitable[ElicitationResult]]
-"""Callback for handling MCP elicitation requests.
-
-Called when an MCP server requests user input and no hook handles it.
-If not provided, elicitation requests will be declined automatically.
-"""

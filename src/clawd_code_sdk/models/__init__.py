@@ -1,6 +1,7 @@
 """Type definitions for Claude SDK."""
 
 from __future__ import annotations
+from collections.abc import Callable
 
 from .agents import AgentDefinition, AgentInfo, AgentWireDefinition, ToolsPreset
 from .base import (
@@ -273,9 +274,7 @@ from .options import (
 )
 from .permissions import (
     CanUseTool,
-    ElicitationRequest,
     ElicitationResult,
-    OnElicitation,
     OnUserQuestion,
     PermissionResult,
     PermissionResultAllow,
@@ -317,6 +316,7 @@ from .system_messages import (
 )
 
 from typing import Annotated, Any
+from collections.abc import Awaitable
 
 from pydantic import Discriminator, Tag, TypeAdapter
 
@@ -361,6 +361,13 @@ Message = Annotated[
 """Discriminated union of all wire-format message types."""
 
 message_adapter: TypeAdapter[Message] = TypeAdapter(Message)
+
+OnElicitation = Callable[[SDKControlElicitationRequest], Awaitable[ElicitationResult]]
+"""Callback for handling MCP elicitation requests.
+
+Called when an MCP server requests user input and no hook handles it.
+If not provided, elicitation requests will be declined automatically.
+"""
 
 __all__ = [
     "TOOL_INPUT_TYPES",
@@ -421,7 +428,6 @@ __all__ = [
     "ElicitationHookInput",
     "ElicitationHookSpecificOutput",
     "ElicitationMode",
-    "ElicitationRequest",
     "ElicitationResult",
     "ElicitationResultHookInput",
     "ElicitationResultHookSpecificOutput",

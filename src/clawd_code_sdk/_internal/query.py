@@ -18,7 +18,6 @@ from clawd_code_sdk.models import (
     ClaudeOAuthWaitForCompletionResponse,
     ControlErrorResponse,
     ControlResponse,
-    ElicitationRequest,
     JSONRPCError,
     PermissionResultAllow,
     SDKControlElicitationRequest,
@@ -384,15 +383,7 @@ class Query:
             # Auto-decline if no callback is set
             return {"action": "decline"}
 
-        elicitation_req = ElicitationRequest(
-            server_name=req.mcp_server_name,
-            message=req.message,
-            mode=req.mode,
-            url=req.url,
-            elicitation_id=req.elicitation_id,
-            requested_schema=req.requested_schema,
-        )
-        result = await self.on_elicitation(elicitation_req)
+        result = await self.on_elicitation(req)
         response: dict[str, Any] = {"action": result.action}
         if result.content is not None:
             response["content"] = result.content

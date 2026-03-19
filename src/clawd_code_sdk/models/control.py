@@ -299,11 +299,17 @@ class SDKControlElicitationRequest:
 
     subtype: Literal["elicitation"] = "elicitation"
     mcp_server_name: str
+    """Name of the MCP server requesting elicitation."""
     message: str
+    """Message to display to the user."""
     mode: ElicitationMode | None = None
+    """Elicitation mode: 'form' for structured input, 'url' for browser-based auth."""
     url: str | None = None
+    """URL to open (only for 'url' mode)."""
     elicitation_id: str | None = None
+    """Elicitation ID for correlating URL elicitations with completion notifications."""
     requested_schema: dict[str, Any] | None = None
+    """JSON Schema for the requested input (only for 'form' mode)."""
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
