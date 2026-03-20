@@ -2889,6 +2889,116 @@ export declare interface Settings {
                  * Regex pattern matched against the .path field of file and directory sources. Use in strictKnownMarketplaces to allow filesystem-based marketplaces alongside hostPattern restrictions for network sources. Use ".*" to allow all filesystem paths, or a narrower pattern (e.g., "^/opt/approved/") to restrict to specific directories.
                  */
                 pathPattern: string;
+            } | {
+                source: 'settings';
+                /**
+                 * Marketplace name. Must match the extraKnownMarketplaces key (enforced); the synthetic manifest is written under this name. Same validation as PluginMarketplaceSchema plus reserved-name rejection — validateOfficialNameSource runs after the disk write, too late to clean up.
+                 */
+                name: string;
+                /**
+                 * Plugin entries declared inline in settings.json
+                 */
+                plugins: {
+                    /**
+                     * Plugin name as it appears in the target repository
+                     */
+                    name: string;
+                    /**
+                     * Where to fetch the plugin from. Must be a remote source — relative paths have no marketplace repository to resolve against.
+                     */
+                    source: string | {
+                        source: 'npm';
+                        /**
+                         * Package name (or url, or local path, or anything else that can be passed to `npm` as a package)
+                         */
+                        package: string;
+                        /**
+                         * Specific version or version range (e.g., ^1.0.0, ~2.1.0)
+                         */
+                        version?: string;
+                        /**
+                         * Custom NPM registry URL (defaults to using system default, likely npmjs.org)
+                         */
+                        registry?: string;
+                    } | {
+                        source: 'pip';
+                        /**
+                         * Python package name as it appears on PyPI
+                         */
+                        package: string;
+                        /**
+                         * Version specifier (e.g., ==1.0.0, >=2.0.0, <3.0.0)
+                         */
+                        version?: string;
+                        /**
+                         * Custom PyPI registry URL (defaults to using system default, likely pypi.org)
+                         */
+                        registry?: string;
+                    } | {
+                        source: 'url';
+                        /**
+                         * Full git repository URL (https:// or git\@)
+                         */
+                        url: string;
+                        /**
+                         * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                         */
+                        ref?: string;
+                        /**
+                         * Specific commit SHA to use
+                         */
+                        sha?: string;
+                    } | {
+                        source: 'github';
+                        /**
+                         * GitHub repository in owner/repo format
+                         */
+                        repo: string;
+                        /**
+                         * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                         */
+                        ref?: string;
+                        /**
+                         * Specific commit SHA to use
+                         */
+                        sha?: string;
+                    } | {
+                        source: 'git-subdir';
+                        /**
+                         * Git repository: GitHub owner/repo shorthand, https://, or git\@ URL
+                         */
+                        url: string;
+                        /**
+                         * Subdirectory within the repo containing the plugin (e.g., "tools/claude-plugin"). Cloned sparsely using partial clone (--filter=tree:0) to minimize bandwidth for monorepos.
+                         */
+                        path: string;
+                        /**
+                         * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                         */
+                        ref?: string;
+                        /**
+                         * Specific commit SHA to use
+                         */
+                        sha?: string;
+                    };
+                    description?: string;
+                    version?: string;
+                    strict?: boolean;
+                }[];
+                owner?: {
+                    /**
+                     * Display name of the plugin author or organization
+                     */
+                    name: string;
+                    /**
+                     * Contact email for support or feedback
+                     */
+                    email?: string;
+                    /**
+                     * Website, GitHub profile, or organization URL
+                     */
+                    url?: string;
+                };
             };
             /**
              * Local cache path where marketplace manifest is stored (auto-generated if not provided)
@@ -2981,6 +3091,116 @@ export declare interface Settings {
          * Regex pattern matched against the .path field of file and directory sources. Use in strictKnownMarketplaces to allow filesystem-based marketplaces alongside hostPattern restrictions for network sources. Use ".*" to allow all filesystem paths, or a narrower pattern (e.g., "^/opt/approved/") to restrict to specific directories.
          */
         pathPattern: string;
+    } | {
+        source: 'settings';
+        /**
+         * Marketplace name. Must match the extraKnownMarketplaces key (enforced); the synthetic manifest is written under this name. Same validation as PluginMarketplaceSchema plus reserved-name rejection — validateOfficialNameSource runs after the disk write, too late to clean up.
+         */
+        name: string;
+        /**
+         * Plugin entries declared inline in settings.json
+         */
+        plugins: {
+            /**
+             * Plugin name as it appears in the target repository
+             */
+            name: string;
+            /**
+             * Where to fetch the plugin from. Must be a remote source — relative paths have no marketplace repository to resolve against.
+             */
+            source: string | {
+                source: 'npm';
+                /**
+                 * Package name (or url, or local path, or anything else that can be passed to `npm` as a package)
+                 */
+                package: string;
+                /**
+                 * Specific version or version range (e.g., ^1.0.0, ~2.1.0)
+                 */
+                version?: string;
+                /**
+                 * Custom NPM registry URL (defaults to using system default, likely npmjs.org)
+                 */
+                registry?: string;
+            } | {
+                source: 'pip';
+                /**
+                 * Python package name as it appears on PyPI
+                 */
+                package: string;
+                /**
+                 * Version specifier (e.g., ==1.0.0, >=2.0.0, <3.0.0)
+                 */
+                version?: string;
+                /**
+                 * Custom PyPI registry URL (defaults to using system default, likely pypi.org)
+                 */
+                registry?: string;
+            } | {
+                source: 'url';
+                /**
+                 * Full git repository URL (https:// or git\@)
+                 */
+                url: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            } | {
+                source: 'github';
+                /**
+                 * GitHub repository in owner/repo format
+                 */
+                repo: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            } | {
+                source: 'git-subdir';
+                /**
+                 * Git repository: GitHub owner/repo shorthand, https://, or git\@ URL
+                 */
+                url: string;
+                /**
+                 * Subdirectory within the repo containing the plugin (e.g., "tools/claude-plugin"). Cloned sparsely using partial clone (--filter=tree:0) to minimize bandwidth for monorepos.
+                 */
+                path: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            };
+            description?: string;
+            version?: string;
+            strict?: boolean;
+        }[];
+        owner?: {
+            /**
+             * Display name of the plugin author or organization
+             */
+            name: string;
+            /**
+             * Contact email for support or feedback
+             */
+            email?: string;
+            /**
+             * Website, GitHub profile, or organization URL
+             */
+            url?: string;
+        };
     })[];
     /**
      * Enterprise blocklist of marketplace sources. When set in managed settings, these exact sources are blocked from being added as marketplaces. The check happens BEFORE downloading, so blocked sources never touch the filesystem.
@@ -3063,6 +3283,116 @@ export declare interface Settings {
          * Regex pattern matched against the .path field of file and directory sources. Use in strictKnownMarketplaces to allow filesystem-based marketplaces alongside hostPattern restrictions for network sources. Use ".*" to allow all filesystem paths, or a narrower pattern (e.g., "^/opt/approved/") to restrict to specific directories.
          */
         pathPattern: string;
+    } | {
+        source: 'settings';
+        /**
+         * Marketplace name. Must match the extraKnownMarketplaces key (enforced); the synthetic manifest is written under this name. Same validation as PluginMarketplaceSchema plus reserved-name rejection — validateOfficialNameSource runs after the disk write, too late to clean up.
+         */
+        name: string;
+        /**
+         * Plugin entries declared inline in settings.json
+         */
+        plugins: {
+            /**
+             * Plugin name as it appears in the target repository
+             */
+            name: string;
+            /**
+             * Where to fetch the plugin from. Must be a remote source — relative paths have no marketplace repository to resolve against.
+             */
+            source: string | {
+                source: 'npm';
+                /**
+                 * Package name (or url, or local path, or anything else that can be passed to `npm` as a package)
+                 */
+                package: string;
+                /**
+                 * Specific version or version range (e.g., ^1.0.0, ~2.1.0)
+                 */
+                version?: string;
+                /**
+                 * Custom NPM registry URL (defaults to using system default, likely npmjs.org)
+                 */
+                registry?: string;
+            } | {
+                source: 'pip';
+                /**
+                 * Python package name as it appears on PyPI
+                 */
+                package: string;
+                /**
+                 * Version specifier (e.g., ==1.0.0, >=2.0.0, <3.0.0)
+                 */
+                version?: string;
+                /**
+                 * Custom PyPI registry URL (defaults to using system default, likely pypi.org)
+                 */
+                registry?: string;
+            } | {
+                source: 'url';
+                /**
+                 * Full git repository URL (https:// or git\@)
+                 */
+                url: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            } | {
+                source: 'github';
+                /**
+                 * GitHub repository in owner/repo format
+                 */
+                repo: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            } | {
+                source: 'git-subdir';
+                /**
+                 * Git repository: GitHub owner/repo shorthand, https://, or git\@ URL
+                 */
+                url: string;
+                /**
+                 * Subdirectory within the repo containing the plugin (e.g., "tools/claude-plugin"). Cloned sparsely using partial clone (--filter=tree:0) to minimize bandwidth for monorepos.
+                 */
+                path: string;
+                /**
+                 * Git branch or tag to use (e.g., "main", "v1.0.0"). Defaults to repository default branch.
+                 */
+                ref?: string;
+                /**
+                 * Specific commit SHA to use
+                 */
+                sha?: string;
+            };
+            description?: string;
+            version?: string;
+            strict?: boolean;
+        }[];
+        owner?: {
+            /**
+             * Display name of the plugin author or organization
+             */
+            name: string;
+            /**
+             * Contact email for support or feedback
+             */
+            email?: string;
+            /**
+             * Website, GitHub profile, or organization URL
+             */
+            url?: string;
+        };
     })[];
     /**
      * Force a specific login method: "claudeai" for Claude Pro/Max, "console" for Console billing
