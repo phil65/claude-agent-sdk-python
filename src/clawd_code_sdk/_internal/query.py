@@ -340,8 +340,13 @@ class Query:
         """
         context = ToolPermissionContext(
             tool_use_id=req.tool_use_id,
+            agent_id=req.agent_id,
+            decision_reason=req.decision_reason,
             suggestions=req.permission_suggestions or [],
             blocked_path=req.blocked_path,
+            title=req.title,
+            display_name=req.display_name,
+            description=req.description,
         )
 
         # Dispatch elicitation requests to dedicated callback if available

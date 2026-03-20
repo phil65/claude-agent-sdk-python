@@ -74,8 +74,14 @@ class ToolPermissionContext:
     Multiple tool calls in the same assistant message will have different tool_use_ids.
     """
 
-    signal: Any | None = None
-    """Reserved for future abort signal support. Currently always None."""
+    # signal: Any | None = None
+    # """Reserved for future abort signal support. Currently always None."""
+
+    agent_id: str | None = None
+    """The agent that initiated the tool call, if in a multi-agent setup."""
+
+    decision_reason: str | None = None
+    """Why the CLI triggered the permission check."""
 
     suggestions: list[PermissionUpdate] = field(default_factory=list)
     """Permission suggestions from CLI for updating permissions.
