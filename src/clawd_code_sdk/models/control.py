@@ -300,7 +300,7 @@ class SDKControlElicitationRequest(_ControlBase):
     requested_schema: dict[str, Any] | None = None
     """JSON Schema for the requested input (only for 'form' mode)."""
 
-    def to_mcp(self) -> mcp.types.ElicitRequestParams:
+    def to_mcp(self) -> mcp.types.ElicitRequestFormParams | mcp.types.ElicitRequestURLParams:
         """Convert to the corresponding MCP elicitation request params."""
         import mcp.types
 
@@ -315,7 +315,31 @@ class SDKControlElicitationRequest(_ControlBase):
         assert self.requested_schema is not None
         return mcp.types.ElicitRequestFormParams(
             message=self.message,
-            requestedSchema=self.requested_schema,
+            requestedSchema=mcp.types.ElicitRequestedSchema(**self.requested_schema),
+        )
+
+    @classmethod
+    def from_mcp(
+        cls,
+        params: mcp.types.ElicitRequestFormParams | mcp.types.ElicitRequestURLParams,
+        mcp_server_name: str,
+    ) -> SDKControlElicitationRequest:
+        """Create from MCP elicitation request params."""
+        import mcp.types
+
+        if isinstance(params, mcp.types.ElicitRequestURLParams):
+            return cls(
+                mcp_server_name=mcp_server_name,
+                message=params.message,
+                mode="url",
+                url=params.url,
+                elicitation_id=params.elicitationId,
+            )
+        return cls(
+            mcp_server_name=mcp_server_name,
+            message=params.message,
+            mode="form",
+            requested_schema=dict(params.requestedSchema),
         )
 
 

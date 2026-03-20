@@ -167,3 +167,8 @@ class ElicitationResult:
         import mcp.types
 
         return mcp.types.ElicitResult(action=self.action, content=self.content)
+
+    @classmethod
+    def from_mcp(cls, result: mcp.types.ElicitResult) -> ElicitationResult:
+        """Create from an MCP ElicitResult."""
+        return cls(action=result.action, content=result.content)
