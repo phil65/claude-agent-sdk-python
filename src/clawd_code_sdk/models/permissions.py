@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
@@ -13,6 +13,10 @@ from clawd_code_sdk.models.base import (
     PermissionMode,
 )
 from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
+
+
+if TYPE_CHECKING:
+    import mcp.types
 
 
 # Permission Update types (matching TypeScript SDK)
@@ -157,3 +161,9 @@ class ElicitationResult:
     """The action taken: accept, decline, or cancel."""
     content: dict[str, Any] | None = None
     """Form field values (only for 'accept' action with 'form' mode)."""
+
+    def to_mcp(self) -> mcp.types.ElicitResult:
+        """Convert to the MCP ElicitResult type."""
+        import mcp.types
+
+        return mcp.types.ElicitResult(action=self.action, content=self.content)

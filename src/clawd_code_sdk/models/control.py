@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
 
@@ -18,6 +18,10 @@ from clawd_code_sdk.models.hooks import HookEvent, HookInput
 from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage
 from clawd_code_sdk.models.permissions import PermissionUpdate
 from clawd_code_sdk.models.server_info import ClaudeCodeAccountInfo
+
+
+if TYPE_CHECKING:
+    import mcp.types
 
 
 class _ControlBase(BaseModel):
@@ -295,6 +299,24 @@ class SDKControlElicitationRequest(_ControlBase):
     """Elicitation ID for correlating URL elicitations with completion notifications."""
     requested_schema: dict[str, Any] | None = None
     """JSON Schema for the requested input (only for 'form' mode)."""
+
+    def to_mcp(self) -> mcp.types.ElicitRequestParams:
+        """Convert to the corresponding MCP elicitation request params."""
+        import mcp.types
+
+        if self.mode == "url":
+            assert self.url is not None
+            assert self.elicitation_id is not None
+            return mcp.types.ElicitRequestURLParams(
+                message=self.message,
+                url=self.url,
+                elicitationId=self.elicitation_id,
+            )
+        assert self.requested_schema is not None
+        return mcp.types.ElicitRequestFormParams(
+            message=self.message,
+            requestedSchema=self.requested_schema,
+        )
 
 
 class SDKControlGetSettingsRequest(_ControlBase):
