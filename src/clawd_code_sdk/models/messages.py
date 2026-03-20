@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from anthropic.types.beta import (
     BetaInputJSONDelta,
@@ -33,6 +33,7 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk.models.base import (  # noqa: TC001
     AssistantMessageError,
+    ClaudeCodeBaseModel,
     FastModeState,
     StopReason,
     ToolName,
@@ -76,31 +77,31 @@ OverAgeDisabledReason = Literal[
 ]
 
 
-class RateLimitInfo(TypedDict):
+class RateLimitInfo(ClaudeCodeBaseModel):
     """Rate limit information."""
 
     status: RateLimitStatus
-    resetsAt: NotRequired[int]
-    rateLimitType: NotRequired[RateLimitType]
-    utilization: NotRequired[float]
-    overageStatus: NotRequired[RateLimitStatus]
-    overageResetsAt: NotRequired[int]
-    overageDisabledReason: NotRequired[OverAgeDisabledReason]
-    isUsingOverage: NotRequired[bool]
-    surpassedThreshold: NotRequired[float]
+    resets_at: int | None = None
+    rate_limit_type: RateLimitType | None = None
+    utilization: float | None = None
+    overage_status: RateLimitStatus | None = None
+    overage_resets_at: int | None = None
+    overage_disabled_reason: OverAgeDisabledReason | None = None
+    is_using_overage: bool | None = None
+    surpassed_threshold: float | None = None
 
 
-class ModelUsage(TypedDict):
+class ModelUsage(ClaudeCodeBaseModel):
     """Cumulative token usage per model, accumulated across the entire session."""
 
-    inputTokens: int
-    outputTokens: int
-    cacheReadInputTokens: int
-    cacheCreationInputTokens: int
-    webSearchRequests: int
-    costUSD: float
-    contextWindow: int
-    maxOutputTokens: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    web_search_requests: int
+    cost_usd: float = Field(default=..., alias="costUSD")
+    context_window: int
+    max_output_tokens: int
 
 
 class SDKPermissionDenial(TypedDict):
