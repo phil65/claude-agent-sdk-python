@@ -1880,7 +1880,7 @@ declare type SDKControlPermissionRequest = {
     description?: string;
 };
 
-declare type SDKControlRequest = {
+export declare type SDKControlRequest = {
     type: 'control_request';
     request_id: string;
     request: SDKControlRequestInner;
@@ -1888,7 +1888,7 @@ declare type SDKControlRequest = {
 
 declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlMcpSetServersRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
 
-declare type SDKControlResponse = {
+export declare type SDKControlResponse = {
     type: 'control_response';
     response: ControlResponse | ControlErrorResponse;
 };
@@ -2353,6 +2353,7 @@ export declare type SDKTaskProgressMessage = {
     };
     last_tool_name?: string;
     summary?: string;
+
     uuid: UUID;
     session_id: string;
 };
@@ -2458,6 +2459,7 @@ export declare type SessionStartHookInput = BaseHookInput & {
 export declare type SessionStartHookSpecificOutput = {
     hookEventName: 'SessionStart';
     additionalContext?: string;
+    initialUserMessage?: string;
 };
 
 /**
@@ -2639,13 +2641,17 @@ export declare interface Settings {
              */
             hooks: ({
                 /**
-                 * Bash command hook type
+                 * Shell command hook type
                  */
                 type: 'command';
                 /**
                  * Shell command to execute
                  */
                 command: string;
+                /**
+                 * Shell interpreter. 'bash' uses your $SHELL (bash/zsh/sh); 'powershell' uses pwsh. Defaults to bash.
+                 */
+                shell?: 'bash' | 'powershell';
                 /**
                  * Timeout in seconds for this specific command
                  */
@@ -2768,6 +2774,10 @@ export declare interface Settings {
      */
     disableAllHooks?: boolean;
     /**
+     * Default shell for input-box ! commands. Defaults to 'bash' on all platforms (no Windows auto-flip).
+     */
+    defaultShell?: 'bash' | 'powershell';
+    /**
      * When true (and set in managed settings), only hooks from managed settings run. User, project, and local hooks are ignored.
      */
     allowManagedHooksOnly?: boolean;
@@ -2787,6 +2797,10 @@ export declare interface Settings {
      * When true (and set in managed settings), allowedMcpServers is only read from managed settings. deniedMcpServers still merges from all sources, so users can deny servers for themselves. Users can still add their own MCP servers, but only the admin-defined allowlist applies.
      */
     allowManagedMcpServersOnly?: boolean;
+    /**
+     * When set in managed settings, blocks non-plugin customization sources for the listed surfaces. Array form locks specific surfaces (e.g. ["skills", "hooks"]); `true` locks all four; `false` is an explicit no-op. Blocked: ~/.claude/{surface}/, .claude/{surface}/ (project), settings.json hooks, .mcp.json. NOT blocked: managed (policySettings) sources, plugin-provided customizations. Composes with strictKnownMarketplaces for end-to-end admin control — plugins gated by marketplace allowlist, everything else blocked here.
+     */
+    strictPluginOnlyCustomization?: boolean | ('skills' | 'agents' | 'hooks' | 'mcp')[];
     /**
      * Custom status line display configuration
      */
@@ -3534,6 +3548,10 @@ export declare interface Settings {
      */
     promptSuggestionEnabled?: boolean;
     /**
+     * When true, the plan-approval dialog offers a "clear context" option. Defaults to false.
+     */
+    showClearContextOnPlanAccept?: boolean;
+    /**
      * Name of an agent (built-in or custom) to use for the main thread. Applies the agent's system prompt, tool restrictions, and model.
      */
     agent?: string;
@@ -3595,6 +3613,10 @@ export declare interface Settings {
      * Custom directory path for auto-memory storage. Supports ~/ prefix for home directory expansion. Ignored if set in projectSettings (checked-in .claude/settings.json) for security. When unset, defaults to ~/.claude/projects/<sanitized-cwd>/memory/.
      */
     autoMemoryDirectory?: string;
+    /**
+     * Enable background memory consolidation (auto-dream). When set, overrides the server-side default.
+     */
+    autoDreamEnabled?: boolean;
     /**
      * Show thinking summaries in the transcript view (ctrl+o). Default: false.
      */

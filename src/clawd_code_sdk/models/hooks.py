@@ -424,6 +424,7 @@ class SessionStartHookSpecificOutput(TypedDict):
 
     hookEventName: Literal["SessionStart"]
     additionalContext: NotRequired[str]
+    initialUserMessage: NotRequired[str]
 
 
 class NotificationHookSpecificOutput(TypedDict):
