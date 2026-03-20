@@ -158,9 +158,6 @@ class Query:
         self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
-        self._stream_close_timeout = (
-            float(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000")) / 1000.0
-        )  # Convert ms to seconds
         # Cancel scope for the reader task - can be cancelled from any task context
         # This fixes the RuntimeError when async generator cleanup happens in a different task
         self._reader_cancel_scope: CancelScope | None = None
