@@ -173,6 +173,17 @@ class AgentDefinition(ClaudeCodeBaseModel):
 
         Returns a camelCase dict with None values excluded.
         """
+        model = self.to_wire_model()
+        return model.model_dump(by_alias=True, exclude_none=True)
+
+    def to_wire_model(self) -> AgentWireDefinition:
+        """Serialize to the wire-format dict for the CLI control protocol.
+
+        Converts dict-style mcp_servers to the array format the CLI expects:
+        ``{"git": config}`` -> ``[{"git": config}]``
+
+        Returns a camelCase dict with None values excluded.
+        """
         mcp = [
             name if config is None else {name: config}
             for name, config in (self.mcp_servers or {}).items()
@@ -193,4 +204,4 @@ class AgentDefinition(ClaudeCodeBaseModel):
             effort=self.effort,
             permission_mode=self.permission_mode,
             isolation=self.isolation,
-        ).model_dump(by_alias=True, exclude_none=True)
+        )

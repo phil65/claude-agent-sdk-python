@@ -122,7 +122,7 @@ class SDKControlSetModelRequest(_ControlBase):
     """Sets the model to use for subsequent conversation turns."""
 
     subtype: Literal["set_model"] = "set_model"
-    model: str | None = None
+    model: ModelName | str | None = None
 
 
 class SDKControlSetMaxThinkingTokensRequest(_ControlBase):

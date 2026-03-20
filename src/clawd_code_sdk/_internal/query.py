@@ -137,7 +137,7 @@ class Query:
         self.on_elicitation = on_elicitation
         self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
         self.sdk_mcp_servers = sdk_mcp_servers or {}
-        self._agents = {name: agent_def.to_wire() for name, agent_def in (agents or {}).items()}
+        self._agents = agents
         self._system_prompt = system_prompt
         self._append_system_prompt = append_system_prompt
         self._json_schema = json_schema
@@ -196,24 +196,16 @@ class Query:
                 if matcher.get("timeout") is not None:
                     matcher_cfg["timeout"] = matcher.get("timeout")
                 hooks_config[event].append(matcher_cfg)
-
-        # Send initialize request
-        request: dict[str, Any] = {"subtype": "initialize", "hooks": hooks_config or None}
-        if self._agents:
-            request["agents"] = self._agents
-        if self.sdk_mcp_servers:
-            request["sdkMcpServers"] = list(self.sdk_mcp_servers.keys())
-        if self._system_prompt is not None:
-            request["systemPrompt"] = self._system_prompt
-        if self._append_system_prompt is not None:
-            request["appendSystemPrompt"] = self._append_system_prompt
-        if self._json_schema is not None:
-            request["jsonSchema"] = self._json_schema
-        if self._prompt_suggestions is not None:
-            request["promptSuggestions"] = self._prompt_suggestions
-        if self._agent_progress_summaries is not None:
-            request["agentProgressSummaries"] = self._agent_progress_summaries
-
+        request = SDKControlInitializeRequest(
+            hooks=hooks_config or None,
+            agents={name: i.to_wire_model() for name, i in (self._agents or {}).items()} or None,
+            system_prompt=self._system_prompt,
+            append_system_prompt=self._append_system_prompt,
+            json_schema=self._json_schema,
+            prompt_suggestions=self._prompt_suggestions,
+            sdk_mcp_servers=list(self.sdk_mcp_servers.keys()) or None,
+            agent_progress_summaries=self._agent_progress_summaries,
+        ).model_dump(by_alias=True, exclude_none=True)
         # Use longer timeout for initialize since MCP servers may take time to start
         response = await self._send_control_request(request, timeout=self._initialize_timeout)
         self._initialization_result = ClaudeCodeServerInfo.model_validate(response)

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import anyenv
 from pydantic import ValidationError
 
 from clawd_code_sdk._errors import MessageParseError
@@ -35,9 +36,7 @@ def parse_message(data: dict[str, Any]) -> Message:
         MessageParseError: If parsing fails or message type is unrecognized
     """
     if _record_file is not None:
-        import json
-
-        _record_file.write(json.dumps(data) + "\n")
+        _record_file.write(anyenv.dump_json(data) + "\n")
         _record_file.flush()
     try:
         return message_adapter.validate_python(data)
