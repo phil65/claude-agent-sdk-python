@@ -360,7 +360,7 @@ class SubprocessCLITransport(Transport):
             raise self._exit_error
 
 
-async def _check_claude_version(cli_path: str) -> None:
+async def _check_claude_version(cli_path: str | Path) -> None:
     """Check Claude Code version and warn if below minimum."""
     proc = None
     try:
