@@ -26,7 +26,6 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk.models import (
-    BaseSessionConfig,
     ContinueLatest,
     FromPR,
     NewSession,
@@ -474,15 +473,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.permission_mode:
         cmd.extend(["--permission-mode", options.permission_mode])
 
-    match options.session:
-        case None:
-            session: BaseSessionConfig = NewSession()
-        case str() as session_id:
-            session = ResumeSession(session_id=session_id)
-        case BaseSessionConfig() as config:
-            session = config
-        case _ as unreachable:
-            assert_never(unreachable)
+    session = options.get_session()
     match session:
         case NewSession(session_id=str() as sid):
             cmd.extend(["--session-id", sid])
@@ -503,7 +494,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             if fork:
                 cmd.append("--fork-session")
         case _ as unreachable:
-            assert_never(unreachable)  # ty:ignore[type-assertion-failure]
+            assert_never(unreachable)
 
     if not session.persist:
         cmd.append("--no-persist-session")

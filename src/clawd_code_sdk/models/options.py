@@ -352,3 +352,14 @@ class ClaudeAgentOptions:
                 return None
             case _ as unreachable:
                 assert_never(unreachable)
+
+    def get_session(self) -> SessionConfig:
+        match self.session:
+            case None:
+                return NewSession()
+            case str() as session_id:
+                return ResumeSession(session_id=session_id)
+            case NewSession() | ResumeSession() | ContinueLatest() | FromPR() as config:
+                return config
+            case _ as unreachable:
+                assert_never(unreachable)
