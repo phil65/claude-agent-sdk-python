@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+import dataclasses
 import logging
 import os
 from pathlib import Path
@@ -510,8 +511,6 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     match options.mcp_servers:
         case dict() as servers if servers:
-            import dataclasses
-
             servers_for_cli = {
                 name: {k: v for k, v in dataclasses.asdict(cfg).items() if k != "instance"}
                 for name, cfg in servers.items()
