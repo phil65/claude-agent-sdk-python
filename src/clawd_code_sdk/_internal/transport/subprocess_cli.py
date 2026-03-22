@@ -484,8 +484,10 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
         case _ as unreachable:
             assert_never(unreachable)
     match session:
-        case NewSession(session_id=sid) if sid is not None:
+        case NewSession(session_id=str() as sid):
             cmd.extend(["--session-id", sid])
+        case NewSession():
+            pass
         case ResumeSession(session_id=sid, fork=fork, at_message=at_msg):
             cmd.extend(["--resume", sid])
             if fork:
@@ -500,6 +502,9 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             cmd.extend(["--from-pr", str(pr)])
             if fork:
                 cmd.append("--fork-session")
+        case _ as unreachable:
+            assert_never(unreachable)  # ty:ignore[type-assertion-failure]
+
     if not session.persist:
         cmd.append("--no-persist-session")
 
