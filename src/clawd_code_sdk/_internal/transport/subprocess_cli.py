@@ -354,10 +354,9 @@ class SubprocessCLITransport(Transport):
             self._stderr_task_group = None
 
         # Use exit code for error detection
-        if returncode is not None and returncode != 0:
-            stderr_output = "\n".join(self._stderr_lines) if self._stderr_lines else None
-            msg = f"Command failed with exit code {returncode}"
-            self._exit_error = ProcessError(msg, exit_code=returncode, stderr=stderr_output)
+        if returncode:
+            stderr = "\n".join(self._stderr_lines) if self._stderr_lines else None
+            self._exit_error = ProcessError("Command failed", exit_code=returncode, stderr=stderr)
             raise self._exit_error
 
 
