@@ -21,6 +21,8 @@ from clawd_code_sdk.models.base import ToolName  # noqa: TC001
 # Agent (Task tool)
 # ---------------------------------------------------------------------------
 ServiceTier = Literal["standard", "priority", "batch"]
+MimeType = Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
+Status = Literal["running", "completed", "failed"]
 
 
 class AgentOutputTextContent(TypedDict):
@@ -173,7 +175,7 @@ class TaskInfo(TypedDict):
 
     task_id: str
     task_type: Literal["local_bash", "agent"]
-    status: Literal["running", "completed", "failed"]
+    status: Status
     description: str
     output: str
     exitCode: int | None
@@ -203,7 +205,7 @@ class BashOutputOutput(TypedDict):
     """ID of the background shell."""
     command: NotRequired[str]
     """The command that was executed."""
-    status: NotRequired[Literal["running", "completed", "failed"]]
+    status: NotRequired[Status]
     """Current status of the command."""
     exitCode: NotRequired[int | None]
     """Exit code of the command, or None if still running."""
@@ -315,7 +317,7 @@ class ReadImageFileInfo(TypedDict):
 
     base64: str
     """Base64-encoded image data."""
-    type: Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
+    type: MimeType
     """The MIME type of the image."""
     originalSize: int
     """Original file size in bytes."""
