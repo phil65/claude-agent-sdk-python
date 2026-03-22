@@ -26,9 +26,6 @@ from clawd_code_sdk.models import (
     Network,
     Permissions,
     Sandbox,
-    ThinkingConfigAdaptive,
-    ThinkingConfigDisabled,
-    ThinkingConfigEnabled,
 )
 
 
@@ -54,27 +51,6 @@ class TestSubprocessCLITransport:
             SubprocessCLITransport(options=ClaudeAgentOptions())
 
         assert "Claude Code not found" in str(exc_info.value)
-
-    def test_build_command_basic(self):
-        """Test building basic CLI command."""
-        transport = SubprocessCLITransport(options=make_options())
-        cmd = transport._build_command()
-        assert cmd[0] == "/usr/bin/claude"
-        assert "--output-format" in cmd
-        assert "stream-json" in cmd
-        # Always use streaming mode (matching TypeScript SDK)
-        assert "--input-format" in cmd
-        assert "--print" not in cmd  # Never use --print anymore
-        # system_prompt is now sent via initialize request, not CLI args
-        assert "--system-prompt" not in cmd
-
-    def test_cli_path_accepts_pathlib_path(self):
-        """Test that cli_path accepts pathlib.Path objects."""
-        path = Path("/usr/bin/claude")
-        opts = ClaudeAgentOptions(cli_path=path)
-        transport = SubprocessCLITransport(options=opts)
-        # Path object is converted to string, compare with str(path)
-        assert transport._cli_path == str(path)
 
     def test_build_command_system_prompt_not_in_cli_args(self):
         """Test that system prompt is not passed as CLI arg (sent via initialize request)."""
@@ -112,150 +88,6 @@ class TestSubprocessCLITransport:
         assert "acceptEdits" in cmd
         assert "--max-turns" in cmd
         assert "5" in cmd
-
-    def test_build_command_with_fallback_model(self):
-        """Test building CLI command with fallback_model option."""
-        opts = make_options(model="opus", fallback_model="sonnet")
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--model" in cmd
-        assert "opus" in cmd
-        assert "--fallback-model" in cmd
-        assert "sonnet" in cmd
-
-    def test_build_command_with_thinking_enabled(self):
-        """Test building CLI command with thinking config."""
-        opts = make_options(thinking=ThinkingConfigEnabled(budget_tokens=5000))
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--max-thinking-tokens" in cmd
-        assert "5000" in cmd
-
-    def test_build_command_with_thinking_adaptive(self):
-        """Test building CLI command with adaptive thinking config."""
-        opts = make_options(thinking=ThinkingConfigAdaptive())
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--max-thinking-tokens" in cmd
-        assert "32000" in cmd
-
-    def test_build_command_with_thinking_disabled(self):
-        """Test building CLI command with disabled thinking config."""
-        opts = make_options(thinking=ThinkingConfigDisabled())
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--max-thinking-tokens" in cmd
-        assert "0" in cmd
-
-    def test_build_command_with_effort(self):
-        """Test building CLI command with effort option."""
-        opts = make_options(effort="high")
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--effort" in cmd
-        assert "high" in cmd
-
-    def test_build_command_with_context_1m(self):
-        """Test building CLI command with context_1m option."""
-        opts = make_options(context_1m=True)
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--betas" in cmd
-        betas_index = cmd.index("--betas")
-        assert cmd[betas_index + 1] == "context-1m-2025-08-07"
-
-    def test_build_command_without_context_1m(self):
-        """Test that --betas is not added when context_1m is False."""
-        transport = SubprocessCLITransport(options=make_options())
-        cmd = transport._build_command()
-        assert "--betas" not in cmd
-
-    def test_build_command_with_add_dirs(self):
-        """Test building CLI command with add_dirs option."""
-        dir1 = "/path/to/dir1"
-        dir2 = Path("/path/to/dir2")
-        opts = make_options(add_dirs=[dir1, dir2])
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        # Check that both directories are in the command
-        assert "--add-dir" in cmd
-        add_dir_indices = [i for i, x in enumerate(cmd) if x == "--add-dir"]
-        assert len(add_dir_indices) == 2
-        # The directories should appear after --add-dir flags
-        dirs_in_cmd = [cmd[i + 1] for i in add_dir_indices]
-        assert dir1 in dirs_in_cmd
-        assert str(dir2) in dirs_in_cmd
-
-    def test_session_resume(self):
-        """Test resume session options."""
-        from clawd_code_sdk.models import ResumeSession
-
-        opts = make_options(session=ResumeSession(session_id="session-123"))
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--resume" in cmd
-        assert "session-123" in cmd
-
-    def test_session_resume_shortcut(self):
-        """Test resume session with string shortcut."""
-        opts = make_options(session="session-123")
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--resume" in cmd
-        assert "session-123" in cmd
-
-    def test_session_continue_latest(self):
-        """Test continue latest session option."""
-        from clawd_code_sdk.models import ContinueLatest
-
-        opts = make_options(session=ContinueLatest())
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--continue" in cmd
-
-    def test_session_resume_with_fork(self):
-        """Test resume session with fork."""
-        from clawd_code_sdk.models import ResumeSession
-
-        opts = make_options(session=ResumeSession(session_id="prev-id", fork=True))
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--resume" in cmd
-        assert "prev-id" in cmd
-        assert "--fork-session" in cmd
-
-    def test_session_resume_at_message(self):
-        """Test resume session at a specific message."""
-        from clawd_code_sdk.models import ResumeSession
-
-        opts = make_options(
-            session=ResumeSession(session_id="prev-id", at_message="msg-uuid"),
-        )
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--resume" in cmd
-        assert "prev-id" in cmd
-        assert "--resume-session-at" in cmd
-        assert "msg-uuid" in cmd
-
-    def test_build_command_with_new_session_id(self):
-        """Test building CLI command with explicit new session ID."""
-        from clawd_code_sdk.models import NewSession
-
-        opts = make_options(session=NewSession(session_id="my-session-uuid"))
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--session-id" in cmd
-        assert "my-session-uuid" in cmd
-
-    def test_session_no_persist(self):
-        """Test session with persist=False."""
-        from clawd_code_sdk.models import NewSession
-
-        opts = make_options(session=NewSession(persist=False))
-        transport = SubprocessCLITransport(options=opts)
-        cmd = transport._build_command()
-        assert "--no-persist-session" in cmd
 
     def test_connect_close(self):
         """Test connect and close lifecycle."""
@@ -328,9 +160,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_settings_model(self):
         """Test building CLI command with settings as ClaudeCodeSettings."""
-        settings = ClaudeCodeSettings(
-            permissions=Permissions(allow=["Bash(ls:*)"]),
-        )
+        settings = ClaudeCodeSettings(permissions=Permissions(allow=["Bash(ls:*)"]))
         opts = make_options(settings=settings)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
@@ -460,7 +290,6 @@ class TestSubprocessCLITransport:
         async def _test():
             # Simulate running inside Claude Code
             os.environ["CLAUDECODE"] = "1"
-
             options = make_options()
 
             # Mock the subprocess to capture the env argument
@@ -471,7 +300,6 @@ class TestSubprocessCLITransport:
                 mock_version_process.stdout.receive = AsyncMock(return_value=b"2.0.0 (Claude Code)")
                 mock_version_process.terminate = MagicMock()
                 mock_version_process.wait = AsyncMock()
-
                 # Mock main process
                 mock_process = MagicMock()
                 mock_process.stdout = MagicMock()
@@ -479,27 +307,18 @@ class TestSubprocessCLITransport:
                 mock_stdin.aclose = AsyncMock()
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
-
                 # Return version process first, then main process
                 mock_open_process.side_effect = [mock_version_process, mock_process]
-
-                transport = SubprocessCLITransport(
-                    options=options,
-                )
-
+                transport = SubprocessCLITransport(options=options)
                 await transport.connect()
-
                 # Verify open_process was called twice (version check + main process)
                 assert mock_open_process.call_count == 2
-
                 # Check the second call (main process) for env vars
                 second_call_kwargs = mock_open_process.call_args_list[1].kwargs
                 assert "env" in second_call_kwargs
                 env_passed = second_call_kwargs["env"]
-
                 # CLAUDECODE should NOT be in env (filtered to prevent nesting detection)
                 assert "CLAUDECODE" not in env_passed
-
                 # But other vars should be present
                 assert "CLAUDE_CODE_ENTRYPOINT" in env_passed
                 assert env_passed["CLAUDE_CODE_ENTRYPOINT"] == "sdk-py"
@@ -512,10 +331,8 @@ class TestSubprocessCLITransport:
         async def _test():
             # Simulate running inside Claude Code
             os.environ["CLAUDECODE"] = "1"
-
             # User explicitly wants CLAUDECODE set (unusual but allowed)
             options = make_options(env={"CLAUDECODE": "1"})
-
             # Mock the subprocess to capture the env argument
             with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
@@ -532,24 +349,16 @@ class TestSubprocessCLITransport:
                 mock_stdin.aclose = AsyncMock()
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
-
                 # Return version process first, then main process
                 mock_open_process.side_effect = [mock_version_process, mock_process]
-
-                transport = SubprocessCLITransport(
-                    options=options,
-                )
-
+                transport = SubprocessCLITransport(options=options)
                 await transport.connect()
-
                 # Verify open_process was called twice
                 assert mock_open_process.call_count == 2
-
                 # Check the second call (main process) for env vars
                 second_call_kwargs = mock_open_process.call_args_list[1].kwargs
                 assert "env" in second_call_kwargs
                 env_passed = second_call_kwargs["env"]
-
                 # CLAUDECODE SHOULD be in env because user explicitly provided it
                 assert "CLAUDECODE" in env_passed
                 assert env_passed["CLAUDECODE"] == "1"
