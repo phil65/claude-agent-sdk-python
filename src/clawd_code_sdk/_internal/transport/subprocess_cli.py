@@ -69,7 +69,6 @@ class SubprocessCLITransport(Transport):
     ):
         self._options = options
         self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
-        self._cwd = str(options.cwd) if options.cwd else None
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
         self._stdin_stream: TextSendStream | None = None
@@ -112,52 +111,17 @@ class SubprocessCLITransport(Transport):
         # Merge environment variables: system -> user -> SDK required
         process_env = {
             **parent_env,
-            **self._options.env,  # User-provided env vars
             "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
             "CLAWD_CODE_SDK_VERSION": __version__,
+            **get_env_vars(self._options),
         }
-
-        # Enable file checkpointing if requested
-        if self._options.enable_file_checkpointing:
-            process_env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"
-
-        # Enable experimental agent teams feature
-        if self._options.enable_agent_teams:
-            process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
-
-        # Control ToolSearch behavior
-        match self._options.enable_tool_search:
-            case bool() as flag:
-                process_env["ENABLE_TOOL_SEARCH"] = str(flag).lower()
-            case "auto":
-                process_env["ENABLE_TOOL_SEARCH"] = "auto"
-            case int() as threshold:
-                process_env["ENABLE_TOOL_SEARCH"] = f"auto:{threshold}"
-            case None:
-                pass
-
-        # Set question preview format from toolConfig
-        if fmt := (
-            self._options.tool_config
-            and self._options.tool_config.ask_user_question
-            and self._options.tool_config.ask_user_question.preview_format
-        ):
-            process_env["CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"] = fmt
-        # Enable fine-grained tool streaming. --include-partial-messages emits
-        # stream_event messages, but tool input parameters are still buffered
-        # by the API unless eager_input_streaming is also enabled at the
-        # per-tool level via this env var.
-        process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
-        if self._cwd:
-            process_env["PWD"] = self._cwd
-
         # Always pipe stderr so we can capture it for error reporting.
         # The callback and debug mode flags control whether lines are
         # forwarded in real-time, but we always collect them.
         try:
             self._process = await anyio.open_process(
                 cmd,
-                cwd=self._cwd,
+                cwd=self._options.cwd,
                 env=process_env,
                 user=self._options.user if platform.system() != "Windows" else None,
                 start_new_session=True,
@@ -183,8 +147,8 @@ class SubprocessCLITransport(Transport):
 
         except FileNotFoundError as e:
             # Check if the error comes from the working directory or the CLI
-            if self._cwd and not Path(self._cwd).exists():
-                error = CLIConnectionError(f"Working directory does not exist: {self._cwd}")
+            if (cwd := self._options.cwd) and not Path(cwd).exists():
+                error = CLIConnectionError(f"Working directory does not exist: {cwd}")
                 self._exit_error = error
                 raise error from e
             error = CLINotFoundError(f"Claude Code not found at: {self._cli_path}")
@@ -574,3 +538,42 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     # Always use streaming mode with stdin (matching TypeScript SDK)
     # This allows agents and other large configs to be sent via initialize request
     return cmd
+
+
+def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
+    process_env = options.env
+
+    # Enable file checkpointing if requested
+    if options.enable_file_checkpointing:
+        process_env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"
+
+    # Enable experimental agent teams feature
+    if options.enable_agent_teams:
+        process_env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
+
+    # Control ToolSearch behavior
+    match options.enable_tool_search:
+        case bool() as flag:
+            process_env["ENABLE_TOOL_SEARCH"] = str(flag).lower()
+        case "auto":
+            process_env["ENABLE_TOOL_SEARCH"] = "auto"
+        case int() as threshold:
+            process_env["ENABLE_TOOL_SEARCH"] = f"auto:{threshold}"
+        case None:
+            pass
+
+    # Set question preview format from toolConfig
+    if (
+        (opts := options.tool_config)
+        and opts.ask_user_question
+        and (fmt := opts.ask_user_question.preview_format)
+    ):
+        process_env["CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"] = fmt
+    # Enable fine-grained tool streaming. --include-partial-messages emits
+    # stream_event messages, but tool input parameters are still buffered
+    # by the API unless eager_input_streaming is also enabled at the
+    # per-tool level via this env var.
+    process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
+    if cwd := options.cwd:
+        process_env["PWD"] = str(cwd)
+    return process_env
