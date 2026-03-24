@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import sys
 
-from clawd_code_sdk.models import ModelUsage
+from clawd_code_sdk.models.messages import ModelUsage, ResultSuccessMessage, Usage
 
 
 def main() -> None:
@@ -50,19 +50,16 @@ def main() -> None:
                 assert "Second" in texts, f"Expected 'Second' in {texts}"
 
                 # Output a valid result
-                result = {
-                    "type": "result",
-                    "uuid": "msg-004",
-                    "subtype": "success",
-                    "duration_ms": 100,
-                    "duration_api_ms": 50,
-                    "is_error": False,
-                    "num_turns": 1,
-                    "session_id": "test",
-                    "total_cost_usd": 0.001,
-                    "stop_reason": None,
-                    "permission_denials": [],
-                    "model_usage": {
+                result = ResultSuccessMessage(
+                    uuid="msg-004",
+                    session_id="test",
+                    duration_ms=100,
+                    duration_api_ms=50,
+                    is_error=False,
+                    num_turns=1,
+                    total_cost_usd=0.001,
+                    stop_reason=None,
+                    model_usage={
                         "opus": ModelUsage(
                             input_tokens=100,
                             output_tokens=50,
@@ -72,15 +69,15 @@ def main() -> None:
                             cost_usd=0.001,  # pyright: ignore[reportCallIssue]
                             context_window=0,
                             max_output_tokens=0,
-                        ).model_dump(by_alias=True)
+                        )
                     },
-                    "usage": {
-                        "input_tokens": 100,
-                        "output_tokens": 50,
-                        "cache_creation_input_tokens": 0,
-                        "cache_read_input_tokens": 0,
-                    },
-                }
+                    usage=Usage(
+                        input_tokens=100,
+                        output_tokens=50,
+                        cache_creation_input_tokens=0,
+                        cache_read_input_tokens=0,
+                    ),
+                ).model_dump(by_alias=True)
                 print(json.dumps(result))
                 sys.stdout.flush()
                 break
