@@ -64,15 +64,15 @@ def main() -> None:
                     "permission_denials": [],
                     "model_usage": {
                         "opus": ModelUsage(
-                            inputTokens=100,
-                            outputTokens=50,
-                            cacheReadInputTokens=0,
-                            cacheCreationInputTokens=0,
-                            webSearchRequests=0,
-                            costUSD=0.001,
-                            contextWindow=0,
-                            maxOutputTokens=0,
-                        )
+                            input_tokens=100,
+                            output_tokens=50,
+                            cache_read_input_tokens=0,
+                            cache_creation_input_tokens=0,
+                            web_search_requests=0,
+                            cost_usd=0.001,  # pyright: ignore[reportCallIssue]
+                            context_window=0,
+                            max_output_tokens=0,
+                        ).model_dump(by_alias=True)
                     },
                     "usage": {
                         "input_tokens": 100,
