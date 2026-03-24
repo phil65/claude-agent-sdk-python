@@ -376,12 +376,8 @@ class Query:
         if not self.on_elicitation:
             # Auto-decline if no callback is set
             return {"action": "decline"}
-
         result = await self.on_elicitation(req)
-        response: dict[str, Any] = {"action": result.action}
-        if result.content is not None:
-            response["content"] = result.content
-        return response
+        return result.model_dump(mode="json", exclude_none=True)
 
     async def _handle_hook_callback(self, req: SDKHookCallbackRequest) -> dict[str, Any]:
         """Handle a hook callback request."""

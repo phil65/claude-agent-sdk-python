@@ -3,6 +3,8 @@
 from __future__ import annotations
 from collections.abc import Callable
 
+from mcp.types import ElicitResult
+
 from .agents import AgentDefinition, AgentInfo, AgentWireDefinition, ToolsPreset
 from .base import (
     ApiKeySource,
@@ -274,7 +276,6 @@ from .options import (
 )
 from .permissions import (
     CanUseTool,
-    ElicitationResult,
     OnUserQuestion,
     PermissionResult,
     PermissionResultAllow,
@@ -362,7 +363,7 @@ Message = Annotated[
 
 message_adapter: TypeAdapter[Message] = TypeAdapter(Message)
 
-OnElicitation = Callable[[SDKControlElicitationRequest], Awaitable[ElicitationResult]]
+OnElicitation = Callable[[SDKControlElicitationRequest], Awaitable[ElicitResult]]
 """Callback for handling MCP elicitation requests.
 
 Called when an MCP server requests user input and no hook handles it.
@@ -428,7 +429,6 @@ __all__ = [
     "ElicitationHookInput",
     "ElicitationHookSpecificOutput",
     "ElicitationMode",
-    "ElicitationResult",
     "ElicitationResultHookInput",
     "ElicitationResultHookSpecificOutput",
     "EnterPlanModeInput",

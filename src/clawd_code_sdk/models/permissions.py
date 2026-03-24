@@ -4,19 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
-from clawd_code_sdk.models.base import (
-    ClaudeCodeBaseModel,
-    ElicitationAction,  # noqa: TC001
-    PermissionBehavior,
-    PermissionMode,
-)
+from clawd_code_sdk.models.base import ClaudeCodeBaseModel, PermissionBehavior, PermissionMode
 from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
-
-
-if TYPE_CHECKING:
-    import mcp.types
 
 
 # Permission Update types (matching TypeScript SDK)
@@ -151,24 +142,3 @@ Called when Claude asks the user a clarifying question.
 The callback should return a PermissionResultAllow with updated_input
 containing the answers, or a PermissionResultDeny to cancel.
 """
-
-
-@dataclass
-class ElicitationResult:
-    """Elicitation response from the SDK consumer."""
-
-    action: ElicitationAction
-    """The action taken: accept, decline, or cancel."""
-    content: dict[str, Any] | None = None
-    """Form field values (only for 'accept' action with 'form' mode)."""
-
-    def to_mcp(self) -> mcp.types.ElicitResult:
-        """Convert to the MCP ElicitResult type."""
-        import mcp.types
-
-        return mcp.types.ElicitResult(action=self.action, content=self.content)
-
-    @classmethod
-    def from_mcp(cls, result: mcp.types.ElicitResult) -> ElicitationResult:
-        """Create from an MCP ElicitResult."""
-        return cls(action=result.action, content=result.content)
