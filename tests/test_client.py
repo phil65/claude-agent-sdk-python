@@ -66,14 +66,14 @@ def _make_result(
         model_usage=model_usage
         or {
             "opus": ModelUsage(
-                inputTokens=200,
-                outputTokens=100,
-                cacheReadInputTokens=0,
-                cacheCreationInputTokens=0,
-                webSearchRequests=0,
+                input_tokens=200,
+                output_tokens=100,
+                cache_read_input_tokens=0,
+                cache_creation_input_tokens=0,
+                web_search_requests=0,
                 costUSD=0.005,
-                contextWindow=0,
-                maxOutputTokens=0,
+                context_window=0,
+                max_output_tokens=0,
             )
         },
         usage=usage

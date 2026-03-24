@@ -668,7 +668,7 @@ class TestHookInitializeRegistration:
                 "PermissionRequest": [HookMatcher(hooks=[noop_hook])],
             }
         )
-
+        assert options.hooks
         assert "Notification" in options.hooks
         assert "SubagentStart" in options.hooks
         assert "PermissionRequest" in options.hooks

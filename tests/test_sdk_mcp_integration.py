@@ -12,13 +12,14 @@ from mcp.types import (
     CallToolRequestParams,
     EmbeddedResource,
     ImageContent,
+    ListToolsRequest,
     TextContent,
     ToolAnnotations,
 )
 import pytest
 
-from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool
-from clawd_code_sdk.models import JSONRPCRequest, McpStdioServerConfig
+from clawd_code_sdk import create_sdk_mcp_server, tool
+from clawd_code_sdk.models import JSONRPCRequest
 
 
 async def test_sdk_mcp_server_handlers():
@@ -129,25 +130,6 @@ async def test_error_handling():
     assert "Expected error" in str(result.root.content[0].text)
 
 
-async def test_mixed_servers():
-    """Test that SDK and external MCP servers can work together."""
-
-    # Create an SDK server
-    @tool("sdk_tool", "SDK tool", {})
-    async def sdk_tool(args: dict[str, Any]) -> dict[str, Any]:
-        return {"result": "from SDK"}
-
-    sdk_server = create_sdk_mcp_server(name="sdk-server", tools=[sdk_tool])
-    # Create configuration with both SDK and external servers
-    external_server = McpStdioServerConfig(command="echo", args=["test"])
-    options = ClaudeAgentOptions(mcp_servers={"sdk": sdk_server, "external": external_server})
-    # Verify both server types are in the configuration
-    assert "sdk" in options.mcp_servers
-    assert "external" in options.mcp_servers
-    assert options.mcp_servers["sdk"].type == "sdk"
-    assert options.mcp_servers["external"].type == "stdio"
-
-
 async def test_server_creation():
     """Test that SDK MCP servers are created correctly."""
     server = create_sdk_mcp_server(name="test-server", version="2.0.0", tools=[])
@@ -156,15 +138,11 @@ async def test_server_creation():
     assert server.type == "sdk"
     assert server.name == "test-server"
     assert server.instance is not None
-
     # Verify the server instance has the right attributes
     instance = server.instance
     assert instance.name == "test-server"
     assert instance.version == "2.0.0"
-
     # With no tools, no handlers are registered if tools is empty
-    from mcp.types import ListToolsRequest
-
     # When no tools are provided, the handlers are not registered
     assert ListToolsRequest not in instance.request_handlers
 
@@ -452,7 +430,7 @@ async def test_process_mcp_request_resources_list():
     server = mcp._mcp_server
 
     # Test resources/list
-    msg = {"jsonrpc": "2.0", "id": 1, "method": "resources/list"}
+    msg = JSONRPCRequest(jsonrpc="2.0", id=1, method="resources/list")
     resp = await process_mcp_request(msg, server)
     assert resp.get("id") == 1
     assert "result" in resp

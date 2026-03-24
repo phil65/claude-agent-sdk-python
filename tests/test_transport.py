@@ -406,10 +406,10 @@ class TestSubprocessCLITransport:
         """Test building CLI command with sandbox settings (no existing settings)."""
         import json
 
-        sandbox = Sandbox(
+        sandbox = Sandbox(  # pyright: ignore[reportCallIssue]
             enabled=True,
             auto_allow_bash_if_sandboxed=True,
-            network=Network(
+            network=Network(  # pyright: ignore[reportCallIssue]
                 allow_local_binding=True,
                 allow_unix_sockets=["/var/run/docker.sock"],
             ),
@@ -462,7 +462,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_sandbox_minimal(self):
         """Test sandbox with minimal configuration."""
-        sandbox = Sandbox(enabled=True)
+        sandbox = Sandbox(enabled=True)  # pyright: ignore[reportCallIssue]
         opts = make_options(sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
@@ -480,9 +480,9 @@ class TestSubprocessCLITransport:
 
     def test_sandbox_network_config(self):
         """Test sandbox with full network configuration."""
-        sandbox = Sandbox(
+        sandbox = Sandbox(  # pyright: ignore[reportCallIssue]
             enabled=True,
-            network=Network(
+            network=Network(  # pyright: ignore[reportCallIssue]
                 allow_unix_sockets=["/tmp/ssh-agent.sock"],
                 allow_all_unix_sockets=False,
                 allow_local_binding=True,
