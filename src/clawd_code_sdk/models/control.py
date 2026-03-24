@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict, assert_never
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
 
@@ -300,47 +300,57 @@ class SDKControlElicitationRequest(_ControlBase):
     requested_schema: dict[str, Any] | None = None
     """JSON Schema for the requested input (only for 'form' mode)."""
 
-    def to_mcp(self) -> mcp.types.ElicitRequestFormParams | mcp.types.ElicitRequestURLParams:
+    def to_mcp(self) -> mcp.types.ElicitRequestParams:
         """Convert to the corresponding MCP elicitation request params."""
-        import mcp.types
+        from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
-        if self.mode == "url":
-            assert self.url is not None
-            assert self.elicitation_id is not None
-            return mcp.types.ElicitRequestURLParams(
-                message=self.message,
-                url=self.url,
-                elicitationId=self.elicitation_id,
-            )
-        assert self.requested_schema is not None
-        return mcp.types.ElicitRequestFormParams(
-            message=self.message,
-            requestedSchema=mcp.types.ElicitRequestedSchema(**self.requested_schema),
-        )
+        match self.mode:
+            case "url":
+                assert self.url is not None
+                assert self.elicitation_id is not None
+                return ElicitRequestURLParams(
+                    message=self.message,
+                    url=self.url,
+                    elicitationId=self.elicitation_id,
+                )
+            case "form":
+                assert self.requested_schema is not None
+                return ElicitRequestFormParams(
+                    message=self.message,
+                    requestedSchema=self.requested_schema,
+                )
+            case None:
+                raise ValueError("mode must be 'url' or 'form'")
+            case _ as unreachable:
+                assert_never(unreachable)
 
     @classmethod
     def from_mcp(
         cls,
-        params: mcp.types.ElicitRequestFormParams | mcp.types.ElicitRequestURLParams,
+        params: mcp.types.ElicitRequestParams,
         mcp_server_name: str,
     ) -> SDKControlElicitationRequest:
         """Create from MCP elicitation request params."""
-        import mcp.types
+        from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
-        if isinstance(params, mcp.types.ElicitRequestURLParams):
-            return cls(
-                mcp_server_name=mcp_server_name,
-                message=params.message,
-                mode="url",
-                url=params.url,
-                elicitation_id=params.elicitationId,
-            )
-        return cls(
-            mcp_server_name=mcp_server_name,
-            message=params.message,
-            mode="form",
-            requested_schema=dict(params.requestedSchema),
-        )
+        match params:
+            case ElicitRequestURLParams(url=url, message=message, elicitationId=id_):
+                return cls(
+                    mcp_server_name=mcp_server_name,
+                    message=message,
+                    mode="url",
+                    url=url,
+                    elicitation_id=id_,
+                )
+            case ElicitRequestFormParams(message=message, requestedSchema=schema):
+                return cls(
+                    mcp_server_name=mcp_server_name,
+                    message=message,
+                    mode="form",
+                    requested_schema=dict(schema),
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 class SDKControlGetSettingsRequest(_ControlBase):
