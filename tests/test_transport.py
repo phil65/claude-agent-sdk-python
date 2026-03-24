@@ -188,8 +188,6 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_mcp_servers(self):
         """Test building CLI command with mcp_servers option."""
-        from clawd_code_sdk.models import McpStdioServerConfig
-
         mcp_servers = {
             "test-server": McpStdioServerConfig(
                 command="/path/to/server",
@@ -404,8 +402,6 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_sandbox_only(self):
         """Test building CLI command with sandbox settings (no existing settings)."""
-        import json
-
         sandbox = Sandbox(  # pyright: ignore[reportCallIssue]
             enabled=True,
             auto_allow_bash_if_sandboxed=True,

@@ -19,6 +19,7 @@ from clawd_code_sdk.models import (
     ControlErrorResponse,
     ControlResponse,
     JSONRPCError,
+    JSONRPCErrorResponse,
     PermissionResultAllow,
     SDKControlElicitationRequest,
     SDKControlInitializeRequest,
@@ -445,8 +446,9 @@ class Query:
         """
         if server_name not in self.sdk_mcp_servers:
             dct = JSONRPCError(code=-32601, message=f"Server '{server_name}' not found")
-            return {"jsonrpc": "2.0", "id": get_jsonrpc_request_id(message), "error": dct}
-
+            return JSONRPCErrorResponse(
+                jsonrpc="2.0", id=get_jsonrpc_request_id(message), error=dct
+            )
         server = self.sdk_mcp_servers[server_name]
         return await process_mcp_request(message, server)
 
