@@ -27,6 +27,7 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk.models import (
+    ClaudeAgentOptions,
     ContinueLatest,
     FromPR,
     NewSession,
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
 
     from anyio.abc import Process
 
-    from clawd_code_sdk.models import ClaudeAgentOptions
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,9 @@ _CREATION_FLAGS = (
 class SubprocessCLITransport(Transport):
     """Subprocess transport using Claude Code CLI."""
 
-    def __init__(
-        self,
-        options: ClaudeAgentOptions,
-    ):
-        self._options = options
-        self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
+    def __init__(self, options: ClaudeAgentOptions | None = None):
+        self._options = options or ClaudeAgentOptions()
+        self._cli_path = str(p) if (p := self._options.transport.cli_path) else _find_cli()
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
         self._stdin_stream: TextSendStream | None = None
@@ -76,7 +73,7 @@ class SubprocessCLITransport(Transport):
         self._stderr_task_group: anyio.abc.TaskGroup | None = None
         self._ready = False
         self._exit_error: Exception | None = None  # Track process exit errors
-        self._max_buffer_size = options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
+        self._max_buffer_size = self._options.transport.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
         self._stderr_lines: list[str] = []
         self._write_lock: anyio.Lock = anyio.Lock()
 
@@ -124,7 +121,7 @@ class SubprocessCLITransport(Transport):
                 cmd,
                 cwd=self._options.cwd,
                 env=process_env,
-                user=self._options.user if platform.system() != "Windows" else None,
+                user=self._options.transport.user if platform.system() != "Windows" else None,
                 start_new_session=True,
                 creationflags=_CREATION_FLAGS,
             )
@@ -270,7 +267,6 @@ class SubprocessCLITransport(Transport):
                 line_str = line.strip()
                 if not line_str:
                     continue
-
                 # Accumulate partial JSON until we can parse it
                 # Note: TextReceiveStream can truncate long lines, so we need to buffer
                 # and speculatively parse until we get a complete JSON object
@@ -518,7 +514,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
                 raise ValueError(f"Unsupported plugin type: {plugin.type}")
 
     # Add extra args for future CLI flags
-    for flag, value in options.extra_args.items():
+    for flag, value in options.transport.extra_args.items():
         flags = [f"--{flag}"] if value is None else [f"--{flag}", value]
         cmd.extend(flags)
 
@@ -542,7 +538,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
 
 def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
-    process_env = options.env
+    process_env = options.transport.env
 
     # Enable file checkpointing if requested
     if options.enable_file_checkpointing:

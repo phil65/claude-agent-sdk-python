@@ -107,6 +107,22 @@ Can also be specified as a plain ``str``, which is a shortcut for
 """
 
 
+@dataclass(kw_only=True)
+class StdioTransportOptions:
+    """Options for the transport layer."""
+
+    cli_path: str | Path | None = None
+    """CLI path override (auto-detects by default)."""
+    extra_args: dict[str, str | None] = field(default_factory=dict)
+    """Arbitrary extra CLI flags."""
+    max_buffer_size: int = 10 * 1024 * 1024
+    """Max bytes when buffering CLI stdout."""
+    env: dict[str, str] = field(default_factory=dict)
+    """Environment variables for the CLI subprocess."""
+    user: str | None = None
+    """User for the AnyIO process."""
+
+
 @dataclass
 class ClaudeAgentOptions:
     """Query options for Claude SDK."""
@@ -214,19 +230,10 @@ class ClaudeAgentOptions:
     """Controls thinking behavior."""
     effort: ReasoningEffort | None = None
     """Effort level for thinking depth."""
-    # CLI SubProcess
-    cli_path: str | Path | None = None
-    """CLI path override (auto-detects by default)."""
-    extra_args: dict[str, str | None] = field(default_factory=dict)
-    """Arbitrary extra CLI flags."""
-    max_buffer_size: int = 10 * 1024 * 1024
-    """Max bytes when buffering CLI stdout."""
+    transport: StdioTransportOptions = field(default_factory=StdioTransportOptions)
+    """Options for the transport layer."""
     stderr: Callable[[str], None] | None = None
     """Callback for stderr output from CLI."""
-    env: dict[str, str] = field(default_factory=dict)
-    """Environment variables for the CLI subprocess."""
-    user: str | None = None
-    """User for the AnyIO process."""
     # CWD
     add_dirs: Sequence[str | Path] = field(default_factory=list)
     """Add additional working directories."""

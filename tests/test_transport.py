@@ -7,7 +7,6 @@ import json
 import os
 from pathlib import Path
 import sys
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 
@@ -26,16 +25,8 @@ from clawd_code_sdk.models import (
     Network,
     Permissions,
     Sandbox,
+    StdioTransportOptions,
 )
-
-
-DEFAULT_CLI_PATH = "/usr/bin/claude"
-
-
-def make_options(**kwargs: Any) -> ClaudeAgentOptions:
-    """Construct options using the standard CLI path unless overridden."""
-    cli_path = kwargs.pop("cli_path", DEFAULT_CLI_PATH)
-    return ClaudeAgentOptions(cli_path=cli_path, **kwargs)
 
 
 class TestSubprocessCLITransport:
@@ -59,7 +50,7 @@ class TestSubprocessCLITransport:
             {"type": "preset", "preset": "claude_code"},
             {"type": "preset", "preset": "claude_code", "append": "Be concise."},
         ]:
-            opts = make_options(system_prompt=system_prompt)
+            opts = ClaudeAgentOptions(system_prompt=system_prompt)
             transport = SubprocessCLITransport(options=opts)
             cmd = transport._build_command()
             assert "--system-prompt" not in cmd
@@ -68,7 +59,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_options(self):
         """Test building CLI command with options."""
         transport = SubprocessCLITransport(
-            options=make_options(
+            options=ClaudeAgentOptions(
                 allowed_tools=["Read", "Write"],
                 disallowed_tools=["Bash"],
                 model="claude-sonnet-4-5",
@@ -118,7 +109,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 # Return version process first, then main process
                 mock_exec.side_effect = [mock_version_process, mock_process]
-                transport = SubprocessCLITransport(options=make_options())
+                transport = SubprocessCLITransport()
                 await transport.connect()
                 assert transport._process is not None
                 await transport.close()
@@ -128,20 +119,11 @@ class TestSubprocessCLITransport:
 
         anyio.run(_test)
 
-    def test_read_messages(self):
-        """Test reading messages from CLI output."""
-        # This test is simplified to just test the transport creation
-        # The full async stream handling is tested in integration tests
-        transport = SubprocessCLITransport(options=make_options())
-        # The transport now just provides raw message reading via read_messages()
-        # So we just verify the transport can be created and basic structure is correct
-        assert transport._cli_path == "/usr/bin/claude"
-
     def test_connect_with_nonexistent_cwd(self):
         """Test that connect raises CLIConnectionError when cwd doesn't exist."""
 
         async def _test():
-            opts = make_options(cwd="/this/directory/does/not/exist")
+            opts = ClaudeAgentOptions(cwd="/this/directory/does/not/exist")
             transport = SubprocessCLITransport(options=opts)
             with pytest.raises(CLIConnectionError) as exc_info:
                 await transport.connect()
@@ -152,7 +134,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_settings_file(self):
         """Test building CLI command with settings as file path."""
-        opts = make_options(settings="/path/to/settings.json")
+        opts = ClaudeAgentOptions(settings="/path/to/settings.json")
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
@@ -161,7 +143,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_settings_model(self):
         """Test building CLI command with settings as ClaudeCodeSettings."""
         settings = ClaudeCodeSettings(permissions=Permissions(allow=["Bash(ls:*)"]))
-        opts = make_options(settings=settings)
+        opts = ClaudeAgentOptions(settings=settings)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
@@ -172,7 +154,8 @@ class TestSubprocessCLITransport:
     def test_build_command_with_extra_args(self):
         """Test building CLI command with extra_args for future flags."""
         args = {"new-flag": "value", "boolean-flag": None, "another-option": "test-value"}
-        opts = make_options(extra_args=args)
+        tp_opts = StdioTransportOptions(extra_args=args)
+        opts = ClaudeAgentOptions(transport=tp_opts)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         cmd_str = " ".join(cmd)
@@ -194,7 +177,7 @@ class TestSubprocessCLITransport:
                 args=["--option", "value"],
             )
         }
-        opts = make_options(mcp_servers=mcp_servers)
+        opts = ClaudeAgentOptions(mcp_servers=mcp_servers)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Find the --mcp-config flag and its value
@@ -212,7 +195,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with mcp_servers as file path."""
         # Test with string path
         string_path = "/path/to/mcp-config.json"
-        opts = make_options(mcp_servers=string_path)
+        opts = ClaudeAgentOptions(mcp_servers=string_path)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
@@ -220,7 +203,7 @@ class TestSubprocessCLITransport:
         assert cmd[mcp_idx + 1] == string_path
         # Test with Path object
         path_obj = Path("/path/to/mcp-config.json")
-        opts = make_options(mcp_servers=path_obj)
+        opts = ClaudeAgentOptions(mcp_servers=path_obj)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
@@ -231,7 +214,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_mcp_servers_as_json_string(self):
         """Test building CLI command with mcp_servers as JSON string."""
         json_config = '{"mcpServers": {"server": {"type": "stdio", "command": "test"}}}'
-        opts = make_options(mcp_servers=json_config)
+        opts = ClaudeAgentOptions(mcp_servers=json_config)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
@@ -244,7 +227,8 @@ class TestSubprocessCLITransport:
         async def _test():
             test_value = f"test-{uuid.uuid4().hex[:8]}"
             custom_env = {"MY_TEST_VAR": test_value}
-            options = make_options(env=custom_env)
+            tp_opts = StdioTransportOptions(env=custom_env)
+            options = ClaudeAgentOptions(transport=tp_opts)
             # Mock the subprocess to capture the env argument
             with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
@@ -288,7 +272,7 @@ class TestSubprocessCLITransport:
         async def _test():
             # Simulate running inside Claude Code
             os.environ["CLAUDECODE"] = "1"
-            options = make_options()
+            options = ClaudeAgentOptions()
 
             # Mock the subprocess to capture the env argument
             with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
@@ -330,7 +314,9 @@ class TestSubprocessCLITransport:
             # Simulate running inside Claude Code
             os.environ["CLAUDECODE"] = "1"
             # User explicitly wants CLAUDECODE set (unusual but allowed)
-            options = make_options(env={"CLAUDECODE": "1"})
+            tp_opts = StdioTransportOptions(env={"CLAUDECODE": "1"})
+            options = ClaudeAgentOptions(transport=tp_opts)
+
             # Mock the subprocess to capture the env argument
             with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
@@ -368,8 +354,8 @@ class TestSubprocessCLITransport:
 
         async def _test():
             custom_user = "claude"
-            options = make_options(user=custom_user)
-
+            tp_opts = StdioTransportOptions(user=custom_user)
+            options = ClaudeAgentOptions(transport=tp_opts)
             # Mock the subprocess to capture the env argument
             with patch("anyio.open_process", new_callable=AsyncMock) as mock_open_process:
                 # Mock version check process
@@ -410,7 +396,7 @@ class TestSubprocessCLITransport:
                 allow_unix_sockets=["/var/run/docker.sock"],
             ),
         )
-        opts = make_options(sandbox=sandbox)
+        opts = ClaudeAgentOptions(sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should have --settings with sandbox merged in
@@ -431,7 +417,7 @@ class TestSubprocessCLITransport:
             permissions=Permissions(allow=["Bash(ls:*)"]),
         )
         sandbox = Sandbox(enabled=True, excluded_commands=["git", "docker"])
-        opts = make_options(settings=settings, sandbox=sandbox)
+        opts = ClaudeAgentOptions(settings=settings, sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should have merged settings
@@ -448,7 +434,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_settings_file_and_no_sandbox(self):
         """Test that settings file path is passed through when no sandbox."""
-        opts = make_options(settings="/path/to/settings.json")
+        opts = ClaudeAgentOptions(settings="/path/to/settings.json")
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # Should pass path directly, not parse it
@@ -459,7 +445,7 @@ class TestSubprocessCLITransport:
     def test_build_command_sandbox_minimal(self):
         """Test sandbox with minimal configuration."""
         sandbox = Sandbox(enabled=True)  # pyright: ignore[reportCallIssue]
-        opts = make_options(sandbox=sandbox)
+        opts = ClaudeAgentOptions(sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
@@ -486,7 +472,7 @@ class TestSubprocessCLITransport:
                 socks_proxy_port=8081,
             ),
         )
-        opts = make_options(sandbox=sandbox)
+        opts = ClaudeAgentOptions(sandbox=sandbox)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         settings_idx = cmd.index("--settings")
@@ -501,7 +487,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_tools_array(self):
         """Test building CLI command with tools as array of tool names."""
-        opts = make_options(tools=["Read", "Edit", "Bash"])
+        opts = ClaudeAgentOptions(tools=["Read", "Edit", "Bash"])
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
@@ -510,7 +496,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_tools_empty_array(self):
         """Test building CLI command with tools as empty array (disables all tools)."""
-        opts = make_options(tools=[])
+        opts = ClaudeAgentOptions(tools=[])
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
@@ -519,7 +505,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_with_tools_preset(self):
         """Test building CLI command with tools preset."""
-        opts = make_options(tools={"type": "preset", "preset": "claude_code"})
+        opts = ClaudeAgentOptions(tools={"type": "preset", "preset": "claude_code"})
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
@@ -528,7 +514,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_without_tools(self):
         """Test building CLI command without tools option (default None)."""
-        transport = SubprocessCLITransport(options=make_options())
+        transport = SubprocessCLITransport()
         cmd = transport._build_command()
         assert "--tools" not in cmd
 
@@ -544,7 +530,8 @@ class TestSubprocessCLITransport:
         # Create a real subprocess that consumes stdin (cross-platform)
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
-        opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
+        tp_opts = StdioTransportOptions(cli_path="/usr/bin/claude")
+        opts = ClaudeAgentOptions(transport=tp_opts)
         transport = SubprocessCLITransport(options=opts)
 
         # Same setup as production: TextSendStream wrapping process.stdin
@@ -583,7 +570,8 @@ class TestSubprocessCLITransport:
         # Create a real subprocess that consumes stdin (cross-platform)
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
-        opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
+        tp_opts = StdioTransportOptions(cli_path="/usr/bin/claude")
+        opts = ClaudeAgentOptions(transport=tp_opts)
         transport = SubprocessCLITransport(options=opts)
         # Same setup as production
         transport._ready = True
@@ -642,7 +630,7 @@ class TestSubprocessCLITransport:
             )
         }
         # Test with string prompt
-        opts = make_options(agents=agents)
+        opts = ClaudeAgentOptions(agents=agents)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         assert "--agents" not in cmd
@@ -650,7 +638,7 @@ class TestSubprocessCLITransport:
         assert "stream-json" in cmd
 
         # Verify same behavior with different options
-        transport2 = SubprocessCLITransport(options=make_options(agents=agents))
+        transport2 = SubprocessCLITransport(options=ClaudeAgentOptions(agents=agents))
         cmd2 = transport2._build_command()
         assert "--agents" not in cmd2
         assert "--input-format" in cmd2
@@ -663,7 +651,7 @@ class TestSubprocessCLITransport:
         so that agents and other large configs can be sent via initialize request.
         """
         # String prompt should still use streaming
-        transport = SubprocessCLITransport(options=make_options())
+        transport = SubprocessCLITransport()
         cmd = transport._build_command()
         assert "--input-format" in cmd
         assert "stream-json" in cmd
@@ -678,7 +666,7 @@ class TestSubprocessCLITransport:
         # Create a large agent definition (50KB prompt)
         large_prompt = "x" * 50000
         agents = {"large-agent": AgentDefinition(description="A large agent", prompt=large_prompt)}
-        opts = make_options(agents=agents)
+        opts = ClaudeAgentOptions(agents=agents)
         transport = SubprocessCLITransport(options=opts)
         cmd = transport._build_command()
         # --agents should not be in command (sent via initialize)
@@ -858,3 +846,9 @@ class TestSubprocessCLITransport:
         assert {
             "remote": {"type": "sse", "url": "http://localhost:8080/sse", "headers": {}}
         } in serialized["mcpServers"]
+
+
+if __name__ == "__main__":
+    import pytest
+
+    pytest.main([__file__])
