@@ -94,8 +94,6 @@ class SubprocessCLITransport(Transport):
 
     async def connect(self) -> None:
         """Start subprocess."""
-        from clawd_code_sdk import __version__
-
         if self._process:
             return
 
@@ -110,7 +108,7 @@ class SubprocessCLITransport(Transport):
         process_env = {
             **parent_env,
             "CLAUDE_CODE_ENTRYPOINT": "sdk-py",
-            "CLAWD_CODE_SDK_VERSION": __version__,
+            # "CLAUDE_CODE_SDK_VERSION": "xyz",
             **get_env_vars(self._options),
         }
         # Always pipe stderr so we can capture it for error reporting.
@@ -232,12 +230,12 @@ class SubprocessCLITransport(Transport):
 
             if self._process and self._process.returncode is not None:
                 raise CLIConnectionError(
-                    f"Cannot write to terminated process (exit code: {self._process.returncode})"
+                    f"Cannot write to terminated process: {self._process.returncode=}"
                 )
 
             if self._exit_error:
                 raise CLIConnectionError(
-                    f"Cannot write to process that exited with error: {self._exit_error}"
+                    f"Cannot write to process: {self._exit_error=}"
                 ) from self._exit_error
 
             try:
@@ -282,7 +280,7 @@ class SubprocessCLITransport(Transport):
                         buffer_length = len(json_buffer)
                         json_buffer = ""
                         raise SDKJSONDecodeError(
-                            f"JSON message exceeded max buffer size of {self._max_buffer_size}b",
+                            f"JSON message exceeded {self._max_buffer_size=}b",
                             ValueError(f"{buffer_length=} exceeds {self._max_buffer_size=}"),
                         )
 
