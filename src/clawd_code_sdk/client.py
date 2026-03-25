@@ -21,6 +21,8 @@ from clawd_code_sdk.models import (
     ResultErrorMessage,
     ResultMessage,
     ResultSuccessMessage,
+    SessionState,
+    SessionStateChangedMessage,
     StatusSystemMessage,
     Usage,
     UserTextPrompt,
@@ -75,6 +77,7 @@ class ClaudeSDKClient:
         self._transport: Transport | None = None
         self._query: Query | None = None
         self.session_usage: Usage = Usage()
+        self.session_state: SessionState = "idle"
         """Cumulative token usage across all queries in this session."""
         self.query_usage: Usage = Usage()
         """Token usage for the current/last query only (reset on each query() call)."""
@@ -164,6 +167,8 @@ class ClaudeSDKClient:
                     message.raise_if_api_error()
                 case StatusSystemMessage(status=status):
                     self.status = status
+                case SessionStateChangedMessage(state=state):
+                    self.session_state = state
                 case ResultSuccessMessage() | ResultErrorMessage():
                     self.query_usage.accumulate(message.usage)
                     self.session_usage.accumulate(message.usage)
