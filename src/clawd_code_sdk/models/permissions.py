@@ -6,7 +6,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, PermissionBehavior, PermissionMode
+from clawd_code_sdk.models.base import (
+    ClaudeCodeBaseModel,
+    PermissionBehavior,
+    PermissionDecisionClassification,
+    PermissionMode,
+)
 from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
 
 
@@ -117,6 +122,7 @@ class PermissionResultAllow(ClaudeCodeBaseModel):
     behavior: Literal["allow"] = "allow"
     updated_input: dict[str, Any] | None = None
     updated_permissions: list[PermissionUpdate] | None = None
+    decision_classification: PermissionDecisionClassification | None = None
 
 
 class PermissionResultDeny(ClaudeCodeBaseModel):
@@ -125,6 +131,7 @@ class PermissionResultDeny(ClaudeCodeBaseModel):
     behavior: Literal["deny"] = "deny"
     message: str = ""
     interrupt: bool = False
+    decision_classification: PermissionDecisionClassification | None = None
 
 
 PermissionResult = PermissionResultAllow | PermissionResultDeny

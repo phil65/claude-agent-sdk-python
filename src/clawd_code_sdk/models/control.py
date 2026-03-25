@@ -108,6 +108,18 @@ class SDKControlCancelAsyncMessageRequest(_ControlBase):
     message_uuid: str
 
 
+class SDKControlSeedReadStateRequest(_ControlBase):
+    """Seeds the readFileState cache with a path+mtime entry.
+
+    Use when a prior Read was removed from context (e.g. by snip) so Edit
+    validation would fail despite the client having observed the Read.
+    """
+
+    subtype: Literal["seed_read_state"] = "seed_read_state"
+    path: str
+    mtime: int
+
+
 class SDKControlStopTaskRequest(_ControlBase):
     """SDK control stop task request."""
 
@@ -401,6 +413,7 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpMessageRequest
     | SDKControlRewindFilesRequest
     | SDKControlCancelAsyncMessageRequest
+    | SDKControlSeedReadStateRequest
     | SDKControlMcpSetServersRequest
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest

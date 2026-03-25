@@ -578,6 +578,21 @@ class Query:
         req = {"subtype": "rewind_files", "user_message_id": user_message_id}
         return await self._send_control_request(req)
 
+    async def seed_read_state(self, path: str, mtime: int) -> None:
+        """Seed the CLI's readFileState cache with a path+mtime entry.
+
+        Use when the client observed a Read that has since been removed from context
+        (e.g. by snip), so a subsequent Edit won't fail "file not read yet".
+        If the file changed on disk since the given mtime, the seed is skipped
+        and Edit will correctly require a fresh Read.
+
+        Args:
+            path: Path to the file that was previously Read
+            mtime: File mtime (floored ms) at the time of the observed Read
+        """
+        req = {"subtype": "seed_read_state", "path": path, "mtime": mtime}
+        await self._send_control_request(req)
+
     async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""
         async for message in self._message_receive:

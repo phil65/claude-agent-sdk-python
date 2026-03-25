@@ -26,6 +26,7 @@ CompactionTrigger = Literal["auto", "manual"]
 ElicitationMode = Literal["form", "url"]
 ElicitationAction = Literal["accept", "decline", "cancel"]
 FastModeState = Literal["off", "cooldown", "on"]
+PermissionDecisionClassification = Literal["user_temporary", "user_permanent", "user_reject"]
 EffortLevel = Literal["low", "medium", "high", "max"]
 AssistantMessageError = Literal[
     "authentication_failed",

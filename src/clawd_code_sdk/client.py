@@ -273,6 +273,19 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         await query.rewind_files(user_message_id)
 
+    async def seed_read_state(self, path: str, mtime: int) -> None:
+        """Seed the CLI's readFileState cache with a path+mtime entry.
+
+        Use when the client observed a Read that has since been removed from context
+        (e.g. by snip), so a subsequent Edit won't fail "file not read yet".
+
+        Args:
+            path: Path to the file that was previously Read
+            mtime: File mtime (floored ms) at the time of the observed Read
+        """
+        query = self._ensure_connected()
+        await query.seed_read_state(path, mtime)
+
     async def get_mcp_status(self) -> McpStatusResponse:
         """Get current MCP server connection status.
 

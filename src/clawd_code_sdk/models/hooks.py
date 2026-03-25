@@ -39,6 +39,8 @@ HookEvent = Literal[
     "WorktreeCreate",
     "WorktreeRemove",
     "InstructionsLoaded",
+    "CwdChanged",
+    "FileChanged",
 ]
 LoadReason = Literal["session_start", "nested_traversal", "path_glob_match", "include", "compact"]
 SessionEndReason = Literal[
@@ -358,6 +360,22 @@ class InstructionsLoadedHookInput(BaseHookInput):
     parent_file_path: NotRequired[str]
 
 
+class CwdChangedHookInput(BaseHookInput):
+    """Input data for CwdChanged hook events."""
+
+    hook_event_name: Literal["CwdChanged"]
+    old_cwd: str
+    new_cwd: str
+
+
+class FileChangedHookInput(BaseHookInput):
+    """Input data for FileChanged hook events."""
+
+    hook_event_name: Literal["FileChanged"]
+    file_path: str
+    event: Literal["change", "add", "unlink"]
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -383,6 +401,8 @@ HookInput = (
     | InstructionsLoadedHookInput
     | WorktreeCreateHookInput
     | WorktreeRemoveHookInput
+    | CwdChangedHookInput
+    | FileChangedHookInput
 )
 
 
@@ -425,6 +445,7 @@ class SessionStartHookSpecificOutput(TypedDict):
     hookEventName: Literal["SessionStart"]
     additionalContext: NotRequired[str]
     initialUserMessage: NotRequired[str]
+    watchPaths: NotRequired[list[str]]
 
 
 class NotificationHookSpecificOutput(TypedDict):
@@ -464,6 +485,20 @@ class ElicitationResultHookSpecificOutput(TypedDict):
     content: NotRequired[dict[str, Any]]
 
 
+class CwdChangedHookSpecificOutput(TypedDict):
+    """Hook-specific output for CwdChanged events."""
+
+    hookEventName: Literal["CwdChanged"]
+    watchPaths: NotRequired[list[str]]
+
+
+class FileChangedHookSpecificOutput(TypedDict):
+    """Hook-specific output for FileChanged events."""
+
+    hookEventName: Literal["FileChanged"]
+    watchPaths: NotRequired[list[str]]
+
+
 HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
@@ -475,6 +510,8 @@ HookSpecificOutput = (
     | PermissionRequestHookSpecificOutput
     | ElicitationHookSpecificOutput
     | ElicitationResultHookSpecificOutput
+    | CwdChangedHookSpecificOutput
+    | FileChangedHookSpecificOutput
 )
 
 

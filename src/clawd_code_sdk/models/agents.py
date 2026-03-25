@@ -74,6 +74,7 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
         default=None, serialization_alias="criticalSystemReminder_EXPERIMENTAL"
     )
     skills: list[str] | None = None
+    initial_prompt: str | None = None
     max_turns: int | None = None
     background: bool | None = None
     hooks: AgentHooksConfig | None = None
@@ -134,6 +135,12 @@ class AgentDefinition(ClaudeCodeBaseModel):
 
     skills: list[str] | None = Field(default=None, title="Skills", examples=["my-skill"])
     """Skills this agent has."""
+
+    initial_prompt: str | None = Field(default=None, title="Initial Prompt")
+    """Auto-submitted as the first user turn when this agent is the main thread agent.
+
+    Slash commands are processed. Prepended to any user-provided prompt.
+    """
 
     max_turns: int | None = Field(default=None, title="Max Turns")
     """Maximum number of agentic turns (API round-trips) before stopping."""
@@ -198,6 +205,7 @@ class AgentDefinition(ClaudeCodeBaseModel):
             disallowed_tools=self.disallowed_tools,
             critical_system_reminder_experimental=self.critical_system_reminder_experimental,
             skills=self.skills,
+            initial_prompt=self.initial_prompt,
             max_turns=self.max_turns,
             background=self.background,
             hooks=self.hooks,

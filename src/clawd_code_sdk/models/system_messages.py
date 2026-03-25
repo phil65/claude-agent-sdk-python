@@ -24,6 +24,7 @@ IS_DEV = "pytest" in sys.modules
 
 
 Outcome = Literal["success", "error", "cancelled"]
+SessionState = Literal["idle", "running", "requires_action"]
 
 
 class Plugin(BaseModel):
@@ -193,6 +194,8 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     tool_use_id: str | None = None
     description: str
     task_type: str | None = None
+    workflow_name: str | None = None
+    """meta.name from the workflow script (e.g. 'spec'). Only set when task_type is 'local_workflow'."""
     prompt: str | None = None
 
 
@@ -221,6 +224,17 @@ class TaskProgressSystemMessage(BaseSystemMessage):
     """AI-generated progress summary when agentProgressSummaries is enabled."""
 
 
+class SessionStateChangedMessage(BaseSystemMessage):
+    """System message emitted when session state changes.
+
+    'idle' fires after heldBackResult flushes and the bg-agent do-while exits —
+    authoritative turn-over signal.
+    """
+
+    subtype: Literal["session_state_changed"] = "session_state_changed"
+    state: SessionState
+
+
 class APIRetrySystemMessage(BaseSystemMessage):
     """System message emitted when an API call fails and is retried."""
 
@@ -242,6 +256,7 @@ SystemMessageUnion = (
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
+    | SessionStateChangedMessage
     | FilesPersistedSystemMessage
     | ElicitationCompleteMessage
     | LocalCommandOutputMessage
@@ -258,6 +273,7 @@ SystemMessages = Annotated[
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
+    | SessionStateChangedMessage
     | FilesPersistedSystemMessage
     | ElicitationCompleteMessage
     | LocalCommandOutputMessage

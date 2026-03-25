@@ -35,6 +35,8 @@ class SdkMcpTool[T]:
     title: str | None = None
     annotations: ToolAnnotations | None = None
     output_schema: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
+    search_hint: str | None = None
 
 
 def tool(
@@ -45,6 +47,8 @@ def tool(
     title: str | None = None,
     annotations: ToolAnnotations | None = None,
     output_schema: dict[str, Any] | None = None,
+    meta: dict[str, Any] | None = None,
+    search_hint: str | None = None,
 ) -> Callable[[Callable[[Any], Awaitable[dict[str, Any]]]], SdkMcpTool[Any]]:
     """Decorator for defining MCP tools with type safety.
 
@@ -87,6 +91,8 @@ def tool(
             title=title,
             annotations=annotations,
             output_schema=output_schema,
+            meta=meta,
+            search_hint=search_hint,
         )
 
     return decorator
