@@ -21,7 +21,6 @@ from clawd_code_sdk.models import (
     ResultErrorMessage,
     ResultMessage,
     ResultSuccessMessage,
-    SessionState,
     SessionStateChangedMessage,
     StatusSystemMessage,
     Usage,
@@ -42,6 +41,7 @@ if TYPE_CHECKING:
         McpServerConfig,
         Message,
         PermissionMode,
+        SessionState,
         SideQuestionResponse,
         UserPrompt,
     )

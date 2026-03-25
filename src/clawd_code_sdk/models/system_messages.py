@@ -195,7 +195,9 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     description: str
     task_type: str | None = None
     workflow_name: str | None = None
-    """meta.name from the workflow script (e.g. 'spec'). Only set when task_type is 'local_workflow'."""
+    """meta.name from the workflow script (e.g. 'spec').
+
+    Only set when task_type is 'local_workflow'."""
     prompt: str | None = None
 
 

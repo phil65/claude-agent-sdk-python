@@ -70,6 +70,8 @@ def tool(
             If not set, clients typically use the name.
         annotations: Optional annotations for the tool.
         output_schema: Optional JSON Schema describing the tool's output format.
+        meta: Optional metadata dict sent as ``_meta`` on the tool definition.
+        search_hint: Optional hint text for tool search/discovery.
 
     Returns:
         A decorator function that wraps the tool implementation and returns
@@ -194,7 +196,7 @@ def create_sdk_mcp_server(
                         # This handles required/optional, nested types, unions, etc.
 
                         fields = {k: (v, ...) for k, v in input_schema.items()}
-                        model = create_model("Input", **fields)  # type: ignore[call-overload]
+                        model = create_model("Input", **fields)  # type: ignore[call-overload]  # ty:ignore[no-matching-overload]
                         schema = TypeAdapter(model).json_schema()
                     case type() as tp:
                         schema = TypeAdapter(tp).json_schema()
