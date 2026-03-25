@@ -16,6 +16,7 @@ PermissionMode = Literal[
     "plan",  # Planning mode, no actual tool execution
     # "delegate",  # Delegate mode, restricts to only Teammate and Task tools
     "dontAsk",  # Don't prompt for permissions, deny if not pre-approved
+    "auto",  # Auto-approves tool calls with background safety checks
 ]
 SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/api/beta-headers
 ModelName = Literal["sonnet", "opus", "haiku"]

@@ -90,6 +90,7 @@ class SubprocessCLITransport(Transport):
             "--input-format",
             "stream-json",
             "--include-partial-messages",
+            "--enable-auto-mode",
         ]
         cmd.extend(to_cli_args(self._options))
         return cmd
