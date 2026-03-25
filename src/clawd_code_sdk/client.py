@@ -6,8 +6,6 @@ from dataclasses import replace
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
-import anyenv
-
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk.models import (
     AssistantMessage,
@@ -195,7 +193,7 @@ class ClaudeSDKClient:
         self.query_usage.reset()
         self.query_cost = 0.0
         self._ensure_connected()
-        if not self._transport:
+        if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
         if not prompts:
             raise ValueError("At least one prompt is required")
@@ -208,7 +206,7 @@ class ClaudeSDKClient:
             "parent_tool_use_id": parent_tool_use_id,
             "session_id": session_id,
         }
-        await self._transport.write(anyenv.dump_json(wire_message) + "\n")
+        await self._query.write_json(wire_message)
 
     async def interrupt(self) -> None:
         """Send interrupt signal (only works with streaming mode)."""
