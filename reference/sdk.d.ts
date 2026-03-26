@@ -313,6 +313,7 @@ declare namespace coreTypes {
         SubagentStopHookInput,
         SyncHookJSONOutput,
         TaskCompletedHookInput,
+        TaskCreatedHookInput,
         TeammateIdleHookInput,
         ThinkingAdaptive,
         ThinkingConfig,
@@ -321,6 +322,7 @@ declare namespace coreTypes {
         UserPromptSubmitHookInput,
         UserPromptSubmitHookSpecificOutput,
         WorktreeCreateHookInput,
+        WorktreeCreateHookSpecificOutput,
         WorktreeRemoveHookInput
     }
 }
@@ -349,6 +351,16 @@ export declare type CwdChangedHookSpecificOutput = {
     hookEventName: 'CwdChanged';
     watchPaths?: string[];
 };
+
+/**
+ * Effort level for controlling how much thinking/reasoning Claude applies.
+ *
+ * - `'low'` — Minimal thinking, fastest responses
+ * - `'medium'` — Moderate thinking
+ * - `'high'` — Deep reasoning (default)
+ * - `'max'` — Maximum effort (select models only)
+ */
+export declare type EffortLevel = 'low' | 'medium' | 'high' | 'max';
 
 /**
  * Hook input for the Elicitation event. Fired when an MCP server requests user input. Hooks can auto-respond (accept/decline) instead of showing the dialog.
@@ -517,7 +529,7 @@ export declare type GetSessionMessagesOptions = {
     offset?: number;
 };
 
-export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
+export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "Setup", "TeammateIdle", "TaskCreated", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
 
 /**
  * Hook callback function for responding to events during execution.
@@ -536,9 +548,9 @@ export declare interface HookCallbackMatcher {
     timeout?: number;
 }
 
-export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged';
+export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'Setup' | 'TeammateIdle' | 'TaskCreated' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged';
 
-export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput;
+export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCreatedHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput;
 
 export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
@@ -683,6 +695,7 @@ export declare type McpServerStatus = {
             openWorld?: boolean;
         };
     }[];
+
 };
 
 export declare type McpServerStatusConfig = McpServerConfigForProcessTransport | McpClaudeAIProxyServerConfig;
@@ -1015,7 +1028,7 @@ export declare type Options = {
      *
      * @see https://docs.anthropic.com/en/docs/build-with-claude/effort
      */
-    effort?: 'low' | 'medium' | 'high' | 'max';
+    effort?: EffortLevel;
     /**
      * Maximum number of tokens the model can use for its thinking/reasoning process.
      * Helps control cost and latency for complex tasks.
@@ -1035,6 +1048,16 @@ export declare type Options = {
      * budget is exceeded, returning an `error_max_budget_usd` result.
      */
     maxBudgetUsd?: number;
+    /**
+     * API-side task budget in tokens. When set, the model is made aware of
+     * its remaining token budget so it can pace tool use and wrap up before
+     * the limit. Sent as `output_config.task_budget` with the
+     * `task-budgets-2026-03-13` beta header.
+     * @alpha
+     */
+    taskBudget?: {
+        total: number;
+    };
     /**
      * MCP (Model Context Protocol) server configurations.
      * Keys are server names, values are server configurations.
@@ -1106,6 +1129,7 @@ export declare type Options = {
      * ```
      */
     plugins?: SdkPluginConfig[];
+
 
 
 
@@ -1416,7 +1440,7 @@ export declare type PreToolUseHookInput = BaseHookInput & {
 
 export declare type PreToolUseHookSpecificOutput = {
     hookEventName: 'PreToolUse';
-    permissionDecision?: 'allow' | 'deny' | 'ask';
+    permissionDecision?: PermissionBehavior;
     permissionDecisionReason?: string;
     updatedInput?: Record<string, unknown>;
     additionalContext?: string;
@@ -1937,7 +1961,7 @@ export declare type SDKControlRequest = {
     request: SDKControlRequestInner;
 };
 
-declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
+declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
 
 export declare type SDKControlResponse = {
     type: 'control_response';
@@ -1987,6 +2011,7 @@ declare type SDKControlSetPermissionModeRequest = {
      * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved.
      */
     mode: coreTypes.PermissionMode;
+
 };
 
 /**
@@ -2389,6 +2414,7 @@ export declare type SDKSystemMessage = {
     plugins: {
         name: string;
         path: string;
+
     }[];
     fast_mode_state?: FastModeState;
     uuid: UUID;
@@ -3687,6 +3713,17 @@ export declare interface Settings {
      */
     plansDirectory?: string;
     /**
+     * Teams/Enterprise opt-in for channel notifications (MCP servers with the claude/channel capability pushing inbound messages). Default off. Set true to allow; users then select servers via --channels.
+     */
+    channelsEnabled?: boolean;
+    /**
+     * Teams/Enterprise allowlist of channel plugins. When set, replaces the default Anthropic allowlist — admins decide which plugins may push inbound messages. Undefined falls back to the default. Requires channelsEnabled: true.
+     */
+    allowedChannelPlugins?: {
+        marketplace: string;
+        plugin: string;
+    }[];
+    /**
      * Reduce or disable animations for accessibility (spinner shimmer, flash effects, etc.)
      */
     prefersReducedMotion?: boolean;
@@ -3897,7 +3934,7 @@ export declare type SyncHookJSONOutput = {
     systemMessage?: string;
     reason?: string;
 
-    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput;
+    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput;
 };
 
 /**
@@ -3910,6 +3947,15 @@ export declare function tagSession(_sessionId: string, _tag: string | null, _opt
 
 export declare type TaskCompletedHookInput = BaseHookInput & {
     hook_event_name: 'TaskCompleted';
+    task_id: string;
+    task_subject: string;
+    task_description?: string;
+    teammate_name?: string;
+    team_name?: string;
+};
+
+export declare type TaskCreatedHookInput = BaseHookInput & {
+    hook_event_name: 'TaskCreated';
     task_id: string;
     task_subject: string;
     task_description?: string;
@@ -4046,6 +4092,14 @@ export declare type UserPromptSubmitHookSpecificOutput = {
 export declare type WorktreeCreateHookInput = BaseHookInput & {
     hook_event_name: 'WorktreeCreate';
     name: string;
+};
+
+/**
+ * Hook-specific output for the WorktreeCreate event. Provides the absolute path to the created worktree directory. Command hooks print the path on stdout instead.
+ */
+export declare type WorktreeCreateHookSpecificOutput = {
+    hookEventName: 'WorktreeCreate';
+    worktreePath: string;
 };
 
 export declare type WorktreeRemoveHookInput = BaseHookInput & {

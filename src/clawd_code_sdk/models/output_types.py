@@ -78,6 +78,8 @@ class AgentCompletedOutput(TypedDict):
     """Agent completion status."""
     agentId: str
     """ID of the agent that ran."""
+    agentType: NotRequired[str]
+    """Type of the agent that ran."""
     content: list[AgentOutputTextContent]
     """Text content blocks produced by the agent."""
     totalToolUseCount: int
@@ -268,6 +270,8 @@ class ExitPlanModeOutput(TypedDict):
     """The file path where the plan was saved."""
     hasTaskTool: NotRequired[bool]
     """Whether the Task tool is available in the current context."""
+    planWasEdited: NotRequired[bool]
+    """Whether the plan was edited by the user."""
     awaitingLeaderApproval: NotRequired[bool]
     """When true, the teammate has sent a plan approval request to the team leader."""
     requestId: NotRequired[str]

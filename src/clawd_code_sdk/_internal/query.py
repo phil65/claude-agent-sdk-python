@@ -503,6 +503,11 @@ class Query:
         """Stop a running task."""
         return await self._send_control_request({"subtype": "stop_task", "task_id": task_id})
 
+    async def channel_enable(self, server_name: str) -> dict[str, Any]:
+        """Enable MCP channel notifications for a marketplace plugin server."""
+        req = {"subtype": "channel_enable", "serverName": server_name}
+        return await self._send_control_request(req)
+
     async def end_session(self) -> dict[str, Any]:
         """End the current session."""
         return await self._send_control_request({"subtype": "end_session"})

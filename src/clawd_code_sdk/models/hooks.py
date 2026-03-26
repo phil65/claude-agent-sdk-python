@@ -32,6 +32,7 @@ HookEvent = Literal[
     "SessionEnd",
     "Setup",
     "TeammateIdle",
+    "TaskCreated",
     "TaskCompleted",
     "Elicitation",
     "ElicitationResult",
@@ -301,6 +302,17 @@ class TaskCompletedHookInput(BaseHookInput):
     team_name: NotRequired[str]
 
 
+class TaskCreatedHookInput(BaseHookInput):
+    """Input data for TaskCreated hook events."""
+
+    hook_event_name: Literal["TaskCreated"]
+    task_id: str
+    task_subject: str
+    task_description: NotRequired[str]
+    teammate_name: NotRequired[str]
+    team_name: NotRequired[str]
+
+
 class ConfigChangeHookInput(BaseHookInput):
     """Input data for ConfigChange hook events."""
 
@@ -394,6 +406,7 @@ HookInput = (
     | SessionEndHookInput
     | SetupHookInput
     | TeammateIdleHookInput
+    | TaskCreatedHookInput
     | TaskCompletedHookInput
     | ElicitationHookInput
     | ElicitationResultHookInput
@@ -485,6 +498,13 @@ class ElicitationResultHookSpecificOutput(TypedDict):
     content: NotRequired[dict[str, Any]]
 
 
+class WorktreeCreateHookSpecificOutput(TypedDict):
+    """Hook-specific output for WorktreeCreate events."""
+
+    hookEventName: Literal["WorktreeCreate"]
+    worktreePath: str
+
+
 class CwdChangedHookSpecificOutput(TypedDict):
     """Hook-specific output for CwdChanged events."""
 
@@ -512,6 +532,7 @@ HookSpecificOutput = (
     | ElicitationResultHookSpecificOutput
     | CwdChangedHookSpecificOutput
     | FileChangedHookSpecificOutput
+    | WorktreeCreateHookSpecificOutput
 )
 
 

@@ -220,6 +220,14 @@ class ClaudeAgentOptions:
     """Maximum allowed amount of agentic turns."""
     max_budget_usd: float | None = None
     """Maximum amount of USD budget which may be consumed."""
+    task_budget: int | None = None
+    """API-side task budget in tokens.
+
+    When set, the model is made aware of its remaining token budget so it can
+    pace tool use and wrap up before the limit.  The CLI sends this as
+    ``output_config.task_budget`` with the ``task-budgets-2026-03-13`` beta
+    header automatically.
+    """
     # Model
     model: ModelName | str | None = None
     """Session model."""

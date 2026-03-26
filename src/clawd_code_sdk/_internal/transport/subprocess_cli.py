@@ -415,6 +415,9 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.max_budget_usd is not None:
         cmd.extend(["--max-budget-usd", str(options.max_budget_usd)])
 
+    if options.task_budget is not None:
+        cmd.extend(["--task-budget", str(options.task_budget)])
+
     if options.disallowed_tools:
         cmd.extend(["--disallowedTools", ",".join(options.disallowed_tools)])
 

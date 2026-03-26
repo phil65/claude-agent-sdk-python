@@ -176,6 +176,13 @@ class SDKControlMcpToggleRequest(_ControlBase):
     enabled: bool
 
 
+class SDKControlChannelEnableRequest(_ControlBase):
+    """Enables MCP channel notifications for a marketplace plugin server."""
+
+    subtype: Literal["channel_enable"] = "channel_enable"
+    server_name: str = Field(serialization_alias="serverName")
+
+
 class SDKControlEndSessionRequest(_ControlBase):
     """Ends the current session."""
 
@@ -417,6 +424,7 @@ ControlRequestUnion = Annotated[
     | SDKControlMcpSetServersRequest
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest
+    | SDKControlChannelEnableRequest
     | SDKControlEndSessionRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest
