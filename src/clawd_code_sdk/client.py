@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
@@ -321,11 +321,9 @@ class ClaudeSDKClient:
             - 'errors': Dict mapping server names to error messages (if any)
         """
         query = self._ensure_connected()
-        import dataclasses
-
         wire_servers: dict[str, dict[str, Any]] = {}
         for name, config in servers.items():
-            server_dict = dataclasses.asdict(config)
+            server_dict = asdict(config)
             server_dict["name"] = name
             wire_servers[name] = server_dict
         result = await query.set_mcp_servers(wire_servers)
@@ -481,21 +479,6 @@ class ClaudeSDKClient:
 
         Yields:
             Message: Each message received
-
-        Example:
-            ```python
-            async with ClaudeSDKClient() as client:
-                await client.query("What's the capital of France?")
-
-                async for msg in client.receive_response():
-                    if isinstance(msg, AssistantMessage):
-                        for block in msg.content:
-                            if isinstance(block, TextBlock):
-                                print(f"Claude: {block.text}")
-                    elif isinstance(msg, ResultMessage):
-                        print(f"Cost: ${msg.total_cost_usd:.4f}")
-                        # Iterator will terminate after this message
-            ```
 
         Note:
             To collect all messages: `messages = [msg async for msg in client.receive_response()]`
