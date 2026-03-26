@@ -457,8 +457,8 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         return query._initialization_result
 
-    async def receive_response(self) -> AsyncIterator[Message]:
-        """Receive messages from Claude until and including a ResultMessage.
+    async def receive_response(self, *, wait_for_idle: bool = False) -> AsyncIterator[Message]:
+        """Receive messages from Claude until the response is complete.
 
         This async iterator yields all messages in sequence and automatically terminates
         after yielding a ResultMessage (which indicates the response is complete).
@@ -466,9 +466,18 @@ class ClaudeSDKClient:
 
         **Stopping Behavior:**
         - Yields each message as it's received
-        - Terminates immediately after yielding a ResultMessage
+        - By default, terminates immediately after yielding a ResultMessage
+        - When ``wait_for_idle=True``, continues yielding until the session
+          transitions to ``idle`` state (the authoritative turn-over signal)
         - The ResultMessage IS included in the yielded messages
         - If no ResultMessage is received, the iterator continues indefinitely
+
+        Args:
+            wait_for_idle: If True, keep yielding messages after ResultMessage
+                until a ``session_state_changed`` message with ``state='idle'``
+                is received. This guarantees the CLI has fully finished its
+                turn (held-back results flushed, background agent loops exited)
+                before the iterator terminates.
 
         Yields:
             Message: Each message received
@@ -490,11 +499,15 @@ class ClaudeSDKClient:
 
         Note:
             To collect all messages: `messages = [msg async for msg in client.receive_response()]`
-            The final message in the list will always be a ResultMessage.
+            The final message in the list will always be a ResultMessage (or
+            SessionStateChangedMessage when ``wait_for_idle=True``).
         """
         async for message in self.receive_messages():
             yield message
-            if isinstance(message, ResultMessage):
+            if wait_for_idle:
+                if isinstance(message, SessionStateChangedMessage) and message.state == "idle":
+                    return
+            elif isinstance(message, ResultMessage):
                 return
 
     async def disconnect(self) -> None:
