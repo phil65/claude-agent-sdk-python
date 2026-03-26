@@ -97,7 +97,7 @@ class SubprocessCLITransport(Transport):
         if self._process:
             return
 
-        if not os.environ.get("CLAWD_CODE_SDK_SKIP_VERSION_CHECK"):
+        if not os.environ.get("CLAUDE_CODE_SDK_SKIP_VERSION_CHECK"):
             await _check_claude_version(self._cli_path)
 
         cmd = self._build_command()
@@ -572,6 +572,7 @@ def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
     # by the API unless eager_input_streaming is also enabled at the
     # per-tool level via this env var.
     process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
+    process_env.setdefault("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
     if cwd := options.cwd:
         process_env["PWD"] = str(cwd)
     return process_env
