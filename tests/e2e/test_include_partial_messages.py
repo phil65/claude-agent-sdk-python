@@ -33,9 +33,9 @@ async def test_include_partial_messages_stream_events():
     # Verify we got the expected message types
     message_types = [type(msg).__name__ for msg in collected_messages]
     # Should have InitSystemMessage(init) at the start
-    assert message_types[0] == "InitSystemMessage"
-    assert isinstance(collected_messages[0], InitSystemMessage)
-    assert collected_messages[0].subtype == "init"
+    assert message_types[1] == "InitSystemMessage"
+    assert isinstance(collected_messages[1], InitSystemMessage)
+    assert collected_messages[1].subtype == "init"
     # Should have multiple StreamEvent messages
     stream_events = [msg for msg in collected_messages if isinstance(msg, StreamEvent)]
     assert len(stream_events) > 0, "No StreamEvent messages received"

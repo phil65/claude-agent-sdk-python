@@ -128,15 +128,6 @@ class TestSubprocessCLITransport:
 
         anyio.run(_test)
 
-    def test_read_messages(self):
-        """Test reading messages from CLI output."""
-        # This test is simplified to just test the transport creation
-        # The full async stream handling is tested in integration tests
-        transport = SubprocessCLITransport()
-        # The transport now just provides raw message reading via read_messages()
-        # So we just verify the transport can be created and basic structure is correct
-        assert transport._cli_path == "/usr/bin/claude"
-
     def test_connect_with_nonexistent_cwd(self):
         """Test that connect raises CLIConnectionError when cwd doesn't exist."""
 

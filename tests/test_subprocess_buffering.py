@@ -215,7 +215,8 @@ class TestSubprocessBuffering:
                 _messages = [msg async for msg in transport.read_messages()]
 
             assert isinstance(exc_info.value, CLIJSONDecodeError)
-            assert "exceeded max buffer size" in str(exc_info.value)
+            assert "exceeded" in str(exc_info.value)
+            assert "max_buffer_size" in str(exc_info.value)
 
         anyio.run(_test)
 
@@ -238,7 +239,7 @@ class TestSubprocessBuffering:
                 async for _ in transport.read_messages():
                     pass
 
-            assert f"max buffer size of {custom_limit}b" in str(exc_info.value)
+            assert f"max_buffer_size={custom_limit}b" in str(exc_info.value)
 
         anyio.run(_test)
 

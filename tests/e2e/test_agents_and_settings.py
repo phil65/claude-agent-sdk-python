@@ -14,6 +14,7 @@ from clawd_code_sdk import (
     ClaudeSDKClient,
     InitSystemMessage,
 )
+from clawd_code_sdk.models import McpStdioServerConfig
 
 
 def generate_large_agents(
@@ -328,14 +329,12 @@ async def test_large_agent_definitions_via_initialize():
     2. Creates an SDK client with these agents
     3. Verifies all agents are registered and available
     """
-    from dataclasses import asdict
-
     # Generate 20 agents with 13KB prompts each = ~260KB total
     agents = generate_large_agents(num_agents=20, prompt_size_kb=13)
 
     # Calculate total size to verify we're testing the right thing
     total_size = sum(
-        len(json.dumps({k: v for k, v in asdict(agent).items() if v is not None}))
+        len(json.dumps({k: v for k, v in agent.model_dump().items() if v is not None}))
         for agent in agents.values()
     )
     assert total_size > 250_000, f"Test agents should be >250KB, got {total_size / 1024:.1f}KB"
@@ -459,9 +458,7 @@ async def test_agent_definition_with_mcp_servers():
                     "You are a git helper agent with access to git MCP tools. "
                     "When asked about your tools, list the git-related tools you have available."
                 ),
-                mcp_servers=[
-                    {"git": {"command": "uvx", "args": ["mcp-server-git"]}},
-                ],
+                mcp_servers={"git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"])},
             )
         },
         max_turns=10,
