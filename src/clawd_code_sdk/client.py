@@ -7,6 +7,8 @@ import os
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 from clawd_code_sdk._errors import CLIConnectionError
+from clawd_code_sdk._internal.query import Query
+from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
@@ -30,7 +32,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from clawd_code_sdk import Transport
-    from clawd_code_sdk._internal.query import Query
     from clawd_code_sdk.models import (
         ClaudeCodeAgentInfo,
         ClaudeCodeServerInfo,
@@ -94,9 +95,6 @@ class ClaudeSDKClient:
 
     async def connect(self) -> None:
         """Connect to Claude Code CLI and initialize the session."""
-        from clawd_code_sdk._internal.query import Query
-        from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-
         # If on_permission is a callback, extract it for Query and replace with
         # "stdio" so the CLI routes permission requests through the control protocol.
         if callable(self.options.on_permission):
@@ -167,12 +165,15 @@ class ClaudeSDKClient:
                     self.status = status
                 case SessionStateChangedMessage(state=state):
                     self.session_state = state
-                case ResultSuccessMessage() | ResultErrorMessage():
-                    self.query_usage.accumulate(message.usage)
-                    self.session_usage.accumulate(message.usage)
+                case (
+                    ResultSuccessMessage(usage=usage, total_cost_usd=total_cost)
+                    | ResultErrorMessage(usage=usage, total_cost_usd=total_cost)
+                ):
+                    self.query_usage.accumulate(usage)
+                    self.session_usage.accumulate(usage)
                     # total_cost_usd is cumulative; derive per-query cost as delta
-                    self.query_cost = message.total_cost_usd - self.session_cost
-                    self.session_cost = message.total_cost_usd
+                    self.query_cost = total_cost - self.session_cost
+                    self.session_cost = total_cost
             yield message
 
     async def query(
