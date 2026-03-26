@@ -276,7 +276,6 @@ from .prompt_requests import PromptRequest, PromptRequestOption, PromptResponse
 from .options import (
     ClaudeAgentOptions,
     BaseSessionConfig,
-    StdioTransportOptions,
     ContinueLatest,
     FromPR,
     NewSession,
@@ -619,7 +618,6 @@ __all__ = [
     "SkillInput",
     "SkillOutput",
     "StatusSystemMessage",
-    "StdioTransportOptions",
     "StopHookInput",
     "StopReason",
     "StreamEvent",
