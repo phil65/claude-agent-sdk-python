@@ -27,6 +27,7 @@ from clawd_code_sdk._errors import (
 )
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk.models import (
+    ClaudeAgentOptions,
     ContinueLatest,
     FromPR,
     NewSession,
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
 
     from anyio.abc import Process
 
-    from clawd_code_sdk.models import ClaudeAgentOptions
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +65,10 @@ class SubprocessCLITransport(Transport):
 
     def __init__(
         self,
-        options: ClaudeAgentOptions,
+        options: ClaudeAgentOptions | None = None,
     ):
-        self._options = options
-        self._cli_path = str(options.cli_path) if options.cli_path is not None else _find_cli()
+        self._options = options or ClaudeAgentOptions()
+        self._cli_path = str(opts) if (opts := self._options.cli_path) is not None else _find_cli()
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
         self._stdin_stream: TextSendStream | None = None
@@ -76,7 +76,7 @@ class SubprocessCLITransport(Transport):
         self._stderr_task_group: anyio.abc.TaskGroup | None = None
         self._ready = False
         self._exit_error: Exception | None = None  # Track process exit errors
-        self._max_buffer_size = options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
+        self._max_buffer_size = self._options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
         self._stderr_lines: list[str] = []
         self._write_lock: anyio.Lock = anyio.Lock()
 

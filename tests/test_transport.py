@@ -118,7 +118,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 # Return version process first, then main process
                 mock_exec.side_effect = [mock_version_process, mock_process]
-                transport = SubprocessCLITransport(options=make_options())
+                transport = SubprocessCLITransport()
                 await transport.connect()
                 assert transport._process is not None
                 await transport.close()
@@ -132,7 +132,7 @@ class TestSubprocessCLITransport:
         """Test reading messages from CLI output."""
         # This test is simplified to just test the transport creation
         # The full async stream handling is tested in integration tests
-        transport = SubprocessCLITransport(options=make_options())
+        transport = SubprocessCLITransport()
         # The transport now just provides raw message reading via read_messages()
         # So we just verify the transport can be created and basic structure is correct
         assert transport._cli_path == "/usr/bin/claude"
@@ -528,7 +528,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_without_tools(self):
         """Test building CLI command without tools option (default None)."""
-        transport = SubprocessCLITransport(options=make_options())
+        transport = SubprocessCLITransport()
         cmd = transport._build_command()
         assert "--tools" not in cmd
 
@@ -663,7 +663,7 @@ class TestSubprocessCLITransport:
         so that agents and other large configs can be sent via initialize request.
         """
         # String prompt should still use streaming
-        transport = SubprocessCLITransport(options=make_options())
+        transport = SubprocessCLITransport()
         cmd = transport._build_command()
         assert "--input-format" in cmd
         assert "stream-json" in cmd

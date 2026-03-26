@@ -62,7 +62,7 @@ class TestSubprocessBuffering:
             json_obj1 = {"type": "message", "id": "msg1", "content": "First message"}
             json_obj2 = {"type": "result", "id": "res1", "status": "completed"}
             buffered_line = json.dumps(json_obj1) + "\n" + json.dumps(json_obj2)
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -87,7 +87,7 @@ class TestSubprocessBuffering:
             json_obj1 = {"type": "message", "content": "Line 1\nLine 2\nLine 3"}
             json_obj2 = {"type": "result", "data": "Some\nMultiline\nContent"}
             buffered_line = json.dumps(json_obj1) + "\n" + json.dumps(json_obj2)
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -108,7 +108,7 @@ class TestSubprocessBuffering:
             json_obj1 = {"type": "message", "id": "msg1"}
             json_obj2 = {"type": "result", "id": "res1"}
             buffered_line = json.dumps(json_obj1) + "\n\n\n" + json.dumps(json_obj2)
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -145,7 +145,7 @@ class TestSubprocessBuffering:
             part1 = complete_json[:100]
             part2 = complete_json[100:250]
             part3 = complete_json[250:]
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -182,7 +182,7 @@ class TestSubprocessBuffering:
             chunks = [
                 complete_json[i : i + chunk_size] for i in range(0, len(complete_json), chunk_size)
             ]
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -204,7 +204,7 @@ class TestSubprocessBuffering:
 
         async def _test() -> None:
             huge_incomplete = '{"data": "' + "x" * (_DEFAULT_MAX_BUFFER_SIZE + 1000)
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
@@ -259,7 +259,7 @@ class TestSubprocessBuffering:
                 large_json[1000:3000],
                 large_json[3000:] + "\n" + msg3,
             ]
-            transport = SubprocessCLITransport(options=make_options())
+            transport = SubprocessCLITransport()
             mock_process = MagicMock()
             mock_process.returncode = None
             mock_process.wait = AsyncMock(return_value=None)
