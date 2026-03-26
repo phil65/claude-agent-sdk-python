@@ -319,6 +319,8 @@ class ClaudeAgentOptions:
 
     Applies to both foreground and background subagents. Defaults to False.
     """
+    replay_user_messages: bool | None = None
+    """Whether to replay user messages in the session."""
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
 

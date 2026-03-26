@@ -494,6 +494,9 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.strict_mcp_config:
         cmd.append("--strict-mcp-config")
 
+    if options.replay_user_messages:
+        cmd.append("--replay-user-messages")
+
     match options.worktree:
         case True:
             cmd.append("--worktree")
