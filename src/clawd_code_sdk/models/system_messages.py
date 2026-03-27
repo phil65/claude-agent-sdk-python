@@ -243,7 +243,7 @@ class APIRetrySystemMessage(BaseSystemMessage):
     subtype: Literal["api_retry"] = "api_retry"
     attempt: int
     max_retries: int
-    retry_delay_ms: int
+    retry_delay_ms: float
     error_status: int | None
     error: AssistantMessageError
 

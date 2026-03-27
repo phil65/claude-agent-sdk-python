@@ -15,9 +15,13 @@ from clawd_code_sdk.models.base import (
     PermissionMode,
 )
 from clawd_code_sdk.models.hooks import HookEvent, HookInput
-from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage
+from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage, McpServerStatusEntry
 from clawd_code_sdk.models.permissions import PermissionUpdate
-from clawd_code_sdk.models.server_info import ClaudeCodeAccountInfo
+from clawd_code_sdk.models.server_info import (
+    ClaudeCodeAccountInfo,
+    ClaudeCodeAgentInfo,
+    ClaudeCodeCommandInfo,
+)
 
 
 if TYPE_CHECKING:
@@ -159,6 +163,34 @@ class SDKControlMcpSetServersRequest(_ControlBase):
 
     subtype: Literal["mcp_set_servers"] = "mcp_set_servers"
     servers: dict[str, ExternalMcpServerConfig]
+
+
+class SDKControlReloadPluginsRequest(_ControlBase):
+    """Reloads plugins from disk and returns the refreshed session components."""
+
+    subtype: Literal["reload_plugins"] = "reload_plugins"
+
+
+class PluginInfo(ClaudeCodeBaseModel):
+    """Information about a loaded plugin."""
+
+    name: str
+    path: str
+    source: str | None = None
+
+
+class SDKControlReloadPluginsResponse(ClaudeCodeBaseModel):
+    """Refreshed commands, agents, plugins, and MCP server status after reload."""
+
+    commands: list[ClaudeCodeCommandInfo]
+    """List of available slash commands."""
+
+    agents: list[ClaudeCodeAgentInfo]
+    """List of available subagents."""
+
+    plugins: list[PluginInfo]
+    mcp_servers: list[McpServerStatusEntry]
+    error_count: int
 
 
 class SDKControlMcpReconnectRequest(_ControlBase):
@@ -422,6 +454,7 @@ ControlRequestUnion = Annotated[
     | SDKControlCancelAsyncMessageRequest
     | SDKControlSeedReadStateRequest
     | SDKControlMcpSetServersRequest
+    | SDKControlReloadPluginsRequest
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest
     | SDKControlChannelEnableRequest

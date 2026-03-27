@@ -630,36 +630,36 @@ class ReadMcpResourceOutput(TypedDict):
     """Resource contents."""
 
 
-class SubscribeMcpResourceOutput(TypedDict):
-    """Output from subscribing to an MCP resource."""
+# class SubscribeMcpResourceOutput(TypedDict):
+#     """Output from subscribing to an MCP resource."""
 
-    subscribed: bool
-    """Whether the subscription was successful."""
-    subscriptionId: str
-    """Unique identifier for this subscription."""
-
-
-class UnsubscribeMcpResourceOutput(TypedDict):
-    """Output from unsubscribing from an MCP resource."""
-
-    unsubscribed: bool
-    """Whether the unsubscription was successful."""
+#     subscribed: bool
+#     """Whether the subscription was successful."""
+#     subscriptionId: str
+#     """Unique identifier for this subscription."""
 
 
-class SubscribePollingOutput(TypedDict):
-    """Output from subscribing to a polling resource."""
+# class UnsubscribeMcpResourceOutput(TypedDict):
+#     """Output from unsubscribing from an MCP resource."""
 
-    subscribed: bool
-    """Whether the subscription was successful."""
-    subscriptionId: str
-    """Unique identifier for this subscription."""
+#     unsubscribed: bool
+#     """Whether the unsubscription was successful."""
 
 
-class UnsubscribePollingOutput(TypedDict):
-    """Output from unsubscribing from a polling resource."""
+# class SubscribePollingOutput(TypedDict):
+#     """Output from subscribing to a polling resource."""
 
-    unsubscribed: bool
-    """Whether the unsubscription was successful."""
+#     subscribed: bool
+#     """Whether the subscription was successful."""
+#     subscriptionId: str
+#     """Unique identifier for this subscription."""
+
+
+# class UnsubscribePollingOutput(TypedDict):
+#     """Output from unsubscribing from a polling resource."""
+
+#     unsubscribed: bool
+#     """Whether the unsubscription was successful."""
 
 
 # ---------------------------------------------------------------------------
@@ -807,10 +807,10 @@ ToolUseResult = (
     | AskUserQuestionOutput
     | TodoWriteOutput
     | ReadMcpResourceOutput
-    | SubscribeMcpResourceOutput
-    | UnsubscribeMcpResourceOutput
-    | SubscribePollingOutput
-    | UnsubscribePollingOutput
+    # | SubscribeMcpResourceOutput
+    # | UnsubscribeMcpResourceOutput
+    # | SubscribePollingOutput
+    # | UnsubscribePollingOutput
     | ConfigOutput
     | EnterWorktreeOutput
     | ExitWorktreeOutput
@@ -841,10 +841,10 @@ TOOL_USE_RESULT_TYPES: dict[ToolName, type[ToolUseResult]] = {
     "TodoWrite": TodoWriteOutput,
     "ListMcpResources": McpResourceEntry,
     "ReadMcpResource": ReadMcpResourceOutput,
-    "SubscribeMcpResource": SubscribeMcpResourceOutput,
-    "UnsubscribeMcpResource": UnsubscribeMcpResourceOutput,
-    "SubscribePolling": SubscribePollingOutput,
-    "UnsubscribePolling": UnsubscribePollingOutput,
+    # "SubscribeMcpResource": SubscribeMcpResourceOutput,
+    # "UnsubscribeMcpResource": UnsubscribeMcpResourceOutput,
+    # "SubscribePolling": SubscribePollingOutput,
+    # "UnsubscribePolling": UnsubscribePollingOutput,
     "Config": ConfigOutput,
     "EnterWorktree": EnterWorktreeOutput,
     "ExitWorktree": ExitWorktreeOutput,
