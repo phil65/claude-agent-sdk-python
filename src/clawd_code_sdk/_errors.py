@@ -55,7 +55,7 @@ class MessageParseError(ClaudeSDKError):
 
     def __init__(self, message: str, data: dict[str, Any] | None = None):
         self.data = data
-        super().__init__(message)
+        super().__init__(f"{message}: {data}")
 
 
 # API Error types - raised when the Anthropic API returns errors
