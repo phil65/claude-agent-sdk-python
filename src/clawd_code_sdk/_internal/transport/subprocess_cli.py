@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 import dataclasses
+import functools
 import logging
 import os
 from pathlib import Path
@@ -331,6 +332,7 @@ class SubprocessCLITransport(Transport):
             raise self._exit_error
 
 
+@functools.cache
 async def _check_claude_version(cli_path: str | Path) -> None:
     """Check Claude Code version and warn if below minimum."""
     proc = None
@@ -363,6 +365,7 @@ async def _check_claude_version(cli_path: str | Path) -> None:
                 await proc.wait()
 
 
+@functools.cache
 def _find_bundled_cli() -> str | None:
     """Find bundled CLI binary if it exists."""
     # Determine the CLI binary name based on platform
@@ -376,6 +379,7 @@ def _find_bundled_cli() -> str | None:
     return None
 
 
+@functools.cache
 def _find_cli() -> str:
     """Find Claude Code CLI binary."""
     # First, check for bundled CLI
