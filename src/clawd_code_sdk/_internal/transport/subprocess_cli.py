@@ -337,13 +337,14 @@ async def _check_claude_version(cli_path: str | Path) -> None:
                     version_parts = [int(x) for x in version.split(".")]
                     min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
                     if version_parts < min_parts:
-                        warning = (
-                            f"Warning: Claude Code version {version} is unsupported in the SDK. "
-                            f"Minimum required version is {MINIMUM_CLAUDE_CODE_VERSION}. "
-                            "Some features may not work correctly."
+                        logger.warning(
+                            "Claude Code version %s at %s is unsupported in the Agent SDK. "
+                            "Minimum required version is %s. "
+                            "Some features may not work correctly.",
+                            version,
+                            cli_path,
+                            MINIMUM_CLAUDE_CODE_VERSION,
                         )
-                        logger.warning(warning)
-                        print(warning, file=sys.stderr)
     except Exception:
         pass
     finally:
