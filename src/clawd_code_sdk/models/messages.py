@@ -48,6 +48,8 @@ from clawd_code_sdk.models.output_types import ToolUseResult
 
 
 if TYPE_CHECKING:
+    from logfire._internal.integrations.llm_providers.semconv import MessagePart, OutputMessage
+
     from clawd_code_sdk.models.content_blocks import ContentBlock
 
 
@@ -148,6 +150,35 @@ class Usage(BaseModel):
         self.cache_creation_input_tokens = 0
         self.cache_read_input_tokens = 0
 
+    def to_otel(self, *, partial: bool = False) -> dict[str, int]:
+        """Extract usage metrics from a Claude usage object or dict.
+
+        Args:
+            usage: A usage object or dict from the SDK.
+            partial: If True, prefix attribute names with ``gen_ai.usage.partial.``
+                instead of ``gen_ai.usage.``. Used for chat spans where per-message
+                usage from the SDK is unreliable.
+        """
+        prefix = "gen_ai.usage.partial." if partial else "gen_ai.usage."
+        result: dict[str, int] = {}
+        # input_tokens is the *total* input token count.
+        # The Anthropic API's input_tokens only counts uncached tokens,
+        # so we sum input + cache_read + cache_creation to get the actual total.
+        input_tokens = self.input_tokens
+        cache_read = self.cache_read_input_tokens
+        cache_creation = self.cache_creation_input_tokens
+        if total_input := (input_tokens + cache_read + cache_creation):
+            result[f"{prefix}input_tokens"] = total_input
+
+        result[f"{prefix}output_tokens"] = self.output_tokens
+
+        if cache_read:
+            result[f"{prefix}cache_read.input_tokens"] = cache_read
+        if cache_creation:
+            result[f"{prefix}cache_creation.input_tokens"] = cache_creation
+
+        return result
+
 
 class BaseMessage(BaseModel):
     """Base class for messages."""
@@ -228,6 +259,13 @@ class AssistantMessage(BaseModel):
                 raise ServerError(error_message, self.model)
             case _ as unknown:
                 raise APIError(error_message, unknown, self.model)
+
+    def to_otel(self) -> OutputMessage:
+        """Convert SDK content block objects into semconv OutputMessages."""
+        from logfire._internal.integrations.llm_providers.semconv import OutputMessage
+
+        parts: list[MessagePart] = [b.to_otel() for b in self.content]
+        return OutputMessage(role="assistant", parts=parts)
 
 
 class RateLimitMessage(BaseMessage):

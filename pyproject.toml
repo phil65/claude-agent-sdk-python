@@ -22,6 +22,7 @@ dependencies = [
   "anthropic>=0.77.0",
   "anyenv>=2.0.15",
   "anyio>=4.0.0",
+  "logfire>=4.31.0",
   "mcp>=0.1.0",
   "python-dotenv>=1.2.1",
 ]

@@ -8,7 +8,7 @@ therefore serves both purposes, avoiding a redundant conversion layer.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never, cast
 
 from anthropic.types.beta.beta_tool_use_block import Caller
 from pydantic import BaseModel, ConfigDict, Discriminator
@@ -18,8 +18,15 @@ from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName
 
 
 if TYPE_CHECKING:
-    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
+    from logfire._internal.integrations.llm_providers.semconv import (
+        BlobPart,
+        ReasoningPart,
+        TextPart,
+        ToolCallPart,
+        ToolCallResponsePart,
+    )
 
+    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
 
 # =============================================================================
 # Content block types
@@ -40,6 +47,11 @@ class TextBlock(BaseContentBlock):
     type: Literal["text"] = "text"
     text: str
 
+    def to_otel(self) -> TextPart:
+        from logfire._internal.integrations.llm_providers.semconv import TextPart
+
+        return TextPart(type="text", content=self.text)
+
 
 class ThinkingBlock(BaseContentBlock):
     """Thinking/reasoning content block."""
@@ -47,6 +59,11 @@ class ThinkingBlock(BaseContentBlock):
     type: Literal["thinking"] = "thinking"
     thinking: str
     signature: str = ""
+
+    def to_otel(self) -> ReasoningPart:
+        from logfire._internal.integrations.llm_providers.semconv import ReasoningPart
+
+        return ReasoningPart(type="reasoning", content=self.thinking)
 
 
 class ToolUseBlock(BaseContentBlock):
@@ -57,6 +74,12 @@ class ToolUseBlock(BaseContentBlock):
     name: ToolName | str = ""
     input: ToolInput | dict[str, Any] = {}
     caller: Caller | None = None
+
+    def to_otel(self) -> ToolCallPart:
+        from logfire._internal.integrations.llm_providers.semconv import ToolCallPart
+
+        args = cast(dict[str, Any], self.input)
+        return ToolCallPart(type="tool_call", id=self.id, name=self.name, arguments=args)
 
 
 class ToolResultBlock(BaseContentBlock):
@@ -78,12 +101,24 @@ class ToolResultBlock(BaseContentBlock):
 
     def extract_text(self) -> str:
         """Extract text content from this tool result."""
-        if self.content is None:
-            return ""
-        if isinstance(self.content, str):
-            return self.content
-        text_parts = [tc.get("text", "") for tc in self.content if tc.get("type") == "text"]
-        return "\n".join(text_parts)
+        match self.content:
+            case None:
+                return ""
+            case str():
+                return self.content
+            case list():
+                text_parts = [tc.get("text", "") for tc in self.content if tc.get("type") == "text"]
+                return "\n".join(text_parts)
+            case _ as unreachable:
+                assert_never(unreachable)
+
+    def to_otel(self) -> ToolCallResponsePart:
+        from logfire._internal.integrations.llm_providers.semconv import ToolCallResponsePart
+
+        res = {"content": self.content} if isinstance(self.content, list) else self.content
+        return ToolCallResponsePart(
+            type="tool_call_response", id=self.tool_use_id or "", response=res
+        )
 
 
 class ImageSource(BaseContentBlock):
@@ -99,6 +134,16 @@ class ImageBlock(BaseContentBlock):
 
     type: Literal["image"] = "image"
     source: ImageSource
+
+    def to_otel(self) -> BlobPart:
+        from logfire._internal.integrations.llm_providers.semconv import BlobPart
+
+        return BlobPart(
+            type="blob",
+            content=self.source.data,
+            media_type=self.source.media_type,
+            modality="image",
+        )
 
 
 # =============================================================================
