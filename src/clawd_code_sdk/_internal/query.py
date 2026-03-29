@@ -156,6 +156,7 @@ class Query:
         ](max_buffer_size=math.inf)
         self._read_task: asyncio.Task[None] | None = None
         self._child_tasks: set[asyncio.Task[Any]] = set()
+        self._inflight_requests: dict[str, asyncio.Task[Any]] = {}
         self._closed = False
         self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
@@ -209,12 +210,23 @@ class Query:
             loop = asyncio.get_running_loop()
             self._read_task = loop.create_task(self._read_messages())
 
-    def spawn_task(self, coro: Any) -> None:
+    def spawn_task(self, coro: Any) -> asyncio.Task[Any]:
         """Spawn a child task that will be cancelled on close()."""
         loop = asyncio.get_running_loop()
         task = loop.create_task(coro)
         self._child_tasks.add(task)
         task.add_done_callback(self._child_tasks.discard)
+        return task
+
+    def _spawn_control_request_handler(self, request_id: str, coro: Any) -> None:
+        """Spawn a control request handler and track it for cancellation."""
+        task = self.spawn_task(coro)
+        self._inflight_requests[request_id] = task
+
+        def _done(_t: asyncio.Task[Any]) -> None:
+            self._inflight_requests.pop(request_id, None)
+
+        task.add_done_callback(_done)
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
@@ -244,12 +256,19 @@ class Query:
                     case {"type": "control_response"} as msg:
                         logger.info("unhandled control message: %s", msg)
                     case {"type": "control_request"} if not self._closed:
+                        req_id = message["request_id"]
                         req = control_request_adapter.validate_python(message["request"])
-                        self.spawn_task(self._handle_control_request(message["request_id"], req))
+                        self._spawn_control_request_handler(
+                            req_id, self._handle_control_request(req_id, req)
+                        )
                     case {"type": "control_request"} as msg:
                         logger.info("Control request sent while closed: %s", msg)
                     case {"type": "control_cancel_request"}:
-                        pass
+                        cancel_id = message.get("request_id")
+                        if cancel_id:
+                            inflight = self._inflight_requests.pop(cancel_id, None)
+                            if inflight:
+                                inflight.cancel()
                     case {"type": "result"}:
                         self._first_result_event.set()
                         await self._message_send.send(message)
@@ -305,6 +324,10 @@ class Query:
             success_response = SDKControlResponse(type="control_response", response=dct)
             await self.write_json(success_response)
 
+        except asyncio.CancelledError:
+            # Request was cancelled via control_cancel_request; the CLI has
+            # already abandoned this request, so don't write a response.
+            raise
         except Exception as e:
             response = ControlErrorResponse(subtype="error", request_id=request_id, error=str(e))
             error_response = SDKControlResponse(type="control_response", response=response)
