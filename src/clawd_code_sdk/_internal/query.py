@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import suppress
 import logging
 import math
@@ -41,7 +42,6 @@ from clawd_code_sdk.models import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator
 
-    from anyio.abc import CancelScope, TaskGroup
     from mcp.server import Server as McpServer
 
     from clawd_code_sdk._internal.transport import Transport
@@ -154,18 +154,12 @@ class Query:
         self._message_send, self._message_receive = anyio.create_memory_object_stream[
             dict[str, Any]
         ](max_buffer_size=math.inf)
-        self._tg: TaskGroup | None = None
+        self._read_task: asyncio.Task[None] | None = None
+        self._child_tasks: set[asyncio.Task[Any]] = set()
         self._closed = False
         self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
-        # Cancel scope for the reader task - can be cancelled from any task context
-        # This fixes the RuntimeError when async generator cleanup happens in a different task
-        self._reader_cancel_scope: CancelScope | None = None
-        self._reader_task_started = anyio.Event()
-        # Track whether we entered the task group in this task
-        # Used to determine if we can safely call __aexit__()
-        self._tg_entered_in_current_task = False
 
     @property
     def initialized(self) -> bool:
@@ -210,32 +204,17 @@ class Query:
         return self._initialization_result
 
     async def start(self) -> None:
-        """Start reading messages from transport.
+        """Start reading messages from transport."""
+        if self._read_task is None:
+            loop = asyncio.get_running_loop()
+            self._read_task = loop.create_task(self._read_messages())
 
-        This method starts background tasks for reading messages. The task lifecycle
-        is managed using a CancelScope that can be safely cancelled from any async
-        task context, avoiding the RuntimeError that occurs when task group
-        __aexit__() is called from a different task than __aenter__().
-        """
-        if self._tg is None:
-            # Create a task group for spawning background tasks
-            self._tg = anyio.create_task_group()
-            await self._tg.__aenter__()
-            self._tg_entered_in_current_task = True
-            # Start the reader with its own cancel scope that can be cancelled safely
-            self._tg.start_soon(self._read_messages_with_cancel_scope)
-
-    async def _read_messages_with_cancel_scope(self) -> None:
-        """Wrapper for _read_messages that sets up a cancellable scope.
-
-        This wrapper creates a CancelScope that can be cancelled from any task
-        context, solving the issue where async generator cleanup happens in a
-        different task than where the task group was entered.
-        """
-        self._reader_cancel_scope = anyio.CancelScope()
-        self._reader_task_started.set()
-        with self._reader_cancel_scope:
-            await self._read_messages()
+    def spawn_task(self, coro: Any) -> None:
+        """Spawn a child task that will be cancelled on close()."""
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(coro)
+        self._child_tasks.add(task)
+        task.add_done_callback(self._child_tasks.discard)
 
     async def _read_messages(self) -> None:
         """Read messages from transport and route them."""
@@ -264,11 +243,11 @@ class Query:
                         event.set()
                     case {"type": "control_response"} as msg:
                         logger.info("unhandled control message: %s", msg)
-                    case {"type": "control_request"} if tg := self._tg:
+                    case {"type": "control_request"} if not self._closed:
                         req = control_request_adapter.validate_python(message["request"])
-                        tg.start_soon(self._handle_control_request, message["request_id"], req)
+                        self.spawn_task(self._handle_control_request(message["request_id"], req))
                     case {"type": "control_request"} as msg:
-                        logger.info("Control request sent while no task group active: %s", msg)
+                        logger.info("Control request sent while closed: %s", msg)
                     case {"type": "control_cancel_request"}:
                         pass
                     case {"type": "result"}:
@@ -615,49 +594,18 @@ class Query:
                     yield message
 
     async def close(self) -> None:
-        """Close the query and transport.
-
-        This method safely cleans up resources, handling the case where cleanup
-        happens in a different async task context than where start() was called.
-        This commonly occurs during async generator cleanup (e.g., when breaking
-        out of an `async for` loop or when asyncio.run() shuts down).
-
-        The fix uses two mechanisms:
-        1. A CancelScope for the reader task that can be cancelled from any context
-        2. Suppressing the RuntimeError that occurs when task group __aexit__()
-           is called from a different task than __aenter__()
-        """
+        """Close the query and transport."""
         if self._closed:
             return
         self._closed = True
 
-        # Cancel the reader task via its cancel scope (safe from any task context)
-        if self._reader_cancel_scope is not None:
-            self._reader_cancel_scope.cancel()
-
-        # Handle task group cleanup
-        if self._tg is not None:
-            # Always cancel the task group's scope to stop any running tasks
-            self._tg.cancel_scope.cancel()
-            # Try to properly exit the task group, but handle the case where
-            # we're in a different task context than where __aenter__() was called
-            try:
-                with suppress(anyio.get_cancelled_exc_class()):
-                    await self._tg.__aexit__(None, None, None)
-            except RuntimeError as e:
-                # Handle "Attempted to exit cancel scope in a different task"
-                # This happens during async generator cleanup when Python's GC
-                # runs the finally block in a different task context.
-                if "different task" in str(e):
-                    logger.debug(
-                        "Task group cleanup skipped due to cross-task context "
-                        "(this is expected during async generator cleanup)"
-                    )
-                else:
-                    raise
-            finally:
-                self._tg = None
-                self._tg_entered_in_current_task = False
+        for task in list(self._child_tasks):
+            task.cancel()
+        if self._read_task is not None and not self._read_task.done():
+            self._read_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._read_task
+        self._read_task = None
 
         await self.transport.close()
         # clean up

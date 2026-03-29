@@ -860,8 +860,8 @@ class TestAsyncGeneratorCleanup:
             # Give reader time to start
             await asyncio.sleep(0.05)
 
-            # Cancel scope should exist
-            assert q._reader_cancel_scope is not None
+            # Read task should exist
+            assert q._read_task is not None
 
             # Close should work without RuntimeError
             # This is the key test - close() used to raise RuntimeError
@@ -869,6 +869,7 @@ class TestAsyncGeneratorCleanup:
 
             # Verify closed state
             assert q._closed is True
+            assert q._read_task is None
             mock_transport.close.assert_called()
 
         anyio.run(_test)
@@ -904,7 +905,7 @@ class TestAsyncGeneratorCleanup:
 
             async with q:
                 # Query should be started
-                assert q._tg is not None
+                assert q._read_task is not None
                 # Get one message
                 msg = await q.__anext__()
                 assert msg["type"] == "system"
