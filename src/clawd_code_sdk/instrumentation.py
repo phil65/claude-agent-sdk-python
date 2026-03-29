@@ -192,11 +192,11 @@ def inject_tracing_hooks(options: ClaudeAgentOptions) -> None:
     with handle_internal_errors:  # ty:ignore[invalid-context-manager]
         for event in ("PreToolUse", "PostToolUse", "PostToolUseFailure"):
             hooks.setdefault(event, [])
-        hooks["PreToolUse"].insert(0, HookMatcher(matcher=None, hooks=[pre_tool_use_hook]))  # type: ignore[list-item]
-        hooks["PostToolUse"].insert(0, HookMatcher(matcher=None, hooks=[post_tool_use_hook]))  # type: ignore[list-item]
+        hooks["PreToolUse"].insert(0, HookMatcher(matcher=None, hooks=[pre_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
+        hooks["PostToolUse"].insert(0, HookMatcher(matcher=None, hooks=[post_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
         hooks["PostToolUseFailure"].insert(
             0,
-            HookMatcher(matcher=None, hooks=[post_tool_use_failure_hook]),  # type: ignore[list-item]
+            HookMatcher(matcher=None, hooks=[post_tool_use_failure_hook]),  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
         )
 
 

@@ -6,7 +6,7 @@ from contextlib import suppress
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import anyenv
 import anyio
@@ -352,7 +352,7 @@ class Query:
 
         # Dispatch elicitation requests to dedicated callback if available
         if req.tool_name == "AskUserQuestion" and self.on_user_question:
-            input_data: AskUserQuestionInput = req.input  # type: ignore[assignment]
+            input_data = cast(AskUserQuestionInput, req.input)
             result = await self.on_user_question(input_data, context)
             if isinstance(result, PermissionResultAllow) and result.updated_input is None:
                 result.updated_input = req.input

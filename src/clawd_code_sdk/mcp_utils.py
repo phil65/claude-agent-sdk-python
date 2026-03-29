@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, assert_never
 
+from mcp.types import ListToolsResult
 from pydantic import AnyUrl, TypeAdapter, create_model
 
 from clawd_code_sdk.models import (
@@ -330,8 +331,9 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
             ):
                 request = ListToolsRequest()
                 result = await handler(request)
+                assert isinstance(result.root, ListToolsResult)
                 # Convert MCP result to JSONRPC response
-                data = [i.model_dump(exclude_none=True, by_alias=True) for i in result.root.tools]  # type: ignore[union-attr]
+                data = [i.model_dump(exclude_none=True, by_alias=True) for i in result.root.tools]
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": data})
 
             case {"method": "tools/call", "params": dict() as params} if (
