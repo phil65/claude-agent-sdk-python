@@ -21,6 +21,7 @@ from clawd_code_sdk.models import (
     ResultErrorMessage,
     ResultMessage,
     ResultSuccessMessage,
+    SDKControlGetContextUsageResponse,
     SessionStateChangedMessage,
     StatusSystemMessage,
     Usage,
@@ -379,6 +380,12 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         result = await query.get_settings()
         return GetSettingsResponse.model_validate(result)
+
+    async def get_context_usage(self) -> SDKControlGetContextUsageResponse:
+        """Get a breakdown of current context window usage by category."""
+        query = self._ensure_connected()
+        result = await query.get_context_usage()
+        return SDKControlGetContextUsageResponse.model_validate(result)
 
     async def mcp_authenticate(self, server_name: str) -> McpAuthenticateResponse:
         """Trigger OAuth authentication for an MCP server.

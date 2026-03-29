@@ -404,6 +404,12 @@ class SDKControlElicitationRequest(_ControlBase):
                 assert_never(unreachable)
 
 
+class SDKControlGetContextUsageRequest(_ControlBase):
+    """Requests a breakdown of current context window usage by category."""
+
+    subtype: Literal["get_context_usage"] = "get_context_usage"
+
+
 class SDKControlGetSettingsRequest(_ControlBase):
     """Returns the effective merged settings and the raw per-source settings."""
 
@@ -468,6 +474,7 @@ ControlRequestUnion = Annotated[
     | SDKControlSideQuestionRequest
     | SDKControlStopTaskRequest
     | SDKControlApplyFlagSettingsRequest
+    | SDKControlGetContextUsageRequest
     | SDKControlGetSettingsRequest
     | SDKControlElicitationRequest,
     Discriminator("subtype"),

@@ -383,7 +383,21 @@ class ReadPartsOutput(TypedDict):
     file: ReadPartsFileInfo
 
 
-ReadOutput = ReadTextOutput | ReadImageOutput | ReadNotebookOutput | ReadPdfOutput | ReadPartsOutput
+class FileUnchangedOutput(TypedDict):
+    """Read tool output when the file has not changed."""
+
+    type: Literal["file_unchanged"]
+    filePath: str
+
+
+ReadOutput = (
+    ReadTextOutput
+    | ReadImageOutput
+    | ReadNotebookOutput
+    | ReadPdfOutput
+    | ReadPartsOutput
+    | FileUnchangedOutput
+)
 
 
 # ---------------------------------------------------------------------------

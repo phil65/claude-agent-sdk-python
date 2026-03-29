@@ -37,6 +37,7 @@ class SdkMcpTool[T]:
     output_schema: dict[str, Any] | None = None
     meta: dict[str, Any] | None = None
     search_hint: str | None = None
+    always_load: bool | None = None
 
 
 def tool(
@@ -49,6 +50,7 @@ def tool(
     output_schema: dict[str, Any] | None = None,
     meta: dict[str, Any] | None = None,
     search_hint: str | None = None,
+    always_load: bool | None = None,
 ) -> Callable[[Callable[[Any], Awaitable[dict[str, Any]]]], SdkMcpTool[Any]]:
     """Decorator for defining MCP tools with type safety.
 
@@ -72,6 +74,7 @@ def tool(
         output_schema: Optional JSON Schema describing the tool's output format.
         meta: Optional metadata dict sent as ``_meta`` on the tool definition.
         search_hint: Optional hint text for tool search/discovery.
+        always_load: Optional flag indicating whether the tool should always be loaded.
 
     Returns:
         A decorator function that wraps the tool implementation and returns
@@ -95,6 +98,7 @@ def tool(
             output_schema=output_schema,
             meta=meta,
             search_hint=search_hint,
+            always_load=always_load,
         )
 
     return decorator

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
+import sys
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from anthropic.types.beta import (
@@ -51,6 +52,8 @@ if TYPE_CHECKING:
     from logfire._internal.integrations.llm_providers.semconv import MessagePart, OutputMessage
 
     from clawd_code_sdk.models.content_blocks import ContentBlock
+
+IS_DEV = "pytest" in sys.modules
 
 
 # Message types
@@ -183,16 +186,18 @@ class Usage(BaseModel):
 class BaseMessage(BaseModel):
     """Base class for messages."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True, populate_by_name=True)
+    model_config = ConfigDict(
+        extra="forbid" if IS_DEV else "ignore", arbitrary_types_allowed=True, populate_by_name=True
+    )
 
     uuid: str
-    session_id: str
 
 
 class UserMessage(BaseMessage):
     """User message."""
 
     type: Literal["user"] = "user"
+    session_id: str | None = None
     parent_tool_use_id: str | None = None
     tool_use_result: (
         Sequence[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
@@ -273,6 +278,7 @@ class RateLimitMessage(BaseMessage):
 
     type: Literal["rate_limit_event"] = "rate_limit_event"
     subtype: Literal["rate_limit"] = "rate_limit"
+    session_id: str
     rate_limit_info: RateLimitInfo
 
 
@@ -283,6 +289,7 @@ class BaseResultMessage(BaseMessage):
     """
 
     type: Literal["result"] = "result"
+    session_id: str
     duration_ms: int
     """Wall-clock time for this query only (per-query)."""
     duration_api_ms: int
@@ -325,6 +332,7 @@ class StreamEvent(BaseMessage):
     """Stream event for partial message updates during streaming."""
 
     type: Literal["stream_event"] = "stream_event"
+    session_id: str
     event: BetaRawMessageStreamEvent
     parent_tool_use_id: str | None = None
 
@@ -436,6 +444,7 @@ class ToolProgressMessage(BaseMessage):
     """Progress update for a running tool."""
 
     type: Literal["tool_progress"] = "tool_progress"
+    session_id: str
     tool_use_id: str
     tool_name: str
     parent_tool_use_id: str | None
@@ -447,6 +456,7 @@ class ToolUseSummaryMessage(BaseMessage):
     """Summary of preceding tool uses."""
 
     type: Literal["tool_use_summary"] = "tool_use_summary"
+    session_id: str
     summary: str
     preceding_tool_use_ids: list[str]
 
@@ -455,6 +465,7 @@ class AuthStatusMessage(BaseMessage):
     """Authentication status update."""
 
     type: Literal["auth_status"] = "auth_status"
+    session_id: str
     is_authenticating: bool = Field(False, validation_alias="isAuthenticating")
     output: list[str] | None = None
     error: str | None = None
@@ -464,6 +475,7 @@ class PromptSuggestionMessage(BaseMessage):
     """Predicted next user prompt, emitted after each turn when promptSuggestions is enabled."""
 
     type: Literal["prompt_suggestion"] = "prompt_suggestion"
+    session_id: str
     suggestion: str
 
 

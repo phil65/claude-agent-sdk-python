@@ -532,6 +532,10 @@ class Query:
         """Get the effective merged settings and raw per-source settings."""
         return await self._send_control_request({"subtype": "get_settings"})
 
+    async def get_context_usage(self) -> dict[str, Any]:
+        """Get a breakdown of current context window usage by category."""
+        return await self._send_control_request({"subtype": "get_context_usage"})
+
     async def mcp_authenticate(self, server_name: str) -> dict[str, Any]:
         """Trigger OAuth authentication for an MCP server."""
         req = {"subtype": "mcp_authenticate", "serverName": server_name}
