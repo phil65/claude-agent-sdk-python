@@ -24,7 +24,6 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk.models import (
     McpServerStatusEntry,
-    McpStatusResponse,
     McpStdioServerConfig,
     ModelUsage,
     TextBlock,
@@ -469,10 +468,10 @@ class TestGetMcpStatus:
             try:
                 status = await client.get_mcp_status()
 
-                assert isinstance(status, McpStatusResponse)
-                assert len(status.mcp_servers) == 1
+                assert isinstance(status, list)
+                assert len(status) == 1
 
-                server = status.mcp_servers[0]
+                server = status[0]
                 assert isinstance(server, McpServerStatusEntry)
                 assert server.name == "git"
                 assert server.status == "connected"
@@ -507,9 +506,13 @@ class TestGetMcpStatus:
             try:
                 status = await client.get_mcp_status()
 
-                assert isinstance(status, McpStatusResponse)
-                assert len(status.mcp_servers) == 0
+                assert isinstance(status, list)
+                assert len(status) == 0
             finally:
                 await client.disconnect()
 
         anyio.run(_test)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-vv"])
