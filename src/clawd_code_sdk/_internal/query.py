@@ -255,14 +255,12 @@ class Query:
                         event.set()
                     case {"type": "control_response"} as msg:
                         logger.info("unhandled control message: %s", msg)
-                    case {"type": "control_request"} if not self._closed:
+                    case {"type": "control_request"}:
                         req_id = message["request_id"]
                         req = control_request_adapter.validate_python(message["request"])
                         self._spawn_control_request_handler(
                             req_id, self._handle_control_request(req_id, req)
                         )
-                    case {"type": "control_request"} as msg:
-                        logger.info("Control request sent while closed: %s", msg)
                     case {"type": "control_cancel_request"}:
                         cancel_id = message.get("request_id")
                         if cancel_id:
