@@ -15,7 +15,7 @@ from anyio.streams.text import TextSendStream
 import pytest
 
 from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError
-from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport, _find_cli
 from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
@@ -33,6 +33,7 @@ class TestSubprocessCLITransport:
 
     def test_find_cli_not_found(self):
         """Test CLI not found error."""
+        _find_cli.cache_clear()
         with (
             patch("shutil.which", return_value=None),
             patch("pathlib.Path.exists", return_value=False),
