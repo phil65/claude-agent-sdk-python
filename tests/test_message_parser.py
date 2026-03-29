@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from clawd_code_sdk._errors import MessageParseError
-from clawd_code_sdk._internal.message_parser import parse_message
+from clawd_code_sdk.client import parse_message
 
 
 class TestErrorWrapping:
