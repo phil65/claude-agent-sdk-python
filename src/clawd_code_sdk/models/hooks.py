@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Sequence  # noqa: TC003
-from dataclasses import dataclass, field
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import field
 from typing import Any, Literal, NotRequired, TypedDict
+
+from pydantic import BaseModel
 
 from clawd_code_sdk.models.base import (  # noqa: TC001
     AssistantMessageError,
@@ -620,8 +622,7 @@ HookCallback = Callable[
 
 
 # Hook matcher configuration
-@dataclass
-class HookMatcher:
+class HookMatcher(BaseModel):
     """Hook matcher configuration."""
 
     # See https://docs.anthropic.com/en/docs/claude-code/hooks#structure for the

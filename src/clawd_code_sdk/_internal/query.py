@@ -71,22 +71,6 @@ def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
     return raw_id if isinstance(raw_id, str | int) else 0
 
 
-def convert_hooks_to_internal_format(
-    hooks: dict[HookEvent, list[HookMatcher]],
-) -> dict[HookEvent, list[dict[str, Any]]]:
-    """Convert HookMatcher format to internal Query format."""
-    internal_hooks: dict[HookEvent, list[dict[str, Any]]] = {}
-    for event, matchers in hooks.items():
-        internal_hooks[event] = []
-        for matcher in matchers:
-            # Convert HookMatcher to internal dict format
-            internal_matcher: dict[str, Any] = {"matcher": matcher.matcher, "hooks": matcher.hooks}
-            if matcher.timeout is not None:
-                internal_matcher["timeout"] = matcher.timeout
-            internal_hooks[event].append(internal_matcher)
-    return internal_hooks
-
-
 class Query:
     """Handles bidirectional control protocol on top of Transport.
 
@@ -136,7 +120,10 @@ class Query:
         self.can_use_tool = can_use_tool
         self.on_user_question = on_user_question
         self.on_elicitation = on_elicitation
-        self.hooks = convert_hooks_to_internal_format(hooks) if hooks else {}
+        self.hooks = {
+            event: [m.model_dump(exclude_none=True) for m in matchers]
+            for event, matchers in (hooks or {}).items()
+        }
         self.sdk_mcp_servers = sdk_mcp_servers or {}
         self._agents = agents
         self._system_prompt = system_prompt
