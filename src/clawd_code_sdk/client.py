@@ -91,10 +91,6 @@ class ClaudeSDKClient:
         """Current client status, or None when idle."""
 
         self._logfire_prompt: str | None = None
-        if self.options.instrument:
-            from clawd_code_sdk.instrumentation import inject_tracing_hooks
-
-            inject_tracing_hooks(self.options)
 
     def _ensure_connected(self) -> Query:
         """Return the active Query, raising if not connected."""
@@ -104,6 +100,13 @@ class ClaudeSDKClient:
 
     async def connect(self) -> None:
         """Connect to Claude Code CLI and initialize the session."""
+        if self.options.instrument:
+            from clawd_code_sdk.instrumentation import inject_tracing_hooks
+
+            hooks = inject_tracing_hooks(self.options.hooks)
+        else:
+            hooks = self.options.hooks
+
         # If on_permission is a callback, extract it for Query and replace with
         # "stdio" so the CLI routes permission requests through the control protocol.
         if callable(self.options.on_permission):
@@ -146,7 +149,7 @@ class ClaudeSDKClient:
             can_use_tool=can_use_tool,  # ty:ignore[invalid-argument-type]
             on_user_question=self.options.on_user_question,
             on_elicitation=self.options.on_elicitation,
-            hooks=self.options.hooks,
+            hooks=hooks,
             sdk_mcp_servers=sdk_mcp_servers,
             initialize_timeout=initialize_timeout,
             agents=self.options.agents,

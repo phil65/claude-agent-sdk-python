@@ -34,7 +34,6 @@ if TYPE_CHECKING:
 
     from clawd_code_sdk.models import (
         AssistantMessage,
-        ClaudeAgentOptions,
         HookContext,
         HookEvent,
         PostToolUseFailureHookInput,
@@ -178,26 +177,23 @@ async def post_tool_use_failure_hook(
 # ---------------------------------------------------------------------------
 
 
-def inject_tracing_hooks(options: ClaudeAgentOptions) -> None:
-    """Inject logfire tracing hooks into ClaudeAgentOptions.
-
-    Guards against duplicate injection when the same options object is reused
-    across multiple ClaudeSDKClient instances.
-    """
-    hooks: dict[HookEvent, list[HookMatcher]]
-    if options.hooks is None:
-        hooks = options.hooks = {}
-    else:
-        hooks = options.hooks
+def inject_tracing_hooks(
+    hooks: dict[HookEvent, list[HookMatcher]] | None = None,
+) -> dict[HookEvent, list[HookMatcher]]:
+    """Return a copy of *hooks* with logfire tracing hooks prepended."""
+    result: dict[HookEvent, list[HookMatcher]] = (
+        {k: list(v) for k, v in hooks.items()} if hooks else {}
+    )
     with handle_internal_errors:  # ty:ignore[invalid-context-manager]
         for event in ("PreToolUse", "PostToolUse", "PostToolUseFailure"):
-            hooks.setdefault(event, [])
-        hooks["PreToolUse"].insert(0, HookMatcher(matcher=None, hooks=[pre_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
-        hooks["PostToolUse"].insert(0, HookMatcher(matcher=None, hooks=[post_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
-        hooks["PostToolUseFailure"].insert(
+            result.setdefault(event, [])
+        result["PreToolUse"].insert(0, HookMatcher(matcher=None, hooks=[pre_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
+        result["PostToolUse"].insert(0, HookMatcher(matcher=None, hooks=[post_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
+        result["PostToolUseFailure"].insert(
             0,
             HookMatcher(matcher=None, hooks=[post_tool_use_failure_hook]),  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
         )
+    return result
 
 
 class ConversationState:
