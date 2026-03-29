@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel
+from clawd_code_sdk.models.messages import Usage
 
 
 class ContextUsageCategory(ClaudeCodeBaseModel):
@@ -124,15 +125,6 @@ class ContextUsageMessageBreakdown(ClaudeCodeBaseModel):
     attachments_by_type: list[ContextUsageAttachmentBreakdown]
 
 
-class ContextUsageApiUsage(ClaudeCodeBaseModel):
-    """API-level token usage counters."""
-
-    input_tokens: int
-    output_tokens: int
-    cache_creation_input_tokens: int
-    cache_read_input_tokens: int
-
-
 class SDKControlGetContextUsageResponse(ClaudeCodeBaseModel):
     """Breakdown of current context window usage by category."""
 
@@ -154,4 +146,4 @@ class SDKControlGetContextUsageResponse(ClaudeCodeBaseModel):
     auto_compact_threshold: int | None = None
     is_auto_compact_enabled: bool
     message_breakdown: ContextUsageMessageBreakdown | None = None
-    api_usage: ContextUsageApiUsage | None = None
+    api_usage: Usage | None = None
