@@ -117,14 +117,16 @@ class TestClaudeSDKClientStreaming:
         """Test automatic connection when using context manager."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
                 async with ClaudeSDKClient() as client:
                     # Verify connect was called
                     mock_transport.connect.assert_called_once()
-                    assert client._transport is mock_transport
+                    assert client._query.transport is mock_transport
 
                 # Verify disconnect was called on exit
                 mock_transport.close.assert_called_once()
@@ -135,18 +137,20 @@ class TestClaudeSDKClientStreaming:
         """Test manual connect and disconnect."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
                 client = ClaudeSDKClient()
                 await client.connect()
                 # Verify connect was called
                 mock_transport.connect.assert_called_once()
-                assert client._transport is mock_transport
+                assert client._query.transport is mock_transport
                 await client.disconnect()
                 # Verify disconnect was called
                 mock_transport.close.assert_called_once()
-                assert client._transport is None
+                assert client._query is None
 
         anyio.run(_test)
 
@@ -154,7 +158,9 @@ class TestClaudeSDKClientStreaming:
         """Test that connect creates a transport and initializes."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
                 client = ClaudeSDKClient()
@@ -168,7 +174,9 @@ class TestClaudeSDKClientStreaming:
         """Test sending a query."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -199,7 +207,9 @@ class TestClaudeSDKClientStreaming:
         """Test sending a message with custom session ID."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -235,7 +245,9 @@ class TestClaudeSDKClientStreaming:
         """Test receiving messages."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -299,7 +311,9 @@ class TestClaudeSDKClientStreaming:
         """Test receive_response stops at ResultMessage."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -388,7 +402,9 @@ class TestClaudeSDKClientStreaming:
         """Test interrupt functionality."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -434,7 +450,9 @@ class TestClaudeSDKClientStreaming:
                 system_prompt="Be helpful",
             )
 
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
                 client = ClaudeSDKClient(options=options)
@@ -449,7 +467,9 @@ class TestClaudeSDKClientStreaming:
         """Test concurrent sending and receiving messages."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -597,7 +617,9 @@ class TestClaudeSDKClientEdgeCases:
         """Test connecting twice."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 # Create a new mock transport for each call
                 mock_transport_class.side_effect = [
                     create_mock_transport(),
@@ -628,7 +650,9 @@ class TestClaudeSDKClientEdgeCases:
         """Test context manager cleans up on exception."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -645,7 +669,9 @@ class TestClaudeSDKClientEdgeCases:
         """Test collecting messages with list comprehension as shown in examples."""
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 
@@ -750,7 +776,9 @@ class TestAsyncGeneratorCleanup:
         """
 
         async def _test():
-            with patch("clawd_code_sdk.client.SubprocessCLITransport") as mock_transport_class:
+            with patch(
+                "clawd_code_sdk._internal.query.SubprocessCLITransport"
+            ) as mock_transport_class:
                 mock_transport = create_mock_transport()
                 mock_transport_class.return_value = mock_transport
 

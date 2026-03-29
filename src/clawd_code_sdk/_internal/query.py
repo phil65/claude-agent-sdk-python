@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from dataclasses import replace
 import logging
 import math
 import os
@@ -13,15 +14,18 @@ import anyenv
 import anyio
 
 from clawd_code_sdk._errors import ClaudeSDKError, ControlRequestError, ControlRequestTimeoutError
+from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
     AskUserQuestionInput,
+    ClaudeAgentOptions,
     ClaudeCodeServerInfo,
     ClaudeOAuthWaitForCompletionResponse,
     ControlErrorResponse,
     ControlResponse,
     JSONRPCError,
     JSONRPCErrorResponse,
+    McpSdkServerConfigWithInstance,
     PermissionResultAllow,
     SDKControlElicitationRequest,
     SDKControlInitializeRequest,
@@ -148,6 +152,63 @@ class Query:
         self._initialization_result: ClaudeCodeServerInfo | None = None
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
+
+    @classmethod
+    def from_options(cls, options: ClaudeAgentOptions, transport: Transport | None = None) -> Query:
+        # Extract SDK MCP servers from options
+        if options.instrument:
+            from clawd_code_sdk.instrumentation import inject_tracing_hooks
+
+            hooks = inject_tracing_hooks(options.hooks)
+        else:
+            hooks = options.hooks
+
+        # If on_permission is a callback, extract it for Query and replace with
+        # "stdio" so the CLI routes permission requests through the control protocol.
+        if callable(options.on_permission):
+            can_use_tool = options.on_permission
+            options = replace(options, on_permission="stdio")
+        else:
+            can_use_tool = None
+
+        sdk_mcp_servers = {}
+        if isinstance(options.mcp_servers, dict):
+            for name, config in options.mcp_servers.items():
+                if isinstance(config, McpSdkServerConfigWithInstance):
+                    sdk_mcp_servers[name] = config.instance
+
+        # Calculate initialize timeout from CLAUDE_CODE_STREAM_CLOSE_TIMEOUT env var if set
+        # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
+        initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
+        initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
+        # Extract system prompt for initialize request
+        system_prompt: str | None = None
+        append_system_prompt: str | None = None
+        if options.system_prompt is None:
+            if not options.include_builtin_system_prompt:
+                system_prompt = ""  # Clear the builtin prompt
+            # else: send nothing, CLI uses its default builtin prompt
+        elif options.include_builtin_system_prompt:
+            append_system_prompt = options.system_prompt
+        else:
+            system_prompt = options.system_prompt
+
+        # Create Query to handle control protocol
+        return cls(
+            transport=transport or SubprocessCLITransport(options=options),
+            can_use_tool=can_use_tool,  # ty:ignore[invalid-argument-type]
+            on_user_question=options.on_user_question,
+            on_elicitation=options.on_elicitation,
+            hooks=hooks,
+            sdk_mcp_servers=sdk_mcp_servers,
+            initialize_timeout=initialize_timeout,
+            agents=options.agents,
+            system_prompt=system_prompt,
+            append_system_prompt=append_system_prompt,
+            json_schema=options.get_json_schema(),
+            prompt_suggestions=options.prompt_suggestions,
+            agent_progress_summaries=options.agent_progress_summaries,
+        )
 
     @property
     def initialized(self) -> bool:

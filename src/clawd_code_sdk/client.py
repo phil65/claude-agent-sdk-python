@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 import os
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 from clawd_code_sdk._errors import CLIConnectionError
 from clawd_code_sdk._internal.query import Query
-from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
     GetSettingsResponse,
     McpAuthenticateResponse,
-    McpSdkServerConfigWithInstance,
     McpSetServersResult,
     McpStatusResponse,
     RemoteControlResponse,
@@ -76,7 +74,6 @@ class ClaudeSDKClient:
         options = options or ClaudeAgentOptions()
         self.options = options
         self._custom_transport = transport
-        self._transport: Transport | None = None
         self._query: Query | None = None
         self.session_usage: Usage = Usage()
         self.session_state: SessionState = "idle"
@@ -100,65 +97,9 @@ class ClaudeSDKClient:
 
     async def connect(self) -> None:
         """Connect to Claude Code CLI and initialize the session."""
-        if self.options.instrument:
-            from clawd_code_sdk.instrumentation import inject_tracing_hooks
-
-            hooks = inject_tracing_hooks(self.options.hooks)
-        else:
-            hooks = self.options.hooks
-
-        # If on_permission is a callback, extract it for Query and replace with
-        # "stdio" so the CLI routes permission requests through the control protocol.
-        if callable(self.options.on_permission):
-            can_use_tool = self.options.on_permission
-            options = replace(self.options, on_permission="stdio")
-        else:
-            can_use_tool = None
-            options = self.options
-
         # Use provided custom transport or create subprocess transport
-        tp = self._custom_transport or SubprocessCLITransport(options=options)
-        self._transport = tp
-        await self._transport.connect()
-        # Extract SDK MCP servers from options
-        sdk_mcp_servers = {}
-        if isinstance(self.options.mcp_servers, dict):
-            for name, config in self.options.mcp_servers.items():
-                if isinstance(config, McpSdkServerConfigWithInstance):
-                    sdk_mcp_servers[name] = config.instance
-
-        # Calculate initialize timeout from CLAUDE_CODE_STREAM_CLOSE_TIMEOUT env var if set
-        # CLAUDE_CODE_STREAM_CLOSE_TIMEOUT is in milliseconds, convert to seconds
-        initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
-        initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
-        # Extract system prompt for initialize request
-        system_prompt: str | None = None
-        append_system_prompt: str | None = None
-        if self.options.system_prompt is None:
-            if not self.options.include_builtin_system_prompt:
-                system_prompt = ""  # Clear the builtin prompt
-            # else: send nothing, CLI uses its default builtin prompt
-        elif self.options.include_builtin_system_prompt:
-            append_system_prompt = self.options.system_prompt
-        else:
-            system_prompt = self.options.system_prompt
-
-        # Create Query to handle control protocol
-        self._query = Query(
-            transport=self._transport,
-            can_use_tool=can_use_tool,  # ty:ignore[invalid-argument-type]
-            on_user_question=self.options.on_user_question,
-            on_elicitation=self.options.on_elicitation,
-            hooks=hooks,
-            sdk_mcp_servers=sdk_mcp_servers,
-            initialize_timeout=initialize_timeout,
-            agents=self.options.agents,
-            system_prompt=system_prompt,
-            append_system_prompt=append_system_prompt,
-            json_schema=self.options.get_json_schema(),
-            prompt_suggestions=self.options.prompt_suggestions,
-            agent_progress_summaries=self.options.agent_progress_summaries,
-        )
+        self._query = Query.from_options(self.options, self._custom_transport)
+        await self._query.transport.connect()
         # Start reading messages and initialize
         await self._query.start()
         await self._query.initialize()
@@ -594,7 +535,6 @@ class ClaudeSDKClient:
         if self._query:
             await self._query.close()
             self._query = None
-        self._transport = None
 
     @classmethod
     async def one_shot(
