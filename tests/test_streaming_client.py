@@ -19,7 +19,6 @@ from clawd_code_sdk import (
     ResultMessage,
     TextBlock,
     UserMessage,
-    query,
 )
 from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
@@ -560,7 +559,7 @@ class TestQueryWithMultiplePrompts:
                     return cmd
 
                 with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
-                    messages = [msg async for msg in query("First", "Second")]
+                    messages = [msg async for msg in ClaudeSDKClient.one_shot("First", "Second")]
                     # Should get the result message
                     assert len(messages) == 1
                     assert isinstance(messages[0], ResultMessage)

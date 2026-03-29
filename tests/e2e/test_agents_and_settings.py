@@ -76,7 +76,7 @@ async def test_agent_definition_with_query_function():
     Both ClaudeSDKClient and query() now use streaming mode internally,
     sending agents via the initialize request.
     """
-    from clawd_code_sdk import query
+    from clawd_code_sdk import ClaudeSDKClient
 
     options = ClaudeAgentOptions(
         agents={
@@ -90,7 +90,7 @@ async def test_agent_definition_with_query_function():
 
     # Use query() with string prompt
     found_agent = False
-    async for message in query("What is 2 + 2?", options=options):
+    async for message in ClaudeSDKClient.one_shot("What is 2 + 2?", options=options):
         if isinstance(message, InitSystemMessage):
             agents = message.agents
             assert "test-agent-query" in agents, (
@@ -110,14 +110,14 @@ async def test_large_agents_with_query_function():
     large agents are sent via the initialize request through stdin with no
     size limits.
     """
-    from clawd_code_sdk import query
+    from clawd_code_sdk import ClaudeSDKClient
 
     # Generate 20 agents with 13KB prompts each = ~260KB total
     agents = generate_large_agents(num_agents=20, prompt_size_kb=13)
     options = ClaudeAgentOptions(agents=agents, max_turns=1)
     # Use query() with string prompt - agents still go via initialize
     found_agents = []
-    async for message in query("What is 2 + 2?", options=options):
+    async for message in ClaudeSDKClient.one_shot("What is 2 + 2?", options=options):
         if isinstance(message, InitSystemMessage):
             found_agents = message.agents
             break

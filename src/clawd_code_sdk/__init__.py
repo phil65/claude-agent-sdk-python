@@ -119,7 +119,6 @@ from .models import (
     ImageMediaType,
     PlainTextMediaType,
 )
-from .query import query
 from .mcp_utils import SdkMcpTool, tool, create_sdk_mcp_server
 from .session import (
     ConversationTurn,
@@ -267,6 +266,5 @@ __all__ = [
     "create_sdk_mcp_server",
     "list_sessions",
     # Main exports
-    "query",
     "tool",
 ]

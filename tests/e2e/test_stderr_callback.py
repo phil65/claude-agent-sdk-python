@@ -2,7 +2,7 @@
 
 import pytest
 
-from clawd_code_sdk import ClaudeAgentOptions, query
+from clawd_code_sdk import ClaudeAgentOptions
 
 
 @pytest.mark.e2e
@@ -17,7 +17,7 @@ async def test_stderr_callback_captures_debug_output():
     options = ClaudeAgentOptions(stderr=capture_stderr, extra_args={"debug-to-stderr": None})
 
     # Run a simple query
-    async for _ in query("What is 1+1?", options=options):
+    async for _ in ClaudeSDKClient.one_shot("What is 1+1?", options=options):
         pass  # Just consume messages
 
     # Verify we captured debug output
@@ -37,7 +37,7 @@ async def test_stderr_callback_without_debug():
     options = ClaudeAgentOptions(stderr=capture_stderr)
 
     # Run a simple query
-    async for _ in query("What is 1+1?", options=options):
+    async for _ in ClaudeSDKClient.one_shot("What is 1+1?", options=options):
         pass  # Just consume messages
 
     # Should work but capture minimal/no output without debug

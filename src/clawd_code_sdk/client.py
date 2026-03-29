@@ -593,6 +593,32 @@ class ClaudeSDKClient:
             self._query = None
         self._transport = None
 
+    @classmethod
+    async def one_shot(
+        cls,
+        *prompts: str | UserPrompt,
+        options: ClaudeAgentOptions | None = None,
+        transport: Transport | None = None,
+    ) -> AsyncIterator[Message]:
+        """One-shot query convenience method.
+
+        Args:
+            *prompts: One or more content blocks to send.
+            options: Optional configuration.
+            transport: Optional transport implementation override.
+
+        Yields:
+            Messages from the conversation
+        """
+        client = cls(options=options, transport=transport)
+        try:
+            await client.connect()
+            await client.query(*prompts)
+            async for message in client.receive_response():
+                yield message
+        finally:
+            await client.disconnect()
+
     async def __aenter__(self) -> Self:
         """Enter async context - automatically connects with empty stream for interactive use."""
         await self.connect()

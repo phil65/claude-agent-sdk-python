@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from clawd_code_sdk import ClaudeAgentOptions, ResultMessage, query
+from clawd_code_sdk import ClaudeAgentOptions, ResultMessage
 from clawd_code_sdk.models import ResultSuccessMessage
 
 
@@ -36,7 +36,7 @@ async def test_simple_structured_output():
         "Count how many Python files are in src/clawd_code_sdk/ "
         "and check if there are any test files. Use tools to explore the filesystem."
     )
-    async for message in query(prompt, options=options):
+    async for message in ClaudeSDKClient.one_shot(prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -81,7 +81,7 @@ async def test_nested_structured_output():
         "Analyze this text: 'Hello world'. Provide word count, character count, and list of words."
     )
     result_message = None
-    async for message in query(prompt, options=options):
+    async for message in ClaudeSDKClient.one_shot(prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -121,7 +121,7 @@ async def test_structured_output_with_enum():
         "Determine which test framework is being used (pytest/unittest/nose) "
         "and count how many test files exist. Use Grep to search for framework imports."
     )
-    async for message in query(prompt, options=options):
+    async for message in ClaudeSDKClient.one_shot(prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 
@@ -154,7 +154,7 @@ async def test_structured_output_with_tools():
     options = ClaudeAgentOptions(output_schema=schema, permission_mode="acceptEdits", cwd=cwd)
     result_message = None
     prompt = "Count how many files are in the current directory and check if there's a README file."
-    async for message in query(prompt, options=options):
+    async for message in ClaudeSDKClient.one_shot(prompt, options=options):
         if isinstance(message, ResultMessage):
             result_message = message
 

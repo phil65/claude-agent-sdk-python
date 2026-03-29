@@ -13,10 +13,10 @@ import pytest
 from clawd_code_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
+    ClaudeSDKClient,
     CLINotFoundError,
     ContinueLatest,
     ResultMessage,
-    query,
 )
 from clawd_code_sdk.models import ModelUsage, TextBlock, ToolUseBlock, Usage
 
@@ -113,7 +113,12 @@ class TestIntegration:
                 },
             ]
             mock_transport = create_mock_transport(test_messages)
-            messages = [msg async for msg in query("What is 2 + 2?", transport=mock_transport)]
+            messages = [
+                msg
+                async for msg in ClaudeSDKClient.one_shot(
+                    "What is 2 + 2?", transport=mock_transport
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 1
@@ -178,7 +183,12 @@ class TestIntegration:
             ]
             mock_tp = create_mock_transport(test_messages)
             opts = ClaudeAgentOptions(allowed_tools=["Read"])
-            messages = [i async for i in query("Read /test.txt", options=opts, transport=mock_tp)]
+            messages = [
+                i
+                async for i in ClaudeSDKClient.one_shot(
+                    "Read /test.txt", options=opts, transport=mock_tp
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert len(messages[0].content) == 2
@@ -199,7 +209,7 @@ class TestIntegration:
                 patch("pathlib.Path.exists", return_value=False),
                 pytest.raises(CLINotFoundError) as exc_info,
             ):
-                async for _ in query("test"):
+                async for _ in ClaudeSDKClient.one_shot("test"):
                     pass
 
             assert "Claude Code not found" in str(exc_info.value)
@@ -251,7 +261,12 @@ class TestIntegration:
             ]
             mock_transport = create_mock_transport(test_messages)
             opts = ClaudeAgentOptions(session=ContinueLatest())
-            messages = [i async for i in query("Continue", options=opts, transport=mock_transport)]
+            messages = [
+                i
+                async for i in ClaudeSDKClient.one_shot(
+                    "Continue", options=opts, transport=mock_transport
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -304,7 +319,12 @@ class TestIntegration:
             ]
             mock_tp = create_mock_transport(test_messages)
             opts = ClaudeAgentOptions(max_budget_usd=0.0001)
-            messages = [i async for i in query("Read the readme", options=opts, transport=mock_tp)]
+            messages = [
+                i
+                async for i in ClaudeSDKClient.one_shot(
+                    "Read the readme", options=opts, transport=mock_tp
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[1], ResultMessage)
             assert messages[1].subtype == "error_max_budget_usd"
