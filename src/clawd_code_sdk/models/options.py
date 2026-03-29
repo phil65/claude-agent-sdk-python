@@ -316,6 +316,8 @@ class ClaudeAgentOptions:
     """Whether to replay user messages in the session."""
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
+    instrument: bool = False
+    """Whether to instrument the session with tracing hooks."""
 
     def build_settings_value(self) -> str | None:
         """Build the CLI ``--settings`` value, merging sandbox if provided.

@@ -25,6 +25,7 @@ from clawd_code_sdk.models import (
     SessionStateChangedMessage,
     StatusSystemMessage,
     Usage,
+    UserMessage,
     UserTextPrompt,
 )
 
@@ -87,6 +88,12 @@ class ClaudeSDKClient:
         """Cost in USD for the current/last query only (reset on each query() call)."""
         self.status: Literal["compacting"] | None = None
         """Current client status, or None when idle."""
+
+        self._logfire_prompt: str | None = None
+        if self.options.instrument:
+            from clawd_code_sdk.instrumentation import inject_tracing_hooks
+
+            inject_tracing_hooks(self.options)
 
     def _ensure_connected(self) -> Query:
         """Return the active Query, raising if not connected."""
@@ -192,6 +199,8 @@ class ClaudeSDKClient:
             session_id: Session identifier for the message.
             parent_tool_use_id: If responding to a tool use, the tool_use block ID.
         """
+        prompt = prompts[0] if prompts else None
+        self._logfire_prompt = str(prompt)
         self.query_usage.reset()
         self.query_cost = 0.0
         self._ensure_connected()
@@ -462,6 +471,80 @@ class ClaudeSDKClient:
         """
         query = self._ensure_connected()
         return query._initialization_result
+
+    async def receive_response_instrumented(
+        self, wait_for_idle: bool = False
+    ) -> AsyncIterator[Message]:
+        from logfire import Logfire
+        from logfire._internal.integrations.llm_providers.semconv import (
+            INPUT_MESSAGES,
+            OPERATION_NAME,
+            PROVIDER_NAME,
+            REQUEST_MODEL,
+            RESPONSE_MODEL,
+            SYSTEM,
+            SYSTEM_INSTRUCTIONS,
+            ChatMessage,
+            TextPart,
+        )
+        from logfire._internal.utils import handle_internal_errors
+
+        from clawd_code_sdk.instrumentation import (
+            ConversationState,
+            clear_state,
+            record_result,
+            set_state,
+        )
+
+        logfire_instance = Logfire()
+        logfire_claude = logfire_instance.with_settings(custom_scope_suffix="clawd_code_sdk")
+
+        input_messages: list[ChatMessage] = []
+        if prompt := self._logfire_prompt:
+            part = TextPart(type="text", content=prompt)
+            input_messages = [ChatMessage(role="user", parts=[part])]  # ty:ignore[invalid-argument-type]
+
+        span_data: dict[str, Any] = {
+            OPERATION_NAME: "invoke_agent",
+            PROVIDER_NAME: "anthropic",
+            SYSTEM: "anthropic",
+        }
+        if input_messages:
+            span_data[INPUT_MESSAGES] = input_messages
+        if self.options and (system_prompt := self.options.system_prompt):
+            text = str(system_prompt)
+            span_data[SYSTEM_INSTRUCTIONS] = [TextPart(type="text", content=text)]
+
+        with logfire_claude.span("invoke_agent", **span_data) as root_span:
+            state = ConversationState(
+                logfire=logfire_claude,
+                root_span=root_span,
+                input_messages=input_messages,
+                system_instructions=span_data.get(SYSTEM_INSTRUCTIONS),
+            )
+            set_state(state)
+            # Open the first chat span now — the LLM call starts at query time.
+            state.open_chat_span()
+
+            try:
+                async for msg in self.receive_response(wait_for_idle=wait_for_idle):
+                    with handle_internal_errors:  # ty:ignore[invalid-context-manager]
+                        match msg:
+                            case AssistantMessage():
+                                state.handle_assistant_message(msg)
+                            case UserMessage():
+                                state.handle_user_message()
+                            case ResultSuccessMessage() | ResultErrorMessage():
+                                record_result(root_span, msg)
+                                if state.model:
+                                    root_span.set_attribute(REQUEST_MODEL, state.model)
+                                    root_span.set_attribute(RESPONSE_MODEL, state.model)
+                            case _:
+                                pass
+                    yield msg
+            finally:
+                state.close()
+                clear_state()
 
     async def receive_response(self, *, wait_for_idle: bool = False) -> AsyncIterator[Message]:
         """Receive messages from Claude until the response is complete.
