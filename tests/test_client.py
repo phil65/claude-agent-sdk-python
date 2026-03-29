@@ -69,7 +69,7 @@ def _make_result(
                 cache_read_input_tokens=0,
                 cache_creation_input_tokens=0,
                 web_search_requests=0,
-                costUSD=0.005,
+                costUSD=0.005,  # ty:ignore[unknown-argument]
                 context_window=0,
                 max_output_tokens=0,
             )

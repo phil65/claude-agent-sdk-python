@@ -18,7 +18,6 @@ from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITrans
 from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
     AskUserQuestionInput,
-    ClaudeAgentOptions,
     ClaudeCodeServerInfo,
     ClaudeOAuthWaitForCompletionResponse,
     ControlErrorResponse,
@@ -52,6 +51,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models import (
         AgentDefinition,
         CanUseTool,
+        ClaudeAgentOptions,
         ClaudeCodeAgentInfo,
         ControlRequestUnion,
         HookCallback,

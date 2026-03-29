@@ -13,7 +13,7 @@ class TestErrorWrapping:
 
     def test_non_dict_input(self):
         with pytest.raises(MessageParseError, match="Failed to parse message"):
-            parse_message("not a dict")  # type: ignore[arg-type]
+            parse_message("not a dict")  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
 
     def test_missing_type_field(self):
         with pytest.raises(MessageParseError, match="Failed to parse message"):

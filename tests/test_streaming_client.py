@@ -126,6 +126,7 @@ class TestClaudeSDKClientStreaming:
                 async with ClaudeSDKClient() as client:
                     # Verify connect was called
                     mock_transport.connect.assert_called_once()
+                    assert client._query
                     assert client._query.transport is mock_transport
 
                 # Verify disconnect was called on exit
@@ -146,6 +147,7 @@ class TestClaudeSDKClientStreaming:
                 await client.connect()
                 # Verify connect was called
                 mock_transport.connect.assert_called_once()
+                assert client._query
                 assert client._query.transport is mock_transport
                 await client.disconnect()
                 # Verify disconnect was called
@@ -367,7 +369,7 @@ class TestClaudeSDKClientStreaming:
                                 cache_read_input_tokens=0,
                                 cache_creation_input_tokens=0,
                                 web_search_requests=0,
-                                cost_usd=0.001,
+                                cost_usd=0.001,  # pyright: ignore[reportCallIssue]
                                 context_window=0,
                                 max_output_tokens=0,
                             )
@@ -528,7 +530,7 @@ class TestClaudeSDKClientStreaming:
                                 cache_read_input_tokens=0,
                                 cache_creation_input_tokens=0,
                                 web_search_requests=0,
-                                cost_usd=0.001,
+                                cost_usd=0.001,  # pyright: ignore[reportCallIssue]
                                 context_window=0,
                                 max_output_tokens=0,
                             )
@@ -730,7 +732,7 @@ class TestClaudeSDKClientEdgeCases:
                                 cache_read_input_tokens=0,
                                 cache_creation_input_tokens=0,
                                 web_search_requests=0,
-                                cost_usd=0.001,
+                                cost_usd=0.001,  # pyright: ignore[reportCallIssue]
                                 context_window=0,
                                 max_output_tokens=0,
                             )
