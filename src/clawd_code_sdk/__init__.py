@@ -22,7 +22,7 @@ from ._errors import (
 )
 from ._internal.transport import Transport
 from ._version import __version__
-from .anthropic_types import ToolResultContentBlock
+from .models.anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
 from .list_sessions import list_sessions
 from .models import (

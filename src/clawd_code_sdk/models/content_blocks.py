@@ -26,7 +26,7 @@ if TYPE_CHECKING:
         ToolCallResponsePart,
     )
 
-    from clawd_code_sdk.anthropic_types import ToolResultContentBlock
+    from clawd_code_sdk.models.anthropic_types import ToolResultContentBlock
 
 # =============================================================================
 # Content block types
@@ -92,7 +92,7 @@ class ToolResultBlock(BaseContentBlock):
 
     def get_parsed_content(self) -> list[ToolResultContentBlock] | str | None:
         # TODO: or is it anthropic.types.beta.beta_tool_result_block_param.Content?
-        from clawd_code_sdk.anthropic_types import validate_tool_result_content
+        from clawd_code_sdk.models.anthropic_types import validate_tool_result_content
 
         if self.content is None or isinstance(self.content, str):
             return self.content
