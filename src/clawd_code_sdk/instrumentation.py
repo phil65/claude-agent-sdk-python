@@ -306,9 +306,7 @@ def record_result(span: LogfireSpan, msg: ResultMessage) -> None:
     attrs: dict[str, Any] = {}
     attrs.update(msg.usage.to_otel())
     attrs["operation.cost"] = float(msg.total_cost_usd)
-    session_id = msg.session_id
-    if session_id is not None:
-        attrs[CONVERSATION_ID] = session_id
+    attrs[CONVERSATION_ID] = msg.session_id
     attrs["num_turns"] = msg.num_turns
     attrs["duration_ms"] = msg.duration_ms
 
