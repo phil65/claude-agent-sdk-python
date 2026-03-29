@@ -120,7 +120,7 @@ class Query:
         self.can_use_tool = can_use_tool
         self.on_user_question = on_user_question
         self.on_elicitation = on_elicitation
-        self.hooks = {
+        self.hooks: dict[HookEvent, list[dict[str, Any]]] = {
             event: [m.model_dump(exclude_none=True) for m in matchers]
             for event, matchers in (hooks or {}).items()
         }
