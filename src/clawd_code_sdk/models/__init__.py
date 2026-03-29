@@ -29,7 +29,6 @@ from .thinking import (
 )
 from .context_usage import (
     ContextUsageAgent,
-    ContextUsageApiUsage,
     ContextUsageAttachmentBreakdown,
     ContextUsageCategory,
     ContextUsageDeferredBuiltinTool,
@@ -259,9 +258,9 @@ from .content_blocks import (
     ToolUseBlock,
 )
 from .session import SDKSessionInfo, ListSessionsOptions
+from .usage import ModelUsage, Usage
 from .messages import (
     AssistantMessage,
-    ModelUsage,
     BaseResultMessage,
     PromptSuggestionMessage,
     RateLimitInfo,
@@ -274,7 +273,6 @@ from .messages import (
     AuthStatusMessage,
     ToolProgressMessage,
     ToolUseSummaryMessage,
-    Usage,
     MiscMessages,
     UserMessage,
 )
@@ -449,7 +447,6 @@ __all__ = [
     "ConfigOutput",
     "ContentBlock",
     "ContextUsageAgent",
-    "ContextUsageApiUsage",
     "ContextUsageAttachmentBreakdown",
     "ContextUsageCategory",
     "ContextUsageDeferredBuiltinTool",

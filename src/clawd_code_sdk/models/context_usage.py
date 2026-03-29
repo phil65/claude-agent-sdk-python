@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel
-from clawd_code_sdk.models.messages import Usage
+from clawd_code_sdk.models.usage import Usage
 
 
 class ContextUsageCategory(ClaudeCodeBaseModel):
