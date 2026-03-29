@@ -157,7 +157,10 @@ class TestQueryFunction:
                 _make_result(),
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
-            messages = [msg async for msg in ClaudeSDKClient.one_shot("What is 2+2?", transport=mock_transport)]
+            messages = [
+                msg
+                async for msg in ClaudeSDKClient.one_shot("What is 2+2?", transport=mock_transport)
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -185,7 +188,12 @@ class TestQueryFunction:
                 permission_mode="acceptEdits",
                 max_turns=5,
             )
-            messages = [msg async for msg in ClaudeSDKClient.one_shot("Hi", options=options, transport=mock_transport)]
+            messages = [
+                msg
+                async for msg in ClaudeSDKClient.one_shot(
+                    "Hi", options=options, transport=mock_transport
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -208,7 +216,12 @@ class TestQueryFunction:
             ]
             mock_transport = create_mock_transport_with_messages(test_messages)
             options = ClaudeAgentOptions(cwd="/custom/path")
-            messages = [i async for i in ClaudeSDKClient.one_shot("test", options=options, transport=mock_transport)]
+            messages = [
+                i
+                async for i in ClaudeSDKClient.one_shot(
+                    "test", options=options, transport=mock_transport
+                )
+            ]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)
@@ -361,8 +374,8 @@ class TestAPIErrorRaising:
                 },
                 _make_result(uuid="msg-002"),
             ]
-            mock_transport = create_mock_transport_with_messages(test_messages)
-            messages = [msg async for msg in ClaudeSDKClient.one_shot("test", transport=mock_transport)]
+            mock_tp = create_mock_transport_with_messages(test_messages)
+            messages = [msg async for msg in ClaudeSDKClient.one_shot("test", transport=mock_tp)]
             assert len(messages) == 2
             assert isinstance(messages[0], AssistantMessage)
             assert isinstance(messages[0].content[0], TextBlock)

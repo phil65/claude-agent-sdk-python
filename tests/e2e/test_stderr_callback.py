@@ -2,7 +2,7 @@
 
 import pytest
 
-from clawd_code_sdk import ClaudeAgentOptions
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
 
 @pytest.mark.e2e

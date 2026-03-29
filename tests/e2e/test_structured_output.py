@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from clawd_code_sdk import ClaudeAgentOptions, ResultMessage
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
 from clawd_code_sdk.models import ResultSuccessMessage
 
 
