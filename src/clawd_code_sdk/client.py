@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         ClaudeCodeSettings,
         ClaudeOAuthWaitForCompletionResponse,
         McpServerConfig,
+        McpServerStatusEntry,
         Message,
         PermissionMode,
         SessionState,
@@ -300,7 +301,7 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         await query.seed_read_state(path, mtime)
 
-    async def get_mcp_status(self) -> McpStatusResponse:
+    async def get_mcp_status(self) -> list[McpServerStatusEntry]:
         """Get current MCP server connection status.
 
         Returns:
@@ -309,7 +310,8 @@ class ClaudeSDKClient:
         """
         query = self._ensure_connected()
         result = await query.get_mcp_status()
-        return McpStatusResponse.model_validate(result)
+        response = McpStatusResponse.model_validate(result)
+        return response.mcp_servers
 
     async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> McpSetServersResult:
         """Add, replace, or remove MCP servers dynamically mid-session.

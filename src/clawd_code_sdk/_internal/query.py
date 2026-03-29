@@ -14,6 +14,7 @@ import anyio
 from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
 from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
+    AskUserQuestionInput,
     ClaudeCodeServerInfo,
     ClaudeOAuthWaitForCompletionResponse,
     ControlErrorResponse,
@@ -46,7 +47,6 @@ if TYPE_CHECKING:
     from clawd_code_sdk._internal.transport import Transport
     from clawd_code_sdk.models import (
         AgentDefinition,
-        AskUserQuestionInput,
         CanUseTool,
         ClaudeCodeAgentInfo,
         ControlRequestUnion,
