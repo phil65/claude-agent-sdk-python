@@ -161,7 +161,7 @@ class Query:
 
             hooks = inject_tracing_hooks(options.hooks)
         else:
-            hooks = options.hooks
+            hooks = options.hooks or {}
 
         # If on_permission is a callback, extract it for Query and replace with
         # "stdio" so the CLI routes permission requests through the control protocol.
