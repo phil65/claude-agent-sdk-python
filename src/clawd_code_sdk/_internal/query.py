@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Self, cast
 import anyenv
 import anyio
 
-from clawd_code_sdk._errors import ControlRequestError, ControlRequestTimeoutError
+from clawd_code_sdk._errors import ClaudeSDKError, ControlRequestError, ControlRequestTimeoutError
 from clawd_code_sdk.mcp_utils import process_mcp_request
 from clawd_code_sdk.models import (
     AskUserQuestionInput,
@@ -610,7 +610,7 @@ class Query:
                 case "end":
                     break
                 case "error":
-                    raise Exception(message.get("error", "Unknown error"))  # noqa: TRY002
+                    raise ClaudeSDKError(message.get("error", "Unknown error"))
                 case _:
                     yield message
 
