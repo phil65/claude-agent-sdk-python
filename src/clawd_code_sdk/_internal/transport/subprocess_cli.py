@@ -275,51 +275,10 @@ class SubprocessCLITransport(Transport):
         if not self._process or not self._stdout_stream:
             raise CLIConnectionError("Not connected")
 
-        json_buffer = ""
         # Process stdout messages
         try:
-            async for line in self._stdout_stream:
-                line_str = line.strip()
-                if not line_str:
-                    continue
-
-                # Accumulate partial JSON until we can parse it
-                # Note: TextReceiveStream can truncate long lines, so we need to buffer
-                # and speculatively parse until we get a complete JSON object
-                for json_line in line_str.split("\n"):
-                    stripped = json_line.strip()
-                    if not stripped:
-                        continue
-                    # Skip non-JSON lines (e.g. [SandboxDebug]) when not
-                    # mid-parse — they corrupt the buffer otherwise (#347).
-                    if not json_buffer and not stripped.startswith("{"):
-                        logger.debug(
-                            "Skipping non-JSON line from CLI stdout: %s",
-                            json_line[:200],
-                        )
-                        continue
-
-                    # Keep accumulating partial JSON until we can parse it
-                    json_buffer += stripped
-
-                    if len(json_buffer) > self._max_buffer_size:
-                        buffer_length = len(json_buffer)
-                        json_buffer = ""
-                        raise SDKJSONDecodeError(
-                            f"JSON message exceeded {self._max_buffer_size=}b",
-                            ValueError(f"{buffer_length=} exceeds {self._max_buffer_size=}"),
-                        )
-
-                    try:
-                        data = anyenv.load_json(json_buffer, return_type=dict)
-                        json_buffer = ""
-                        yield data
-                    except anyenv.JsonLoadError:
-                        # We are speculatively decoding the buffer until we get
-                        # a full JSON object. If there is an actual issue, we
-                        # raise an error after exceeding the configured limit.
-                        continue
-
+            async for message in parse_stream(self._stdout_stream, self._max_buffer_size):
+                yield message
         except anyio.ClosedResourceError:
             pass
         except GeneratorExit:  # Client disconnected
@@ -608,6 +567,55 @@ def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
     # per-tool level via this env var.
     process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
     process_env.setdefault("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
+    # MCP_CONNECTION_NONBLOCKING=true
     if cwd := options.cwd:
         process_env["PWD"] = str(cwd)
     return process_env
+
+
+async def parse_stream(
+    stream: TextReceiveStream,
+    max_buffer_size: int,
+) -> AsyncIterator[dict[str, Any]]:
+    json_buffer = ""
+    async for line in stream:
+        line_str = line.strip()
+        if not line_str:
+            continue
+
+        # Accumulate partial JSON until we can parse it
+        # Note: TextReceiveStream can truncate long lines, so we need to buffer
+        # and speculatively parse until we get a complete JSON object
+        for json_line in line_str.split("\n"):
+            stripped = json_line.strip()
+            if not stripped:
+                continue
+            # Skip non-JSON lines (e.g. [SandboxDebug]) when not
+            # mid-parse — they corrupt the buffer otherwise (#347).
+            if not json_buffer and not stripped.startswith("{"):
+                logger.debug(
+                    "Skipping non-JSON line from CLI stdout: %s",
+                    json_line[:200],
+                )
+                continue
+
+            # Keep accumulating partial JSON until we can parse it
+            json_buffer += stripped
+
+            if len(json_buffer) > max_buffer_size:
+                buffer_length = len(json_buffer)
+                json_buffer = ""
+                raise SDKJSONDecodeError(
+                    f"JSON message exceeded {max_buffer_size=}b",
+                    ValueError(f"{buffer_length=} exceeds {max_buffer_size=}"),
+                )
+
+            try:
+                data = anyenv.load_json(json_buffer, return_type=dict)
+                json_buffer = ""
+                yield data
+            except anyenv.JsonLoadError:
+                # We are speculatively decoding the buffer until we get
+                # a full JSON object. If there is an actual issue, we
+                # raise an error after exceeding the configured limit.
+                continue
