@@ -30,6 +30,7 @@ from clawd_code_sdk.models import (
     Usage,
 )
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
+from clawd_code_sdk.models.output_types import AgentServerToolUse, ServiceTier
 
 
 if TYPE_CHECKING:
@@ -45,8 +46,8 @@ MCPToolCallStatus = Literal["started", "completed", "failed"]
 class ClaudeUsage(Usage):
     """Token usage from Claude API response, with additional storage fields."""
 
-    service_tier: str | None = None
-    server_tool_use: dict[str, Any] | None = None
+    service_tier: ServiceTier | None = None
+    server_tool_use: AgentServerToolUse | None = None
 
     @classmethod
     def from_entries(cls, entries: Iterable[ClaudeJSONLEntry]) -> ClaudeUsage:
@@ -108,6 +109,8 @@ class ClaudeEntryBase(ClaudeCodeBaseModel):
 
     uuid: str
     parent_uuid: str | None = None
+    logical_parent_uuid: str | None = None
+    """Preserves logical parent when parentUuid is nullified for session breaks."""
     session_id: str
     timestamp: str
 
@@ -115,12 +118,24 @@ class ClaudeEntryBase(ClaudeCodeBaseModel):
     cwd: str = ""
     git_branch: str | None = None
     version: str = ""
+    entrypoint: str | None = None
+    """CLAUDE_CODE_ENTRYPOINT — distinguishes cli/sdk-ts/sdk-py/etc."""
+    slug: str | None = None
+    """Session slug for files like plans (used for resume)."""
 
     # Metadata
     user_type: UserType = "external"
     is_sidechain: bool = False
     is_meta: bool | None = None
     agent_id: str | None = None
+    team_name: str | None = None
+    """Team name if this is a spawned agent session."""
+    agent_name: str | None = None
+    """Agent's custom name (from /rename or swarm)."""
+    agent_color: str | None = None
+    """Agent's color (from /rename or swarm)."""
+    prompt_id: str | None = None
+    """Correlates with OTel prompt.id for user prompt messages."""
 
 
 # =============================================================================
@@ -232,7 +247,6 @@ class ClaudeSystemEntryBase(ClaudeEntryBase):
     """Common fields shared across all system entry subtypes."""
 
     type: Literal["system"]
-    slug: str | None = None
 
 
 class ClaudeHookInfo(ClaudeCodeBaseModel):
@@ -568,8 +582,8 @@ class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
     """Last prompt entry tracking the most recent user prompt."""
 
     type: Literal["last-prompt"]
-    last_prompt: str = Field(alias="lastPrompt")
-    session_id: str = Field(alias="sessionId")
+    last_prompt: str
+    session_id: str
 
 
 # =============================================================================
@@ -581,11 +595,270 @@ class ClaudePrLinkEntry(ClaudeCodeBaseModel):
     """PR link entry recording a pull request created during a session."""
 
     type: Literal["pr-link"]
-    session_id: str = Field(alias="sessionId")
-    pr_number: int = Field(alias="prNumber")
-    pr_url: str = Field(alias="prUrl")
-    pr_repository: str = Field(alias="prRepository")
+    session_id: str
+    pr_number: int
+    pr_url: str
+    pr_repository: str
     timestamp: str
+
+
+# =============================================================================
+# Custom title entry
+# =============================================================================
+
+
+class ClaudeCustomTitleEntry(ClaudeCodeBaseModel):
+    """User-set custom title for a session."""
+
+    type: Literal["custom-title"]
+    session_id: str
+    custom_title: str
+
+
+# =============================================================================
+# AI title entry
+# =============================================================================
+
+
+class ClaudeAiTitleEntry(ClaudeCodeBaseModel):
+    """AI-generated session title.
+
+    Distinct from ClaudeCustomTitleEntry: user renames always win over
+    AI titles in read preference.
+    """
+
+    type: Literal["ai-title"]
+    session_id: str
+    ai_title: str
+
+
+# =============================================================================
+# Task summary entry
+# =============================================================================
+
+
+class ClaudeTaskSummaryEntry(ClaudeCodeBaseModel):
+    """Periodic fork-generated summary of what the agent is currently doing.
+
+    Written every min(5 steps, 2min) by forking the main thread mid-turn
+    so ``claude ps`` can show something more useful than the last user prompt.
+    """
+
+    type: Literal["task-summary"]
+    session_id: str
+    summary: str
+    timestamp: str
+
+
+# =============================================================================
+# Tag entry
+# =============================================================================
+
+
+class ClaudeTagEntry(ClaudeCodeBaseModel):
+    """Session tag entry (searchable in /resume)."""
+
+    type: Literal["tag"]
+    session_id: str
+    tag: str
+
+
+# =============================================================================
+# Agent name / color / setting entries
+# =============================================================================
+
+
+class ClaudeAgentNameEntry(ClaudeCodeBaseModel):
+    """Agent's custom name (from /rename or swarm)."""
+
+    type: Literal["agent-name"]
+    session_id: str
+    agent_name: str
+
+
+class ClaudeAgentColorEntry(ClaudeCodeBaseModel):
+    """Agent's color (from /rename or swarm)."""
+
+    type: Literal["agent-color"]
+    session_id: str
+    agent_color: str
+
+
+class ClaudeAgentSettingEntry(ClaudeCodeBaseModel):
+    """Agent definition used (from --agent flag or settings.agent)."""
+
+    type: Literal["agent-setting"]
+    session_id: str
+    agent_setting: str
+
+
+# =============================================================================
+# Mode entry
+# =============================================================================
+
+
+class ClaudeModeEntry(ClaudeCodeBaseModel):
+    """Session mode entry for coordinator/normal detection."""
+
+    type: Literal["mode"]
+    session_id: str
+    mode: Literal["coordinator", "normal"]
+
+
+# =============================================================================
+# Worktree state entry
+# =============================================================================
+
+
+class ClaudePersistedWorktreeSession(ClaudeCodeBaseModel):
+    """Worktree session state persisted to the transcript for resume."""
+
+    original_cwd: str
+    worktree_path: str
+    worktree_name: str
+    worktree_branch: str | None = None
+    original_branch: str | None = None
+    original_head_commit: str | None = None
+    session_id: str
+    tmux_session_name: str | None = None
+    hook_based: bool | None = None
+
+
+class ClaudeWorktreeStateEntry(ClaudeCodeBaseModel):
+    """Records whether the session is currently inside a worktree.
+
+    Last-wins: an enter writes the session, an exit writes null.
+    On --resume, restored only if the worktreePath still exists on disk.
+    """
+
+    type: Literal["worktree-state"]
+    session_id: str
+    worktree_session: ClaudePersistedWorktreeSession | None = None
+
+
+# =============================================================================
+# Content replacement entry
+# =============================================================================
+
+
+class ClaudeContentReplacementRecord(ClaudeCodeBaseModel):
+    """Records content blocks replaced with smaller stubs for prompt cache stability."""
+
+    kind: Literal["tool-result"]
+    tool_use_id: str
+    replacement: str
+
+
+class ClaudeContentReplacementEntry(ClaudeCodeBaseModel):
+    """Content replacement entry for resume reconstruction.
+
+    When agentId is set, the record belongs to a subagent sidechain;
+    when absent, it's main-thread.
+    """
+
+    type: Literal["content-replacement"]
+    session_id: str
+    agent_id: str | None = None
+    replacements: list[ClaudeContentReplacementRecord]
+
+
+# =============================================================================
+# Attribution snapshot entry
+# =============================================================================
+
+
+class ClaudeFileAttributionState(ClaudeCodeBaseModel):
+    """Per-file attribution state tracking Claude's character contributions."""
+
+    content_hash: str
+    """SHA-256 hash of file content."""
+    claude_contribution: int
+    """Characters written by Claude."""
+    mtime: int
+    """File modification time."""
+
+
+class ClaudeAttributionSnapshotEntry(ClaudeCodeBaseModel):
+    """Attribution snapshot tracking character-level contributions for commit attribution."""
+
+    type: Literal["attribution-snapshot"]
+    message_id: str
+    surface: str
+    """Client surface (cli, ide, web, api)."""
+    file_states: dict[str, ClaudeFileAttributionState]
+    prompt_count: int | None = None
+    prompt_count_at_last_commit: int | None = None
+    permission_prompt_count: int | None = None
+    permission_prompt_count_at_last_commit: int | None = None
+    escape_count: int | None = None
+    escape_count_at_last_commit: int | None = None
+
+
+# =============================================================================
+# Speculation accept entry
+# =============================================================================
+
+
+class ClaudeSpeculationAcceptEntry(ClaudeCodeBaseModel):
+    """Records a speculation accept with time saved."""
+
+    type: Literal["speculation-accept"]
+    timestamp: str
+    time_saved_ms: int
+
+
+# =============================================================================
+# Context collapse entries
+# =============================================================================
+
+
+class ClaudeContextCollapseCommitEntry(ClaudeCodeBaseModel):
+    """Persisted context-collapse commit.
+
+    The archived messages themselves are NOT persisted — they're already
+    in the transcript as ordinary user/assistant messages. Only enough is
+    persisted to reconstruct the splice instruction and summary placeholder.
+    """
+
+    type: Literal["marble-origami-commit"]
+    session_id: str
+    collapse_id: str
+    """16-digit collapse ID."""
+    summary_uuid: str
+    """The summary placeholder's uuid."""
+    summary_content: str
+    """Full <collapsed id="...">text</collapsed> string for the placeholder."""
+    summary: str
+    """Plain summary text."""
+    first_archived_uuid: str
+    """Span start boundary."""
+    last_archived_uuid: str
+    """Span end boundary."""
+
+
+class ClaudeContextCollapseStagedSpan(ClaudeCodeBaseModel):
+    """A staged span within a context collapse snapshot."""
+
+    start_uuid: str
+    end_uuid: str
+    summary: str
+    risk: float
+    staged_at: int
+
+
+class ClaudeContextCollapseSnapshotEntry(ClaudeCodeBaseModel):
+    """Snapshot of staged queue and spawn trigger state.
+
+    Unlike commits (append-only, replay-all), snapshots are last-wins —
+    only the most recent snapshot entry is applied on restore.
+    """
+
+    type: Literal["marble-origami-snapshot"]
+    session_id: str
+    staged: list[ClaudeContextCollapseStagedSpan]
+    armed: bool
+    """Spawn trigger state."""
+    last_spawn_tokens: int
 
 
 # =============================================================================
@@ -602,7 +875,21 @@ ClaudeJSONLEntry = Annotated[
     | ClaudeProgressEntry
     | ClaudeSavedHookContextEntry
     | ClaudeLastPromptEntry
-    | ClaudePrLinkEntry,
+    | ClaudePrLinkEntry
+    | ClaudeCustomTitleEntry
+    | ClaudeAiTitleEntry
+    | ClaudeTaskSummaryEntry
+    | ClaudeTagEntry
+    | ClaudeAgentNameEntry
+    | ClaudeAgentColorEntry
+    | ClaudeAgentSettingEntry
+    | ClaudeModeEntry
+    | ClaudeWorktreeStateEntry
+    | ClaudeContentReplacementEntry
+    | ClaudeAttributionSnapshotEntry
+    | ClaudeSpeculationAcceptEntry
+    | ClaudeContextCollapseCommitEntry
+    | ClaudeContextCollapseSnapshotEntry,
     Field(discriminator="type"),
 ]
 """Discriminated union for all JSONL entry types."""
