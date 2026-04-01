@@ -570,8 +570,8 @@ class TestQueryWithMultiplePrompts:
         async def _test():
             test_script = str(Path(__file__).parent / "mock_claude_server.py")
 
-            # Mock _find_cli to return the test script path directly
-            with patch.object(subprocess_cli, "_find_cli", return_value=test_script):
+            # Mock find_cli to return the test script path directly
+            with patch.object(subprocess_cli, "find_cli", return_value=test_script):
                 # Mock _build_command to execute via Python interpreter
                 original_build_command = SubprocessCLITransport._build_command
 
