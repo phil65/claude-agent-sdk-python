@@ -31,17 +31,30 @@ from clawd_code_sdk.models import (
 class TestSubprocessCLITransport:
     """Test subprocess transport implementation."""
 
-    def test_find_cli_not_found(self):
-        """Test CLI not found error."""
-        _find_cli.cache_clear()
-        with (
-            patch("shutil.which", return_value=None),
-            patch("pathlib.Path.exists", return_value=False),
-            pytest.raises(CLINotFoundError) as exc_info,
-        ):
-            SubprocessCLITransport()
+    @staticmethod
+    def _make_transport(options: ClaudeAgentOptions | None = None) -> SubprocessCLITransport:
+        """Create a transport with a dummy CLI path for unit testing."""
+        transport = SubprocessCLITransport(options=options)
+        if transport._cli_path is None:
+            transport._cli_path = "/usr/bin/claude"
+        return transport
 
-        assert "Claude Code not found" in str(exc_info.value)
+    def test_find_cli_not_found(self):
+        """Test CLI not found error during connect()."""
+        _find_cli.cache_clear()
+
+        async def _test():
+            with (
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.exists", return_value=False),
+                pytest.raises(CLINotFoundError) as exc_info,
+            ):
+                transport = SubprocessCLITransport()
+                await transport.connect()
+
+            assert "Claude Code not found" in str(exc_info.value)
+
+        anyio.run(_test)
 
     def test_build_command_system_prompt_not_in_cli_args(self):
         """Test that system prompt is not passed as CLI arg (sent via initialize request)."""
@@ -51,14 +64,14 @@ class TestSubprocessCLITransport:
             {"type": "preset", "preset": "claude_code", "append": "Be concise."},
         ]:
             opts = ClaudeAgentOptions(system_prompt=system_prompt)
-            transport = SubprocessCLITransport(options=opts)
+            transport = self._make_transport(options=opts)
             cmd = transport._build_command()
             assert "--system-prompt" not in cmd
             assert "--append-system-prompt" not in cmd
 
     def test_build_command_with_options(self):
         """Test building CLI command with options."""
-        transport = SubprocessCLITransport(
+        transport = self._make_transport(
             options=ClaudeAgentOptions(
                 allowed_tools=["Read", "Write"],
                 disallowed_tools=["Bash"],
@@ -135,7 +148,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_settings_file(self):
         """Test building CLI command with settings as file path."""
         opts = ClaudeAgentOptions(settings="/path/to/settings.json")
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         assert "/path/to/settings.json" in cmd
@@ -144,7 +157,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with settings as ClaudeCodeSettings."""
         settings = ClaudeCodeSettings(permissions=Permissions(allow=["Bash(ls:*)"]))
         opts = ClaudeAgentOptions(settings=settings)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         settings_idx = cmd.index("--settings")
@@ -155,7 +168,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with extra_args for future flags."""
         args = {"new-flag": "value", "boolean-flag": None, "another-option": "test-value"}
         opts = ClaudeAgentOptions(extra_args=args)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         cmd_str = " ".join(cmd)
         # Check flags with values
@@ -177,7 +190,7 @@ class TestSubprocessCLITransport:
             )
         }
         opts = ClaudeAgentOptions(mcp_servers=mcp_servers)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         # Find the --mcp-config flag and its value
         assert "--mcp-config" in cmd
@@ -195,7 +208,7 @@ class TestSubprocessCLITransport:
         # Test with string path
         string_path = "/path/to/mcp-config.json"
         opts = ClaudeAgentOptions(mcp_servers=string_path)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -203,7 +216,7 @@ class TestSubprocessCLITransport:
         # Test with Path object
         path_obj = Path("/path/to/mcp-config.json")
         opts = ClaudeAgentOptions(mcp_servers=path_obj)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -214,7 +227,7 @@ class TestSubprocessCLITransport:
         """Test building CLI command with mcp_servers as JSON string."""
         json_config = '{"mcpServers": {"server": {"type": "stdio", "command": "test"}}}'
         opts = ClaudeAgentOptions(mcp_servers=json_config)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -393,7 +406,7 @@ class TestSubprocessCLITransport:
             ),
         )
         opts = ClaudeAgentOptions(sandbox=sandbox)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         # Should have --settings with sandbox merged in
         assert "--settings" in cmd
@@ -414,7 +427,7 @@ class TestSubprocessCLITransport:
         )
         sandbox = Sandbox(enabled=True, excluded_commands=["git", "docker"])
         opts = ClaudeAgentOptions(settings=settings, sandbox=sandbox)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         # Should have merged settings
         assert "--settings" in cmd
@@ -431,7 +444,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_settings_file_and_no_sandbox(self):
         """Test that settings file path is passed through when no sandbox."""
         opts = ClaudeAgentOptions(settings="/path/to/settings.json")
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         # Should pass path directly, not parse it
         assert "--settings" in cmd
@@ -442,7 +455,7 @@ class TestSubprocessCLITransport:
         """Test sandbox with minimal configuration."""
         sandbox = Sandbox(enabled=True)  # pyright: ignore[reportCallIssue]
         opts = ClaudeAgentOptions(sandbox=sandbox)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--settings" in cmd
         settings_idx = cmd.index("--settings")
@@ -469,7 +482,7 @@ class TestSubprocessCLITransport:
             ),
         )
         opts = ClaudeAgentOptions(sandbox=sandbox)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         settings_idx = cmd.index("--settings")
         settings_value = cmd[settings_idx + 1]
@@ -484,7 +497,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_array(self):
         """Test building CLI command with tools as array of tool names."""
         opts = ClaudeAgentOptions(tools=["Read", "Edit", "Bash"])
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -493,7 +506,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_empty_array(self):
         """Test building CLI command with tools as empty array (disables all tools)."""
         opts = ClaudeAgentOptions(tools=[])
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -502,7 +515,7 @@ class TestSubprocessCLITransport:
     def test_build_command_with_tools_preset(self):
         """Test building CLI command with tools preset."""
         opts = ClaudeAgentOptions(tools={"type": "preset", "preset": "claude_code"})
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--tools" in cmd
         tools_idx = cmd.index("--tools")
@@ -510,7 +523,7 @@ class TestSubprocessCLITransport:
 
     def test_build_command_without_tools(self):
         """Test building CLI command without tools option (default None)."""
-        transport = SubprocessCLITransport()
+        transport = self._make_transport()
         cmd = transport._build_command()
         assert "--tools" not in cmd
 
@@ -527,7 +540,7 @@ class TestSubprocessCLITransport:
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
         opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
 
         # Same setup as production: TextSendStream wrapping process.stdin
         transport._ready = True
@@ -566,7 +579,7 @@ class TestSubprocessCLITransport:
         cmd = [sys.executable, "-c", "import sys; sys.stdin.read()"]
         process = await anyio.open_process(cmd)
         opts = ClaudeAgentOptions(cli_path="/usr/bin/claude")
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         # Same setup as production
         transport._ready = True
         transport._process = MagicMock(returncode=None)
@@ -625,14 +638,14 @@ class TestSubprocessCLITransport:
         }
         # Test with string prompt
         opts = ClaudeAgentOptions(agents=agents)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         assert "--agents" not in cmd
         assert "--input-format" in cmd
         assert "stream-json" in cmd
 
         # Verify same behavior with different options
-        transport2 = SubprocessCLITransport(options=ClaudeAgentOptions(agents=agents))
+        transport2 = self._make_transport(options=ClaudeAgentOptions(agents=agents))
         cmd2 = transport2._build_command()
         assert "--agents" not in cmd2
         assert "--input-format" in cmd2
@@ -645,7 +658,7 @@ class TestSubprocessCLITransport:
         so that agents and other large configs can be sent via initialize request.
         """
         # String prompt should still use streaming
-        transport = SubprocessCLITransport()
+        transport = self._make_transport()
         cmd = transport._build_command()
         assert "--input-format" in cmd
         assert "stream-json" in cmd
@@ -661,7 +674,7 @@ class TestSubprocessCLITransport:
         large_prompt = "x" * 50000
         agents = {"large-agent": AgentDefinition(description="A large agent", prompt=large_prompt)}
         opts = ClaudeAgentOptions(agents=agents)
-        transport = SubprocessCLITransport(options=opts)
+        transport = self._make_transport(options=opts)
         cmd = transport._build_command()
         # --agents should not be in command (sent via initialize)
         assert "--agents" not in cmd
