@@ -312,6 +312,13 @@ class ClaudeAgentOptions:
 
     Applies to both foreground and background subagents. Defaults to False.
     """
+    include_hook_events: bool = False
+    """Include hook lifecycle events in the output stream.
+
+    When True, ``hook_started``, ``hook_progress``, and ``hook_response`` system
+    messages will be emitted for all hook event types. SessionStart and Setup
+    hook events are always emitted regardless of this setting.
+    """
     replay_user_messages: bool | None = None
     """Whether to replay user messages in the session."""
     worktree: bool | str = False

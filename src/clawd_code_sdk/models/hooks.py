@@ -13,6 +13,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     CompactionTrigger,
     ElicitationAction,
     ElicitationMode,
+    HookPermissionDecision,
 )
 from clawd_code_sdk.models.permissions import PermissionUpdate  # noqa: TC001
 
@@ -30,6 +31,7 @@ HookEvent = Literal[
     "Notification",
     "SubagentStart",
     "PermissionRequest",
+    "PermissionDenied",
     "SessionStart",
     "SessionEnd",
     "Setup",
@@ -262,6 +264,16 @@ class PermissionRequestHookInput(BaseHookInput):
     agent_type: NotRequired[str]
 
 
+class PermissionDeniedHookInput(BaseHookInput):
+    """Input data for PermissionDenied hook events."""
+
+    hook_event_name: Literal["PermissionDenied"]
+    tool_name: str
+    tool_input: Any
+    tool_use_id: str
+    reason: str
+
+
 class SessionStartHookInput(BaseHookInput):
     """Input data for SessionStart hook events."""
 
@@ -404,6 +416,7 @@ HookInput = (
     | NotificationHookInput
     | SubagentStartHookInput
     | PermissionRequestHookInput
+    | PermissionDeniedHookInput
     | SessionStartHookInput
     | SessionEndHookInput
     | SetupHookInput
@@ -426,7 +439,7 @@ class PreToolUseHookSpecificOutput(TypedDict):
     """Hook-specific output for PreToolUse events."""
 
     hookEventName: Literal["PreToolUse"]
-    permissionDecision: NotRequired[Literal["allow", "deny", "ask"]]
+    permissionDecision: NotRequired[HookPermissionDecision]
     permissionDecisionReason: NotRequired[str]
     updatedInput: NotRequired[dict[str, Any]]
     additionalContext: NotRequired[str]
@@ -477,6 +490,13 @@ class SubagentStartHookSpecificOutput(TypedDict):
     additionalContext: NotRequired[str]
 
 
+class PermissionDeniedHookSpecificOutput(TypedDict):
+    """Hook-specific output for PermissionDenied events."""
+
+    hookEventName: Literal["PermissionDenied"]
+    retry: NotRequired[bool]
+
+
 class PermissionRequestHookSpecificOutput(TypedDict):
     """Hook-specific output for PermissionRequest events."""
 
@@ -525,6 +545,7 @@ HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
     | PostToolUseFailureHookSpecificOutput
+    | PermissionDeniedHookSpecificOutput
     | UserPromptSubmitHookSpecificOutput
     | SessionStartHookSpecificOutput
     | NotificationHookSpecificOutput

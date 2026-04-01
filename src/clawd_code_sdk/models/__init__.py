@@ -11,6 +11,7 @@ from .base import (
     AssistantMessageError,
     ElicitationAction,
     ElicitationMode,
+    HookPermissionDecision,
     PermissionDecisionClassification,
     PermissionMode,
     PermissionBehavior,
@@ -87,6 +88,8 @@ from .hooks import (
     CommandHookHandler,
     CwdChangedHookInput,
     CwdChangedHookSpecificOutput,
+    PermissionDeniedHookInput,
+    PermissionDeniedHookSpecificOutput,
     ElicitationHookInput,
     ElicitationHookSpecificOutput,
     ElicitationResultHookInput,
@@ -190,6 +193,7 @@ from .mcp import (
 )
 from .output_types import (
     TOOL_USE_RESULT_TYPES,
+    SDKDeferredToolUse,
     AgentAsyncLaunchedOutput,
     AgentCacheCreation,
     AgentCompletedOutput,
@@ -257,7 +261,14 @@ from .content_blocks import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from .session import SDKSessionInfo, ListSessionsOptions
+from .session import (
+    GetSessionMessagesOptions,
+    GetSubagentMessagesOptions,
+    ListSessionsOptions,
+    ListSubagentsOptions,
+    SDKSessionInfo,
+    SessionMessage,
+)
 from .usage import ModelUsage, Usage
 from .messages import (
     AssistantMessage,
@@ -492,7 +503,9 @@ __all__ = [
     "FilesPersistedSystemMessage",
     "Filesystem",
     "FromPR",
+    "GetSessionMessagesOptions",
     "GetSettingsResponse",
+    "GetSubagentMessagesOptions",
     "GitDiff",
     "GlobInput",
     "GlobOutput",
@@ -506,6 +519,7 @@ __all__ = [
     "HookJSONOutput",
     "HookMatcher",
     "HookMatcherConfig",
+    "HookPermissionDecision",
     "HookProgressSystemMessage",
     "HookResponseSystemMessage",
     "HookSpecificOutput",
@@ -528,6 +542,7 @@ __all__ = [
     "ListMcpResourcesInput",
     "ListMcpResourcesOutput",
     "ListSessionsOptions",
+    "ListSubagentsOptions",
     "LocalCommandOutputMessage",
     "McpAuthenticateResponse",
     "McpClaudeAIProxyServerConfig",
@@ -562,6 +577,8 @@ __all__ = [
     "OnUserQuestion",
     "PermissionBehavior",
     "PermissionDecisionClassification",
+    "PermissionDeniedHookInput",
+    "PermissionDeniedHookSpecificOutput",
     "PermissionMode",
     "PermissionRequestHookInput",
     "PermissionRequestHookSpecificOutput",
@@ -632,6 +649,7 @@ __all__ = [
     "SDKControlSetProactiveRequest",
     "SDKControlSideQuestionRequest",
     "SDKControlStopTaskRequest",
+    "SDKDeferredToolUse",
     "SDKHookCallbackRequest",
     "SDKPermissionDenial",
     "SDKSessionInfo",
@@ -640,6 +658,7 @@ __all__ = [
     "SdkPluginConfig",
     "SessionConfig",
     "SessionEndHookInput",
+    "SessionMessage",
     "SessionStartHookInput",
     "SessionStartHookSpecificOutput",
     "SessionState",

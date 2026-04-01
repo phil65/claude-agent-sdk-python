@@ -141,6 +141,63 @@ def decode_project_path(encoded: str) -> str:
     return "/" + encoded.replace("-", "/")
 
 
+def list_subagents(session_id: str, project_path: str | None = None) -> list[str]:
+    """List subagent IDs for a given session.
+
+    Subagent transcripts are stored at
+    ``~/.claude/projects/<dir>/<sessionId>/subagents/agent-<agentId>.jsonl``.
+
+    Args:
+        session_id: UUID of the session.
+        project_path: Project directory. If omitted, searches all projects.
+
+    Returns:
+        List of subagent ID strings.
+    """
+    import re
+
+    results: list[str] = []
+    if project_path:
+        dirs = [get_claude_projects_dir() / path_to_claude_dir_name(project_path)]
+    else:
+        projects_dir = get_claude_projects_dir()
+        dirs = [d for d in projects_dir.iterdir() if d.is_dir()] if projects_dir.exists() else []
+
+    pattern = re.compile(r"^agent-(.+)\.jsonl$")
+    for project_dir in dirs:
+        subagents_dir = project_dir / session_id / "subagents"
+        if not subagents_dir.is_dir():
+            continue
+        results.extend(m.group(1) for f in subagents_dir.iterdir() if (m := pattern.match(f.name)))
+    return results
+
+
+def get_subagent_transcript_path(
+    session_id: str, agent_id: str, project_path: str | None = None
+) -> Path | None:
+    """Find the transcript file for a subagent.
+
+    Args:
+        session_id: UUID of the parent session.
+        agent_id: Subagent ID.
+        project_path: Project directory. If omitted, searches all projects.
+
+    Returns:
+        Path to the subagent JSONL file, or None if not found.
+    """
+    if project_path:
+        dirs = [get_claude_projects_dir() / path_to_claude_dir_name(project_path)]
+    else:
+        projects_dir = get_claude_projects_dir()
+        dirs = [d for d in projects_dir.iterdir() if d.is_dir()] if projects_dir.exists() else []
+
+    for project_dir in dirs:
+        path = project_dir / session_id / "subagents" / f"agent-{agent_id}.jsonl"
+        if path.exists():
+            return path
+    return None
+
+
 def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
     """Extract title from session file efficiently.
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -76,6 +76,50 @@ class SDKSessionInfo(BaseModel):
             git_branch=_read_git_branch_from_tail(session_path),
             cwd=project_cwd,
         )
+
+
+class SessionMessage(TypedDict):
+    """A message from a session transcript.
+
+    Returned by ``get_session_messages`` for reading historical session data.
+    """
+
+    type: Literal["user", "assistant", "system"]
+    uuid: str
+    session_id: str
+    message: Any
+    timestamp: str
+
+
+class GetSessionMessagesOptions(TypedDict, total=False):
+    """Options for retrieving session messages."""
+
+    dir: str
+    """Project directory to find the session in. If omitted, searches all projects."""
+    limit: int
+    """Maximum number of messages to return."""
+    offset: int
+    """Number of messages to skip from the start."""
+    include_system_messages: bool
+    """When True, include system messages alongside user/assistant messages."""
+
+
+class GetSubagentMessagesOptions(TypedDict, total=False):
+    """Options for retrieving subagent messages."""
+
+    dir: str
+    """Project directory to find the session in. If omitted, searches all projects."""
+    limit: int
+    """Maximum number of messages to return."""
+    offset: int
+    """Number of messages to skip from the start."""
+
+
+class ListSubagentsOptions(TypedDict, total=False):
+    """Options for listing subagents."""
+
+    dir: str
+    """Project directory to find the session in. If omitted, searches all projects."""
 
 
 class ListSessionsOptions(TypedDict, total=False):

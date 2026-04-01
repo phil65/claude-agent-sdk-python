@@ -30,7 +30,7 @@ from clawd_code_sdk.models import (
     Usage,
 )
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
-from clawd_code_sdk.models.output_types import AgentServerToolUse, ServiceTier
+from clawd_code_sdk.models.output_types import AgentServerToolUse, ServiceTier  # noqa: TC001
 
 
 if TYPE_CHECKING:

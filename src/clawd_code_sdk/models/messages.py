@@ -45,7 +45,7 @@ from clawd_code_sdk.models.content_blocks import (
     TextBlock,
 )
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
-from clawd_code_sdk.models.output_types import ToolUseResult
+from clawd_code_sdk.models.output_types import SDKDeferredToolUse, ToolUseResult
 from clawd_code_sdk.models.usage import ModelUsage, Usage
 
 
@@ -129,6 +129,7 @@ class UserMessage(BaseMessage):
     priority: Literal["now", "next", "later"] | None = None
     message: MessageParam
     timestamp: str | None = None
+    file_attachments: list[object] | None = None
 
     @property
     def content(self) -> str | Sequence[ContentBlock]:
@@ -238,6 +239,7 @@ class ResultSuccessMessage(BaseResultMessage):
     subtype: Literal["success"] = "success"
     result: str | None = None
     structured_output: Any = None
+    deferred_tool_use: SDKDeferredToolUse | None = None
 
 
 class ResultErrorMessage(BaseResultMessage):

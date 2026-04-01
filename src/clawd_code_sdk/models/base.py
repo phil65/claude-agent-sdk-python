@@ -21,6 +21,7 @@ PermissionMode = Literal[
 SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/api/beta-headers
 ModelName = Literal["sonnet", "opus", "haiku"]
 PermissionBehavior = Literal["allow", "deny", "ask"]
+HookPermissionDecision = Literal["allow", "deny", "ask", "defer"]
 ReasoningEffort = Literal["low", "medium", "high", "max"]
 TaskStatus = Literal["completed", "failed", "stopped"]
 CompactionTrigger = Literal["auto", "manual"]

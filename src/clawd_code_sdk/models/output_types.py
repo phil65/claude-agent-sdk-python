@@ -21,6 +21,19 @@ from clawd_code_sdk.models.base import ToolName  # noqa: TC001
 # Agent (Task tool)
 # ---------------------------------------------------------------------------
 ServiceTier = Literal["standard", "priority", "batch"]
+
+
+class SDKDeferredToolUse(TypedDict):
+    """A deferred tool use from a completed agent result."""
+
+    id: str
+    """Tool use ID."""
+    name: str
+    """Tool name."""
+    input: dict[str, Any]
+    """Tool input parameters."""
+
+
 MimeType = Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
 Status = Literal["running", "completed", "failed"]
 
@@ -163,6 +176,8 @@ class BashOutput(TypedDict):
     """Path to persisted full output (when output is too large for inline)."""
     persistedOutputSize: NotRequired[int]
     """Total size of the output in bytes (when output is too large for inline)."""
+    staleReadFileStateHint: NotRequired[str]
+    """Model-facing note listing readFileState entries whose mtime bumped during this command."""
     # tokenSaverOutput: NotRequired[str]
     # """Compressed output sent to model when token-saver is active (UI still uses stdout)."""
 
