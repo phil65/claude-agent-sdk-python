@@ -403,6 +403,30 @@ class PromptSuggestionMessage(BaseMessage):
     suggestion: str
 
 
+class StreamlinedTextMessage(BaseMessage):
+    """Streamlined text message.
+
+    Replaces AssistantMessage in streamlined output.
+    Text content is preserved, thinking and tool_use blocks are removed.
+    """
+
+    type: Literal["streamlined_text"] = "streamlined_text"
+    text: str
+    session_id: str
+
+
+class StreamlinedToolUseSummaryMessage(BaseMessage):
+    """Streamlined tool use summary.
+
+    Replaces tool_use blocks in streamlined output
+    with a cumulative summary string.
+    """
+
+    type: Literal["streamlined_tool_use_summary"] = "streamlined_tool_use_summary"
+    tool_summary: str
+    session_id: str
+
+
 MiscMessages = (
     UserMessage
     | AssistantMessage
@@ -413,4 +437,6 @@ MiscMessages = (
     | ToolUseSummaryMessage
     | AuthStatusMessage
     | PromptSuggestionMessage
+    | StreamlinedTextMessage
+    | StreamlinedToolUseSummaryMessage
 )
