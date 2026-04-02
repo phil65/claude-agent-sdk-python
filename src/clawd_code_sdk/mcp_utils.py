@@ -256,6 +256,9 @@ def create_sdk_mcp_server(
             # Return just the content list - the decorator wraps it
             return content
 
+    # Attach tool definitions to server for _meta injection in process_mcp_request
+    server._sdk_tool_defs = tools or []  # type: ignore[attr-defined]
+
     # Return SDK server configuration
     return McpSdkServerConfigWithInstance(type="sdk", name=name, instance=server)
 
@@ -285,6 +288,26 @@ def _detect_capabilities(server: McpServer) -> dict[str, Any]:
     if handlers.get(ListPromptsRequest) or handlers.get(GetPromptRequest):
         capabilities["prompts"] = {}
     return capabilities
+
+
+def _build_tool_meta(tool_def: SdkMcpTool[Any] | None) -> dict[str, Any] | None:
+    """Build _meta dict for a tool's JSONRPC response.
+
+    Merges explicit meta from the tool definition with Anthropic-specific
+    hints extracted from annotations. The CLI reads
+    ``anthropic/maxResultSizeChars`` from ``_meta`` to override its
+    layer-2 tool-result spill threshold.
+    """
+    if tool_def is None:
+        return None
+    meta: dict[str, Any] = {}
+    if tool_def.meta:
+        meta.update(tool_def.meta)
+    if tool_def.annotations is not None:
+        max_size = getattr(tool_def.annotations, "maxResultSizeChars", None)
+        if max_size is not None:
+            meta["anthropic/maxResultSizeChars"] = max_size
+    return meta or None
 
 
 async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
@@ -332,8 +355,17 @@ async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSO
                 request = ListToolsRequest()
                 result = await handler(request)
                 assert isinstance(result.root, ListToolsResult)
-                # Convert MCP result to JSONRPC response
-                data = [i.model_dump(exclude_none=True, by_alias=True) for i in result.root.tools]
+                # Convert MCP result to JSONRPC response, injecting _meta
+                # for Anthropic-specific hints (e.g. maxResultSizeChars)
+                sdk_tools: list[SdkMcpTool[Any]] = getattr(server, "_sdk_tool_defs", [])
+                tool_defs = {t.name: t for t in sdk_tools}
+                data = []
+                for mcp_tool in result.root.tools:
+                    tool_data = mcp_tool.model_dump(exclude_none=True, by_alias=True)
+                    meta = _build_tool_meta(tool_defs.get(mcp_tool.name))
+                    if meta:
+                        tool_data["_meta"] = meta
+                    data.append(tool_data)
                 return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": data})
 
             case {"method": "tools/call", "params": dict() as params} if (
