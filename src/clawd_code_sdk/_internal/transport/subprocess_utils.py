@@ -249,8 +249,9 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.chrome:
         cmd.append("--chrome")
 
-    sources_value = ",".join(options.setting_sources or [])
-    cmd.extend(["--setting-sources", sources_value])
+    if options.setting_sources:
+        sources_value = ",".join(options.setting_sources or [])
+        cmd.extend(["--setting-sources", sources_value])
 
     # Add plugin directories
     for plugin in options.plugins:
