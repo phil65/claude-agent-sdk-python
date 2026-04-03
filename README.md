@@ -1,44 +1,43 @@
 # Claude Agent SDK for Python
 
-Python SDK for Claude Agent. See the [Claude Agent SDK documentation](https://platform.claude.com/docs/en/agent-sdk/python) for more information.
+An improved fork of the official [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/python) with stronger type safety and additional features.
+(API still quite similar to the official one)
 
 ## Installation
 
 ```bash
-pip install clawd-code-sdk
+uv add clawd-code-sdk
 ```
 
 **Prerequisites:**
 
-- Python 3.10+
-
-**Note:** The Claude Code CLI is automatically bundled with the package - no separate installation required! The SDK will use the bundled CLI by default. If you prefer to use a system-wide installation or a specific version, you can:
-
-- Install Claude Code separately: `curl -fsSL https://claude.ai/install.sh | bash`
-- Specify a custom path: `ClaudeAgentOptions(cli_path="/path/to/claude")`
+- Python 3.13+
 
 ## Quick Start
 
 ```python
 import anyio
-from clawd_code_sdk import query
+from clawd_code_sdk import ClaudeSDKClient
 
 async def main():
-    async for message in query(prompt="What is 2 + 2?"):
+    async for message in ClaudeSDKClient.one_shot("What is 2 + 2?"):
         print(message)
 
 anyio.run(main)
 ```
 
-## Basic Usage: query()
+## Basic Usage
 
-`query()` is an async function for querying Claude Code. It returns an `AsyncIterator` of response messages. See [src/clawd_code_sdk/query.py](src/clawd_code_sdk/query.py).
+### One-shot queries
+
+`ClaudeSDKClient.one_shot()` is the simplest way to query Claude Code.
+It handles connection lifecycle automatically and yields response messages:
 
 ```python
-from clawd_code_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock
+from clawd_code_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, TextBlock
 
 # Simple query
-async for message in query(prompt="Hello Claude"):
+async for message in ClaudeSDKClient.one_shot("Hello Claude"):
     if isinstance(message, AssistantMessage):
         for block in message.content:
             if isinstance(block, TextBlock):
@@ -47,27 +46,81 @@ async for message in query(prompt="Hello Claude"):
 # With options
 options = ClaudeAgentOptions(
     system_prompt="You are a helpful assistant",
-    max_turns=1
+    max_turns=1,
 )
 
-async for message in query(prompt="Tell me a joke", options=options):
+async for message in ClaudeSDKClient.one_shot("Tell me a joke", options=options):
     print(message)
 ```
 
-### Using Tools
+### Interactive sessions
+
+`ClaudeSDKClient` supports bidirectional, interactive conversations with Claude
+Code. Unlike `one_shot()`, it additionally enables **custom tools**, **hooks**,
+and multi-turn conversations within the same session.
+
+```python
+from clawd_code_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, TextBlock
+
+options = ClaudeAgentOptions(max_turns=3)
+
+async with ClaudeSDKClient(options=options) as client:
+    # First turn
+    await client.query("What is 2 + 2?")
+    async for message in client.receive_response():
+        if isinstance(message, AssistantMessage):
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    print(block.text)
+
+    # Follow-up in the same session
+    await client.query("Now multiply that by 3")
+    async for message in client.receive_response():
+        print(message)
+```
+
+## Message Sequence
+
+When you call `client.query()` and iterate `client.receive_response()`,
+messages arrive in this order:
+
+```
+SessionStateChangedMessage  state=running     # session starts processing
+InitSystemMessage           subtype=init      # session metadata (tools, model, cwd)
+StreamEvent                                   # raw Anthropic SSE events (deltas)
+StreamEvent                                   # ...
+AssistantMessage                              # complete assistant turn (text, thinking, tool use)
+StreamEvent                                   # more streaming if multi-turn
+AssistantMessage                              # another complete turn
+ResultSuccessMessage        subtype=success   # final result with usage/cost
+SessionStateChangedMessage  state=idle        # session fully done — iterator stops here
+```
+
+Key points:
+
+- **`receive_response()`** automatically terminates when the session
+  transitions to `idle` — the authoritative signal that the CLI has fully
+  finished (held-back results flushed, background agents exited).
+- **`StreamEvent`** wraps raw Anthropic streaming events (`message_start`,
+  `content_block_delta`, etc.). Useful for real-time UI updates.
+- **`AssistantMessage`** contains complete content blocks (`TextBlock`,
+  `ThinkingBlock`, `ToolUseBlock`) — no need to reassemble from deltas.
+- **Hook messages** (`HookStartedSystemMessage`, `HookResponseSystemMessage`)
+  may appear at any point if hooks are configured.
+- **`ResultSuccessMessage`** / **`ResultErrorMessage`** carry token usage
+  and cost information.
+
+## Configuration
+
+### Tools
 
 ```python
 options = ClaudeAgentOptions(
-    allowed_tools=["Read", "Write", "Bash"],
-    permission_mode='acceptEdits'  # auto-accept file edits
+    tools=["Read", "Write", "Bash"],           # tools available to the agent
+    allowed_tools=["Read", "Write", "Bash"],   # auto-approved (no permission prompt)
+    disallowed_tools=["WebFetch"],             # completely removed from context
+    permission_mode="acceptEdits",             # auto-accept file edits
 )
-
-async for message in query(
-    prompt="Create a hello.py file",
-    options=options
-):
-    # Process tool use and results
-    pass
 ```
 
 ### Working Directory
@@ -76,138 +129,146 @@ async for message in query(
 from pathlib import Path
 
 options = ClaudeAgentOptions(
-    cwd="/path/to/project"  # or Path("/path/to/project")
+    cwd="/path/to/project",        # or Path("/path/to/project")
+    add_dirs=["/other/project"],   # additional working directories
 )
 ```
 
-## ClaudeSDKClient
+### Model and Thinking
 
-`ClaudeSDKClient` supports bidirectional, interactive conversations with Claude
-Code. See [src/clawd_code_sdk/client.py](src/clawd_code_sdk/client.py).
+```python
+from clawd_code_sdk import ClaudeAgentOptions, ThinkingConfigEnabled
 
-Unlike `query()`, `ClaudeSDKClient` additionally enables **custom tools** and **hooks**, both of which can be defined as Python functions.
+options = ClaudeAgentOptions(
+    model="sonnet",
+    fallback_model="haiku",
+    thinking=ThinkingConfigEnabled(budget_tokens=10_000),
+    effort="high",
+)
+```
 
-### Custom Tools (as In-Process SDK MCP Servers)
+### Session Management
 
-A **custom tool** is a Python function that you can offer to Claude, for Claude to invoke as needed.
+```python
+from clawd_code_sdk import ClaudeAgentOptions, NewSession, ResumeSession, ContinueLatest
 
-Custom tools are implemented in-process MCP servers that run directly within your Python application, eliminating the need for separate processes that regular MCP servers require.
+# Fresh session (default)
+options = ClaudeAgentOptions(session=NewSession())
 
-For an end-to-end example, see [MCP Calculator](examples/mcp_calculator.py).
+# Resume by ID
+options = ClaudeAgentOptions(session=ResumeSession(session_id="abc-123"))
 
-#### Creating a Simple Tool
+# Or shorthand
+options = ClaudeAgentOptions(session="abc-123")
+
+# Continue most recent
+options = ClaudeAgentOptions(session=ContinueLatest())
+```
+
+### Structured Output
+
+```python
+from pydantic import BaseModel
+
+class Joke(BaseModel):
+    setup: str
+    punchline: str
+
+options = ClaudeAgentOptions(
+    output_schema=Joke,  # accepts Pydantic models, dataclasses, TypedDicts, or raw dicts
+)
+```
+
+## MCP Servers
+
+### In-Process SDK Servers
+
+Define tools as Python functions that run in-process — no subprocess management
+or IPC overhead:
 
 ```python
 from clawd_code_sdk import tool, create_sdk_mcp_server, ClaudeAgentOptions, ClaudeSDKClient
 
-# Define a tool using the @tool decorator
 @tool("greet", "Greet a user", {"name": str})
 async def greet_user(args):
-    return {
-        "content": [
-            {"type": "text", "text": f"Hello, {args['name']}!"}
-        ]
-    }
+    return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
 
-# Create an SDK MCP server
 server = create_sdk_mcp_server(
     name="my-tools",
     version="1.0.0",
-    tools=[greet_user]
+    tools=[greet_user],
 )
 
-# Use it with Claude
 options = ClaudeAgentOptions(
     mcp_servers={"tools": server},
-    allowed_tools=["mcp__tools__greet"]
+    allowed_tools=["mcp__tools__greet"],
 )
 
 async with ClaudeSDKClient(options=options) as client:
     await client.query("Greet Alice")
-
-    # Extract and print response
     async for msg in client.receive_response():
         print(msg)
 ```
 
-#### Benefits Over External MCP Servers
-
-- **No subprocess management** - Runs in the same process as your application
-- **Better performance** - No IPC overhead for tool calls
-- **Simpler deployment** - Single Python process instead of multiple
-- **Easier debugging** - All code runs in the same process
-- **Type safety** - Direct Python function calls with type hints
-
-#### Migration from External Servers
+### External Servers
 
 ```python
-# BEFORE: External MCP server (separate process)
+from clawd_code_sdk import McpStdioServerConfig, McpHttpServerConfig
+
 options = ClaudeAgentOptions(
     mcp_servers={
-        "calculator": {
-            "type": "stdio",
-            "command": "python",
-            "args": ["-m", "calculator_server"]
-        }
-    }
-)
-
-# AFTER: SDK MCP server (in-process)
-from my_tools import add, subtract  # Your tool functions
-
-calculator = create_sdk_mcp_server(
-    name="calculator",
-    tools=[add, subtract]
-)
-
-options = ClaudeAgentOptions(
-    mcp_servers={"calculator": calculator}
-)
-```
-
-#### Mixed Server Support
-
-You can use both SDK and external MCP servers together:
-
-```python
-options = ClaudeAgentOptions(
-    mcp_servers={
-        "internal": sdk_server,      # In-process SDK server
-        "external": {                # External subprocess server
-            "type": "stdio",
-            "command": "external-server"
-        }
+        # Subprocess (stdio)
+        "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),
+        # HTTP
+        "remote": McpHttpServerConfig(url="https://mcp.example.com/sse"),
     }
 )
 ```
 
-### Hooks
+### Mixed Servers
 
-A **hook** is a Python function that the Claude Code _application_ (_not_ Claude) invokes at specific points of the Claude agent loop. Hooks can provide deterministic processing and automated feedback for Claude. Read more in [Claude Code Hooks Reference](https://docs.anthropic.com/en/docs/claude-code/hooks).
-
-For more examples, see examples/hooks.py.
-
-#### Example
+SDK and external servers can be used together:
 
 ```python
-from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, HookMatcher
+options = ClaudeAgentOptions(
+    mcp_servers={
+        "internal": sdk_server,                                              # in-process
+        "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]), # subprocess
+    }
+)
+```
 
-async def check_bash_command(input_data, tool_use_id, context):
-    tool_name = input_data["tool_name"]
+## Hooks
+
+Hooks are Python callbacks that the Claude Code CLI invokes at specific points
+of the agent loop. They enable deterministic processing and automated feedback.
+
+Each hook event has strongly-typed input/output types:
+
+```python
+from clawd_code_sdk import (
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    HookMatcher,
+    PreToolUseHookInput,
+    HookContext,
+)
+
+async def check_bash_command(
+    input_data: PreToolUseHookInput,
+    tool_use_id: str | None,
+    context: HookContext,
+):
     tool_input = input_data["tool_input"]
-    if tool_name != "Bash":
-        return {}
     command = tool_input.get("command", "")
-    block_patterns = ["foo.sh"]
-    for pattern in block_patterns:
-        if pattern in command:
-            return {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": f"Command contains invalid pattern: {pattern}",
-                }
+    if "rm -rf" in command:
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": "Dangerous command blocked",
             }
+        }
     return {}
 
 options = ClaudeAgentOptions(
@@ -216,30 +277,115 @@ options = ClaudeAgentOptions(
         "PreToolUse": [
             HookMatcher(matcher="Bash", hooks=[check_bash_command]),
         ],
-    }
+    },
 )
 
 async with ClaudeSDKClient(options=options) as client:
-    # Test 1: Command with forbidden pattern (will be blocked)
-    await client.query("Run the bash command: ./foo.sh --help")
-    async for msg in client.receive_response():
-        print(msg)
-
-    print("\n" + "=" * 50 + "\n")
-
-    # Test 2: Safe command that should work
-    await client.query("Run the bash command: echo 'Hello from hooks example!'")
+    await client.query("Run echo hello")
     async for msg in client.receive_response():
         print(msg)
 ```
 
+### Available Hook Events
+
+| Event | When it fires |
+|-------|---------------|
+| `PreToolUse` | Before a tool executes (can deny/modify) |
+| `PostToolUse` | After a tool succeeds |
+| `PostToolUseFailure` | After a tool fails |
+| `UserPromptSubmit` | When a user prompt is submitted |
+| `Stop` / `StopFailure` | When the agent stops or fails to stop |
+| `SubagentStart` / `SubagentStop` | Subagent lifecycle |
+| `SessionStart` / `SessionEnd` | Session lifecycle |
+| `Notification` | Agent notifications |
+| `PermissionRequest` / `PermissionDenied` | Permission events |
+| `PreCompact` / `PostCompact` | Context compaction |
+| `Elicitation` / `ElicitationResult` | MCP elicitation |
+| `TaskCreated` / `TaskCompleted` | Task lifecycle |
+| `FileChanged` / `CwdChanged` | Filesystem events |
+
+See the [Claude Code Hooks Reference](https://docs.anthropic.com/en/docs/claude-code/hooks)
+for full documentation.
+
+## Multimodal Prompts
+
+Send images, PDFs, and text together using typed prompt classes:
+
+```python
+from clawd_code_sdk import (
+    ClaudeSDKClient,
+    UserImageURLPrompt,
+    UserDocumentPrompt,
+    UserPlainTextDocumentPrompt,
+)
+
+async with ClaudeSDKClient() as client:
+    await client.query(
+        UserImageURLPrompt(url="https://example.com/chart.png"),
+        "What does this chart show?",
+    )
+    async for msg in client.receive_response():
+        print(msg)
+```
+
+## Subagents
+
+Define subagents with their own prompts, tools, and MCP servers:
+
+```python
+from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, AgentDefinition, McpStdioServerConfig
+
+options = ClaudeAgentOptions(
+    agents={
+        "researcher": AgentDefinition(
+            description="A research agent with web access",
+            prompt="You are a research assistant.",
+            tools=["WebFetch", "Read"],
+        ),
+        "git-agent": AgentDefinition(
+            description="An agent with git tools",
+            prompt="You are a git helper.",
+            mcp_servers={"git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"])},
+        ),
+    },
+    max_turns=10,
+)
+```
+
 ## Types
 
-See [src/clawd_code_sdk/types.py](src/clawd_code_sdk/types.py) for complete type definitions:
+### Message Types
 
-- `ClaudeAgentOptions` - Configuration options
-- `AssistantMessage`, `UserMessage`, `InitSystemMessage`, `ResultMessage` - Message types
-- `TextBlock`, `ToolUseBlock`, `ToolResultBlock` - Content blocks
+| Type | Description |
+|------|-------------|
+| `AssistantMessage` | Claude's response (text, thinking, tool use) |
+| `UserMessage` | Echoed user messages |
+| `StreamEvent` | Raw Anthropic SSE streaming events |
+| `InitSystemMessage` | Session metadata (tools, model, cwd) |
+| `ResultSuccessMessage` | Successful completion with usage |
+| `ResultErrorMessage` | Error completion |
+| `SessionStateChangedMessage` | Session state transitions |
+| `HookStartedSystemMessage` | Hook execution started |
+| `HookResponseSystemMessage` | Hook execution completed |
+
+### Content Block Types
+
+| Type | Appears in |
+|------|------------|
+| `TextBlock` | Assistant and user messages |
+| `ThinkingBlock` | Assistant messages (when thinking enabled) |
+| `ToolUseBlock` | Assistant messages |
+| `ToolResultBlock` | User messages |
+| `ImageBlock` | User messages |
+
+The SDK provides role-specific narrowed types:
+
+- `AssistantContentBlock` = `TextBlock | ThinkingBlock | ToolUseBlock`
+- `UserContentBlock` = `TextBlock | ToolResultBlock | ImageBlock`
+- `ContentBlock` = full 5-type union (for storage/serialization)
+
+See [src/clawd_code_sdk/models/content_blocks.py](src/clawd_code_sdk/models/content_blocks.py)
+for complete type definitions.
 
 ## Error Handling
 
@@ -250,17 +396,18 @@ from clawd_code_sdk import (
     CLIConnectionError,  # Connection issues
     ProcessError,        # Process failed
     CLIJSONDecodeError,  # JSON parsing issues
+    BillingError,        # Insufficient credits
+    RateLimitError,      # Rate limited
+    AuthenticationError, # Invalid API key
 )
 
 try:
-    async for message in query(prompt="Hello"):
+    async for message in ClaudeSDKClient.one_shot("Hello"):
         pass
 except CLINotFoundError:
     print("Please install Claude Code")
 except ProcessError as e:
     print(f"Process failed with exit code: {e.exit_code}")
-except CLIJSONDecodeError as e:
-    print(f"Failed to parse response: {e}")
 ```
 
 See [src/clawd_code_sdk/\_errors.py](src/clawd_code_sdk/_errors.py) for all error types.
@@ -268,12 +415,6 @@ See [src/clawd_code_sdk/\_errors.py](src/clawd_code_sdk/_errors.py) for all erro
 ## Available Tools
 
 See the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code/settings#tools-available-to-claude) for a complete list of available tools.
-
-## Examples
-
-See [examples/quick_start.py](examples/quick_start.py) for a complete working example.
-
-See [examples/streaming_mode.py](examples/streaming_mode.py) for comprehensive examples involving `ClaudeSDKClient`. You can even run interactive examples in IPython from [examples/streaming_mode_ipython.py](examples/streaming_mode_ipython.py).
 
 ## Migrating from Claude Code SDK
 
