@@ -21,7 +21,6 @@ from clawd_code_sdk.models import (
     McpStatusResponse,
     RemoteControlResponse,
     ResultErrorMessage,
-    ResultMessage,
     ResultSuccessMessage,
     SDKControlGetContextUsageResponse,
     SessionStateChangedMessage,
@@ -447,9 +446,7 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         return query._initialization_result
 
-    async def receive_response_instrumented(
-        self, wait_for_idle: bool = False
-    ) -> AsyncIterator[Message]:
+    async def receive_response_instrumented(self) -> AsyncIterator[Message]:
         from logfire import Logfire
         from logfire._internal.integrations.llm_providers.semconv import (
             INPUT_MESSAGES,
@@ -502,7 +499,7 @@ class ClaudeSDKClient:
             state.open_chat_span()
 
             try:
-                async for msg in self.receive_response(wait_for_idle=wait_for_idle):
+                async for msg in self.receive_response():
                     with handle_internal_errors:  # ty:ignore[invalid-context-manager]
                         match msg:
                             case AssistantMessage():
@@ -521,42 +518,30 @@ class ClaudeSDKClient:
                 state.close()
                 clear_state()
 
-    async def receive_response(self, *, wait_for_idle: bool = False) -> AsyncIterator[Message]:
+    async def receive_response(self) -> AsyncIterator[Message]:
         """Receive messages from Claude until the response is complete.
 
-        This async iterator yields all messages in sequence and automatically terminates
-        after yielding a ResultMessage (which indicates the response is complete).
-        It's a convenience method over receive_messages() for single-response workflows.
+        This async iterator yields all messages in sequence and automatically
+        terminates when the session transitions to ``idle`` state — the
+        authoritative signal that the CLI has fully finished its turn
+        (held-back results flushed, background agent loops exited).
 
         **Stopping Behavior:**
         - Yields each message as it's received
-        - By default, terminates immediately after yielding a ResultMessage
-        - When ``wait_for_idle=True``, continues yielding until the session
-          transitions to ``idle`` state (the authoritative turn-over signal)
-        - The ResultMessage IS included in the yielded messages
-        - If no ResultMessage is received, the iterator continues indefinitely
-
-        Args:
-            wait_for_idle: If True, keep yielding messages after ResultMessage
-                until a ``session_state_changed`` message with ``state='idle'``
-                is received. This guarantees the CLI has fully finished its
-                turn (held-back results flushed, background agent loops exited)
-                before the iterator terminates.
+        - Terminates after yielding a ``SessionStateChangedMessage`` with
+          ``state='idle'``
+        - The final message in the collected list will always be the idle
+          state-change message
 
         Yields:
             Message: Each message received
 
         Note:
             To collect all messages: `messages = [msg async for msg in client.receive_response()]`
-            The final message in the list will always be a ResultMessage (or
-            SessionStateChangedMessage when ``wait_for_idle=True``).
         """
         async for message in self.receive_messages():
             yield message
-            if wait_for_idle:
-                if isinstance(message, SessionStateChangedMessage) and message.state == "idle":
-                    return
-            elif isinstance(message, ResultMessage):
+            if isinstance(message, SessionStateChangedMessage) and message.state == "idle":
                 return
 
     async def disconnect(self) -> None:
