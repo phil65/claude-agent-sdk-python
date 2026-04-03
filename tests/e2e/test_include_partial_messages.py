@@ -31,7 +31,7 @@ async def test_include_partial_messages_stream_events():
         collected_messages = [i async for i in client.receive_response()]
 
     # Verify we got the expected message types
-    message_types = [type(msg).__name__ for msg in collected_messages]
+    [type(msg).__name__ for msg in collected_messages]
     # Should have an InitSystemMessage somewhere early in the sequence
     init_msgs = [msg for msg in collected_messages if isinstance(msg, InitSystemMessage)]
     assert len(init_msgs) == 1, f"Expected exactly one InitSystemMessage, got {len(init_msgs)}"
