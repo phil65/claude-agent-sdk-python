@@ -37,6 +37,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     ClaudeCodeBaseModel,
     FastModeState,
     StopReason,
+    TerminalReason,
     ToolName,
 )
 from clawd_code_sdk.models.content_blocks import (
@@ -231,6 +232,12 @@ class BaseResultMessage(BaseMessage):
     """Permission denials from the last API call only (per-turn)."""
     fast_mode_state: FastModeState | None = None
     """Whether fast mode was enabled."""
+    terminal_reason: TerminalReason | None = None
+    """Why the query loop terminated.
+
+    Unset when the loop was bypassed (local slash command) or interrupted externally
+    (budget/retry limits checked between yields).
+    """
 
 
 class ResultSuccessMessage(BaseResultMessage):

@@ -335,6 +335,7 @@ declare namespace coreTypes {
         TaskCompletedHookInput,
         TaskCreatedHookInput,
         TeammateIdleHookInput,
+        TerminalReason,
         ThinkingAdaptive,
         ThinkingConfig,
         ThinkingDisabled,
@@ -1269,6 +1270,12 @@ export declare type Options = {
      * These sandbox settings control sandbox behavior (enabled, auto-allow, etc.),
      * while the actual access restrictions come from your permission configuration.
      *
+     * **Dependency check:** When `enabled: true` is passed via this option,
+     * `failIfUnavailable` defaults to `true` — if sandbox dependencies are missing
+     * (e.g. `bubblewrap` on Linux) or the platform is unsupported, `query()` will
+     * emit an error result and exit rather than silently running commands
+     * unsandboxed. Set `failIfUnavailable: false` to allow graceful degradation.
+     *
      * @example Enable sandboxing with auto-allow
      * ```typescript
      * sandbox: {
@@ -1411,9 +1418,9 @@ export declare type PermissionDeniedHookSpecificOutput = {
 };
 
 /**
- * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved.
+ * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved. 'auto' - Use a model classifier to approve/deny permission prompts.
  */
-export declare type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk';
+export declare type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto';
 
 export declare type PermissionRequestHookInput = BaseHookInput & {
     hook_event_name: 'PermissionRequest';
@@ -2242,7 +2249,7 @@ declare type SDKControlSetModelRequest = {
 declare type SDKControlSetPermissionModeRequest = {
     subtype: 'set_permission_mode';
     /**
-     * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved.
+     * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved. 'auto' - Use a model classifier to approve/deny permission prompts.
      */
     mode: coreTypes.PermissionMode;
 
@@ -2460,6 +2467,7 @@ export declare type SDKResultError = {
     modelUsage: Record<string, ModelUsage>;
     permission_denials: SDKPermissionDenial[];
     errors: string[];
+    terminal_reason?: TerminalReason;
     fast_mode_state?: FastModeState;
     uuid: UUID;
     session_id: string;
@@ -2482,6 +2490,7 @@ export declare type SDKResultSuccess = {
     permission_denials: SDKPermissionDenial[];
     structured_output?: unknown;
     deferred_tool_use?: SDKDeferredToolUse;
+    terminal_reason?: TerminalReason;
     fast_mode_state?: FastModeState;
     uuid: UUID;
     session_id: string;
@@ -2646,7 +2655,7 @@ export declare type SDKSystemMessage = {
     }[];
     model: string;
     /**
-     * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved.
+     * Permission mode for controlling how tool executions are handled. 'default' - Standard behavior, prompts for dangerous operations. 'acceptEdits' - Auto-accept file edit operations. 'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). 'plan' - Planning mode, no actual tool execution. 'dontAsk' - Don't prompt for permissions, deny if not pre-approved. 'auto' - Use a model classifier to approve/deny permission prompts.
      */
     permissionMode: PermissionMode;
     slash_commands: string[];
@@ -2897,7 +2906,7 @@ export declare interface Settings {
         /**
          * Default permission mode when Claude Code needs access
          */
-        defaultMode?: 'acceptEdits' | 'bypassPermissions' | 'default' | 'dontAsk' | 'plan';
+        defaultMode?: 'acceptEdits' | 'auto' | 'bypassPermissions' | 'default' | 'dontAsk' | 'plan';
         /**
          * Disable the ability to bypass permission prompts
          */
@@ -3134,6 +3143,10 @@ export declare interface Settings {
      * Disable all hooks and statusLine execution
      */
     disableAllHooks?: boolean;
+    /**
+     * Disable inline shell execution in skills and custom slash commands from user, project, or plugin sources. Commands are replaced with a placeholder instead of being run.
+     */
+    disableSkillShellExecution?: boolean;
     /**
      * Default shell for input-box ! commands. Defaults to 'bash' on all platforms (no Windows auto-flip).
      */
@@ -4230,6 +4243,11 @@ export declare type TeammateIdleHookInput = BaseHookInput & {
     teammate_name: string;
     team_name: string;
 };
+
+/**
+ * Why the query loop terminated. Unset when the loop was bypassed (local slash command) or interrupted externally (budget/retry limits checked between yields).
+ */
+export declare type TerminalReason = 'blocking_limit' | 'rapid_refill_breaker' | 'prompt_too_long' | 'image_error' | 'model_error' | 'aborted_streaming' | 'aborted_tools' | 'stop_hook_prevented' | 'hook_stopped' | 'tool_deferred' | 'max_turns' | 'completed';
 
 /**
  * Claude decides when and how much to think (Opus 4.6+).

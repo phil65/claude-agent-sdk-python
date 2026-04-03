@@ -80,6 +80,20 @@ ToolName = Literal[
     "Config",
     "ToolSearch",
 ]
+TerminalReason = Literal[
+    "blocking_limit",
+    "rapid_refill_breaker",
+    "prompt_too_long",
+    "image_error",
+    "model_error",
+    "aborted_streaming",
+    "aborted_tools",
+    "stop_hook_prevented",
+    "hook_stopped",
+    "tool_deferred",
+    "max_turns",
+    "completed",
+]
 IS_DEV = "pytest" in sys.modules
 
 
