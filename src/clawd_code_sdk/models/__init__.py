@@ -251,15 +251,17 @@ from .output_types import (
     WriteOutput,
 )
 from .content_blocks import (
+    AssistantContentBlock,
+    AssistantMessageContent,
     ContentBlock,
     ImageBlock,
     ImageSource,
-    AssistantMessageContent,
     MessageParam,
     TextBlock,
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
+    UserContentBlock,
 )
 from .session import (
     GetSessionMessagesOptions,
@@ -433,6 +435,7 @@ __all__ = [
     "AskUserQuestionItem",
     "AskUserQuestionOption",
     "AskUserQuestionOutput",
+    "AssistantContentBlock",
     "AssistantMessage",
     "AssistantMessageContent",
     "AssistantMessageError",
@@ -714,6 +717,7 @@ __all__ = [
     # "UnsubscribeMcpResourceOutput",
     # "UnsubscribePollingOutput",
     "Usage",
+    "UserContentBlock",
     "UserDocumentPrompt",
     "UserDocumentURLPrompt",
     "UserFilePrompt",

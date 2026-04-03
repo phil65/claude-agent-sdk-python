@@ -150,10 +150,23 @@ class ImageBlock(BaseContentBlock):
 # Unions and adapters
 # =============================================================================
 
+AssistantContentBlock = Annotated[
+    TextBlock | ThinkingBlock | ToolUseBlock,
+    Discriminator("type"),
+]
+"""Content blocks that appear in assistant messages."""
+
+UserContentBlock = Annotated[
+    TextBlock | ToolResultBlock | ImageBlock,
+    Discriminator("type"),
+]
+"""Content blocks that appear in user messages."""
+
 ContentBlock = Annotated[
     TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | ImageBlock,
     Discriminator("type"),
 ]
+"""All content block types (used for storage/JSONL which doesn't distinguish by role)."""
 
 
 # =============================================================================
@@ -162,10 +175,14 @@ ContentBlock = Annotated[
 
 
 class MessageParam(ClaudeCodeBaseModel):
-    """Replacement for Anthropic MessageParam which serializes to our own content blocks."""
+    """User message payload wrapping content blocks.
 
-    content: Sequence[ContentBlock] | str
-    role: Literal["user", "assistant"]
+    Only used for user-role messages; assistant messages use
+    :class:`AssistantMessageContent`.
+    """
+
+    content: Sequence[UserContentBlock] | str
+    role: Literal["user"] = "user"
     model_config = ConfigDict(extra="allow")
 
 
@@ -180,7 +197,7 @@ class AssistantMessageContent(ClaudeCodeBaseModel):
     id: str
     type: Literal["message"] = "message"
     role: Literal["assistant"] = "assistant"
-    content: Sequence[ContentBlock]
+    content: Sequence[AssistantContentBlock]
     model: str
     stop_reason: StopReason | None = None
     stop_sequence: str | None = None

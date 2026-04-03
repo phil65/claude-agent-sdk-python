@@ -40,11 +40,7 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     TerminalReason,
     ToolName,
 )
-from clawd_code_sdk.models.content_blocks import (
-    AssistantMessageContent,
-    MessageParam,
-    TextBlock,
-)
+from clawd_code_sdk.models.content_blocks import AssistantMessageContent, MessageParam, TextBlock
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import SDKDeferredToolUse, ToolUseResult
 from clawd_code_sdk.models.usage import ModelUsage, Usage
@@ -53,7 +49,7 @@ from clawd_code_sdk.models.usage import ModelUsage, Usage
 if TYPE_CHECKING:
     from logfire._internal.integrations.llm_providers.semconv import MessagePart, OutputMessage
 
-    from clawd_code_sdk.models.content_blocks import ContentBlock
+    from clawd_code_sdk.models.content_blocks import AssistantContentBlock, UserContentBlock
 
 IS_DEV = "pytest" in sys.modules
 
@@ -133,7 +129,7 @@ class UserMessage(BaseMessage):
     file_attachments: list[object] | None = None
 
     @property
-    def content(self) -> str | Sequence[ContentBlock]:
+    def content(self) -> str | Sequence[UserContentBlock]:
         """Return the message content."""
         return self.message.content
 
@@ -158,7 +154,7 @@ class AssistantMessage(BaseModel):
     uuid: str | None = None
 
     @property
-    def content(self) -> Sequence[ContentBlock]:
+    def content(self) -> Sequence[AssistantContentBlock]:
         """Return the message content blocks."""
         return self.message.content
 

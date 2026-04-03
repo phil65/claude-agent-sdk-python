@@ -21,13 +21,14 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from pydantic import BaseModel, Discriminator, Field, Tag
 
 from clawd_code_sdk.models import (
-    ContentBlock,
+    AssistantContentBlock,
     ImageBlock,
     ImageSource,
     TextBlock,
     ToolResultBlock,
     ToolUseResult,
     Usage,
+    UserContentBlock,
 )
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason
 from clawd_code_sdk.models.output_types import AgentServerToolUse, ServiceTier  # noqa: TC001
@@ -63,8 +64,6 @@ class ClaudeUsage(Usage):
             if not isinstance(entry, ClaudeAssistantEntry):
                 continue
             msg = entry.message
-            if not isinstance(msg, ClaudeApiMessage):
-                continue
             if msg.id in seen_ids:
                 continue
             seen_ids.add(msg.id)
@@ -84,7 +83,7 @@ class ClaudeApiMessage(BaseModel):
     id: str
     type: Literal["message"] = "message"
     role: Literal["assistant"]
-    content: str | Sequence[ContentBlock]
+    content: str | Sequence[AssistantContentBlock]
     stop_reason: StopReason | None = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
@@ -94,7 +93,7 @@ class ClaudeUserMessage(BaseModel):
     """User message content."""
 
     role: Literal["user"]
-    content: str | Sequence[ContentBlock]
+    content: str | Sequence[UserContentBlock]
     usage: ClaudeUsage | None = None
     """Usage info (for type compatibility with ClaudeApiMessage)."""
 
@@ -156,6 +155,7 @@ class ClaudeUserEntry(ClaudeMessageEntryBase):
     """User message entry."""
 
     type: Literal["user"]
+    message: ClaudeUserMessage
     tool_use_result: (
         list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
@@ -172,6 +172,7 @@ class ClaudeAssistantEntry(ClaudeMessageEntryBase):
     """Assistant message entry."""
 
     type: Literal["assistant"]
+    message: ClaudeApiMessage
     is_api_error_message: bool | None = None
 
 

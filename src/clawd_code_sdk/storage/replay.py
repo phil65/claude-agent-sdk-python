@@ -88,7 +88,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
-    from clawd_code_sdk.models import ContentBlock, Message, StopReason
+    from clawd_code_sdk.models import AssistantContentBlock, ContentBlock, Message, StopReason
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
@@ -111,13 +111,11 @@ def _convert_user_entry(entry: ClaudeUserEntry) -> UserMessage:
 def _convert_assistant_entry(entry: ClaudeAssistantEntry) -> AssistantMessage:
     """Convert a stored assistant entry to a wire-format AssistantMessage."""
     raw = entry.message.content
-    blocks: Sequence[ContentBlock] = [TextBlock(text=raw)] if isinstance(raw, str) else raw
-    if isinstance(entry.message, ClaudeApiMessage):
-        model = entry.message.model
-        msg_id = entry.message.id
-    else:
-        model = "unknown"
-        msg_id = entry.uuid
+    blocks: Sequence[AssistantContentBlock] = (
+        [TextBlock(text=raw)] if isinstance(raw, str) else list(raw)
+    )
+    model = entry.message.model
+    msg_id = entry.message.id
     return AssistantMessage(
         message=AssistantMessageContent(content=blocks, model=model, id=msg_id),
         uuid=entry.uuid,
