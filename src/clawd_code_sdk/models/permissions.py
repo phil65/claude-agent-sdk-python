@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from clawd_code_sdk.models.base import (
     ClaudeCodeBaseModel,
@@ -13,6 +13,10 @@ from clawd_code_sdk.models.base import (
     PermissionMode,
 )
 from clawd_code_sdk.models.input_types import AskUserQuestionInput, ToolInput
+
+
+if TYPE_CHECKING:
+    from clawd_code_sdk.models import SDKControlPermissionRequest
 
 
 # Permission Update types (matching TypeScript SDK)
@@ -113,6 +117,20 @@ class ToolPermissionContext:
 
     E.g. "Claude will have read and write access to files in ~/Downloads".
     """
+
+    @classmethod
+    def from_permission_request(cls, req: SDKControlPermissionRequest) -> Self:
+        """Create a PermissionContext from a permission request."""
+        return cls(
+            tool_use_id=req.tool_use_id,
+            agent_id=req.agent_id,
+            decision_reason=req.decision_reason,
+            suggestions=req.permission_suggestions or [],
+            blocked_path=req.blocked_path,
+            title=req.title,
+            display_name=req.display_name,
+            description=req.description,
+        )
 
 
 # Match TypeScript's PermissionResult structure

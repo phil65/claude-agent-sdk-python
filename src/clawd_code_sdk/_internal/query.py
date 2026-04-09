@@ -315,11 +315,10 @@ class Query:
                             req_id, self._handle_control_request(req_id, req)
                         )
                     case {"type": "control_cancel_request"}:
-                        cancel_id = message.get("request_id")
-                        if cancel_id:
-                            inflight = self._inflight_requests.pop(cancel_id, None)
-                            if inflight:
-                                inflight.cancel()
+                        if (cancel_id := message.get("request_id")) and (
+                            inflight := self._inflight_requests.pop(cancel_id, None)
+                        ):
+                            inflight.cancel()
                     case {"type": "result"}:
                         self._first_result_event.set()
                         await self._message_send.send(message)
@@ -392,29 +391,15 @@ class Query:
         Dispatches AskUserQuestion to on_user_question if set,
         otherwise falls through to can_use_tool for backwards compatibility.
         """
-        context = ToolPermissionContext(
-            tool_use_id=req.tool_use_id,
-            agent_id=req.agent_id,
-            decision_reason=req.decision_reason,
-            suggestions=req.permission_suggestions or [],
-            blocked_path=req.blocked_path,
-            title=req.title,
-            display_name=req.display_name,
-            description=req.description,
-        )
-
+        context = ToolPermissionContext.from_permission_request(req)
         # Dispatch elicitation requests to dedicated callback if available
         if req.tool_name == "AskUserQuestion" and self.on_user_question:
             input_data = cast(AskUserQuestionInput, req.input)
             result = await self.on_user_question(input_data, context)
-            if isinstance(result, PermissionResultAllow) and result.updated_input is None:
-                result.updated_input = req.input
-            return result
-
-        if not self.can_use_tool:
-            raise RuntimeError("canUseTool callback is not provided")
-
-        result = await self.can_use_tool(req.tool_name, req.input, context)
+        else:
+            if not self.can_use_tool:
+                raise RuntimeError("canUseTool callback is not provided")
+            result = await self.can_use_tool(req.tool_name, req.input, context)
         if isinstance(result, PermissionResultAllow) and result.updated_input is None:
             result.updated_input = req.input
         return result
