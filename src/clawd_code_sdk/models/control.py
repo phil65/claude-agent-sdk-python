@@ -66,6 +66,17 @@ class SDKControlInitializeRequest(_ControlBase):
     sdk_mcp_servers: list[str] | None = Field(default=None, serialization_alias="sdkMcpServers")
     system_prompt: str | None = Field(default=None, serialization_alias="systemPrompt")
     append_system_prompt: str | None = Field(default=None, serialization_alias="appendSystemPrompt")
+    exclude_dynamic_sections: bool | None = Field(
+        default=None,
+        serialization_alias="excludeDynamicSections",
+    )
+    """When true, omit per-user dynamic sections from the cached system prompt.
+
+    Omits info like working directory, auto-memory path and re-inject them as the first usermessage.
+    Lets cross-user prompt caching hit on a static system prompt prefix.
+    Tradeoff: the model sees this context slightly later in the prompt,
+    so steering on the working directory and memory location is marginally less authoritative.
+    Has no effect when a custom (non-preset) system prompt is in use."""
     json_schema: dict[str, Any] | None = Field(default=None, serialization_alias="jsonSchema")
     prompt_suggestions: bool | None = Field(default=None, serialization_alias="promptSuggestions")
     agent_progress_summaries: bool | None = Field(
@@ -350,11 +361,26 @@ class SDKControlElicitationRequest(_ControlBase):
     """Elicitation ID for correlating URL elicitations with completion notifications."""
     requested_schema: dict[str, Any] | None = None
     """JSON Schema for the requested input (only for 'form' mode)."""
+    title: str | None = None
+    """Permission-display title from the MCP server's _meta['anthropic/permissionDisplay'].
+
+    Mirrors can_use_tool.title so SDK consumers can render elicitation-driven permission prompts
+    with structured headers instead of parsing `message`.
+    """
+    display_name: str | None = None
+    """Short tool/server label from MCP `_meta['anthropic/permissionDisplay'].displayName`."""
+    description: str | None = None
+    """Permission-display description from MCP `_meta['anthropic/permissionDisplay'].description`."""
 
     def to_mcp(self) -> mcp.types.ElicitRequestParams:
         """Convert to the corresponding MCP elicitation request params."""
         from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
+        meta = {
+            "title": self.title,
+            "displayName": self.display_name,
+            "description": self.description,
+        }
         match self.mode:
             case "url":
                 assert self.url is not None
@@ -363,12 +389,14 @@ class SDKControlElicitationRequest(_ControlBase):
                     message=self.message,
                     url=self.url,
                     elicitationId=self.elicitation_id,
+                    meta=ElicitRequestURLParams.Meta(**meta),  # pyright: ignore[reportCallIssue]
                 )
             case "form":
                 assert self.requested_schema is not None
                 return ElicitRequestFormParams(
                     message=self.message,
                     requestedSchema=self.requested_schema,
+                    meta=ElicitRequestFormParams.Meta(**meta),  # pyright: ignore[reportCallIssue]
                 )
             case None:
                 raise ValueError("mode must be 'url' or 'form'")
@@ -385,20 +413,28 @@ class SDKControlElicitationRequest(_ControlBase):
         from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
         match params:
-            case ElicitRequestURLParams(url=url, message=message, elicitationId=id_):
+            case ElicitRequestURLParams(url=url, message=message, elicitationId=id_, meta=meta):
+                meta_dct = meta.model_dump() if meta else {}
                 return cls(
                     mcp_server_name=mcp_server_name,
                     message=message,
                     mode="url",
                     url=url,
                     elicitation_id=id_,
+                    title=meta_dct.get("title"),
+                    display_name=meta_dct.get("displayName"),
+                    description=meta_dct.get("description"),
                 )
-            case ElicitRequestFormParams(message=message, requestedSchema=schema):
+            case ElicitRequestFormParams(message=message, requestedSchema=schema, meta=meta):
+                meta_dct = meta.model_dump() if meta else {}
                 return cls(
                     mcp_server_name=mcp_server_name,
                     message=message,
                     mode="form",
                     requested_schema=dict(schema),
+                    title=meta_dct.get("title"),
+                    display_name=meta_dct.get("displayName"),
+                    description=meta_dct.get("description"),
                 )
             case _ as unreachable:
                 assert_never(unreachable)

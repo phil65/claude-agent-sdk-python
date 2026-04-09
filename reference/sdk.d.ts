@@ -29,7 +29,7 @@ export declare type AccountInfo = {
     /**
      * Active API backend. Anthropic OAuth login only applies when "firstParty"; for 3P providers the other fields are absent and auth is external (AWS creds, gcloud ADC, etc.).
      */
-    apiProvider?: 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'anthropicAws';
+    apiProvider?: 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'anthropicAws' | 'mantle';
 };
 
 /**
@@ -421,6 +421,12 @@ export declare type ElicitationRequest = {
     elicitationId?: string;
     /** JSON Schema for the requested input (only for 'form' mode) */
     requestedSchema?: Record<string, unknown>;
+    /** Permission-display title from MCP `_meta['anthropic/permissionDisplay']` — header for elicitation-driven permission prompts */
+    title?: string;
+    /** Short tool/server label from MCP `_meta['anthropic/permissionDisplay'].displayName` */
+    displayName?: string;
+    /** Permission-display subtitle from MCP `_meta['anthropic/permissionDisplay'].description` */
+    description?: string;
 };
 
 /**
@@ -1837,6 +1843,7 @@ declare const SandboxNetworkConfigSchema: () => z.ZodOptional<z.ZodObject<{
     allowUnixSockets: z.ZodOptional<z.ZodArray<z.ZodString>>;
     allowAllUnixSockets: z.ZodOptional<z.ZodBoolean>;
     allowLocalBinding: z.ZodOptional<z.ZodBoolean>;
+    allowMachLookup: z.ZodOptional<z.ZodArray<z.ZodString>>;
     httpProxyPort: z.ZodOptional<z.ZodNumber>;
     socksProxyPort: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strip>>;
@@ -1857,6 +1864,7 @@ declare const SandboxSettingsSchema: () => z.ZodObject<{
         allowUnixSockets: z.ZodOptional<z.ZodArray<z.ZodString>>;
         allowAllUnixSockets: z.ZodOptional<z.ZodBoolean>;
         allowLocalBinding: z.ZodOptional<z.ZodBoolean>;
+        allowMachLookup: z.ZodOptional<z.ZodArray<z.ZodString>>;
         httpProxyPort: z.ZodOptional<z.ZodNumber>;
         socksProxyPort: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>>;
@@ -1968,6 +1976,18 @@ declare type SDKControlElicitationRequest = {
     url?: string;
     elicitation_id?: string;
     requested_schema?: Record<string, unknown>;
+    /**
+     * Permission-display title from the MCP server's _meta['anthropic/permissionDisplay']. Mirrors can_use_tool.title so SDK consumers can render elicitation-driven permission prompts with structured headers instead of parsing `message`.
+     */
+    title?: string;
+    /**
+     * Short tool/server label from _meta['anthropic/permissionDisplay'].displayName. Mirrors can_use_tool.display_name.
+     */
+    display_name?: string;
+    /**
+     * Permission-display subtitle from _meta['anthropic/permissionDisplay'].description. Mirrors can_use_tool.description.
+     */
+    description?: string;
 };
 
 /**
@@ -2052,6 +2072,7 @@ export declare type SDKControlGetContextUsageResponse = {
         attachmentTokens: number;
         assistantMessageTokens: number;
         userMessageTokens: number;
+        redirectedContextTokens: number;
         toolCallsByType: {
             name: string;
             callTokens: number;
@@ -2087,6 +2108,10 @@ declare type SDKControlInitializeRequest = {
     jsonSchema?: Record<string, unknown>;
     systemPrompt?: string;
     appendSystemPrompt?: string;
+    /**
+     * When true, omit per-user dynamic sections (working directory, auto-memory path) from the cached system prompt and re-inject them as the first user message. Lets cross-user prompt caching hit on a static system prompt prefix. Tradeoff: the model sees this context slightly later in the prompt, so steering on the working directory and memory location is marginally less authoritative. Has no effect when a custom (non-preset) system prompt is in use.
+     */
+    excludeDynamicSections?: boolean;
     agents?: Record<string, coreTypes.AgentDefinition>;
     promptSuggestions?: boolean;
     agentProgressSummaries?: boolean;
@@ -2219,7 +2244,7 @@ declare type SDKControlRewindFilesRequest = {
 };
 
 /**
- * Seeds the readFileState cache with a path+mtime entry. Use when a prior Read was removed from context (e.g. by snip) so Edit validation would fail despite the client having observed the Read. The mtime lets the CLI detect if the file changed since the seeded Read — same staleness check as the normal path.
+ * Seeds the readFileState cache with a path+mtime entry. Use when a prior Read was removed from context so Edit validation would fail despite the client having observed the Read. The mtime lets the CLI detect if the file changed since the seeded Read — same staleness check as the normal path.
  */
 declare type SDKControlSeedReadStateRequest = {
     subtype: 'seed_read_state';
@@ -3182,6 +3207,10 @@ export declare interface Settings {
         type: 'command';
         command: string;
         padding?: number;
+        /**
+         * Re-run the status line command every N seconds in addition to event-driven updates
+         */
+        refreshInterval?: number;
     };
     /**
      * Enabled plugins using plugin-id\@marketplace-id format. Example: { "formatter\@anthropic-tools": true }. Also supports extended format with version constraints.
@@ -3803,6 +3832,10 @@ export declare interface Settings {
      */
     outputStyle?: string;
     /**
+     * Default transcript view mode on startup
+     */
+    viewMode?: 'default' | 'verbose' | 'focus';
+    /**
      * Preferred language for Claude responses and voice dictation (e.g., "japanese", "spanish")
      */
     language?: string;
@@ -3836,6 +3869,10 @@ export declare interface Settings {
              */
             allowAllUnixSockets?: boolean;
             allowLocalBinding?: boolean;
+            /**
+             * macOS only: Additional XPC/Mach service names to allow looking up. Supports trailing-wildcard prefix matching (e.g., "com.apple.coresimulator.*"). Needed for tools that communicate via XPC such as the iOS Simulator or Playwright.
+             */
+            allowMachLookup?: string[];
             httpProxyPort?: number;
             socksProxyPort?: number;
         };
@@ -4190,6 +4227,8 @@ export declare type StopHookInput = BaseHookInput & {
      * Text content of the last assistant message before stopping. Avoids the need to read and parse the transcript file.
      */
     last_assistant_message?: string;
+
+
 };
 
 export declare type SubagentStartHookInput = BaseHookInput & {
@@ -4213,6 +4252,8 @@ export declare type SubagentStopHookInput = BaseHookInput & {
      * Text content of the last assistant message before stopping. Avoids the need to read and parse the transcript file.
      */
     last_assistant_message?: string;
+
+
 };
 
 export declare type SyncHookJSONOutput = {
@@ -4268,6 +4309,7 @@ export declare type TerminalReason = 'blocking_limit' | 'rapid_refill_breaker' |
  */
 export declare type ThinkingAdaptive = {
     type: 'adaptive';
+    display?: 'summarized' | 'omitted';
 };
 
 /**
@@ -4288,6 +4330,7 @@ export declare type ThinkingDisabled = {
 export declare type ThinkingEnabled = {
     type: 'enabled';
     budgetTokens?: number;
+    display?: 'summarized' | 'omitted';
 };
 
 export declare function tool<Schema extends AnyZodRawShape>(_name: string, _description: string, _inputSchema: Schema, _handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>, _extras?: {
@@ -4377,11 +4420,13 @@ export declare function unstable_v2_resumeSession(_sessionId: string, _options: 
 export declare type UserPromptSubmitHookInput = BaseHookInput & {
     hook_event_name: 'UserPromptSubmit';
     prompt: string;
+    session_title?: string;
 };
 
 export declare type UserPromptSubmitHookSpecificOutput = {
     hookEventName: 'UserPromptSubmit';
     additionalContext?: string;
+    sessionTitle?: string;
 };
 
 export declare type WorktreeCreateHookInput = BaseHookInput & {

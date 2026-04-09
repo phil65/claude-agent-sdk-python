@@ -192,6 +192,7 @@ class UserPromptSubmitHookInput(BaseHookInput):
 
     hook_event_name: Literal["UserPromptSubmit"]
     prompt: str
+    session_title: NotRequired[str]
 
 
 class StopHookInput(BaseHookInput):
@@ -465,6 +466,7 @@ class UserPromptSubmitHookSpecificOutput(TypedDict):
 
     hookEventName: Literal["UserPromptSubmit"]
     additionalContext: NotRequired[str]
+    sessionTitle: NotRequired[str]
 
 
 class SessionStartHookSpecificOutput(TypedDict):

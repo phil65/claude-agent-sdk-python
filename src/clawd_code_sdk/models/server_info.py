@@ -10,6 +10,9 @@ from pydantic import Field
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel, EffortLevel, FastModeState
 
 
+ApiProvider = Literal["firstParty", "bedrock", "vertex", "foundry", "anthropicAws", "mantle"]
+
+
 class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     """Information about an available AI model from Claude Code."""
 
@@ -69,7 +72,7 @@ class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
     organization: str | None = None
     """Organization name."""
 
-    api_provider: Literal["firstParty", "bedrock", "vertex", "foundry"] | None = None
+    api_provider: ApiProvider | None = None
     """Active API backend.
 
     Anthropic OAuth login only applies when "firstParty"; for 3P providers

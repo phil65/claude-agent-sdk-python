@@ -84,6 +84,25 @@ class AgentOutputUsage(TypedDict):
     """Cache creation statistics."""
 
 
+class ToolStats(TypedDict):
+    """Tool usage statistics from an agent task."""
+
+    readCount: int
+    """Number of read tool calls."""
+    searchCount: int
+    """Number of search tool calls."""
+    bashCount: int
+    """Number of bash tool calls."""
+    editFileCount: int
+    """Number of edit file tool calls."""
+    linesAdded: int
+    """Number of lines added by edit file tool calls."""
+    linesRemoved: int
+    """Number of lines removed by edit file tool calls."""
+    otherToolCount: int
+    """Number of other tool calls."""
+
+
 class AgentCompletedOutput(TypedDict):
     """Output from the Task tool when the agent completed successfully."""
 
@@ -103,6 +122,8 @@ class AgentCompletedOutput(TypedDict):
     """Total tokens used."""
     usage: AgentOutputUsage
     """Detailed token usage statistics."""
+    toolStats: NotRequired[ToolStats]
+    """Tool usage statistics."""
     prompt: str
     """The prompt that was given to the agent."""
 
@@ -448,7 +469,7 @@ class EditOutput(TypedDict):
     filePath: str
     oldString: str
     newString: str
-    originalFile: str
+    originalFile: str | None
     structuredPatch: list[StructuredPatchHunk]
     userModified: bool
     replaceAll: bool
