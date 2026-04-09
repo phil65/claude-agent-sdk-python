@@ -304,12 +304,10 @@ class Query:
                         event.set()
                     case {"type": "control_response"} as msg:
                         logger.info("unhandled control message: %s", msg)
-                    case {"type": "control_request"}:
-                        req_id = message["request_id"]
-                        req = incoming_control_request_adapter.validate_python(message["request"])
-                        self._spawn_control_request_handler(
-                            req_id, self._handle_control_request(req_id, req)
-                        )
+                    case {"type": "control_request", "request_id": req_id, "request": request}:
+                        req = incoming_control_request_adapter.validate_python(request)
+                        coro = self._handle_control_request(req_id, req)
+                        self._spawn_control_request_handler(req_id, coro)
                     case {"type": "control_cancel_request"}:
                         if (cancel_id := message.get("request_id")) and (
                             inflight := self._inflight_requests.pop(cancel_id, None)
@@ -318,8 +316,7 @@ class Query:
                     case {"type": "result"}:
                         self._first_result_event.set()
                         await self._message_send.send(message)
-                    case _:
-                        # Regular SDK messages go to the stream
+                    case _:  # Regular SDK messages go to the stream
                         await self._message_send.send(message)
 
         except anyio.get_cancelled_exc_class():
