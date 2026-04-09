@@ -391,14 +391,14 @@ class SDKControlElicitationRequest(_ControlBase):
                     message=self.message,
                     url=self.url,
                     elicitationId=self.elicitation_id,
-                    meta=ElicitRequestURLParams.Meta.model_validate(meta),  # pyright: ignore[reportCallIssue]
+                    _meta=ElicitRequestURLParams.Meta.model_validate(meta),  # ty:ignore[unknown-argument]
                 )
             case "form":
                 assert self.requested_schema is not None
                 return ElicitRequestFormParams(
                     message=self.message,
                     requestedSchema=self.requested_schema,
-                    meta=ElicitRequestFormParams.Meta.model_validate(meta),  # pyright: ignore[reportCallIssue]
+                    _meta=ElicitRequestFormParams.Meta.model_validate(meta),  # ty:ignore[unknown-argument]
                 )
             case None:
                 raise ValueError("mode must be 'url' or 'form'")
@@ -416,7 +416,7 @@ class SDKControlElicitationRequest(_ControlBase):
 
         match params:
             case ElicitRequestURLParams(url=url, message=message, elicitationId=id_, meta=meta):
-                meta_dct = meta.model_dump().get("anthropic/permissionDisplay") if meta else {}
+                meta_dct = meta.model_dump().get("anthropic/permissionDisplay", {}) if meta else {}
                 return cls(
                     mcp_server_name=mcp_server_name,
                     message=message,
@@ -428,7 +428,7 @@ class SDKControlElicitationRequest(_ControlBase):
                     description=meta_dct.get("description"),
                 )
             case ElicitRequestFormParams(message=message, requestedSchema=schema, meta=meta):
-                meta_dct = meta.model_dump() if meta else {}
+                meta_dct = meta.model_dump().get("anthropic/permissionDisplay", {}) if meta else {}
                 return cls(
                     mcp_server_name=mcp_server_name,
                     message=message,

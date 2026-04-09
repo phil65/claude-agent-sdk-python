@@ -13,7 +13,7 @@ replays, reconnection) are synthesized into the full event sequence
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from anthropic.types.beta import (
     BetaMessage,
@@ -181,8 +181,8 @@ def _to_anthropic_block(
             return AThinkingBlock(type="thinking", thinking="", signature="")
         case ToolUseBlock():
             return AToolUseBlock(type="tool_use", id=block.id, name=block.name, input={})
-        case _:
-            return None
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def _to_anthropic_delta(
