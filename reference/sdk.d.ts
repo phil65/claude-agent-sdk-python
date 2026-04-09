@@ -1360,6 +1360,19 @@ export declare type Options = {
      * - `string` - Use a custom system prompt
      * - `{ type: 'preset', preset: 'claude_code' }` - Use Claude Code's default system prompt
      * - `{ type: 'preset', preset: 'claude_code', append: '...' }` - Use default prompt with appended instructions
+     * - `{ type: 'preset', preset: 'claude_code', excludeDynamicSections: true }` -
+     *   Strip per-user dynamic sections (working directory, auto-memory, git
+     *   status) from the system prompt so it stays static and cacheable across
+     *   users. The stripped content is re-injected as the first user message so
+     *   the model still has access to it.
+     *
+     *   Use this when many users in your fleet share the same system prompt and
+     *   you want the prompt-caching prefix to hit cross-user. Tradeoffs:
+     *   - The working-directory, memory-path, and git-status context is
+     *     marginally less authoritative for steering the model (it appears in
+     *     a user message instead of the system prompt).
+     *   - The first user message becomes slightly larger.
+     *   - Has no effect when `systemPrompt` is a string (custom prompt).
      *
      * @example Custom prompt
      * ```typescript
@@ -1374,11 +1387,21 @@ export declare type Options = {
      *   append: 'Always explain your reasoning.'
      * }
      * ```
+     *
+     * @example Cacheable prompt for multi-user fleets
+     * ```typescript
+     * systemPrompt: {
+     *   type: 'preset',
+     *   preset: 'claude_code',
+     *   excludeDynamicSections: true,
+     * }
+     * ```
      */
     systemPrompt?: string | {
         type: 'preset';
         preset: 'claude_code';
         append?: string;
+        excludeDynamicSections?: boolean;
     };
     /**
      * Custom function to spawn the Claude Code process.

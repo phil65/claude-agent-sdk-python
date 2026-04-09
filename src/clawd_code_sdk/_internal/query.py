@@ -98,6 +98,7 @@ class Query:
         agents: dict[str, AgentDefinition] | None = None,
         system_prompt: str | None = None,
         append_system_prompt: str | None = None,
+        exclude_dynamic_sections: bool | None = None,
         json_schema: dict[str, Any] | None = None,
         prompt_suggestions: bool | None = None,
         agent_progress_summaries: bool | None = None,
@@ -115,6 +116,7 @@ class Query:
             agents: Optional agent definitions to send via initialize
             system_prompt: Optional system prompt to send via initialize
             append_system_prompt: Optional text to append to preset system prompt
+            exclude_dynamic_sections: Exclude dynamic sections from the system prompt
             json_schema: Optional JSON schema for structured output
             prompt_suggestions: Optional flag to enable prompt suggestions
             agent_progress_summaries: Optional flag to enable agent progress summaries
@@ -132,6 +134,7 @@ class Query:
         self._agents = agents
         self._system_prompt = system_prompt
         self._append_system_prompt = append_system_prompt
+        self._exclude_dynamic_sections = exclude_dynamic_sections
         self._json_schema = json_schema
         self._prompt_suggestions = prompt_suggestions
         self._agent_progress_summaries = agent_progress_summaries
@@ -205,6 +208,7 @@ class Query:
             agents=options.agents,
             system_prompt=system_prompt,
             append_system_prompt=append_system_prompt,
+            exclude_dynamic_sections=options.exclude_dynamic_sections,
             json_schema=options.get_json_schema(),
             prompt_suggestions=options.prompt_suggestions,
             agent_progress_summaries=options.agent_progress_summaries,
@@ -244,6 +248,7 @@ class Query:
             append_system_prompt=self._append_system_prompt,
             json_schema=self._json_schema,
             prompt_suggestions=self._prompt_suggestions,
+            exclude_dynamic_sections=self._exclude_dynamic_sections,
             sdk_mcp_servers=list(self.sdk_mcp_servers.keys()) or None,
             agent_progress_summaries=self._agent_progress_summaries,
         ).model_dump(by_alias=True, exclude_none=True)

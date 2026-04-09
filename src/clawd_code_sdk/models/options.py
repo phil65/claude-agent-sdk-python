@@ -268,6 +268,9 @@ class ClaudeAgentOptions:
     When True (default) and system_prompt is set, it is appended to the
     builtin system prompt. When False, the system_prompt replaces it entirely.
     """
+    exclude_dynamic_sections: bool | None = None
+    """Whether to exclude dynamic sections from the system prompt."""
+
     hooks: dict[HookEvent, list[HookMatcher]] | None = None
     """Hook configurations."""
     agents: dict[str, AgentDefinition] | None = None

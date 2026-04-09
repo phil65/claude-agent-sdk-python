@@ -368,18 +368,20 @@ class SDKControlElicitationRequest(_ControlBase):
     with structured headers instead of parsing `message`.
     """
     display_name: str | None = None
-    """Short tool/server label from MCP `_meta['anthropic/permissionDisplay'].displayName`."""
+    """Short tool/server label from `_meta['anthropic/permissionDisplay'].displayName`."""
     description: str | None = None
-    """Permission-display description from MCP `_meta['anthropic/permissionDisplay'].description`."""
+    """Permission-display description from `_meta['anthropic/permissionDisplay'].description`."""
 
     def to_mcp(self) -> mcp.types.ElicitRequestParams:
         """Convert to the corresponding MCP elicitation request params."""
         from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
         meta = {
-            "title": self.title,
-            "displayName": self.display_name,
-            "description": self.description,
+            "anthropic/permissionDisplay": {
+                "title": self.title,
+                "displayName": self.display_name,
+                "description": self.description,
+            }
         }
         match self.mode:
             case "url":
@@ -389,14 +391,14 @@ class SDKControlElicitationRequest(_ControlBase):
                     message=self.message,
                     url=self.url,
                     elicitationId=self.elicitation_id,
-                    meta=ElicitRequestURLParams.Meta(**meta),  # pyright: ignore[reportCallIssue]
+                    meta=ElicitRequestURLParams.Meta.model_validate(meta),  # pyright: ignore[reportCallIssue]
                 )
             case "form":
                 assert self.requested_schema is not None
                 return ElicitRequestFormParams(
                     message=self.message,
                     requestedSchema=self.requested_schema,
-                    meta=ElicitRequestFormParams.Meta(**meta),  # pyright: ignore[reportCallIssue]
+                    meta=ElicitRequestFormParams.Meta.model_validate(meta),  # pyright: ignore[reportCallIssue]
                 )
             case None:
                 raise ValueError("mode must be 'url' or 'form'")
@@ -414,7 +416,7 @@ class SDKControlElicitationRequest(_ControlBase):
 
         match params:
             case ElicitRequestURLParams(url=url, message=message, elicitationId=id_, meta=meta):
-                meta_dct = meta.model_dump() if meta else {}
+                meta_dct = meta.model_dump().get("anthropic/permissionDisplay") if meta else {}
                 return cls(
                     mcp_server_name=mcp_server_name,
                     message=message,
