@@ -484,19 +484,21 @@ class SDKControlSideQuestionRequest(_ControlBase):
     question: str
 
 
-ControlRequestUnion = Annotated[
+IncomingControlRequest = Annotated[
+    SDKControlPermissionRequest
+    | SDKHookCallbackRequest
+    | SDKControlMcpMessageRequest
+    | SDKControlElicitationRequest,
+    Discriminator("subtype"),
+]
+
+OutgoingControlRequest = Annotated[
     SDKControlInterruptRequest
-    | SDKControlPermissionRequest
     | SDKControlInitializeRequest
     | SDKControlSetPermissionModeRequest
     | SDKControlSetModelRequest
     | SDKControlSetMaxThinkingTokensRequest
     | SDKControlMcpStatusRequest
-    | SDKHookCallbackRequest
-    | SDKControlMcpMessageRequest
-    | SDKControlRewindFilesRequest
-    | SDKControlCancelAsyncMessageRequest
-    | SDKControlSeedReadStateRequest
     | SDKControlMcpSetServersRequest
     | SDKControlReloadPluginsRequest
     | SDKControlMcpReconnectRequest
@@ -514,11 +516,18 @@ ControlRequestUnion = Annotated[
     | SDKControlApplyFlagSettingsRequest
     | SDKControlGetContextUsageRequest
     | SDKControlGetSettingsRequest
-    | SDKControlElicitationRequest,
+    | SDKControlRewindFilesRequest
+    | SDKControlCancelAsyncMessageRequest
+    | SDKControlSeedReadStateRequest,
     Discriminator("subtype"),
 ]
 
-control_request_adapter = TypeAdapter[ControlRequestUnion](ControlRequestUnion)
+ControlRequestUnion = Annotated[
+    IncomingControlRequest | OutgoingControlRequest,
+    Discriminator("subtype"),
+]
+
+incoming_control_request_adapter = TypeAdapter[IncomingControlRequest](IncomingControlRequest)
 
 
 class SDKControlRequest(_ControlBase):

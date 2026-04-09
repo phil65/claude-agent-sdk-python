@@ -48,6 +48,8 @@ from .context_usage import (
 from .control import (
     ControlErrorResponse,
     ControlRequestUnion,
+    IncomingControlRequest,
+    OutgoingControlRequest,
     ControlResponse,
     SDKControlCancelAsyncMessageRequest,
     SDKControlChannelEnableRequest,
@@ -78,7 +80,7 @@ from .control import (
     SDKControlGetSettingsRequest,
     SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
-    control_request_adapter,
+    incoming_control_request_adapter,
 )
 from .hooks import (
     AgentHookHandler,
@@ -477,6 +479,8 @@ __all__ = [
     "ContinueLatest",
     "ControlErrorResponse",
     "ControlRequestUnion",
+    "IncomingControlRequest",
+    "OutgoingControlRequest",
     "ControlResponse",
     "CwdChangedHookInput",
     "CwdChangedHookSpecificOutput",
@@ -739,7 +743,7 @@ __all__ = [
     "WorktreeCreateHookSpecificOutput",
     "WorktreeRemoveHookInput",
     "WriteOutput",
-    "control_request_adapter",
+    "incoming_control_request_adapter",
     "message_adapter",
     "system_message_adapter",
 ]

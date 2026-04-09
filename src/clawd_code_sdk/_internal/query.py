@@ -8,7 +8,7 @@ from dataclasses import replace
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self, assert_never, cast
 
 import anyenv
 import anyio
@@ -28,17 +28,13 @@ from clawd_code_sdk.models import (
     PermissionResultAllow,
     SDKControlElicitationRequest,
     SDKControlInitializeRequest,
-    SDKControlInterruptRequest,
     SDKControlMcpMessageRequest,
     SDKControlPermissionRequest,
     SDKControlResponse,
-    SDKControlRewindFilesRequest,
-    SDKControlSetPermissionModeRequest,
-    SDKControlStopTaskRequest,
     SDKHookCallbackRequest,
     SideQuestionResponse,
     ToolPermissionContext,
-    control_request_adapter,
+    incoming_control_request_adapter,
 )
 
 
@@ -53,10 +49,10 @@ if TYPE_CHECKING:
         CanUseTool,
         ClaudeAgentOptions,
         ClaudeCodeAgentInfo,
-        ControlRequestUnion,
         HookCallback,
         HookEvent,
         HookMatcher,
+        IncomingControlRequest,
         JSONRPCMessage,
         JSONRPCResponse,
         OnElicitation,
@@ -310,7 +306,7 @@ class Query:
                         logger.info("unhandled control message: %s", msg)
                     case {"type": "control_request"}:
                         req_id = message["request_id"]
-                        req = control_request_adapter.validate_python(message["request"])
+                        req = incoming_control_request_adapter.validate_python(message["request"])
                         self._spawn_control_request_handler(
                             req_id, self._handle_control_request(req_id, req)
                         )
@@ -346,7 +342,7 @@ class Query:
     async def _handle_control_request(
         self,
         request_id: str,
-        request_data: ControlRequestUnion,
+        request_data: IncomingControlRequest,
     ) -> None:
         """Handle incoming control request from CLI."""
         response_data: dict[str, Any] = {}
@@ -362,14 +358,8 @@ class Query:
                     response_data = {"mcp_response": mcp_resp}
                 case SDKControlElicitationRequest() as req:
                     response_data = await self._handle_elicitation_request(req)
-                case (
-                    SDKControlInitializeRequest()
-                    | SDKControlSetPermissionModeRequest()
-                    | SDKControlRewindFilesRequest()
-                    | SDKControlStopTaskRequest()
-                    | SDKControlInterruptRequest()  # No response data needed
-                ):
-                    pass  # Handled elsewhere
+                case _ as unreachable:
+                    assert_never(unreachable)
             dct = ControlResponse(subtype="success", request_id=request_id, response=response_data)
             success_response = SDKControlResponse(type="control_response", response=dct)
             await self.write_json(success_response)
