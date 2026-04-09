@@ -16,7 +16,10 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport import Transport
-from clawd_code_sdk.models import SDKControlPermissionRequest, control_request_adapter
+from clawd_code_sdk.models import (
+    SDKControlPermissionRequest,
+    incoming_control_request_adapter as control_request_adapter,
+)
 
 
 async def _dispatch(query: Query, request: dict[str, Any]) -> None:

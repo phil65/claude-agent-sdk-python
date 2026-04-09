@@ -15,7 +15,7 @@ from clawd_code_sdk import (
     ResultMessage,
     ResultSuccessMessage,
 )
-from clawd_code_sdk.models import ModelUsage
+from clawd_code_sdk.models import ModelUsage, SessionStateChangedMessage
 from clawd_code_sdk.session import (
     ConversationTurn,
     Session,
@@ -25,6 +25,15 @@ from clawd_code_sdk.session import (
 )
 
 from .conftest import make_beta_message
+
+
+IDLE_STATE_MSG = {
+    "type": "system",
+    "subtype": "session_state_changed",
+    "state": "idle",
+    "session_id": "test-session",
+    "uuid": "state-idle-001",
+}
 
 
 def _create_mock_transport_with_messages(messages: list[dict]) -> AsyncMock:
@@ -246,15 +255,18 @@ class TestSession:
         """send() yields messages and records a ConversationTurn."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages([ASSISTANT_MSG, RESULT_MSG])
+            transport = _create_mock_transport_with_messages(
+                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG]
+            )
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
                 assert session.state == "idle"
                 messages = [msg async for msg in session.send("hello")]
-                assert len(messages) == 2
+                assert len(messages) == 3
                 assert isinstance(messages[0], AssistantMessage)
                 assert isinstance(messages[1], ResultMessage)
+                assert isinstance(messages[2], SessionStateChangedMessage)
 
                 assert len(session.turns) == 1
                 turn = session.turns[0]
@@ -270,14 +282,16 @@ class TestSession:
         """send() extracts tool calls from assistant messages."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages([TOOL_USE_MSG, RESULT_MSG])
+            transport = _create_mock_transport_with_messages(
+                [TOOL_USE_MSG, RESULT_MSG, IDLE_STATE_MSG]
+            )
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
 
                 messages = [msg async for msg in session.send("read file")]
 
-                assert len(messages) == 2
+                assert len(messages) == 3
                 assert len(session.turns) == 1
                 turn = session.turns[0]
                 assert turn.text == "Let me read that."
@@ -293,7 +307,9 @@ class TestSession:
         """send_and_collect() returns a ConversationTurn directly."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages([ASSISTANT_MSG, RESULT_MSG])
+            transport = _create_mock_transport_with_messages(
+                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG]
+            )
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
@@ -327,7 +343,7 @@ class TestSession:
             result2 = {**RESULT_MSG, "total_cost_usd": 0.010, "uuid": "msg-002"}
             # Transport that returns two rounds of messages
             transport1 = _create_mock_transport_with_messages(
-                [ASSISTANT_MSG, RESULT_MSG, ASSISTANT_MSG, result2]
+                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG, ASSISTANT_MSG, result2, IDLE_STATE_MSG]
             )
 
             async with SessionManager() as mgr:
@@ -551,9 +567,9 @@ class TestSessionManager:
         """total_cost_usd sums across all sessions."""
 
         async def _test():
-            t1 = _create_mock_transport_with_messages([ASSISTANT_MSG, RESULT_MSG])
+            t1 = _create_mock_transport_with_messages([ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG])
             result2 = {**RESULT_MSG, "total_cost_usd": 0.010, "uuid": "msg-002"}
-            t2 = _create_mock_transport_with_messages([ASSISTANT_MSG, result2])
+            t2 = _create_mock_transport_with_messages([ASSISTANT_MSG, result2, IDLE_STATE_MSG])
 
             async with SessionManager() as mgr:
                 s1 = await mgr.create_session("a", transport=t1)

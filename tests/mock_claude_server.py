@@ -80,6 +80,17 @@ def main() -> None:
                 ).model_dump(by_alias=True)
                 print(json.dumps(result))
                 sys.stdout.flush()
+
+                # Emit session state changed to idle (authoritative turn-over signal)
+                state_msg = {
+                    "type": "system",
+                    "subtype": "session_state_changed",
+                    "state": "idle",
+                    "session_id": "test",
+                    "uuid": "state-idle-001",
+                }
+                print(json.dumps(state_msg))
+                sys.stdout.flush()
                 break
         except (json.JSONDecodeError, KeyError):
             pass

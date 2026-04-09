@@ -22,7 +22,7 @@ from clawd_code_sdk import (
 )
 from clawd_code_sdk._internal.transport import subprocess_cli
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.models import ModelUsage
+from clawd_code_sdk.models import ModelUsage, SessionStateChangedMessage
 
 from .conftest import make_beta_message
 
@@ -381,6 +381,13 @@ class TestClaudeSDKClientStreaming:
                             "cache_read_input_tokens": 0,
                         },
                     }
+                    yield {
+                        "type": "system",
+                        "subtype": "session_state_changed",
+                        "state": "idle",
+                        "session_id": "test",
+                        "uuid": "state-idle-001",
+                    }
                     # This should not be yielded
                     yield {
                         "type": "assistant",
@@ -393,10 +400,11 @@ class TestClaudeSDKClientStreaming:
 
                 async with ClaudeSDKClient() as client:
                     messages = [msg async for msg in client.receive_response()]
-                    # Should only get 2 messages (assistant + result)
-                    assert len(messages) == 2
+                    # Should get 3 messages (assistant + result + idle state change)
+                    assert len(messages) == 3
                     assert isinstance(messages[0], AssistantMessage)
                     assert isinstance(messages[1], ResultMessage)
+                    assert isinstance(messages[2], SessionStateChangedMessage)
 
         anyio.run(_test)
 
@@ -582,10 +590,11 @@ class TestQueryWithMultiplePrompts:
 
                 with patch.object(SubprocessCLITransport, "_build_command", mock_build_command):
                     messages = [msg async for msg in ClaudeSDKClient.one_shot("First", "Second")]
-                    # Should get the result message
-                    assert len(messages) == 1
+                    # Should get result + idle state change
+                    assert len(messages) == 2
                     assert isinstance(messages[0], ResultMessage)
                     assert messages[0].subtype == "success"
+                    assert isinstance(messages[1], SessionStateChangedMessage)
 
         anyio.run(_test)
 
