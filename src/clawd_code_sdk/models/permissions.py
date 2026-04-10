@@ -118,6 +118,12 @@ class ToolPermissionContext:
     E.g. "Claude will have read and write access to files in ~/Downloads".
     """
 
+    tool_name: str | None = None
+    """The name of the tool that generated this permission request."""
+
+    input: dict[str, Any] | None = None
+    """The input to the tool that generated this permission request."""
+
     @classmethod
     def from_permission_request(cls, req: SDKControlPermissionRequest) -> Self:
         """Create a PermissionContext from a permission request."""
@@ -130,6 +136,8 @@ class ToolPermissionContext:
             title=req.title,
             display_name=req.display_name,
             description=req.description,
+            tool_name=req.tool_name,
+            input=req.input,
         )
 
 
