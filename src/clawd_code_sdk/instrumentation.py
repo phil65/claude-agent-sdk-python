@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING, Any
 
 from logfire._internal.integrations.llm_providers.semconv import (
@@ -22,186 +21,22 @@ from logfire._internal.integrations.llm_providers.semconv import (
     OutputMessage,
     ToolCallResponsePart,
 )
-from logfire._internal.utils import handle_internal_errors
 from opentelemetry import context as context_api, trace as trace_api
-
-from clawd_code_sdk import HookMatcher
 
 
 if TYPE_CHECKING:
     from logfire._internal.integrations.llm_providers.semconv import MessagePart, TextPart
     from logfire._internal.main import Logfire, LogfireSpan
 
-    from clawd_code_sdk.models import (
-        AssistantMessage,
-        HookContext,
-        HookEvent,
-        PostToolUseFailureHookInput,
-        PostToolUseHookInput,
-        PreToolUseHookInput,
-        ResultMessage,
-        SyncHookJSONOutput,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Thread-local storage for per-conversation state.
-#
-# The Claude Agent SDK uses anyio internally, and anyio tasks don't propagate
-# contextvars from the parent. This means OTel's context propagation breaks
-# for hook callbacks. We use threading.local() as a workaround — storing a
-# single ConversationState object that hooks retrieve.
-# ---------------------------------------------------------------------------
-_thread_local = threading.local()
-
-
-def get_state() -> ConversationState | None:
-    return getattr(_thread_local, "state", None)
-
-
-def set_state(state: ConversationState) -> None:
-    _thread_local.state = state
-
-
-def clear_state() -> None:
-    if hasattr(_thread_local, "state"):
-        delattr(_thread_local, "state")
-
-
-async def pre_tool_use_hook(
-    input_data: PreToolUseHookInput,
-    tool_use_id: str | None,
-    _context: HookContext,
-) -> SyncHookJSONOutput:
-    """Create a child span when a tool execution starts."""
-    if not tool_use_id:
-        return {}
-
-    with handle_internal_errors:  # ty:ignore[invalid-context-manager]
-        state = get_state()
-        if state is None:
-            return {}
-
-        tool_name = input_data["tool_name"]
-        # Close the current chat span so it doesn't overlap with tool execution.
-        state.close_chat_span()
-        # Temporarily attach root span context so the new span is parented correctly,
-        # then immediately detach. We can't keep the context attached because hooks
-        # run in different async contexts (anyio tasks) and detaching later would fail.
-        otel_span = state.root_span._span  # pyright: ignore[reportPrivateUsage]
-        if otel_span is None:
-            return {}
-        parent_ctx = trace_api.set_span_in_context(otel_span)
-        token = context_api.attach(parent_ctx)
-        try:
-            span_name = f"execute_tool {tool_name}"
-            span = state.logfire.span(span_name)
-            span.set_attributes(
-                {
-                    OPERATION_NAME: "execute_tool",
-                    TOOL_NAME: tool_name,
-                    TOOL_CALL_ID: tool_use_id,
-                    TOOL_CALL_ARGUMENTS: input_data["tool_input"],
-                }
-            )
-            span._start()  # pyright: ignore[reportPrivateUsage]
-            state.active_tool_spans[tool_use_id] = span
-        finally:
-            context_api.detach(token)
-
-    return {}
-
-
-async def post_tool_use_hook(
-    input_data: PostToolUseHookInput,
-    tool_use_id: str | None,
-    _context: HookContext,
-) -> SyncHookJSONOutput:
-    """End the tool span after successful execution."""
-    if not tool_use_id:
-        return {}
-
-    with handle_internal_errors:  # ty:ignore[invalid-context-manager]
-        state = get_state()
-        if state is None:
-            return {}
-
-        span = state.active_tool_spans.pop(tool_use_id, None)
-        if not span:
-            return {}
-
-        tool_response = input_data["tool_response"]
-        if tool_response is not None:
-            span.set_attribute(TOOL_CALL_RESULT, tool_response)
-        span._end()  # pyright: ignore[reportPrivateUsage]
-
-        # Record tool result for the next chat span's input messages
-        tool_name = str(input_data["tool_name"])
-        state.add_tool_result(
-            tool_use_id, tool_name, tool_response if tool_response is not None else ""
-        )
-
-    return {}
-
-
-async def post_tool_use_failure_hook(
-    input_data: PostToolUseFailureHookInput,
-    tool_use_id: str | None,
-    _context: HookContext,
-) -> SyncHookJSONOutput:
-    """End the tool span with an error after failed execution."""
-    if not tool_use_id:
-        return {}
-
-    with handle_internal_errors:  # ty:ignore[invalid-context-manager]
-        state = get_state()
-        if state is None:
-            return {}
-
-        span = state.active_tool_spans.pop(tool_use_id, None)
-        if not span:
-            return {}
-
-        error = str(input_data["error"])
-        span.set_attribute(ERROR_TYPE, error)
-        span.set_level("error")
-        span._end()  # pyright: ignore[reportPrivateUsage]
-        # Record the error as a tool result so the next turn's input is complete.
-        state.add_tool_result(tool_use_id, input_data["tool_name"], error)
-
-    return {}
-
-
-# ---------------------------------------------------------------------------
-# Instrumentation entry point.
-# ---------------------------------------------------------------------------
-
-
-def inject_tracing_hooks(
-    hooks: dict[HookEvent, list[HookMatcher]] | None = None,
-) -> dict[HookEvent, list[HookMatcher]]:
-    """Return a copy of *hooks* with logfire tracing hooks prepended."""
-    result: dict[HookEvent, list[HookMatcher]] = (
-        {k: list(v) for k, v in hooks.items()} if hooks else {}
-    )
-    with handle_internal_errors:  # ty:ignore[invalid-context-manager]
-        for event in ("PreToolUse", "PostToolUse", "PostToolUseFailure"):
-            result.setdefault(event, [])
-        result["PreToolUse"].insert(0, HookMatcher(matcher=None, hooks=[pre_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
-        result["PostToolUse"].insert(0, HookMatcher(matcher=None, hooks=[post_tool_use_hook]))  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
-        result["PostToolUseFailure"].insert(
-            0,
-            HookMatcher(matcher=None, hooks=[post_tool_use_failure_hook]),  # type: ignore[list-item]  # ty:ignore[invalid-argument-type]
-        )
-    return result
+    from clawd_code_sdk.models import AssistantMessage, ResultMessage
+    from clawd_code_sdk.models.content_blocks import ToolResultBlock, ToolUseBlock
 
 
 class ConversationState:
-    """Per-conversation state stored in thread-local during a receive_response iteration.
+    """Per-conversation state for instrumenting a receive_response iteration.
 
-    Holds everything hooks need: the root span, logfire instance, active tool spans,
-    chat span lifecycle, and conversation history. This keeps all mutable state in one
-    object instead of scattered across globals and thread-local attributes.
+    All instrumentation is driven from the event loop in
+    ``receive_response_instrumented`` — no hooks or thread-locals needed.
     """
 
     def __init__(
@@ -246,18 +81,11 @@ class ConversationState:
             span_data[SYSTEM_INSTRUCTIONS] = self._system_instructions
 
         self._current_span = self.logfire.span("chat", **span_data)
-        # Start without entering context — chat spans don't need to be on the
-        # context stack, and this allows close_chat_span() to be called safely
-        # from hooks running in different async contexts.
         self._current_span._start()  # pyright: ignore[reportPrivateUsage]
         self._current_output_parts = []
 
     def close_chat_span(self) -> None:
-        """Close the current chat span without opening a new one.
-
-        Safe to call from hooks (different async contexts) because chat spans
-        are never entered into the OTel context stack.
-        """
+        """Close the current chat span without opening a new one."""
         if self._current_span is not None:
             if self._current_output_parts:
                 self._history.append(
@@ -285,13 +113,68 @@ class ConversationState:
             self.model = model
             self._current_span.set_attribute(REQUEST_MODEL, model)
             self._current_span.set_attribute(RESPONSE_MODEL, model)
-            # Update span name to include model.
             self._current_span.message = f"chat {model}"
             self._current_span.update_name(f"chat {model}")  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
-        # self._current_span.set_attributes(usage.to_otel(partial=True))
         if error := message.error:
             self._current_span.set_attribute(ERROR_TYPE, str(error))
             self._current_span.set_level("error")
+
+    def open_tool_spans(self, blocks: list[ToolUseBlock]) -> None:
+        """Open tool execution spans for each ToolUseBlock in an AssistantMessage.
+
+        Closes the current chat span first (chat is done, tools are about to run),
+        then creates child spans under the root span for each tool call.
+        """
+        if not blocks:
+            return
+
+        self.close_chat_span()
+
+        otel_span = self.root_span._span  # pyright: ignore[reportPrivateUsage]
+        if otel_span is None:
+            return
+        parent_ctx = trace_api.set_span_in_context(otel_span)
+        token = context_api.attach(parent_ctx)
+        try:
+            for block in blocks:
+                span_name = f"execute_tool {block.name}"
+                span = self.logfire.span(span_name)
+                span.set_attributes(
+                    {
+                        OPERATION_NAME: "execute_tool",
+                        TOOL_NAME: block.name,
+                        TOOL_CALL_ID: block.id,
+                        TOOL_CALL_ARGUMENTS: block.input,
+                    }
+                )
+                span._start()  # pyright: ignore[reportPrivateUsage]
+                self.active_tool_spans[block.id] = span
+        finally:
+            context_api.detach(token)
+
+    def close_tool_spans(self, results: list[ToolResultBlock]) -> None:
+        """Close tool spans using ToolResultBlocks from a UserMessage.
+
+        Records results/errors on each span and adds tool results to conversation
+        history for the next chat span.
+        """
+        for result_block in results:
+            span = self.active_tool_spans.pop(result_block.tool_use_id, None)
+            if span is None:
+                continue
+
+            result_text = result_block.extract_text()
+            if result_block.is_error:
+                span.set_attribute(ERROR_TYPE, result_text)
+                span.set_level("error")
+            else:
+                span.set_attribute(TOOL_CALL_RESULT, result_text)
+            span._end()  # pyright: ignore[reportPrivateUsage]
+
+            # Record tool result for the next chat span's input messages.
+            # Use tool_use_id as the name since ToolResultBlock doesn't carry the tool name;
+            # the tool name is already on the span from open_tool_spans.
+            self.add_tool_result(result_block.tool_use_id, result_block.tool_use_id, result_text)
 
     def close(self) -> None:
         """Close chat span and end any orphaned tool spans."""

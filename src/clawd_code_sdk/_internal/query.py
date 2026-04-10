@@ -154,13 +154,7 @@ class Query:
 
     @classmethod
     def from_options(cls, options: ClaudeAgentOptions, transport: Transport | None = None) -> Query:
-        # Extract SDK MCP servers from options
-        if options.instrument:
-            from clawd_code_sdk.instrumentation import inject_tracing_hooks
-
-            hooks = inject_tracing_hooks(options.hooks)
-        else:
-            hooks = options.hooks or {}
+        hooks = options.hooks or {}
 
         # If on_permission is a callback, extract it for Query and replace with
         # "stdio" so the CLI routes permission requests through the control protocol.

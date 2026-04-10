@@ -461,12 +461,8 @@ class ClaudeSDKClient:
         )
         from logfire._internal.utils import handle_internal_errors
 
-        from clawd_code_sdk.instrumentation import (
-            ConversationState,
-            clear_state,
-            record_result,
-            set_state,
-        )
+        from clawd_code_sdk.instrumentation import ConversationState, record_result
+        from clawd_code_sdk.models.content_blocks import ToolResultBlock, ToolUseBlock
 
         logfire_instance = Logfire()
         logfire_claude = logfire_instance.with_settings(custom_scope_suffix="clawd_code_sdk")
@@ -494,7 +490,6 @@ class ClaudeSDKClient:
                 input_messages=input_messages,
                 system_instructions=span_data.get(SYSTEM_INSTRUCTIONS),
             )
-            set_state(state)
             # Open the first chat span now — the LLM call starts at query time.
             state.open_chat_span()
 
@@ -504,7 +499,20 @@ class ClaudeSDKClient:
                         match msg:
                             case AssistantMessage():
                                 state.handle_assistant_message(msg)
+                                # Open tool spans for any tool_use blocks.
+                                tool_blocks = [
+                                    b for b in msg.content if isinstance(b, ToolUseBlock)
+                                ]
+                                state.open_tool_spans(tool_blocks)
                             case UserMessage():
+                                # Close tool spans from tool results before
+                                # opening the next chat span.
+                                content = msg.message.content
+                                if isinstance(content, (list, tuple)):
+                                    result_blocks = [
+                                        b for b in content if isinstance(b, ToolResultBlock)
+                                    ]
+                                    state.close_tool_spans(result_blocks)
                                 state.handle_user_message()
                             case ResultSuccessMessage() | ResultErrorMessage():
                                 record_result(root_span, msg)
@@ -516,7 +524,6 @@ class ClaudeSDKClient:
                     yield msg
             finally:
                 state.close()
-                clear_state()
 
     async def receive_response(self) -> AsyncIterator[Message]:
         """Receive messages from Claude until the response is complete.
