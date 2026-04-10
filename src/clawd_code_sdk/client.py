@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
@@ -15,6 +14,8 @@ from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
+    ClaudeCodeServerInfo,
+    ClaudeOAuthWaitForCompletionResponse,
     GetSettingsResponse,
     McpAuthenticateResponse,
     McpSetServersResult,
@@ -22,8 +23,33 @@ from clawd_code_sdk.models import (
     RemoteControlResponse,
     ResultErrorMessage,
     ResultSuccessMessage,
+    SDKControlApplyFlagSettingsRequest,
+    SDKControlCancelAsyncMessageRequest,
+    SDKControlChannelEnableRequest,
+    SDKControlClaudeOAuthWaitForCompletionRequest,
+    SDKControlEndSessionRequest,
+    SDKControlGetContextUsageRequest,
     SDKControlGetContextUsageResponse,
+    SDKControlGetSettingsRequest,
+    SDKControlInitializeRequest,
+    SDKControlInterruptRequest,
+    SDKControlMcpAuthenticateRequest,
+    SDKControlMcpClearAuthRequest,
+    SDKControlMcpOAuthCallbackUrlRequest,
+    SDKControlMcpReconnectRequest,
+    SDKControlMcpSetServersRequest,
+    SDKControlMcpStatusRequest,
+    SDKControlMcpToggleRequest,
+    SDKControlRemoteControlRequest,
+    SDKControlRewindFilesRequest,
+    SDKControlSeedReadStateRequest,
+    SDKControlSetMaxThinkingTokensRequest,
+    SDKControlSetModelRequest,
+    SDKControlSetPermissionModeRequest,
+    SDKControlSideQuestionRequest,
+    SDKControlStopTaskRequest,
     SessionStateChangedMessage,
+    SideQuestionResponse,
     StatusSystemMessage,
     Usage,
     UserMessage,
@@ -38,15 +64,12 @@ if TYPE_CHECKING:
     from clawd_code_sdk import Transport
     from clawd_code_sdk.models import (
         ClaudeCodeAgentInfo,
-        ClaudeCodeServerInfo,
         ClaudeCodeSettings,
-        ClaudeOAuthWaitForCompletionResponse,
-        McpServerConfig,
+        ExternalMcpServerConfig,
         McpServerStatusEntry,
         Message,
         PermissionMode,
         SessionState,
-        SideQuestionResponse,
         UserPrompt,
     )
 
@@ -105,6 +128,7 @@ class ClaudeSDKClient:
         self.options = options
         self._custom_transport = transport
         self._query: Query | None = None
+        self._initialization_result: ClaudeCodeServerInfo | None = None
         self.session_usage: Usage = Usage()
         self.session_state: SessionState = "idle"
         """Cumulative token usage across all queries in this session."""
@@ -130,9 +154,43 @@ class ClaudeSDKClient:
         # Use provided custom transport or create subprocess transport
         self._query = Query.from_options(self.options, self._custom_transport)
         await self._query.transport.connect()
-        # Start reading messages and initialize
         await self._query.start()
-        await self._query.initialize()
+        await self._initialize()
+
+    async def _initialize(self) -> None:
+        """Send the initialize control request to the CLI."""
+        query = self._ensure_connected()
+        options = self.options
+
+        # Resolve system prompt vs append_system_prompt from options
+        system_prompt: str | None = None
+        append_system_prompt: str | None = None
+        if options.system_prompt is None:
+            if not options.include_builtin_system_prompt:
+                system_prompt = ""  # Clear the builtin prompt
+        elif options.include_builtin_system_prompt:
+            append_system_prompt = options.system_prompt
+        else:
+            system_prompt = options.system_prompt
+
+        # Calculate initialize timeout
+        initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
+        initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
+
+        hooks_config = query.build_hooks_config()
+        request = SDKControlInitializeRequest(
+            hooks=hooks_config,
+            agents={name: d.to_wire_model() for name, d in (options.agents or {}).items()} or None,
+            system_prompt=system_prompt,
+            append_system_prompt=append_system_prompt,
+            json_schema=options.get_json_schema(),
+            prompt_suggestions=options.prompt_suggestions,
+            exclude_dynamic_sections=options.exclude_dynamic_sections,
+            sdk_mcp_servers=list(query.sdk_mcp_servers.keys()) or None,
+            agent_progress_summaries=options.agent_progress_summaries,
+        )
+        response = await query._send_control_request(request, timeout=initialize_timeout)
+        self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
 
     async def receive_messages(self) -> AsyncIterator[Message]:
         """Receive all messages from Claude."""
@@ -195,7 +253,8 @@ class ClaudeSDKClient:
     async def interrupt(self) -> None:
         """Send interrupt signal (only works with streaming mode)."""
         query = self._ensure_connected()
-        await query.interrupt()
+        request = SDKControlInterruptRequest()
+        await query._send_control_request(request)
 
     async def set_permission_mode(self, mode: PermissionMode) -> None:
         """Change permission mode during conversation (only works with streaming mode).
@@ -208,7 +267,8 @@ class ClaudeSDKClient:
                 - 'bypassPermissions': Allow all tools (use with caution)
         """
         query = self._ensure_connected()
-        await query.set_permission_mode(mode)
+        request = SDKControlSetPermissionModeRequest(mode=mode)
+        await query._send_control_request(request)
 
     async def set_model(self, model: str | None = None) -> None:
         """Change the AI model during conversation (only works with streaming mode).
@@ -217,17 +277,20 @@ class ClaudeSDKClient:
             model: The model to use, or None to use default. Example: 'claude-sonnet-4-5'
         """
         query = self._ensure_connected()
-        await query.set_model(model)
+        request = SDKControlSetModelRequest(model=model)
+        await query._send_control_request(request)
 
     async def cancel_async_message(self, message_uuid: str) -> None:
         """Drop a pending async user message from the command queue by uuid."""
         query = self._ensure_connected()
-        await query.cancel_async_message(message_uuid)
+        request = SDKControlCancelAsyncMessageRequest(message_uuid=message_uuid)
+        await query._send_control_request(request)
 
     async def stop_task(self, task_id: str) -> None:
         """Stop a running task."""
         query = self._ensure_connected()
-        await query.stop_task(task_id)
+        request = SDKControlStopTaskRequest(task_id=task_id)
+        await query._send_control_request(request)
 
     async def rewind_files(self, user_message_id: str) -> None:
         """Rewind tracked files to their state at a specific user message.
@@ -258,20 +321,24 @@ class ClaudeSDKClient:
             ```
         """
         query = self._ensure_connected()
-        await query.rewind_files(user_message_id)
+        req = SDKControlRewindFilesRequest(user_message_id=user_message_id)
+        await query._send_control_request(req)
 
     async def seed_read_state(self, path: str, mtime: int) -> None:
         """Seed the CLI's readFileState cache with a path+mtime entry.
 
         Use when the client observed a Read that has since been removed from context
         (e.g. by snip), so a subsequent Edit won't fail "file not read yet".
+        If the file changed on disk since the given mtime, the seed is skipped
+        and Edit will correctly require a fresh Read.
 
         Args:
             path: Path to the file that was previously Read
             mtime: File mtime (floored ms) at the time of the observed Read
         """
         query = self._ensure_connected()
-        await query.seed_read_state(path, mtime)
+        req = SDKControlSeedReadStateRequest(path=path, mtime=mtime)
+        await query._send_control_request(req)
 
     async def get_mcp_status(self) -> list[McpServerStatusEntry]:
         """Get current MCP server connection status.
@@ -281,11 +348,14 @@ class ClaudeSDKClient:
             configurations, tools, and connection information.
         """
         query = self._ensure_connected()
-        result = await query.get_mcp_status()
+        request = SDKControlMcpStatusRequest()
+        result = await query._send_control_request(request)
         response = McpStatusResponse.model_validate(result)
         return response.mcp_servers
 
-    async def set_mcp_servers(self, servers: dict[str, McpServerConfig]) -> McpSetServersResult:
+    async def set_mcp_servers(
+        self, servers: dict[str, ExternalMcpServerConfig]
+    ) -> McpSetServersResult:
         """Add, replace, or remove MCP servers dynamically mid-session.
 
         Allows dynamic registration of MCP servers without restarting the session.
@@ -306,28 +376,27 @@ class ClaudeSDKClient:
             - 'errors': Dict mapping server names to error messages (if any)
         """
         query = self._ensure_connected()
-        wire_servers: dict[str, dict[str, Any]] = {}
-        for name, config in servers.items():
-            server_dict = asdict(config)
-            server_dict["name"] = name
-            wire_servers[name] = server_dict
-        result = await query.set_mcp_servers(wire_servers)
+        request = SDKControlMcpSetServersRequest(servers=servers)
+        result = await query._send_control_request(request)
         return McpSetServersResult.model_validate(result)
 
     async def mcp_reconnect(self, server_name: str) -> None:
         """Reconnect to an MCP server."""
         query = self._ensure_connected()
-        await query.mcp_reconnect(server_name)
+        request = SDKControlMcpReconnectRequest(server_name=server_name)
+        await query._send_control_request(request)
 
     async def mcp_toggle(self, server_name: str, *, enabled: bool) -> None:
         """Enable or disable an MCP server."""
         query = self._ensure_connected()
-        await query.mcp_toggle(server_name, enabled=enabled)
+        request = SDKControlMcpToggleRequest(server_name=server_name, enabled=enabled)
+        await query._send_control_request(request)
 
     async def end_session(self) -> None:
         """End the current session."""
         query = self._ensure_connected()
-        await query.end_session()
+        request = SDKControlEndSessionRequest()
+        await query._send_control_request(request)
 
     async def remote_control(self, *, enabled: bool) -> RemoteControlResponse | None:
         """Toggle the remote control REPL bridge for external session access.
@@ -340,7 +409,8 @@ class ClaudeSDKClient:
             when enabling, or ``None`` when disabling.
         """
         query = self._ensure_connected()
-        result = await query.remote_control(enabled=enabled)
+        req = SDKControlRemoteControlRequest(enabled=enabled)
+        result = await query._send_control_request(req)
         if not result:
             return None
         return RemoteControlResponse.model_validate(result)
@@ -356,18 +426,21 @@ class ClaudeSDKClient:
         """
         query = self._ensure_connected()
         serialized = settings.model_dump(by_alias=True, exclude_none=True)
-        await query.apply_flag_settings(serialized)
+        req = SDKControlApplyFlagSettingsRequest(settings=serialized)
+        await query._send_control_request(req)
 
     async def get_settings(self) -> GetSettingsResponse:
         """Get the effective merged settings and raw per-source settings."""
         query = self._ensure_connected()
-        result = await query.get_settings()
+        request = SDKControlGetSettingsRequest()
+        result = await query._send_control_request(request)
         return GetSettingsResponse.model_validate(result)
 
     async def get_context_usage(self) -> SDKControlGetContextUsageResponse:
         """Get a breakdown of current context window usage by category."""
         query = self._ensure_connected()
-        result = await query.get_context_usage()
+        request = SDKControlGetContextUsageRequest()
+        result = await query._send_control_request(request)
         return SDKControlGetContextUsageResponse.model_validate(result)
 
     async def mcp_authenticate(self, server_name: str) -> McpAuthenticateResponse:
@@ -377,13 +450,15 @@ class ClaudeSDKClient:
             Response indicating whether user action is required and the auth URL if so.
         """
         query = self._ensure_connected()
-        result = await query.mcp_authenticate(server_name)
+        req = SDKControlMcpAuthenticateRequest(server_name=server_name)
+        result = await query._send_control_request(req)
         return McpAuthenticateResponse.model_validate(result)
 
     async def mcp_clear_auth(self, server_name: str) -> None:
         """Clear OAuth credentials for an MCP server."""
         query = self._ensure_connected()
-        await query.mcp_clear_auth(server_name)
+        req = SDKControlMcpClearAuthRequest(server_name=server_name)
+        await query._send_control_request(req)
 
     async def mcp_oauth_callback_url(self, server_name: str, callback_url: str) -> None:
         """Provide an OAuth redirect callback URL to complete an MCP server OAuth flow.
@@ -392,7 +467,10 @@ class ClaudeSDKClient:
         redirect URL (containing the authorization code) to finish the flow.
         """
         query = self._ensure_connected()
-        await query.mcp_oauth_callback_url(server_name, callback_url)
+        req = SDKControlMcpOAuthCallbackUrlRequest(
+            server_name=server_name, callback_url=callback_url
+        )
+        await query._send_control_request(req)
 
     async def claude_oauth_wait_for_completion(self) -> ClaudeOAuthWaitForCompletionResponse:
         """Wait for an in-progress Claude OAuth flow to complete.
@@ -401,7 +479,9 @@ class ClaudeSDKClient:
             Account details (email, organization, subscriptionType, etc.).
         """
         query = self._ensure_connected()
-        return await query.claude_oauth_wait_for_completion()
+        req = SDKControlClaudeOAuthWaitForCompletionRequest()
+        data = await query._send_control_request(req)
+        return ClaudeOAuthWaitForCompletionResponse.model_validate(data)
 
     async def side_question(self, question: str) -> SideQuestionResponse:
         """Send a side question to the model using the current conversation context.
@@ -416,12 +496,21 @@ class ClaudeSDKClient:
             The model's answer, or None if no context was available.
         """
         query = self._ensure_connected()
-        return await query.side_question(question)
+        req = SDKControlSideQuestionRequest(question=question)
+        data = await query._send_control_request(req)
+        return SideQuestionResponse.model_validate(data)
+
+    async def channel_enable(self, server_name: str) -> None:
+        """Enable MCP channel notifications for a marketplace plugin server."""
+        query = self._ensure_connected()
+        req = SDKControlChannelEnableRequest(server_name=server_name)
+        await query._send_control_request(req)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens for extended thinking."""
         query = self._ensure_connected()
-        await query.set_max_thinking_tokens(max_thinking_tokens)
+        request = SDKControlSetMaxThinkingTokensRequest(max_thinking_tokens=max_thinking_tokens)
+        await query._send_control_request(request)
 
     async def supported_agents(self) -> list[ClaudeCodeAgentInfo]:
         """Get the list of available subagents for the current session.
@@ -429,8 +518,9 @@ class ClaudeSDKClient:
         Returns:
             List of available agents with their names, descriptions, and configuration.
         """
-        query = self._ensure_connected()
-        return await query.supported_agents()
+        if self._initialization_result is None:
+            raise RuntimeError("Not initialized. Call connect() first.")
+        return self._initialization_result.agents
 
     async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.
@@ -443,8 +533,7 @@ class ClaudeSDKClient:
         Returns:
             Parsed server info, or None if not yet initialized
         """
-        query = self._ensure_connected()
-        return query._initialization_result
+        return self._initialization_result
 
     async def receive_response_instrumented(self) -> AsyncIterator[Message]:
         from logfire import Logfire
