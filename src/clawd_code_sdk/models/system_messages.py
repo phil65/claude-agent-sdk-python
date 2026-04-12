@@ -201,6 +201,25 @@ class TaskStartedSystemMessage(BaseSystemMessage):
     prompt: str | None = None
 
 
+class Patch(BaseModel):
+    """Patch for updating a task's status and metadata."""
+
+    status: Literal["pending", "running", "completed", "failed", "killed"] | None = None
+    description: str | None = None
+    end_time: float | None = None
+    total_paused_ms: int | None = None
+    error: str | None = None
+    is_backgrounded: bool | None = None
+
+
+class TaskUpdatedSystemMessage(BaseSystemMessage):
+    """System message emitted when a subagent task was updated."""
+
+    subtype: Literal["task_updated"] = "task_updated"
+    task_id: str
+    patch: Patch
+
+
 class TaskNotificationSystemMessage(BaseSystemMessage):
     """System message emitted when a subagent task completes, fails, or stops."""
 
@@ -258,6 +277,7 @@ SystemMessageUnion = (
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
+    | TaskUpdatedSystemMessage
     | SessionStateChangedMessage
     | FilesPersistedSystemMessage
     | ElicitationCompleteMessage
@@ -265,22 +285,6 @@ SystemMessageUnion = (
     | APIRetrySystemMessage
 )
 
-SystemMessages = Annotated[
-    InitSystemMessage
-    | HookStartedSystemMessage
-    | StatusSystemMessage
-    | CompactBoundarySystemMessage
-    | HookProgressSystemMessage
-    | HookResponseSystemMessage
-    | TaskStartedSystemMessage
-    | TaskNotificationSystemMessage
-    | TaskProgressSystemMessage
-    | SessionStateChangedMessage
-    | FilesPersistedSystemMessage
-    | ElicitationCompleteMessage
-    | LocalCommandOutputMessage
-    | APIRetrySystemMessage,
-    Discriminator("subtype"),
-]
+SystemMessages = Annotated[SystemMessageUnion, Discriminator("subtype")]
 
 system_message_adapter: TypeAdapter[SystemMessages] = TypeAdapter(SystemMessages)

@@ -313,6 +313,7 @@ declare namespace coreTypes {
         SDKTaskNotificationMessage,
         SDKTaskProgressMessage,
         SDKTaskStartedMessage,
+        SDKTaskUpdatedMessage,
         SDKToolProgressMessage,
         SDKToolUseSummaryMessage,
         SDKUserMessageReplay,
@@ -530,6 +531,7 @@ export declare type GetSessionInfoOptions = {
      * When omitted, all project directories are searched for the session file.
      */
     dir?: string;
+
 };
 
 /**
@@ -561,6 +563,7 @@ export declare type GetSessionMessagesOptions = {
      * Defaults to false for backwards compatibility.
      */
     includeSystemMessages?: boolean;
+
 };
 
 /**
@@ -586,6 +589,7 @@ export declare type GetSubagentMessagesOptions = {
     limit?: number;
     /** Number of messages to skip from the start. */
     offset?: number;
+
 };
 
 export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "PermissionDenied", "Setup", "TeammateIdle", "TaskCreated", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
@@ -677,8 +681,13 @@ export declare type ListSessionsOptions = {
     /**
      * When `dir` is provided and the directory is inside a git repository,
      * include sessions from all git worktree paths. Defaults to `true`.
+     *
+     * Only applies to the local-filesystem path. Ignored when `sessionStore`
+     * is provided — worktree enumeration requires inspecting `.git/worktrees`
+     * on disk, which a SessionStore (keyed by projectKey) has no view of.
      */
     includeWorktrees?: boolean;
+
 };
 
 /**
@@ -699,6 +708,7 @@ export declare function listSubagents(_sessionId: string, _options?: ListSubagen
 export declare type ListSubagentsOptions = {
     /** Project directory to find the session in. If omitted, searches all projects. */
     dir?: string;
+
 };
 
 export declare type McpClaudeAIProxyServerConfig = {
@@ -1080,6 +1090,7 @@ export declare type Options = {
      * @default true
      */
     persistSession?: boolean;
+
     /**
      * Include hook lifecycle events in the output stream.
      * When true, `hook_started`, `hook_progress`, and `hook_response` system
@@ -1220,6 +1231,7 @@ export declare type Options = {
      * ```
      */
     plugins?: SdkPluginConfig[];
+
 
 
 
@@ -2096,6 +2108,7 @@ export declare type SDKControlGetContextUsageResponse = {
         assistantMessageTokens: number;
         userMessageTokens: number;
         redirectedContextTokens: number;
+        unattributedTokens: number;
         toolCallsByType: {
             name: string;
             callTokens: number;
@@ -2434,7 +2447,7 @@ export declare type SdkMcpToolDefinition<Schema extends AnyZodRawShape = AnyZodR
     handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>;
 };
 
-export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
 
 export declare type SDKPartialAssistantMessage = {
     type: 'stream_event';
@@ -2770,6 +2783,25 @@ export declare type SDKTaskStartedMessage = {
     session_id: string;
 };
 
+export declare type SDKTaskUpdatedMessage = {
+    type: 'system';
+    subtype: 'task_updated';
+    task_id: string;
+    /**
+     * Wire-safe subset of TaskState fields that changed. Excludes abortController, unregisterCleanup, messages, result. Clients merge into their local task map.
+     */
+    patch: {
+        status?: 'pending' | 'running' | 'completed' | 'failed' | 'killed';
+        description?: string;
+        end_time?: number;
+        total_paused_ms?: number;
+        error?: string;
+        is_backgrounded?: boolean;
+    };
+    uuid: UUID;
+    session_id: string;
+};
+
 export declare type SDKToolProgressMessage = {
     type: 'tool_progress';
     tool_use_id: string;
@@ -2848,6 +2880,7 @@ export declare type SessionMutationOptions = {
      * When omitted, all project directories are searched for the session file.
      */
     dir?: string;
+
 };
 
 export declare type SessionStartHookInput = BaseHookInput & {
@@ -3078,6 +3111,10 @@ export declare interface Settings {
                  * If true, hook runs in background and wakes the model on exit code 2 (blocking error). Implies async.
                  */
                 asyncRewake?: boolean;
+                /**
+                 * Custom prefix for the system-reminder shown to the model when an asyncRewake hook exits with code 2. The hook output is appended after this prefix.
+                 */
+                rewakeMessage?: string;
             } | {
                 /**
                  * LLM prompt hook type

@@ -122,6 +122,7 @@ class ContextUsageMessageBreakdown(ClaudeCodeBaseModel):
     assistant_message_tokens: int
     user_message_tokens: int
     redirected_context_tokens: int
+    unattributed_tokens: int
     tool_calls_by_type: list[ContextUsageToolCallBreakdown]
     attachments_by_type: list[ContextUsageAttachmentBreakdown]
 
