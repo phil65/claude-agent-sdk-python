@@ -296,7 +296,9 @@ declare namespace coreTypes {
         SDKHookResponseMessage,
         SDKHookStartedMessage,
         SDKLocalCommandOutputMessage,
+        SDKMemoryRecallMessage,
         SDKMessage,
+        SDKNotificationMessage,
         SDKPartialAssistantMessage,
         SDKPermissionDenial,
         SDKPromptSuggestionMessage,
@@ -307,6 +309,7 @@ declare namespace coreTypes {
         SDKResultSuccess,
         SDKSessionInfo,
         SDKSessionStateChangedMessage,
+        SDKSettingsParseError,
         SDKStatusMessage,
         SDKStatus,
         SDKSystemMessage,
@@ -1091,6 +1094,7 @@ export declare type Options = {
      */
     persistSession?: boolean;
 
+
     /**
      * Include hook lifecycle events in the output stream.
      * When true, `hook_started`, `hook_progress`, and `hook_response` system
@@ -1231,7 +1235,6 @@ export declare type Options = {
      * ```
      */
     plugins?: SdkPluginConfig[];
-
 
 
 
@@ -1767,7 +1770,6 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
 
 
 
-
     /**
      * Reconnect an MCP server by name.
      * Throws on failure.
@@ -1963,6 +1965,8 @@ export declare type SDKCompactBoundaryMessage = {
     compact_metadata: {
         trigger: 'manual' | 'auto';
         pre_tokens: number;
+        post_tokens?: number;
+        duration_ms?: number;
         /**
          * Relink info for messagesToKeep. Loaders splice the preserved segment at anchor_uuid (summary for suffix-preserving, boundary for prefix-preserving partial compact) so resume includes preserved content. Unset when compaction summarizes everything (no messagesToKeep).
          */
@@ -2263,7 +2267,23 @@ export declare type SDKControlRequest = {
     request: SDKControlRequestInner;
 };
 
-declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlSetProactiveRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest;
+declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlOAuthTokenRefreshRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest | SDKControlRequestUserDialogRequest;
+
+/**
+ * Requests the SDK consumer to render a tool-driven blocking dialog and return the user choice. Used by tools that previously rendered Ink JSX via setToolJSX with an onDone callback.
+ */
+declare type SDKControlRequestUserDialogRequest = {
+    subtype: 'request_user_dialog';
+    /**
+     * Identifier for the dialog the host should render. Open string union — known kinds include "it2_setup" and "computer_use_approval"; new kinds may be added without bumping the protocol.
+     */
+    dialog_kind: string;
+    /**
+     * Dialog-specific data passed to the host renderer. Shape is defined per dialog_kind; the protocol transports it opaquely.
+     */
+    payload: Record<string, unknown>;
+    tool_use_id?: string;
+};
 
 export declare type SDKControlResponse = {
     type: 'control_response';
@@ -2447,7 +2467,47 @@ export declare type SdkMcpToolDefinition<Schema extends AnyZodRawShape = AnyZodR
     handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>;
 };
 
-export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+/**
+ * Emitted when the memory recall supervisor surfaces relevant memories into the turn. Mirrors the CLI relevant_memories attachment so SDK renderers can show "Recalled from memory" inline.
+ */
+export declare type SDKMemoryRecallMessage = {
+    type: 'system';
+    subtype: 'memory_recall';
+    /**
+     * How memories were surfaced: 'select' returns full file bodies chosen by the parallel selector; 'synthesize' returns a Sonnet-authored paragraph distilled from many tiny memories.
+     */
+    mode: 'select' | 'synthesize';
+    memories: {
+        /**
+         * Absolute path to the memory file, or a synthesis sentinel of the form `<synthesis:DIR>` when mode is 'synthesize'.
+         */
+        path: string;
+        scope: 'personal' | 'team';
+        /**
+         * Synthesis paragraph. Only present when mode is 'synthesize'; always absent for 'select' (renderers lazy-load from path).
+         */
+        content?: string;
+    }[];
+    uuid: UUID;
+    session_id: string;
+};
+
+export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKNotificationMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKMemoryRecallMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+
+/**
+ * Loop-side text notification. Mirrors the interactive REPL notification queue (key/priority/timeout). JSX notifications are not emitted on this channel.
+ */
+export declare type SDKNotificationMessage = {
+    type: 'system';
+    subtype: 'notification';
+    key: string;
+    text: string;
+    priority: 'low' | 'medium' | 'high' | 'immediate';
+    color?: string;
+    timeout_ms?: number;
+    uuid: UUID;
+    session_id: string;
+};
 
 export declare type SDKPartialAssistantMessage = {
     type: 'stream_event';
@@ -2690,6 +2750,24 @@ export declare type SDKSessionStateChangedMessage = {
     session_id: string;
 };
 
+/**
+ * A settings file parse or validation error. When a settings.json file fails to parse (invalid JSON, JSON comments, schema mismatch), the file is skipped and any rules it contained — including permission allow/deny lists — are not applied.
+ */
+export declare type SDKSettingsParseError = {
+    /**
+     * Path to the settings file that failed to parse or validate.
+     */
+    file?: string;
+    /**
+     * Dot-notation path to the field with the error, or empty string for whole-file errors.
+     */
+    path: string;
+    /**
+     * Human-readable error message.
+     */
+    message: string;
+};
+
 export declare type SDKStatus = 'compacting' | null;
 
 export declare type SDKStatusMessage = {
@@ -2697,6 +2775,8 @@ export declare type SDKStatusMessage = {
     subtype: 'status';
     status: SDKStatus;
     permissionMode?: PermissionMode;
+    compact_result?: 'success' | 'failed';
+    compact_error?: string;
     uuid: UUID;
     session_id: string;
 };
@@ -2728,6 +2808,7 @@ export declare type SDKSystemMessage = {
 
     }[];
     fast_mode_state?: FastModeState;
+
     uuid: UUID;
     session_id: string;
 };
@@ -2745,6 +2826,7 @@ export declare type SDKTaskNotificationMessage = {
         tool_uses: number;
         duration_ms: number;
     };
+    skip_transcript?: boolean;
     uuid: UUID;
     session_id: string;
 };
@@ -2779,6 +2861,10 @@ export declare type SDKTaskStartedMessage = {
      */
     workflow_name?: string;
     prompt?: string;
+    /**
+     * Ambient/housekeeping task. Consumers should hide this from the inline transcript; it may still appear in a tasks panel.
+     */
+    skip_transcript?: boolean;
     uuid: UUID;
     session_id: string;
 };
@@ -2942,6 +3028,14 @@ export declare interface Settings {
      */
     cleanupPeriodDays?: number;
     /**
+     * Per-skill description character cap in the skill listing sent to Claude (default: 1536). Descriptions longer than this are truncated. Raise to opt in to higher per-turn context cost.
+     */
+    skillListingMaxDescChars?: number;
+    /**
+     * Fraction of the context window (in characters) reserved for the skill listing sent to Claude (default: 0.01 = 1%). When the listing exceeds this, descriptions are shortened to fit. Raise to opt in to higher per-turn context cost.
+     */
+    skillListingBudgetFraction?: number;
+    /**
      * Environment variables to set for Claude Code sessions
      */
     env?: {
@@ -3024,6 +3118,12 @@ export declare interface Settings {
      * List of rejected MCP servers from .mcp.json
      */
     disabledMcpjsonServers?: string[];
+    /**
+     * Per-skill listing overrides keyed by skill name. "name-only" lists the skill without its description; "user-invocable-only" hides it from the model but keeps /name; "off" hides it from both. Absent = on.
+     */
+    skillOverrides?: {
+        [k: string]: 'on' | 'name-only' | 'user-invocable-only' | 'off';
+    };
     /**
      * Enterprise allowlist of MCP servers that can be used. Applies to all scopes including enterprise servers from managed-mcp.json. If undefined, all servers are allowed. If empty array, no servers are allowed. Denylist takes precedence - if a server is on both lists, it is denied.
      */
@@ -3271,6 +3371,13 @@ export declare interface Settings {
          * Re-run the status line command every N seconds in addition to event-driven updates
          */
         refreshInterval?: number;
+    };
+    /**
+     * Custom per-subagent status line shown in the agent panel; receives row context as JSON on stdin
+     */
+    subagentStatusLine?: {
+        type: 'command';
+        command: string;
     };
     /**
      * Enabled plugins using plugin-id\@marketplace-id format. Example: { "formatter\@anthropic-tools": true }. Also supports extended format with version constraints.
@@ -4034,6 +4141,7 @@ export declare interface Settings {
      * When false, prompt suggestions are disabled. When absent or true, prompt suggestions are enabled.
      */
     promptSuggestionEnabled?: boolean;
+
     /**
      * When true, the plan-approval dialog offers a "clear context" option. Defaults to false.
      */
@@ -4088,15 +4196,6 @@ export declare interface Settings {
      * Custom directory for plan files, relative to project root. If not set, defaults to ~/.claude/plans/
      */
     plansDirectory?: string;
-    /**
-     * Autonomous background operation configuration
-     */
-    proactive?: {
-        /**
-         * When true, autonomous background operation is activated automatically at launch (if entitled). When false or null, the user must opt in via the /proactive command or --proactive flag. Existing entitlement gates (GrowthBook flag, ZDR, managed-settings) still apply.
-         */
-        autoEnable?: boolean | null;
-    };
 
     /**
      * Teams/Enterprise opt-in for channel notifications (MCP servers with the claude/channel capability pushing inbound messages). Default off. Set true to allow; users then select servers via --channels.
@@ -4271,7 +4370,7 @@ export declare interface SpawnOptions {
     signal: AbortSignal;
 }
 
-declare type StdoutMessage = coreTypes.SDKMessage | coreTypes.SDKPostTurnSummaryMessage | SDKControlResponse | SDKControlRequest | SDKControlCancelRequest | SDKKeepAliveMessage;
+declare type StdoutMessage = coreTypes.SDKMessage | coreTypes.SDKPostTurnSummaryMessage | coreTypes.SDKTranscriptMirrorMessage | SDKControlResponse | SDKControlRequest | SDKControlCancelRequest | SDKKeepAliveMessage;
 
 export declare type StopFailureHookInput = BaseHookInput & {
     hook_event_name: 'StopFailure';

@@ -484,6 +484,15 @@ class SDKControlSideQuestionRequest(_ControlBase):
     question: str
 
 
+class SDKControlRequestUserDialogRequest(_ControlBase):
+    """Requests the SDK consumer to render a tool-driven blocking dialog + return user choice."""
+
+    subtype: Literal["request_user_dialog"] = "request_user_dialog"
+    dialog_kind: str
+    payload: dict[str, Any]
+    tool_use_id: str | None = None
+
+
 IncomingControlRequest = Annotated[
     SDKControlPermissionRequest
     | SDKHookCallbackRequest

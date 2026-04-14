@@ -257,6 +257,11 @@ class EnterWorktreeInput(TypedDict):
 
     name: NotRequired[str]
     """Optional name for the worktree. A random name is generated if not provided."""
+    path: NotRequired[str]
+    """Path to an existing worktree of the current repo to switch into instead of creating new one.
+
+    Must appear in `git worktree list` for the current repo. Mutually exclusive with `name`.
+    """
 
 
 @_extra_allow

@@ -73,6 +73,44 @@ class BaseSystemMessage(BaseModel):
     session_id: str
 
 
+class NotificationSystemMessage(BaseSystemMessage):
+    """Loop-side text notification.
+
+    Mirrors the interactive REPL notification queue (key/priority/timeout).
+    JSX notifications are not emitted on this channel.
+    """
+
+    subtype: Literal["notification"] = "notification"
+    key: str
+    text: str
+    priority: Literal["low", "medium", "high", "immediate"]
+    color: str | None = None
+    timeout_ms: int | None = None
+
+
+class Memory(BaseModel):
+    """Agent memory."""
+
+    path: str
+    """Absolute or synthesis sentinel path."""
+    scope: Literal["personal", "team"]
+    content: str | None = None
+
+
+class MemoryRecallSystemMessage(BaseSystemMessage):
+    """Emitted when the memory recall supervisor surfaces relevant memories into the turn.
+
+    Mirrors the CLI relevant_memories attachment so SDK renderers can show
+    "Recalled from memory" inline.
+    """
+
+    subtype: Literal["memory_recall"] = "memory_recall"
+    mode: Literal["select", "synthesize"]
+    """Mode of memory recall."""
+    memories: list[Memory]
+    """List of memory objects."""
+
+
 class ElicitationCompleteMessage(BaseSystemMessage):
     """System message emitted when an MCP elicitation completes."""
 
@@ -161,6 +199,8 @@ class StatusSystemMessage(BaseSystemMessage):
     subtype: Literal["status"] = "status"
     status: Literal["compacting"] | None
     permission_mode: PermissionMode | None = Field(None, validation_alias="permissionMode")
+    compact_result: Literal["success", "failed"] | None = None
+    compact_error: str | None = None
 
 
 class PreservedSegment(TypedDict):
@@ -176,6 +216,8 @@ class TriggerMetadata(TypedDict):
 
     trigger: CompactionTrigger
     pre_tokens: int
+    post_tokens: NotRequired[int]
+    duration_ms: NotRequired[float]
     preserved_segment: NotRequired[PreservedSegment]
 
 
@@ -199,6 +241,8 @@ class TaskStartedSystemMessage(BaseSystemMessage):
 
     Only set when task_type is 'local_workflow'."""
     prompt: str | None = None
+    skip_transcript: bool | None = None
+    """Whether to skip this message in the transcript."""
 
 
 class Patch(BaseModel):
@@ -230,6 +274,8 @@ class TaskNotificationSystemMessage(BaseSystemMessage):
     summary: str
     tool_use_id: str | None = None
     usage: TaskProgressUsage | None = None
+    skip_transcript: bool | None = None
+    """Whether to skip this message in the transcript."""
 
 
 class TaskProgressSystemMessage(BaseSystemMessage):
@@ -277,6 +323,8 @@ SystemMessageUnion = (
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
     | TaskProgressSystemMessage
+    | NotificationSystemMessage
+    | MemoryRecallSystemMessage
     | TaskUpdatedSystemMessage
     | SessionStateChangedMessage
     | FilesPersistedSystemMessage
