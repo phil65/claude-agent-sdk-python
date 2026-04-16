@@ -68,7 +68,12 @@ JSONRPCResponse = JSONRPCResultResponse | JSONRPCErrorResponse
 JSONRPCMessage = JSONRPCRequest | JSONRPCNotification | JSONRPCResponse
 
 
-# MCP Server config
+@dataclass(kw_only=True)
+class McpServerToolPolicy:
+    """Per-tool permission policy carried on mcp_set_servers for remote servers."""
+
+    name: str
+    permission_policy: Literal["always_allow", "always_ask", "always_deny"]
 
 
 @dataclass(kw_only=True)
@@ -88,6 +93,7 @@ class McpSSEServerConfig:
     type: Literal["sse"] = "sse"
     url: str
     headers: dict[str, str] = field(default_factory=dict)
+    tools: list[McpServerToolPolicy] | None = field(default=None)
 
 
 @dataclass(kw_only=True)
@@ -97,6 +103,7 @@ class McpHttpServerConfig:
     type: Literal["http"] = "http"
     url: str
     headers: dict[str, str] = field(default_factory=dict)
+    tools: list[McpServerToolPolicy] | None = field(default=None)
 
 
 @dataclass(kw_only=True)

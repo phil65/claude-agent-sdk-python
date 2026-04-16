@@ -490,6 +490,7 @@ class WriteOutput(TypedDict):
     structuredPatch: list[StructuredPatchHunk]
     originalFile: str | None
     gitDiff: NotRequired[GitDiff]
+    userModified: NotRequired[bool]
 
 
 # ---------------------------------------------------------------------------

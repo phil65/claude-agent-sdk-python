@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-import sys
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from anthropic.types.beta import (
@@ -33,6 +32,7 @@ from clawd_code_sdk._errors import (
     ServerError,
 )
 from clawd_code_sdk.models.base import (  # noqa: TC001
+    IS_DEV,
     AssistantMessageError,
     ClaudeCodeBaseModel,
     FastModeState,
@@ -50,8 +50,6 @@ if TYPE_CHECKING:
     from logfire._internal.integrations.llm_providers.semconv import MessagePart, OutputMessage
 
     from clawd_code_sdk.models.content_blocks import AssistantContentBlock, UserContentBlock
-
-IS_DEV = "pytest" in sys.modules
 
 
 # Message types
@@ -78,6 +76,47 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
+
+
+class HumanMessageOrigin(ClaudeCodeBaseModel):
+    """Human message origin."""
+
+    kind: Literal["human"] = "human"
+
+
+class ChannelMessageOrigin(ClaudeCodeBaseModel):
+    """Channel message origin."""
+
+    kind: Literal["channel"] = "channel"
+    server: str
+
+
+class PeerMessageOrigin(ClaudeCodeBaseModel):
+    """Peer message origin."""
+
+    kind: Literal["peer"] = "peer"
+    from_: str = Field(..., alias="from")
+    name: str | None = None
+
+
+class TaskNotificationMessageOrigin(ClaudeCodeBaseModel):
+    """Task notification message origin."""
+
+    kind: Literal["task-notification"] = "task-notification"
+
+
+class CoordinatorMessageOrigin(ClaudeCodeBaseModel):
+    """Coordinator message origin."""
+
+    kind: Literal["coordinator"] = "coordinator"
+
+
+SDKMessageOrigin = (
+    ChannelMessageOrigin
+    | PeerMessageOrigin
+    | TaskNotificationMessageOrigin
+    | CoordinatorMessageOrigin
+)
 
 
 class RateLimitInfo(ClaudeCodeBaseModel):
@@ -127,6 +166,8 @@ class UserMessage(BaseMessage):
     message: MessageParam
     timestamp: str | None = None
     file_attachments: list[object] | None = None
+    origin: SDKMessageOrigin | None = None
+    should_query: bool | None = None
 
     @property
     def content(self) -> str | Sequence[UserContentBlock]:
@@ -243,6 +284,7 @@ class ResultSuccessMessage(BaseResultMessage):
     result: str | None = None
     structured_output: Any = None
     deferred_tool_use: SDKDeferredToolUse | None = None
+    api_error_status: int | None = None
 
 
 class ResultErrorMessage(BaseResultMessage):
@@ -262,6 +304,7 @@ class StreamEvent(BaseMessage):
     session_id: str
     event: BetaRawMessageStreamEvent
     parent_tool_use_id: str | None = None
+    ttft_ms: float | None = None
 
     @classmethod
     def block_stop(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:

@@ -232,6 +232,13 @@ class SDKControlEndSessionRequest(_ControlBase):
     subtype: Literal["end_session"] = "end_session"
 
 
+class SDKControlRenameSessionRequest(_ControlBase):
+    """Sets the user-facing title for the current session."""
+
+    subtype: Literal["rename_session"] = "rename_session"
+    title: str
+
+
 class SDKControlMcpAuthenticateRequest(_ControlBase):
     """Authenticates with an MCP server."""
 
@@ -513,6 +520,7 @@ OutgoingControlRequest = Annotated[
     | SDKControlMcpReconnectRequest
     | SDKControlMcpToggleRequest
     | SDKControlChannelEnableRequest
+    | SDKControlRenameSessionRequest
     | SDKControlEndSessionRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest

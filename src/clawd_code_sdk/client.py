@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import anyenv
 from pydantic import ValidationError
@@ -72,6 +72,7 @@ if TYPE_CHECKING:
         SessionState,
         UserPrompt,
     )
+    from clawd_code_sdk.models.system_messages import SDKStatus
 
 
 _RECORD_PATH = os.environ.get("CLAWD_RECORD_MESSAGES")
@@ -138,7 +139,7 @@ class ClaudeSDKClient:
         """Cumulative cost in USD across all queries in this session."""
         self.query_cost: float = 0.0
         """Cost in USD for the current/last query only (reset on each query() call)."""
-        self.status: Literal["compacting"] | None = None
+        self.status: SDKStatus | None = None
         """Current client status, or None when idle."""
 
         self._logfire_prompt: str | None = None

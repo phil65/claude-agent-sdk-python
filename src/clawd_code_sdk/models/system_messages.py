@@ -25,6 +25,7 @@ IS_DEV = "pytest" in sys.modules
 
 Outcome = Literal["success", "error", "cancelled"]
 SessionState = Literal["idle", "running", "requires_action"]
+SDKStatus = Literal["compacting", "requesting"] | None
 
 
 class Plugin(BaseModel):
@@ -197,7 +198,7 @@ class StatusSystemMessage(BaseSystemMessage):
     """System status message."""
 
     subtype: Literal["status"] = "status"
-    status: Literal["compacting"] | None
+    status: SDKStatus
     permission_mode: PermissionMode | None = Field(None, validation_alias="permissionMode")
     compact_result: Literal["success", "failed"] | None = None
     compact_error: str | None = None
@@ -313,6 +314,15 @@ class APIRetrySystemMessage(BaseSystemMessage):
     error: AssistantMessageError
 
 
+class PluginInstallSystemMessage(BaseSystemMessage):
+    """System message emitted when a plugin is installed."""
+
+    subtype: Literal["plugin_install"] = "plugin_install"
+    status: Literal["started", "installed", "failed", "completed"]
+    name: str | None = None
+    error: str | None = None
+
+
 SystemMessageUnion = (
     InitSystemMessage
     | HookStartedSystemMessage
@@ -322,6 +332,7 @@ SystemMessageUnion = (
     | HookResponseSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
+    | PluginInstallSystemMessage
     | TaskProgressSystemMessage
     | NotificationSystemMessage
     | MemoryRecallSystemMessage

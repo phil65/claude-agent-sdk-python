@@ -22,14 +22,14 @@ SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/
 ModelName = Literal["sonnet", "opus", "haiku"]
 PermissionBehavior = Literal["allow", "deny", "ask"]
 HookPermissionDecision = Literal["allow", "deny", "ask", "defer"]
-ReasoningEffort = Literal["low", "medium", "high", "max"]
+ReasoningEffort = Literal["low", "medium", "high", "xhigh", "max"]
 TaskStatus = Literal["completed", "failed", "stopped"]
 CompactionTrigger = Literal["auto", "manual"]
 ElicitationMode = Literal["form", "url"]
 ElicitationAction = Literal["accept", "decline", "cancel"]
 FastModeState = Literal["off", "cooldown", "on"]
 PermissionDecisionClassification = Literal["user_temporary", "user_permanent", "user_reject"]
-EffortLevel = Literal["low", "medium", "high", "max"]
+EffortLevel = Literal["low", "medium", "high", "xhigh", "max"]
 AssistantMessageError = Literal[
     "authentication_failed",
     "billing_error",
@@ -95,6 +95,7 @@ TerminalReason = Literal[
     "completed",
 ]
 IS_DEV = "pytest" in sys.modules
+SYSTEM_PROMPT_DYNAMIC_BOUNDARY = "__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__"
 
 
 class ClaudeCodeBaseModel(BaseModel):

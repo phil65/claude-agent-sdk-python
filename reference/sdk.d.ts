@@ -84,7 +84,7 @@ export declare type AgentDefinition = {
     /**
      * Reasoning effort level for this agent. Either a named level or an integer
      */
-    effort?: ('low' | 'medium' | 'high' | 'max') | number;
+    effort?: ('low' | 'medium' | 'high' | 'xhigh' | 'max') | number;
     /**
      * Permission mode controlling how tool executions are handled
      */
@@ -220,6 +220,7 @@ declare namespace coreTypes {
         NonNullableUsage,
         HOOK_EVENTS,
         EXIT_REASONS,
+        SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
         AccountInfo,
         AgentDefinition,
         AgentInfo,
@@ -253,6 +254,7 @@ declare namespace coreTypes {
         McpServerConfigForProcessTransport,
         McpServerStatusConfig,
         McpServerStatus,
+        McpServerToolPolicy,
         McpSetServersResult,
         McpStdioServerConfig,
         ModelInfo,
@@ -297,10 +299,12 @@ declare namespace coreTypes {
         SDKHookStartedMessage,
         SDKLocalCommandOutputMessage,
         SDKMemoryRecallMessage,
+        SDKMessageOrigin,
         SDKMessage,
         SDKNotificationMessage,
         SDKPartialAssistantMessage,
         SDKPermissionDenial,
+        SDKPluginInstallMessage,
         SDKPromptSuggestionMessage,
         SDKRateLimitEvent,
         SDKRateLimitInfo,
@@ -383,9 +387,10 @@ export declare type CwdChangedHookSpecificOutput = {
  * - `'low'` — Minimal thinking, fastest responses
  * - `'medium'` — Moderate thinking
  * - `'high'` — Deep reasoning (default)
+ * - `'xhigh'` — Deeper than high (Opus 4.7 only; falls back to `'high'` elsewhere)
  * - `'max'` — Maximum effort (select models only)
  */
-export declare type EffortLevel = 'low' | 'medium' | 'high' | 'max';
+export declare type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 /**
  * Hook input for the Elicitation event. Fired when an MCP server requests user input. Hooks can auto-respond (accept/decline) instead of showing the dialog.
@@ -724,6 +729,7 @@ export declare type McpHttpServerConfig = {
     type: 'http';
     url: string;
     headers?: Record<string, string>;
+    tools?: McpServerToolPolicy[];
 };
 
 export declare type McpSdkServerConfig = {
@@ -795,6 +801,14 @@ export declare type McpServerStatus = {
 export declare type McpServerStatusConfig = McpServerConfigForProcessTransport | McpClaudeAIProxyServerConfig;
 
 /**
+ * Per-tool permission policy carried on mcp_set_servers for remote servers.
+ */
+export declare type McpServerToolPolicy = {
+    name: string;
+    permission_policy: 'always_allow' | 'always_ask' | 'always_deny';
+};
+
+/**
  * Result of a setMcpServers operation.
  */
 export declare type McpSetServersResult = {
@@ -816,6 +830,7 @@ export declare type McpSSEServerConfig = {
     type: 'sse';
     url: string;
     headers?: Record<string, string>;
+    tools?: McpServerToolPolicy[];
 };
 
 export declare type McpStdioServerConfig = {
@@ -848,7 +863,7 @@ export declare type ModelInfo = {
     /**
      * Available effort levels for this model
      */
-    supportedEffortLevels?: ('low' | 'medium' | 'high' | 'max')[];
+    supportedEffortLevels?: ('low' | 'medium' | 'high' | 'xhigh' | 'max')[];
     /**
      * Whether this model supports adaptive thinking (Claude decides when and how much to think)
      */
@@ -986,7 +1001,11 @@ export declare type Options = {
     };
     /**
      * Environment variables to pass to the Claude Code process.
-     * Defaults to `process.env`.
+     * Merged on top of `process.env` — entries here override the parent
+     * process's variables, and anything not set here is inherited.
+     * Set a key to `undefined` to remove an inherited variable. Note:
+     * `GITHUB_ACTIONS` and a few SDK-managed vars are stripped and are
+     * not inherited unless set explicitly here.
      *
      * SDK consumers can identify their app/library to include in the User-Agent header by setting:
      * - `CLAUDE_AGENT_SDK_CLIENT_APP` - Your app/library identifier (e.g., "my-app/1.0.0", "my-library/2.1")
@@ -1130,7 +1149,8 @@ export declare type Options = {
      * - `'low'` — Minimal thinking, fastest responses
      * - `'medium'` — Moderate thinking
      * - `'high'` — Deep reasoning (default)
-     * - `'max'` — Maximum effort (Opus 4.6 only)
+     * - `'xhigh'` — Deeper than high (Opus 4.7 only)
+     * - `'max'` — Maximum effort (Opus 4.6/4.7 only)
      *
      * @see https://docs.anthropic.com/en/docs/build-with-claude/effort
      */
@@ -1181,7 +1201,7 @@ export declare type Options = {
     mcpServers?: Record<string, McpServerConfig>;
     /**
      * Claude model to use. Defaults to the CLI default model.
-     * Examples: 'claude-sonnet-4-6', 'claude-opus-4-6'
+     * Examples: 'claude-sonnet-4-6', 'claude-opus-4-7'
      */
     model?: string;
     /**
@@ -1418,6 +1438,7 @@ export declare type Options = {
         append?: string;
         excludeDynamicSections?: boolean;
     };
+
     /**
      * Custom function to spawn the Claude Code process.
      * Use this to run Claude Code in VMs, containers, or remote environments.
@@ -1767,6 +1788,7 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
      * @param mtime - File mtime (floored ms) at the time of the observed Read
      */
     seedReadState(path: string, mtime: number): Promise<void>;
+
 
 
 
@@ -2148,6 +2170,7 @@ declare type SDKControlInitializeRequest = {
     jsonSchema?: Record<string, unknown>;
     systemPrompt?: string;
     appendSystemPrompt?: string;
+
     /**
      * When true, omit per-user dynamic sections (working directory, auto-memory path) from the cached system prompt and re-inject them as the first user message. Lets cross-user prompt caching hit on a static system prompt prefix. Tradeoff: the model sees this context slightly later in the prompt, so steering on the working directory and memory location is marginally less authoritative. Has no effect when a custom (non-preset) system prompt is in use.
      */
@@ -2261,13 +2284,21 @@ export declare type SDKControlReloadPluginsResponse = {
     error_count: number;
 };
 
+/**
+ * Sets the user-facing title for the current session.
+ */
+declare type SDKControlRenameSessionRequest = {
+    subtype: 'rename_session';
+    title: string;
+};
+
 export declare type SDKControlRequest = {
     type: 'control_request';
     request_id: string;
     request: SDKControlRequestInner;
 };
 
-declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlOAuthTokenRefreshRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest | SDKControlRequestUserDialogRequest;
+declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlRenameSessionRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlUltrareviewLaunchRequest | SDKControlOAuthTokenRefreshRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest | SDKControlRequestUserDialogRequest;
 
 /**
  * Requests the SDK consumer to render a tool-driven blocking dialog and return the user choice. Used by tools that previously rendered Ink JSX via setToolJSX with an onDone callback.
@@ -2492,7 +2523,25 @@ export declare type SDKMemoryRecallMessage = {
     session_id: string;
 };
 
-export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKNotificationMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKMemoryRecallMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKPluginInstallMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKNotificationMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKMemoryRecallMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+
+/**
+ * Provenance of a user-role message (peer session, team lead, channel). Absent or `human` means keyboard input from the user.
+ */
+export declare type SDKMessageOrigin = {
+    kind: 'human';
+} | {
+    kind: 'channel';
+    server: string;
+} | {
+    kind: 'peer';
+    from: string;
+    name?: string;
+} | {
+    kind: 'task-notification';
+} | {
+    kind: 'coordinator';
+};
 
 /**
  * Loop-side text notification. Mirrors the interactive REPL notification queue (key/priority/timeout). JSX notifications are not emitted on this channel.
@@ -2515,6 +2564,7 @@ export declare type SDKPartialAssistantMessage = {
     parent_tool_use_id: string | null;
     uuid: UUID;
     session_id: string;
+    ttft_ms?: number;
 };
 
 export declare type SDKPermissionDenial = {
@@ -2535,6 +2585,19 @@ export declare type SdkPluginConfig = {
      * Absolute or relative path to the plugin directory
      */
     path: string;
+};
+
+/**
+ * Headless plugin installation progress (CLAUDE_CODE_SYNC_PLUGIN_INSTALL). started/completed bracket the whole install; installed/failed carry a per-marketplace name.
+ */
+export declare type SDKPluginInstallMessage = {
+    type: 'system';
+    subtype: 'plugin_install';
+    status: 'started' | 'installed' | 'failed' | 'completed';
+    name?: string;
+    error?: string;
+    uuid: UUID;
+    session_id: string;
 };
 
 /**
@@ -2602,6 +2665,7 @@ export declare type SDKResultSuccess = {
     duration_ms: number;
     duration_api_ms: number;
     is_error: boolean;
+    api_error_status?: number | null;
     num_turns: number;
     result: string;
     stop_reason: string | null;
@@ -2733,6 +2797,7 @@ export declare type SDKSessionOptions = {
      * Permission mode for the session.
      * - `'default'` - Standard permission behavior, prompts for dangerous operations
      * - `'acceptEdits'` - Auto-accept file edit operations
+     * - `'bypassPermissions'` - Bypass all permission checks (requires `allowDangerouslySkipPermissions`)
      * - `'plan'` - Planning mode, no execution of tools
      * - `'dontAsk'` - Don't prompt for permissions, deny if not pre-approved
      */
@@ -2768,7 +2833,7 @@ export declare type SDKSettingsParseError = {
     message: string;
 };
 
-export declare type SDKStatus = 'compacting' | null;
+export declare type SDKStatus = 'compacting' | 'requesting' | null;
 
 export declare type SDKStatusMessage = {
     type: 'system';
@@ -2807,6 +2872,7 @@ export declare type SDKSystemMessage = {
         path: string;
 
     }[];
+
     fast_mode_state?: FastModeState;
 
     uuid: UUID;
@@ -2914,6 +2980,11 @@ export declare type SDKUserMessage = {
     isSynthetic?: boolean;
     tool_use_result?: unknown;
     priority?: 'now' | 'next' | 'later';
+    origin?: SDKMessageOrigin;
+    /**
+     * When false, the message is appended to the transcript without triggering an assistant turn. It will be merged into the next user message that does query.
+     */
+    shouldQuery?: boolean;
     /**
      * ISO timestamp when the message was created on the originating process. Older emitters omit it; consumers should fall back to receive time.
      */
@@ -2929,6 +3000,11 @@ export declare type SDKUserMessageReplay = {
     isSynthetic?: boolean;
     tool_use_result?: unknown;
     priority?: 'now' | 'next' | 'later';
+    origin?: SDKMessageOrigin;
+    /**
+     * When false, the message is appended to the transcript without triggering an assistant turn. It will be merged into the next user message that does query.
+     */
+    shouldQuery?: boolean;
     /**
      * ISO timestamp when the message was created on the originating process. Older emitters omit it; consumers should fall back to receive time.
      */
@@ -3000,6 +3076,10 @@ export declare interface Settings {
      * Path to a script that outputs authentication values
      */
     apiKeyHelper?: string;
+    /**
+     * Shell command that outputs a Proxy-Authorization header value (EAP)
+     */
+    proxyAuthHelper?: string;
     /**
      * Path to a script that exports AWS credentials
      */
@@ -3211,10 +3291,8 @@ export declare interface Settings {
                  * If true, hook runs in background and wakes the model on exit code 2 (blocking error). Implies async.
                  */
                 asyncRewake?: boolean;
-                /**
-                 * Custom prefix for the system-reminder shown to the model when an asyncRewake hook exits with code 2. The hook output is appended after this prefix.
-                 */
-                rewakeMessage?: string;
+
+
             } | {
                 /**
                  * LLM prompt hook type
@@ -4120,7 +4198,7 @@ export declare interface Settings {
     /**
      * Persisted effort level for supported models.
      */
-    effortLevel?: 'low' | 'medium' | 'high';
+    effortLevel?: 'low' | 'medium' | 'high' | 'xhigh';
     /**
      * Auto-compact window size
      */
@@ -4196,6 +4274,10 @@ export declare interface Settings {
      * Custom directory for plan files, relative to project root. If not set, defaults to ~/.claude/plans/
      */
     plansDirectory?: string;
+    /**
+     * Terminal UI renderer. "fullscreen" uses the flicker-free alt-screen renderer with virtualized scrollback (equivalent to CLAUDE_CODE_NO_FLICKER=1). "default" uses the classic main-screen renderer.
+     */
+    tui?: 'default' | 'fullscreen';
 
     /**
      * Teams/Enterprise opt-in for channel notifications (MCP servers with the claude/channel capability pushing inbound messages). Default off. Set true to allow; users then select servers via --channels.
