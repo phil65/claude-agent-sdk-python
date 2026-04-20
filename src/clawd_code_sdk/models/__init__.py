@@ -275,10 +275,6 @@ from .content_blocks import (
     UserContentBlock,
 )
 from .session import (
-    GetSessionMessagesOptions,
-    GetSubagentMessagesOptions,
-    ListSessionsOptions,
-    ListSubagentsOptions,
     SDKSessionInfo,
     SessionMessage,
 )
@@ -517,9 +513,7 @@ __all__ = [
     "FilesPersistedSystemMessage",
     "Filesystem",
     "FromPR",
-    "GetSessionMessagesOptions",
     "GetSettingsResponse",
-    "GetSubagentMessagesOptions",
     "GitDiff",
     "GlobInput",
     "GlobOutput",
@@ -556,8 +550,6 @@ __all__ = [
     "KillShellOutput",
     "ListMcpResourcesInput",
     "ListMcpResourcesOutput",
-    "ListSessionsOptions",
-    "ListSubagentsOptions",
     "LocalCommandOutputMessage",
     "McpAuthenticateResponse",
     "McpClaudeAIProxyServerConfig",

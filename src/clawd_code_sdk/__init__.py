@@ -21,10 +21,16 @@ from ._errors import (
     ServerError,
 )
 from ._internal.transport import Transport
+from ._internal.sessions import (
+    get_session_info,
+    get_session_messages,
+    get_subagent_messages,
+    list_sessions,
+    list_subagents,
+)
 from ._version import __version__
 from .models.anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
-from .list_sessions import list_sessions
 from .models import (
     AgentDefinition,
     AgentHookHandler,
@@ -47,7 +53,6 @@ from .models import (
     HookMatcher,
     HookMatcherConfig,
     PromptHookHandler,
-    ListSessionsOptions,
     McpSdkServerConfig,
     McpSdkServerConfigWithInstance,
     McpServerConfig,
@@ -135,11 +140,8 @@ __cli_version__ = "2.1.11"
 
 
 __all__ = [
-    # API Errors
     "APIError",
-    # Agent support
     "AgentDefinition",
-    # Hook support
     "AgentHookHandler",
     "AgentHooksConfig",
     "AppliedSettings",
@@ -152,17 +154,13 @@ __all__ = [
     "CLIConnectionError",
     "CLIJSONDecodeError",
     "CLINotFoundError",
-    # Tool callbacks
     "CanUseTool",
     "ClaudeAgentOptions",
-    # Settings / sandbox
     "ClaudeCodeSettings",
     "ClaudeSDKClient",
-    # Errors
     "ClaudeSDKError",
     "CommandHookHandler",
     "ContentBlock",
-    # Session config
     "ContinueLatest",
     "ConversationTurn",
     "DocumentMediaType",
@@ -182,7 +180,6 @@ __all__ = [
     "ImageSource",
     "InitSystemMessage",
     "InvalidRequestError",
-    "ListSessionsOptions",
     "McpAuthenticateResponse",
     "McpSdkServerConfig",
     "McpSdkServerConfigWithInstance",
@@ -194,7 +191,6 @@ __all__ = [
     "NotificationHookInput",
     "NotificationHookSpecificOutput",
     "OnUserQuestion",
-    # Types
     "PermissionMode",
     "PermissionRequestHookInput",
     "PermissionRequestHookSpecificOutput",
@@ -220,15 +216,12 @@ __all__ = [
     "ResumeSession",
     "SDKSessionInfo",
     "Sandbox",
-    # Beta support
     "SdkBeta",
     "SdkMcpTool",
-    # Plugin support
     "SdkPluginConfig",
     "ServerError",
     "Session",
     "SessionConfig",
-    # Session management
     "SessionManager",
     "SessionSnapshot",
     "SessionState",
@@ -240,7 +233,6 @@ __all__ = [
     "SubagentStopHookInput",
     "TextBlock",
     "ThinkingBlock",
-    # Thinking configuration
     "ThinkingConfig",
     "ThinkingConfigAdaptive",
     "ThinkingConfigDisabled",
@@ -250,7 +242,6 @@ __all__ = [
     "ToolResultBlock",
     "ToolResultContentBlock",
     "ToolUseBlock",
-    # Transport
     "Transport",
     "UserDocumentPrompt",
     "UserDocumentURLPrompt",
@@ -262,9 +253,11 @@ __all__ = [
     "UserPromptSubmitHookInput",
     "UserTextPrompt",
     "__version__",
-    # MCP Server Support
     "create_sdk_mcp_server",
+    "get_session_info",
+    "get_session_messages",
+    "get_subagent_messages",
     "list_sessions",
-    # Main exports
+    "list_subagents",
     "tool",
 ]

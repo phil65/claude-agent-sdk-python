@@ -4,19 +4,9 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING
 
 import anyenv
 
-from clawd_code_sdk.storage.helpers import (
-    decode_project_path,
-    get_claude_projects_dir,
-    path_to_claude_dir_name,
-)
-
-
-if TYPE_CHECKING:
-    from clawd_code_sdk.models import ListSessionsOptions, SDKSessionInfo
 
 logger = logging.getLogger(__name__)
 
@@ -105,77 +95,3 @@ def _extract_session_metadata(session_path: Path) -> tuple[str | None, str | Non
         pass
 
     return custom_title, first_prompt
-
-
-def _list_session_files_for_dir(directory: str) -> list[tuple[Path, str | None]]:
-    """List session files for a specific project directory.
-
-    Args:
-        directory: Filesystem path of the project.
-
-    Returns:
-        List of ``(session_path, cwd)`` tuples.
-    """
-    projects_dir = get_claude_projects_dir()
-    dir_name = path_to_claude_dir_name(directory)
-    project_dir = projects_dir / dir_name
-    if not project_dir.is_dir():
-        return []
-    return [(p, directory) for p in project_dir.glob("*.jsonl")]
-
-
-def _list_all_session_files() -> list[tuple[Path, str | None]]:
-    """List session files across all projects.
-
-    Returns:
-        List of ``(session_path, cwd)`` tuples where cwd is decoded
-        from the project directory name.
-    """
-    projects_dir = get_claude_projects_dir()
-    if not projects_dir.is_dir():
-        return []
-    results: list[tuple[Path, str | None]] = []
-    for project_dir in projects_dir.iterdir():
-        if not project_dir.is_dir():
-            continue
-        cwd = decode_project_path(project_dir.name)
-        for session_file in project_dir.glob("*.jsonl"):
-            results.append((session_file, cwd))  # noqa: PERF401
-    return results
-
-
-def list_sessions(options: ListSessionsOptions | None = None) -> list[SDKSessionInfo]:
-    """List sessions with metadata.
-
-    When ``dir`` is provided in *options*, returns sessions for that project
-    directory and its git worktrees. When omitted, returns sessions across
-    all projects.
-
-    Args:
-        options: Optional filtering/limiting options.
-
-    Returns:
-        Session metadata sorted by last modified time (newest first).
-
-    Example::
-
-        from clawd_code_sdk import list_sessions
-
-        # List sessions for a specific project
-        sessions = list_sessions({"dir": "/path/to/project"})
-
-        # List all sessions across all projects
-        all_sessions = list_sessions()
-    """
-    from clawd_code_sdk.models import SDKSessionInfo
-
-    opts = options or {}
-    dir_ = opts.get("dir")
-    limit = opts.get("limit")
-    # Collect session files
-    files = _list_all_session_files() if dir_ is None else _list_session_files_for_dir(dir_)
-    sessions = [SDKSessionInfo.from_session_file(p, cwd) for p, cwd in files if p.exists()]
-    sessions.sort(key=lambda s: s.last_modified, reverse=True)
-    if limit is not None and limit > 0:
-        sessions = sessions[:limit]
-    return sessions
