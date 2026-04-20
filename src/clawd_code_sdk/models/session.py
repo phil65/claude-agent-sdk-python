@@ -88,7 +88,8 @@ class SessionMessage(TypedDict):
     uuid: str
     session_id: str
     message: Any
-    timestamp: str
+    # timestamp: str
+    parent_tool_use_id: str | None
 
 
 class GetSessionMessagesOptions(TypedDict, total=False):

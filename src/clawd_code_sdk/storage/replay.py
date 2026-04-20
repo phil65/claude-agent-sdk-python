@@ -270,20 +270,30 @@ def _make_synthetic_result(
         cache_creation_input_tokens=total_usage.cache_creation_input_tokens,
         cache_read_input_tokens=total_usage.cache_read_input_tokens,
     )
-    common = {
-        "uuid": last_uuid or "synthetic",
-        "session_id": session_id,
-        "duration_ms": 0,
-        "duration_api_ms": 0,
-        "is_error": is_error,
-        "num_turns": len(seen_msg_ids),
-        "total_cost_usd": 0.0,
-        "usage": token_usage,
-        "stop_reason": stop_reason,
-    }
     if is_error:
-        return ResultErrorMessage(**common, subtype="error_during_execution")  # type: ignore[arg-type]
-    return ResultSuccessMessage(**common)  # type: ignore[arg-type]
+        return ResultErrorMessage(
+            uuid=last_uuid or "synthetic",
+            session_id=session_id,
+            duration_ms=0,
+            duration_api_ms=0,
+            is_error=True,
+            num_turns=len(seen_msg_ids),
+            total_cost_usd=0.0,
+            usage=token_usage,
+            stop_reason=stop_reason,
+            subtype="error_during_execution",
+        )
+    return ResultSuccessMessage(
+        uuid=last_uuid or "synthetic",
+        session_id=session_id,
+        duration_ms=0,
+        duration_api_ms=0,
+        is_error=False,
+        num_turns=len(seen_msg_ids),
+        total_cost_usd=0.0,
+        usage=token_usage,
+        stop_reason=stop_reason,
+    )
 
 
 # =============================================================================
