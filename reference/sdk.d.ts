@@ -399,6 +399,8 @@ declare namespace coreTypes {
         ThinkingConfig,
         ThinkingDisabled,
         ThinkingEnabled,
+        UserPromptExpansionHookInput,
+        UserPromptExpansionHookSpecificOutput,
         UserPromptSubmitHookInput,
         UserPromptSubmitHookSpecificOutput,
         WorktreeCreateHookInput,
@@ -682,7 +684,7 @@ export declare type GetSubagentMessagesOptions = {
     sessionStore?: SessionStore;
 };
 
-export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "PermissionDenied", "Setup", "TeammateIdle", "TaskCreated", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
+export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "UserPromptExpansion", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "PermissionDenied", "Setup", "TeammateIdle", "TaskCreated", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
 
 /**
  * Hook callback function for responding to events during execution.
@@ -701,9 +703,9 @@ export declare interface HookCallbackMatcher {
     timeout?: number;
 }
 
-export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'PermissionDenied' | 'Setup' | 'TeammateIdle' | 'TaskCreated' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged';
+export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'Notification' | 'UserPromptSubmit' | 'UserPromptExpansion' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PermissionRequest' | 'PermissionDenied' | 'Setup' | 'TeammateIdle' | 'TaskCreated' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged';
 
-export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | PermissionDeniedHookInput | NotificationHookInput | UserPromptSubmitHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCreatedHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput;
+export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | PermissionDeniedHookInput | NotificationHookInput | UserPromptSubmitHookInput | UserPromptExpansionHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCreatedHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput;
 
 export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
@@ -1576,6 +1578,11 @@ export declare type Options = {
     /**
      * System prompt configuration.
      * - `string` - Use a custom system prompt
+     * - `string[]` - Use a custom system prompt as an array of blocks; include
+     *   `SYSTEM_PROMPT_DYNAMIC_BOUNDARY` as a standalone element to mark the
+     *   split between the static (globally-cacheable) prefix and the dynamic
+     *   (session-specific) suffix. Blocks before the marker are eligible for
+     *   cross-session prompt caching; blocks after it are not.
      * - `{ type: 'preset', preset: 'claude_code' }` - Use Claude Code's default system prompt
      * - `{ type: 'preset', preset: 'claude_code', append: '...' }` - Use default prompt with appended instructions
      * - `{ type: 'preset', preset: 'claude_code', excludeDynamicSections: true }` -
@@ -1597,6 +1604,16 @@ export declare type Options = {
      * systemPrompt: 'You are a helpful coding assistant.'
      * ```
      *
+     * @example Custom prompt with cache boundary
+     * ```typescript
+     * import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '@anthropic-ai/claude-code'
+     * systemPrompt: [
+     *   staticInstructions,
+     *   SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
+     *   sessionContext,
+     * ]
+     * ```
+     *
      * @example Default with additions
      * ```typescript
      * systemPrompt: {
@@ -1615,12 +1632,21 @@ export declare type Options = {
      * }
      * ```
      */
-    systemPrompt?: string | {
+    systemPrompt?: string | string[] | {
         type: 'preset';
         preset: 'claude_code';
         append?: string;
         excludeDynamicSections?: boolean;
     };
+    /**
+     * Custom title for a new session. When provided, the session uses this title
+     * instead of auto-generating one from the first user message.
+     *
+     * When resuming via `resume` or `continue`, the resumed session's persisted
+     * title takes precedence — use `renameSession()` to retitle an existing
+     * session.
+     */
+    title?: string;
 
     /**
      * Custom function to spawn the Claude Code process.
@@ -1937,6 +1963,18 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
      */
     getContextUsage(): Promise<SDKControlGetContextUsageResponse>;
     /**
+     * Read a file from the session's filesystem for the remote sidebar
+     * viewer. Path is resolved against cwd and gated by the same
+     * read-permission rules as the Read tool. Returns null on permission
+     * denial, missing file, or transport error.
+     *
+     * @param path - File path (relative to cwd or absolute)
+     * @param options - Optional maxBytes cap (default 1MB)
+     */
+    readFile(path: string, options?: {
+        maxBytes?: number;
+    }): Promise<SDKControlReadFileResponse | null>;
+    /**
      * Reload plugins from disk and return the refreshed commands, agents,
      * plugins, and MCP server status.
      *
@@ -1971,6 +2009,7 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
      * @param mtime - File mtime (floored ms) at the time of the observed Read
      */
     seedReadState(path: string, mtime: number): Promise<void>;
+
 
 
 
@@ -2237,6 +2276,14 @@ declare type SDKControlElicitationRequest = {
 };
 
 /**
+ * Requests at-mention file autocomplete suggestions for a partial path prefix. Returns the same fuzzy-matched results the TUI shows.
+ */
+declare type SDKControlFileSuggestionsRequest = {
+    subtype: 'file_suggestions';
+    query: string;
+};
+
+/**
  * Requests a breakdown of current context window usage by category.
  */
 declare type SDKControlGetContextUsageRequest = {
@@ -2353,7 +2400,7 @@ declare type SDKControlInitializeRequest = {
     hooks?: Partial<Record<coreTypes.HookEvent, SDKHookCallbackMatcher[]>>;
     sdkMcpServers?: string[];
     jsonSchema?: Record<string, unknown>;
-    systemPrompt?: string;
+    systemPrompt?: string[];
     appendSystemPrompt?: string;
 
     /**
@@ -2361,6 +2408,14 @@ declare type SDKControlInitializeRequest = {
      */
     excludeDynamicSections?: boolean;
     agents?: Record<string, coreTypes.AgentDefinition>;
+    /**
+     * Custom session title. When provided, the session uses this title and skips automatic title generation. Has no effect on the persisted title when resuming an existing session.
+     */
+    title?: string;
+    /**
+     * When provided, only skills whose names match an entry are loaded into the main session system prompt, using the same rules as AgentDefinition.skills: exact name, plugin-qualified name, or ":name" suffix. Omit to load every discovered skill. Applies to the main session only; subagents use AgentDefinition.skills.
+     */
+    skills?: string[];
     promptSuggestions?: boolean;
     agentProgressSummaries?: boolean;
 };
@@ -2387,6 +2442,18 @@ export declare type SDKControlInitializeResponse = {
  */
 declare type SDKControlInterruptRequest = {
     subtype: 'interrupt';
+};
+
+/**
+ * Invokes an MCP tool via the subprocess MCP client without a model turn. No permission check (control channel is trusted, same as other subtypes). SDK-type MCP servers (config.type === "sdk") are rejected — they are caller-provided, so the caller can invoke them directly without the subprocess round-trip. Result content passes through the same processing as model-turn MCP calls. Session expiry is not retried automatically; callers can mcp_reconnect and retry. UrlElicitationRequired (-32042) tries Elicitation hooks; if no hook resolves, the call errors with the URL in the message — open it out-of-band, then retry mcp_call.
+ */
+declare type SDKControlMcpCallRequest = {
+    subtype: 'mcp_call';
+    /**
+     * Fully-qualified MCP tool name, e.g. mcp__server__tool_name.
+     */
+    tool: string;
+    arguments?: Record<string, unknown>;
 };
 
 /**
@@ -2440,11 +2507,37 @@ declare type SDKControlPermissionRequest = {
     permission_suggestions?: coreTypes.PermissionUpdate[];
     blocked_path?: string;
     decision_reason?: string;
+    /**
+     * Structured discriminator for why auto-mode escalated. Lets SDK hosts make policy (e.g. auto-deny safetyCheck) without parsing decision_reason text. For compound bash commands this is "subcommandResults" even when a safetyCheck is nested inside — check classifier_approvable for that case.
+     */
+    decision_reason_type?: 'rule' | 'mode' | 'subcommandResults' | 'permissionPromptTool' | 'hook' | 'asyncAgent' | 'sandboxOverride' | 'workingDir' | 'safetyCheck' | 'classifier' | 'other';
+    /**
+     * Set when a safetyCheck is present anywhere in the decision reason (including nested inside subcommandResults for compound bash). false = at least one safety check requires manual approval (e.g. Windows path bypass, dangerous rm); true = all safety checks MAY be classifier-approved (e.g. sensitive-file paths). Absent when no safetyCheck is involved.
+     */
+    classifier_approvable?: boolean;
     title?: string;
     display_name?: string;
     tool_use_id: string;
     agent_id?: string;
     description?: string;
+};
+
+/**
+ * Read a file from the session filesystem for the remote sidebar viewer. Path is resolved against cwd and gated by the same read-permission rules as the Read tool.
+ */
+declare type SDKControlReadFileRequest = {
+    subtype: 'read_file';
+    path: string;
+    max_bytes?: number;
+};
+
+/**
+ * File contents for the remote sidebar viewer.
+ */
+export declare type SDKControlReadFileResponse = {
+    contents: string;
+    absPath: string;
+    truncated?: boolean;
 };
 
 /**
@@ -2483,7 +2576,7 @@ export declare type SDKControlRequest = {
     request: SDKControlRequestInner;
 };
 
-declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlRenameSessionRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlUltrareviewLaunchRequest | SDKControlOAuthTokenRefreshRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest | SDKControlRequestUserDialogRequest;
+declare type SDKControlRequestInner = SDKControlInterruptRequest | SDKControlPermissionRequest | SDKControlInitializeRequest | SDKControlSetPermissionModeRequest | SDKControlSetModelRequest | SDKControlSetMaxThinkingTokensRequest | SDKControlRenameSessionRequest | SDKControlMcpStatusRequest | SDKControlGetContextUsageRequest | SDKControlMcpCallRequest | SDKControlFileSuggestionsRequest | SDKHookCallbackRequest | SDKControlMcpMessageRequest | SDKControlRewindFilesRequest | SDKControlCancelAsyncMessageRequest | SDKControlReadFileRequest | SDKControlSeedReadStateRequest | SDKControlMcpSetServersRequest | SDKControlReloadPluginsRequest | SDKControlMcpReconnectRequest | SDKControlMcpToggleRequest | SDKControlChannelEnableRequest | SDKControlEndSessionRequest | SDKControlMcpAuthenticateRequest | SDKControlMcpClearAuthRequest | SDKControlMcpOAuthCallbackUrlRequest | SDKControlClaudeAuthenticateRequest | SDKControlClaudeOAuthCallbackRequest | SDKControlClaudeOAuthWaitForCompletionRequest | SDKControlRemoteControlRequest | SDKControlGenerateSessionTitleRequest | SDKControlSideQuestionRequest | SDKControlUltrareviewLaunchRequest | SDKControlMessageRatedRequest | SDKControlOAuthTokenRefreshRequest | SDKControlStopTaskRequest | SDKControlApplyFlagSettingsRequest | SDKControlGetSettingsRequest | SDKControlElicitationRequest | SDKControlRequestUserDialogRequest;
 
 /**
  * Requests the SDK consumer to render a tool-driven blocking dialog and return the user choice. Used by tools that previously rendered Ink JSX via setToolJSX with an onDone callback.
@@ -2708,7 +2801,7 @@ export declare type SDKMemoryRecallMessage = {
     session_id: string;
 };
 
-export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKPluginInstallMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKNotificationMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKMemoryRecallMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage;
+export declare type SDKMessage = SDKAssistantMessage | SDKUserMessage | SDKUserMessageReplay | SDKResultMessage | SDKSystemMessage | SDKPartialAssistantMessage | SDKCompactBoundaryMessage | SDKStatusMessage | SDKAPIRetryMessage | SDKLocalCommandOutputMessage | SDKHookStartedMessage | SDKHookProgressMessage | SDKHookResponseMessage | SDKPluginInstallMessage | SDKToolProgressMessage | SDKAuthStatusMessage | SDKTaskNotificationMessage | SDKTaskStartedMessage | SDKTaskUpdatedMessage | SDKTaskProgressMessage | SDKSessionStateChangedMessage | SDKNotificationMessage | SDKFilesPersistedEvent | SDKToolUseSummaryMessage | SDKMemoryRecallMessage | SDKRateLimitEvent | SDKElicitationCompleteMessage | SDKPromptSuggestionMessage | SDKMirrorErrorMessage;
 
 /**
  * Provenance of a user-role message (peer session, team lead, channel). Absent or `human` means keyboard input from the user.
@@ -4419,7 +4512,7 @@ export declare interface Settings {
     sandbox?: {
         enabled?: boolean;
         /**
-         * Exit with an error at startup if sandbox.enabled is true but the sandbox cannot start (missing dependencies, unsupported platform, or platform not in enabledPlatforms). When false (default), a warning is shown and commands run unsandboxed. Intended for managed-settings deployments that require sandboxing as a hard gate.
+         * Exit with an error at startup if sandbox.enabled is true but the sandbox cannot start (missing dependencies or unsupported platform). When false (default), a warning is shown and commands run unsandboxed. Intended for managed-settings deployments that require sandboxing as a hard gate.
          */
         failIfUnavailable?: boolean;
         autoAllowBashIfSandboxed?: boolean;
@@ -4610,7 +4703,20 @@ export declare interface Settings {
      * Terminal UI renderer. "fullscreen" uses the flicker-free alt-screen renderer with virtualized scrollback (equivalent to CLAUDE_CODE_NO_FLICKER=1). "default" uses the classic main-screen renderer.
      */
     tui?: 'default' | 'fullscreen';
-
+    /**
+     * Voice mode settings (hold-to-talk / tap-to-toggle dictation)
+     */
+    voice?: {
+        enabled?: boolean;
+        /**
+         * 'hold' (default): hold to talk. 'tap': tap to start, tap to stop+submit.
+         */
+        mode?: 'hold' | 'tap';
+        /**
+         * Submit the prompt when hold-to-talk is released (hold mode only)
+         */
+        autoSubmit?: boolean;
+    };
     /**
      * Teams/Enterprise opt-in for channel notifications (MCP servers with the claude/channel capability pushing inbound messages). Default off. Set true to allow; users then select servers via --channels.
      */
@@ -4846,7 +4952,7 @@ export declare type SyncHookJSONOutput = {
     systemMessage?: string;
     reason?: string;
 
-    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | PermissionDeniedHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput;
+    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | UserPromptExpansionHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | PermissionDeniedHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput;
 };
 
 /**
@@ -5015,6 +5121,20 @@ export declare function unstable_v2_prompt(_message: string, _options: SDKSessio
  * @alpha
  */
 export declare function unstable_v2_resumeSession(_sessionId: string, _options: SDKSessionOptions): SDKSession;
+
+export declare type UserPromptExpansionHookInput = BaseHookInput & {
+    hook_event_name: 'UserPromptExpansion';
+    expansion_type: 'slash_command' | 'mcp_prompt';
+    command_name: string;
+    command_args: string;
+    command_source?: string;
+    prompt: string;
+};
+
+export declare type UserPromptExpansionHookSpecificOutput = {
+    hookEventName: 'UserPromptExpansion';
+    additionalContext?: string;
+};
 
 export declare type UserPromptSubmitHookInput = BaseHookInput & {
     hook_event_name: 'UserPromptSubmit';

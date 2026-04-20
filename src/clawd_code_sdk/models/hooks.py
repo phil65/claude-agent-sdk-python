@@ -26,6 +26,7 @@ HookEvent = Literal[
     "Stop",
     "StopFailure",
     "SubagentStop",
+    "UserPromptExpansion",
     "PreCompact",
     "PostCompact",
     "Notification",
@@ -403,6 +404,17 @@ class FileChangedHookInput(BaseHookInput):
     event: Literal["change", "add", "unlink"]
 
 
+class UserPromptExpansionHookInput(BaseHookInput):
+    """Input data for UserPromptExpansion hook events."""
+
+    hook_event_name: Literal["UserPromptExpansion"]
+    expansion_type: Literal["slash_command", "mcp_prompt"]
+    command_name: str
+    command_args: str
+    command_source: NotRequired[str]
+    prompt: str
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -432,6 +444,7 @@ HookInput = (
     | WorktreeRemoveHookInput
     | CwdChangedHookInput
     | FileChangedHookInput
+    | UserPromptExpansionHookInput
 )
 
 
@@ -543,6 +556,13 @@ class FileChangedHookSpecificOutput(TypedDict):
     watchPaths: NotRequired[list[str]]
 
 
+class UserPromptExpansionHookSpecificOutput(TypedDict):
+    """Hook-specific output for UserPromptExpansion events."""
+
+    hookEventName: Literal["UserPromptExpansion"]
+    additionalContext: NotRequired[str]
+
+
 HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
@@ -558,6 +578,7 @@ HookSpecificOutput = (
     | CwdChangedHookSpecificOutput
     | FileChangedHookSpecificOutput
     | WorktreeCreateHookSpecificOutput
+    | UserPromptExpansionHookSpecificOutput
 )
 
 

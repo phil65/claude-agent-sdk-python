@@ -27,6 +27,20 @@ from clawd_code_sdk.models.server_info import (
 if TYPE_CHECKING:
     import mcp.types
 
+DecisionReasonType = Literal[
+    "rule",
+    "mode",
+    "subcommandResults",
+    "permissionPromptTool",
+    "hook",
+    "asyncAgent",
+    "sandboxOverride",
+    "workingDir",
+    "safetyCheck",
+    "classifier",
+    "other",
+]
+
 
 class _ControlBase(BaseModel):
     """Frozen base for all SDK control request models."""
@@ -55,6 +69,20 @@ class SDKControlPermissionRequest(_ControlBase):
     tool_use_id: str
     agent_id: str | None = None
     description: str | None = None
+    decision_reason_type: DecisionReasonType | None = None
+    """Structured discriminator for why auto-mode escalated.
+
+    Lets SDK hosts make policy (e.g. auto-deny safetyCheck) without parsing decision_reason text.
+    For compound bash commands this is "subcommandResults" even when a safetyCheck is nested inside
+    — check classifier_approvable for that case.
+    """
+    classifier_approvable: bool | None = None
+    """Set when a safetyCheck is present anywhere in the decision reason
+    (including nested inside subcommandResults for compound bash).
+    false = at least one safety check requires manual approval
+    (e.g. Windows path bypass, dangerous rm);
+    true = all safety checks MAY be classifier-approved
+    (e.g. sensitive-file paths). Absent when no safetyCheck is involved."""
 
 
 class SDKControlInitializeRequest(_ControlBase):
@@ -64,7 +92,7 @@ class SDKControlInitializeRequest(_ControlBase):
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentWireDefinition] | None = None
     sdk_mcp_servers: list[str] | None = Field(default=None, serialization_alias="sdkMcpServers")
-    system_prompt: str | None = Field(default=None, serialization_alias="systemPrompt")
+    system_prompt: list[str] | None = Field(default=None, serialization_alias="systemPrompt")
     append_system_prompt: str | None = Field(default=None, serialization_alias="appendSystemPrompt")
     exclude_dynamic_sections: bool | None = Field(
         default=None,
@@ -82,6 +110,18 @@ class SDKControlInitializeRequest(_ControlBase):
     agent_progress_summaries: bool | None = Field(
         default=None, serialization_alias="agentProgressSummaries"
     )
+    title: str | None = None
+    """Custom session title.
+
+    When provided, the session uses this title and skips automatic title generation.
+    Has no effect on the persisted title when resuming an existing session."""
+    skills: list[str] | None = None
+    """When provided, only given skills are loaded into the main session system prompt.
+
+    Uses the same rules as AgentDefinition.skills:
+    exact name, plugin-qualified name, or ":name" suffix.
+    Omit to load every discovered skill.
+    Applies to the main session only; subagents use AgentDefinition.skills."""
 
 
 class SDKControlSetPermissionModeRequest(_ControlBase):
@@ -500,6 +540,53 @@ class SDKControlRequestUserDialogRequest(_ControlBase):
     tool_use_id: str | None = None
 
 
+class SDKControlFileSuggestionsRequest(_ControlBase):
+    """Requests at-mention file autocomplete suggestions for a partial path prefix.
+
+    Returns the same fuzzy-matched results the TUI shows.
+    """
+
+    subtype: Literal["file_suggestions"] = "file_suggestions"
+    query: str
+
+
+class SDKControlReadFileRequest(_ControlBase):
+    """Read a file from the session filesystem for the remote sidebar viewer.
+
+    Path is resolved against cwd and gated by the same read-permission rules as the Read tool.
+    """
+
+    subtype: Literal["read_file"] = "read_file"
+    path: str
+    max_bytes: int | None = None
+
+
+class SDKControlReadFileResponse(_ControlBase):
+    """File contents for the remote sidebar viewer."""
+
+    contents: str
+    abs_path: str
+    truncated: bool | None = None
+
+
+class SDKControlMcpCallRequest(_ControlBase):
+    """Invokes an MCP tool via the subprocess MCP client without a model turn.
+
+    No permission check (control channel is trusted, same as other subtypes).
+    SDK-type MCP servers (config.type === "sdk") are rejected — they are caller-provided,
+    so the caller can invoke them directly without the subprocess round-trip.
+    Result content passes through the same processing as model-turn MCP calls.
+    Session expiry is not retried automatically; callers can mcp_reconnect and retry.
+    UrlElicitationRequired (-32042) tries Elicitation hooks;
+    if no hook resolves, the call errors with the URL in the message
+    — open it out-of-band, then retry mcp_call.
+    """
+
+    subtype: Literal["mcp_call"] = "mcp_call"
+    tool: str
+    arguments: dict[str, Any] | None = None
+
+
 IncomingControlRequest = Annotated[
     SDKControlPermissionRequest
     | SDKHookCallbackRequest
@@ -524,6 +611,7 @@ OutgoingControlRequest = Annotated[
     | SDKControlEndSessionRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest
+    | SDKControlFileSuggestionsRequest
     | SDKControlMcpOAuthCallbackUrlRequest
     | SDKControlRemoteControlRequest
     | SDKControlSetProactiveRequest
@@ -535,7 +623,9 @@ OutgoingControlRequest = Annotated[
     | SDKControlGetSettingsRequest
     | SDKControlRewindFilesRequest
     | SDKControlCancelAsyncMessageRequest
-    | SDKControlSeedReadStateRequest,
+    | SDKControlSeedReadStateRequest
+    | SDKControlReadFileRequest
+    | SDKControlMcpCallRequest,
     Discriminator("subtype"),
 ]
 

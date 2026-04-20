@@ -60,6 +60,8 @@ class NewSession(BaseSessionConfig):
     mode: Literal["new"] = "new"
     session_id: str | None = None
     """Deterministic session ID, or None to auto-generate a UUID."""
+    title: str | None = None
+    """Title for the session, or None to auto-generate a title."""
 
 
 @dataclass(kw_only=True)
@@ -97,6 +99,8 @@ class FromPR(BaseSessionConfig):
     """PR number or URL."""
     fork: bool = False
     """If True, fork to a new session ID instead of continuing in-place."""
+    # title: str | None = None
+    # """Title for the session, or None to auto-generate a title."""
 
 
 SessionConfig = NewSession | ResumeSession | ContinueLatest | FromPR
@@ -251,6 +255,8 @@ class ClaudeAgentOptions:
     """
     setting_sources: list[SettingSource] | None = None
     """List of sources to load settings from."""
+    skills: list[str] | None = None
+    """List of skills to use for the agent."""
     sandbox: Sandbox | None = None
     """Sandbox configuration for bash command isolation.
 
@@ -260,7 +266,7 @@ class ClaudeAgentOptions:
     debug_file: str | None = None
     """Write debug logs to a specific file path. Implicitly enables debug mode."""
     # Agent config
-    system_prompt: str | None = None
+    system_prompt: str | list[str] | None = None
     """System prompt for the agent."""
     include_builtin_system_prompt: bool = True
     """Whether to include Claude Code's builtin system prompt.

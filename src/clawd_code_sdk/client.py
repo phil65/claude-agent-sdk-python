@@ -20,6 +20,7 @@ from clawd_code_sdk.models import (
     McpAuthenticateResponse,
     McpSetServersResult,
     McpStatusResponse,
+    NewSession,
     RemoteControlResponse,
     ResultErrorMessage,
     ResultSuccessMessage,
@@ -34,12 +35,15 @@ from clawd_code_sdk.models import (
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlMcpAuthenticateRequest,
+    SDKControlMcpCallRequest,
     SDKControlMcpClearAuthRequest,
     SDKControlMcpOAuthCallbackUrlRequest,
     SDKControlMcpReconnectRequest,
     SDKControlMcpSetServersRequest,
     SDKControlMcpStatusRequest,
     SDKControlMcpToggleRequest,
+    SDKControlReadFileRequest,
+    SDKControlReadFileResponse,
     SDKControlRemoteControlRequest,
     SDKControlRewindFilesRequest,
     SDKControlSeedReadStateRequest,
@@ -162,22 +166,34 @@ class ClaudeSDKClient:
         """Send the initialize control request to the CLI."""
         query = self._ensure_connected()
         options = self.options
-
-        # Resolve system prompt vs append_system_prompt from options
-        system_prompt: str | None = None
-        append_system_prompt: str | None = None
-        if options.system_prompt is None:
-            if not options.include_builtin_system_prompt:
-                system_prompt = ""  # Clear the builtin prompt
-        elif options.include_builtin_system_prompt:
-            append_system_prompt = options.system_prompt
-        else:
-            system_prompt = options.system_prompt
+        match options.system_prompt, options.include_builtin_system_prompt:
+            case None, False:
+                system_prompt: list[str] | None = [""]  # Clear the builtin prompt
+                append_system_prompt: str | None = None
+            case None, True:
+                system_prompt = None  # Use the builtin prompt
+                append_system_prompt = None
+            case str() as prompt_str, True:
+                system_prompt = None
+                append_system_prompt = prompt_str
+            case list() as prompt_list, True:
+                system_prompt = None
+                append_system_prompt = "\n".join(prompt_list)
+            case str() as prompt_str, False:
+                system_prompt = [prompt_str]
+                append_system_prompt = None
+            case list() as prompt_list, False:
+                system_prompt = prompt_list
+                append_system_prompt = None
 
         # Calculate initialize timeout
         initialize_timeout_ms = int(os.environ.get("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT", "60000"))
         initialize_timeout = max(initialize_timeout_ms / 1000.0, 60.0)
-
+        match options.get_session():
+            case NewSession() as s:
+                title = s.title
+            case _:
+                title = None
         hooks_config = query.build_hooks_config()
         request = SDKControlInitializeRequest(
             hooks=hooks_config,
@@ -189,6 +205,8 @@ class ClaudeSDKClient:
             exclude_dynamic_sections=options.exclude_dynamic_sections,
             sdk_mcp_servers=list(query.sdk_mcp_servers.keys()) or None,
             agent_progress_summaries=options.agent_progress_summaries,
+            title=title,
+            skills=options.skills,
         )
         response = await query._send_control_request(request, timeout=initialize_timeout)
         self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
@@ -522,6 +540,35 @@ class ClaudeSDKClient:
         if self._initialization_result is None:
             raise RuntimeError("Not initialized. Call connect() first.")
         return self._initialization_result.agents
+
+    async def get_file(self, path: str, max_bytes: int | None = None) -> SDKControlReadFileResponse:
+        """Get the contents of a file from the server.
+
+        Args:
+            path: Path to the file to read
+            max_bytes: Maximum number of bytes to read (default: None, no limit)
+
+        Returns:
+            The file contents and metadata
+        """
+        query = self._ensure_connected()
+        request = SDKControlReadFileRequest(path=path, max_bytes=max_bytes)
+        result = await query._send_control_request(request)
+        return SDKControlReadFileResponse.model_validate(result)
+
+    async def call_tool(self, tool: str, arguments: dict[str, Any] | None = None) -> Any:
+        """Call a tool on the server.
+
+        Args:
+            tool: The name of the tool to call
+            arguments: Optional dictionary of arguments for the tool
+
+        Returns:
+            The result of the tool call
+        """
+        query = self._ensure_connected()
+        request = SDKControlMcpCallRequest(tool=tool, arguments=arguments)
+        return await query._send_control_request(request)
 
     async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.

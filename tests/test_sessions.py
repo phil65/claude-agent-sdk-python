@@ -1111,9 +1111,9 @@ class TestTagExtraction:
         assert sessions[0].tag is None
 
     def test_tag_ignores_tool_use_inputs(self, claude_config_dir: Path, tmp_path: Path):
-        """Tag extraction is scoped to {type:'tag'} lines — ignores "tag" fields
-        in tool_use inputs (git tag, Docker tags, cloud resource tags).
+        """Tag extraction is scoped to {type:'tag'} lines.
 
+        Ignores "tag" fields in tool_use inputs (git tag, Docker tags, cloud resource tags).
         Mirrors TS listSessionsImpl.ts:132 / sessionStorage.ts:629.
         """
         project_path = str(tmp_path / "proj")

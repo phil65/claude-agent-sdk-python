@@ -201,6 +201,8 @@ class BashOutput(TypedDict):
     """Model-facing note listing readFileState entries whose mtime bumped during this command."""
     # tokenSaverOutput: NotRequired[str]
     # """Compressed output sent to model when token-saver is active (UI still uses stdout)."""
+    ghRateLimitHint: NotRequired[str]
+    """Model-facing sys-reminder appended when a gh cmd reports a GitHub API rate-limit error."""
 
 
 # ---------------------------------------------------------------------------
