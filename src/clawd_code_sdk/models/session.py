@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Self, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -45,7 +45,7 @@ class SDKSessionInfo(BaseModel):
     tag: str | None = None
     """User-set session tag."""
 
-    created_at: float | None = None
+    created_at: int | None = None
     """Creation time in milliseconds since epoch."""
 
     @classmethod
@@ -78,7 +78,7 @@ class SDKSessionInfo(BaseModel):
         )
 
 
-class SessionMessage(TypedDict):
+class SessionMessage(BaseModel):
     """A message from a session transcript.
 
     Returned by ``get_session_messages`` for reading historical session data.
@@ -89,4 +89,4 @@ class SessionMessage(TypedDict):
     session_id: str
     message: Any
     # timestamp: str
-    parent_tool_use_id: str | None
+    parent_tool_use_id: str | None = None
