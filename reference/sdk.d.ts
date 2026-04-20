@@ -198,6 +198,56 @@ export declare type ConfigChangeHookInput = BaseHookInput & {
  */
 export declare type ConfigScope = 'local' | 'user' | 'project';
 
+/**
+ * Structured failure from connectRemoteControl.
+ * @alpha
+ */
+export declare type ConnectRemoteControlError = {
+    kind: 'conflict' | 'auth' | 'network' | 'unknown';
+    detail: string;
+};
+
+/**
+ * Options for connectRemoteControl.
+ * @alpha
+ */
+export declare type ConnectRemoteControlOptions = {
+    dir: string;
+    /** Override directory sent to backend for env registration. */
+    registrationDir?: string;
+    name?: string;
+    workerType?: string;
+    branch?: string;
+    gitRepoUrl?: string | null;
+    getAccessToken: () => string | undefined;
+    baseUrl: string;
+    orgUUID: string;
+    model: string;
+    /** Reuse env+session across restarts (reads bridge-pointer.json). */
+    perpetual?: boolean;
+    /** SSE high-water mark so reconnect sends from_sequence_num. */
+    initialSSESequenceNum?: number;
+    /** Called on 401; return true after refreshing token to retry. */
+    onAuth401?: (staleAccessToken: string) => Promise<boolean>;
+    /** Called on 409 conflict; return 'takeover' to deregister + retry. */
+    onConflict?: (detail: {
+        machineName: string;
+        message: string;
+    }) => Promise<'takeover' | 'abort'>;
+};
+
+/**
+ * Discriminated result from connectRemoteControl.
+ * @alpha
+ */
+export declare type ConnectRemoteControlResult = {
+    ok: true;
+    handle: RemoteControlHandle;
+} | {
+    ok: false;
+    error: ConnectRemoteControlError;
+};
+
 declare type ControlErrorResponse = {
     subtype: 'error';
     request_id: string;
@@ -301,6 +351,7 @@ declare namespace coreTypes {
         SDKMemoryRecallMessage,
         SDKMessageOrigin,
         SDKMessage,
+        SDKMirrorErrorMessage,
         SDKNotificationMessage,
         SDKPartialAssistantMessage,
         SDKPermissionDenial,
@@ -380,6 +431,22 @@ export declare type CwdChangedHookSpecificOutput = {
     hookEventName: 'CwdChanged';
     watchPaths?: string[];
 };
+
+/**
+ * Delete a session.
+ *
+ * With `sessionStore`: calls `sessionStore.delete()` if implemented; no-op
+ * otherwise (per the SessionStore contract — appropriate for WORM/append-only
+ * backends).
+ *
+ * Without `sessionStore`: removes `{sessionId}.jsonl` and the `{sessionId}/`
+ * subagent-transcript subdirectory from the local projects dir. Throws if the
+ * session is not found.
+ *
+ * @param sessionId - UUID of the session
+ * @param options - `{ dir?, sessionStore? }`
+ */
+export declare function deleteSession(_sessionId: string, _options?: SessionMutationOptions): Promise<void>;
 
 /**
  * Effort level for controlling how much thinking/reasoning Claude applies.
@@ -539,7 +606,12 @@ export declare type GetSessionInfoOptions = {
      * When omitted, all project directories are searched for the session file.
      */
     dir?: string;
-
+    /**
+     * When provided, load session info from this store instead of the local
+     * filesystem.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 /**
@@ -571,7 +643,12 @@ export declare type GetSessionMessagesOptions = {
      * Defaults to false for backwards compatibility.
      */
     includeSystemMessages?: boolean;
-
+    /**
+     * When provided, load session messages from this store instead of the
+     * local filesystem.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 /**
@@ -597,7 +674,12 @@ export declare type GetSubagentMessagesOptions = {
     limit?: number;
     /** Number of messages to skip from the start. */
     offset?: number;
-
+    /**
+     * When provided, load subagent messages from this store instead of the
+     * local filesystem.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 export declare const HOOK_EVENTS: readonly ["PreToolUse", "PostToolUse", "PostToolUseFailure", "Notification", "UserPromptSubmit", "SessionStart", "SessionEnd", "Stop", "StopFailure", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "PermissionRequest", "PermissionDenied", "Setup", "TeammateIdle", "TaskCreated", "TaskCompleted", "Elicitation", "ElicitationResult", "ConfigChange", "WorktreeCreate", "WorktreeRemove", "InstructionsLoaded", "CwdChanged", "FileChanged"];
@@ -627,11 +709,88 @@ export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
 export declare type HookPermissionDecision = 'allow' | 'deny' | 'ask' | 'defer';
 
+/**
+ * Copy a local JSONL session into a SessionStore.
+ *
+ * Reads the session file (and optionally subagent transcripts) from disk
+ * and calls `store.append()` for each. Entries are appended in batches of
+ * `batchSize` to avoid backend payload limits; the store's `append()` is
+ * called multiple times per session. Useful for migrating existing local
+ * sessions to a remote backend.
+ *
+ * @alpha
+ * @param sessionId - UUID of the local session to import
+ * @param store - Destination SessionStore
+ * @param options - `{ dir?, includeSubagents?, batchSize? }`
+ */
+export declare function importSessionToStore(_sessionId: string, _store: SessionStore, _options?: ImportSessionToStoreOptions): Promise<void>;
+
+/**
+ * Options for importing a local JSONL session into a SessionStore.
+ * @alpha
+ */
+export declare type ImportSessionToStoreOptions = {
+    /**
+     * Project directory path (same semantics as `listSessions({ dir })`).
+     * When omitted, all project directories are searched for the session file
+     * and the destination projectKey is derived from the resolved cwd.
+     */
+    dir?: string;
+    /**
+     * If true, also import subagent transcripts. Default: true.
+     */
+    includeSubagents?: boolean;
+    /**
+     * Maximum entries per `store.append()` call. Entries are appended in
+     * batches of this size to avoid backend payload limits; the store's
+     * `append()` is called multiple times per session. Default: 500.
+     */
+    batchSize?: number;
+};
+
+/**
+ * A user message typed on claude.ai, extracted from the bridge WS.
+ * @alpha
+ */
+export declare type InboundPrompt = {
+    content: string | unknown[];
+    uuid?: string;
+};
+
 export declare type InferShape<T extends AnyZodRawShape> = {
     [K in keyof T]: T[K] extends {
         _output: infer O;
     } ? O : never;
 } & {};
+
+/**
+ * In-memory SessionStore implementation for testing and development.
+ * Stores entries in a Map keyed by a composite string.
+ * Not suitable for production -- data is lost when the process exits.
+ * @alpha
+ */
+export declare class InMemorySessionStore implements SessionStore {
+    private store;
+    private mtimes;
+    private keyToString;
+    append(key: SessionKey, entries: SessionStoreEntry[]): Promise<void>;
+    load(key: SessionKey): Promise<SessionStoreEntry[] | null>;
+    listSessions(projectKey: string): Promise<Array<{
+        sessionId: string;
+        mtime: number;
+    }>>;
+    delete(key: SessionKey): Promise<void>;
+    listSubkeys(key: {
+        projectKey: string;
+        sessionId: string;
+    }): Promise<string[]>;
+    /** Test helper -- get all entries for a key */
+    getEntries(key: SessionKey): SessionStoreEntry[];
+    /** Test helper -- number of stored sessions (main transcripts only) */
+    get size(): number;
+    /** Test helper -- clear all stored data */
+    clear(): void;
+}
 
 export declare type InstructionsLoadedHookInput = BaseHookInput & {
     hook_event_name: 'InstructionsLoaded';
@@ -690,12 +849,15 @@ export declare type ListSessionsOptions = {
      * When `dir` is provided and the directory is inside a git repository,
      * include sessions from all git worktree paths. Defaults to `true`.
      *
-     * Only applies to the local-filesystem path. Ignored when `sessionStore`
-     * is provided — worktree enumeration requires inspecting `.git/worktrees`
-     * on disk, which a SessionStore (keyed by projectKey) has no view of.
+     * Only applies when reading from the local filesystem.
      */
     includeWorktrees?: boolean;
-
+    /**
+     * When provided, list sessions from this store instead of the local
+     * filesystem. Requires `store.listSessions` to be defined.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 /**
@@ -716,7 +878,12 @@ export declare function listSubagents(_sessionId: string, _options?: ListSubagen
 export declare type ListSubagentsOptions = {
     /** Project directory to find the session in. If omitted, searches all projects. */
     dir?: string;
-
+    /**
+     * When provided, list subagents from this store instead of the local
+     * filesystem. Requires `store.listSubkeys` to be defined.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 export declare type McpClaudeAIProxyServerConfig = {
@@ -1001,11 +1168,7 @@ export declare type Options = {
     };
     /**
      * Environment variables to pass to the Claude Code process.
-     * Merged on top of `process.env` — entries here override the parent
-     * process's variables, and anything not set here is inherited.
-     * Set a key to `undefined` to remove an inherited variable. Note:
-     * `GITHUB_ACTIONS` and a few SDK-managed vars are stripped and are
-     * not inherited unless set explicitly here.
+     * Defaults to `process.env`.
      *
      * SDK consumers can identify their app/library to include in the User-Agent header by setting:
      * - `CLAUDE_AGENT_SDK_CLIENT_APP` - Your app/library identifier (e.g., "my-app/1.0.0", "my-library/2.1")
@@ -1112,8 +1275,28 @@ export declare type Options = {
      * @default true
      */
     persistSession?: boolean;
-
-
+    /**
+     * Mirror session transcripts to an external store. When set, the subprocess
+     * still writes to CLAUDE_CONFIG_DIR (set it to /tmp for ephemeral local copy)
+     * AND emits entries to this adapter via dual-write.
+     *
+     * Cannot be used with persistSession: false -- local writes are required
+     * for the mirror to function (the mirror hook fires after local write success).
+     *
+     * Default: undefined (no mirroring, today's behavior).
+     * @alpha
+     */
+    sessionStore?: SessionStore;
+    /**
+     * Timeout for each `sessionStore.load()` / `sessionStore.listSubkeys()` call
+     * during resume materialization. If the adapter doesn't settle within this
+     * window the query fails with a clear error instead of hanging the iterator
+     * forever (the deferred-spawn path otherwise has no upper bound).
+     *
+     * @default 60_000
+     * @alpha
+     */
+    loadTimeoutMs?: number;
     /**
      * Include hook lifecycle events in the output stream.
      * When true, `hook_started`, `hook_progress`, and `hook_response` system
@@ -1898,6 +2081,7 @@ export declare type SandboxNetworkConfig = NonNullable<z.infer<ReturnType<typeof
  */
 declare const SandboxNetworkConfigSchema: () => z.ZodOptional<z.ZodObject<{
     allowedDomains: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    deniedDomains: z.ZodOptional<z.ZodArray<z.ZodString>>;
     allowManagedDomainsOnly: z.ZodOptional<z.ZodBoolean>;
     allowUnixSockets: z.ZodOptional<z.ZodArray<z.ZodString>>;
     allowAllUnixSockets: z.ZodOptional<z.ZodBoolean>;
@@ -1919,6 +2103,7 @@ declare const SandboxSettingsSchema: () => z.ZodObject<{
     allowUnsandboxedCommands: z.ZodOptional<z.ZodBoolean>;
     network: z.ZodOptional<z.ZodObject<{
         allowedDomains: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        deniedDomains: z.ZodOptional<z.ZodArray<z.ZodString>>;
         allowManagedDomainsOnly: z.ZodOptional<z.ZodBoolean>;
         allowUnixSockets: z.ZodOptional<z.ZodArray<z.ZodString>>;
         allowAllUnixSockets: z.ZodOptional<z.ZodBoolean>;
@@ -2544,6 +2729,22 @@ export declare type SDKMessageOrigin = {
 };
 
 /**
+ * Emitted when SessionStore.append() rejects or times out for a transcript-mirror batch. The batch is dropped (at-most-once delivery); this surfaces the failure so consumers are not silent on data loss.
+ */
+export declare type SDKMirrorErrorMessage = {
+    type: 'system';
+    subtype: 'mirror_error';
+    error: string;
+    key: {
+        projectKey: string;
+        sessionId: string;
+        subpath?: string;
+    };
+    uuid: UUID;
+    session_id: string;
+};
+
+/**
  * Loop-side text notification. Mirrors the interactive REPL notification queue (key/priority/timeout). JSX notifications are not emitted on this channel.
  */
 export declare type SDKNotificationMessage = {
@@ -2774,6 +2975,21 @@ export declare type SDKSessionOptions = {
     env?: {
         [envVar: string]: string | undefined;
     };
+    /**
+     * Working directory for the Claude Code process. Defaults to the current
+     * process's working directory.
+     */
+    cwd?: string;
+    /**
+     * Which settings sources to load (CLAUDE.md, `.claude/settings.json`).
+     * Defaults to `[]` — no project/user settings are loaded unless specified.
+     */
+    settingSources?: SettingSource[];
+    /**
+     * Must be set to `true` when using `permissionMode: 'bypassPermissions'`.
+     * This is a safety measure to ensure intentional bypassing of permissions.
+     */
+    allowDangerouslySkipPermissions?: boolean;
     /**
      * List of tool names that are auto-allowed without prompting for permission.
      * These tools will execute automatically without asking the user for approval.
@@ -3021,6 +3237,25 @@ export declare type SessionEndHookInput = BaseHookInput & {
 };
 
 /**
+ * Identifies a session transcript or subagent transcript in the store.
+ * Main transcripts have no subpath; subagent transcripts include a subpath
+ * like 'subagents/agent-{id}' that mirrors the on-disk directory structure.
+ * @alpha
+ */
+export declare type SessionKey = {
+    /** Caller-defined scope. Default: sanitized cwd. Multi-tenant deployments
+     *  should set this to a tenant ID or project name. Paths longer than 200
+     *  characters are truncated and suffixed with a portable djb2 hash so the
+     *  same path yields the same key under both Bun and Node.js. */
+    projectKey: string;
+    sessionId: string;
+    /** Undefined = main transcript. Set for subagent files.
+     *  Empty string is invalid — omit the field for the main transcript.
+     *  Opaque to the adapter — just use it as a storage key suffix. */
+    subpath?: string;
+};
+
+/**
  * A message from a session transcript.
  * Returned by `getSessionMessages` for reading historical session data.
  */
@@ -3042,7 +3277,12 @@ export declare type SessionMutationOptions = {
      * When omitted, all project directories are searched for the session file.
      */
     dir?: string;
-
+    /**
+     * When provided, read/write session data via this store instead of the
+     * local filesystem.
+     * @alpha
+     */
+    sessionStore?: SessionStore;
 };
 
 export declare type SessionStartHookInput = BaseHookInput & {
@@ -3057,6 +3297,94 @@ export declare type SessionStartHookSpecificOutput = {
     additionalContext?: string;
     initialUserMessage?: string;
     watchPaths?: string[];
+};
+
+/**
+ * Adapter for mirroring session transcripts to external storage.
+ * The subprocess still writes to local disk (set CLAUDE_CONFIG_DIR=/tmp
+ * for ephemeral local copy); the adapter receives a secondary copy.
+ *
+ * The SDK never deletes from your store unless you call deleteSession()
+ * with delete? implemented. Retention is the adapter's responsibility —
+ * implement TTL, S3 lifecycle policies, or scheduled cleanup according
+ * to your compliance requirements (e.g., ZDR/HIPAA retention windows).
+ * Local-disk transcripts under CLAUDE_CONFIG_DIR are swept by the
+ * existing cleanupPeriodDays setting independently of this adapter.
+ * @alpha
+ */
+export declare type SessionStore = {
+    /**
+     * Mirror a batch of transcript entries. Called AFTER the subprocess's
+     * local write succeeds — durability is already guaranteed locally.
+     *
+     * Batches arrive at ~100ms cadence during active turns. Entries are
+     * JSON-safe POJOs — one per line in the local JSONL file.
+     *
+     * Within a single process, persist entries in append-call order; across
+     * concurrent processes, order is by storage commit time, not call time.
+     *
+     * Rejection is logged; the subprocess continues unaffected.
+     * At-most-once delivery — failed batches are not retried.
+     */
+    append(key: SessionKey, entries: SessionStoreEntry[]): Promise<void>;
+    /**
+     * Load a full session for resume. Called once, in the SDK parent, before
+     * subprocess spawn. The result is materialized to a temporary JSONL file;
+     * the subprocess resumes from that file using its existing resume code.
+     *
+     * Return `null` for a key that was never written; adapters that cannot
+     * distinguish "never written" from "emptied" (e.g. Redis LRANGE) may
+     * return `null` for both. Returned entries must be deep-equal to what was
+     * appended — byte-equal serialization is NOT required (e.g. Postgres
+     * JSONB may reorder object keys); the SDK never hashes or byte-compares
+     * entries.
+     */
+    load(key: SessionKey): Promise<SessionStoreEntry[] | null>;
+    /**
+     * List sessions for a projectKey. Returns IDs + modification times.
+     * `mtime` is Unix epoch milliseconds; adapters without native modification
+     * time (e.g. Redis) must maintain their own index. Result order is
+     * unspecified — the SDK sorts by mtime descending.
+     * Optional — if undefined, listSessions() with a sessionStore throws.
+     */
+    listSessions?(projectKey: string): Promise<Array<{
+        sessionId: string;
+        mtime: number;
+    }>>;
+    /**
+     * Delete a session. Optional — if undefined, deletion is a no-op
+     * (appropriate for WORM/append-only backends like S3).
+     */
+    delete?(key: SessionKey): Promise<void>;
+    /**
+     * List all subpath keys under a session (e.g., subagent transcripts).
+     * Used during resume to discover and materialize all subagent data.
+     * If undefined, resume only materializes the main transcript.
+     */
+    listSubkeys?(key: {
+        projectKey: string;
+        sessionId: string;
+    }): Promise<string[]>;
+};
+
+/**
+ * One JSONL transcript line as observed by a {@link SessionStore} adapter.
+ *
+ * The concrete entry shape is the on-disk transcript format (a large
+ * discriminated union over `type` covering user/assistant messages, summaries,
+ * titles, tags, mode changes, etc.). That union is CLI-internal and not part
+ * of the SDK API surface, so this is exposed as a minimal structural supertype
+ * — every entry has a string `type` discriminant, most carry a `uuid` and ISO
+ * `timestamp`, and the rest of the payload is opaque JSON. Adapters should
+ * treat entries as pass-through blobs; round-tripping `JSON.stringify` /
+ * `JSON.parse` is the only required invariant.
+ * @alpha
+ */
+export declare type SessionStoreEntry = {
+    type: string;
+    uuid?: string;
+    timestamp?: string;
+    [k: string]: unknown;
 };
 
 /**
@@ -4102,6 +4430,10 @@ export declare interface Settings {
         network?: {
             allowedDomains?: string[];
             /**
+             * Domains that are always blocked, even if matched by allowedDomains. Supports the same wildcard syntax as allowedDomains. Merged from all settings sources regardless of allowManagedDomainsOnly.
+             */
+            deniedDomains?: string[];
+            /**
              * When true (and set in managed settings), only allowedDomains and WebFetch(domain:...) allow rules from managed settings are respected. User, project, local, and flag settings domains are ignored. Denied domains are still respected from all sources.
              */
             allowManagedDomainsOnly?: boolean;
@@ -4265,7 +4597,7 @@ export declare interface Settings {
     /**
      * Release channel for auto-updates (latest or stable)
      */
-    autoUpdatesChannel?: 'latest' | 'stable';
+    autoUpdatesChannel?: 'latest' | 'stable' | 'rc';
     /**
      * Minimum version to stay on - prevents downgrades when switching to stable channel
      */
@@ -4452,6 +4784,15 @@ export declare interface SpawnOptions {
     signal: AbortSignal;
 }
 
+/**
+ * Pre-warms the CLI subprocess so the first `query()` resolves immediately.
+ * Returns a {@link WarmQuery} handle.
+ */
+export declare function startup(_params?: {
+    options?: Options;
+    initializeTimeoutMs?: number;
+}): Promise<WarmQuery>;
+
 declare type StdoutMessage = coreTypes.SDKMessage | coreTypes.SDKPostTurnSummaryMessage | coreTypes.SDKTranscriptMirrorMessage | SDKControlResponse | SDKControlRequest | SDKControlCancelRequest | SDKKeepAliveMessage;
 
 export declare type StopFailureHookInput = BaseHookInput & {
@@ -4507,6 +4848,16 @@ export declare type SyncHookJSONOutput = {
 
     hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | PermissionDeniedHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput;
 };
+
+/**
+ * Marker string that splits a custom `systemPrompt` into a static prefix
+ * (eligible for cross-session prompt caching) and a dynamic suffix
+ * (session-specific, not globally cached). Include this literal as a
+ * standalone element of a `string[]` `systemPrompt` to opt in; blocks
+ * before it get global cache scope, blocks after do not. See
+ * `splitSysPromptPrefix` in `src/utils/api.ts`.
+ */
+export declare const SYSTEM_PROMPT_DYNAMIC_BOUNDARY = "__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__";
 
 /**
  * Tag a session. Pass null to clear the tag.
@@ -4628,6 +4979,13 @@ export declare interface Transport {
      * End the input stream
      */
     endInput(): void;
+    /**
+     * Optional Disposable support. All built-in transports implement this
+     * (delegating to close()), so `using transport = new ProcessTransport(...)`
+     * works. Kept optional on the interface to avoid a breaking change for
+     * external `implements Transport` consumers.
+     */
+    [Symbol.dispose]?(): void;
 }
 
 /**
@@ -4669,6 +5027,25 @@ export declare type UserPromptSubmitHookSpecificOutput = {
     additionalContext?: string;
     sessionTitle?: string;
 };
+
+/**
+ * A pre-warmed query handle returned by `startup()`. The subprocess has
+ * already been spawned and completed its initialize handshake, so calling
+ * `query()` writes the prompt directly to a ready process — no startup
+ * latency.
+ */
+export declare interface WarmQuery extends AsyncDisposable {
+    /**
+     * Send a prompt to the pre-warmed subprocess and return the Query.
+     * Can only be called once per WarmQuery.
+     */
+    query(prompt: string | AsyncIterable<SDKUserMessage>): Query;
+    /**
+     * Close the subprocess without sending a prompt. Use this to discard a
+     * warm query you no longer need.
+     */
+    close(): void;
+}
 
 export declare type WorktreeCreateHookInput = BaseHookInput & {
     hook_event_name: 'WorktreeCreate';

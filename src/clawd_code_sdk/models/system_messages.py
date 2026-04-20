@@ -130,6 +130,28 @@ class LocalCommandOutputMessage(BaseSystemMessage):
     content: str
 
 
+class SessionKey(TypedDict):
+    """Identifies a session transcript or subagent transcript in the store."""
+
+    projectKey: str
+    """Caller-defined scope. Default: sanitized cwd."""
+    sessionId: str
+    subpath: str | None
+    """Set for subagent files, None for main transcript."""
+
+
+class MirrorErrorSystemMessage(BaseSystemMessage):
+    """Emitted when SessionStore.append() rejects or times out for a transcript-mirror batch.
+
+    The batch is dropped (at-most-once delivery);
+    this surfaces the failure so consumers are not silent on data loss.
+    """
+
+    subtype: Literal["mirror_error"] = "mirror_error"
+    error: str
+    key: SessionKey
+
+
 class FilesPersistedSystemMessage(BaseSystemMessage):
     """System message emitted when files have been persisted."""
 
@@ -332,6 +354,7 @@ SystemMessageUnion = (
     | HookResponseSystemMessage
     | TaskStartedSystemMessage
     | TaskNotificationSystemMessage
+    | MirrorErrorSystemMessage
     | PluginInstallSystemMessage
     | TaskProgressSystemMessage
     | NotificationSystemMessage
