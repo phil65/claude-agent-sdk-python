@@ -28,6 +28,7 @@ from ._internal.sessions import (
     list_sessions,
     list_subagents,
 )
+from ._internal.session_mutations import tag_session, delete_session, fork_session, rename_session
 from ._version import __version__
 from .models.anthropic_types import ToolResultContentBlock
 from .client import ClaudeSDKClient
@@ -256,10 +257,14 @@ __all__ = [
     "UserTextPrompt",
     "__version__",
     "create_sdk_mcp_server",
+    "delete_session",
+    "fork_session",
     "get_session_info",
     "get_session_messages",
     "get_subagent_messages",
     "list_sessions",
     "list_subagents",
+    "rename_session",
+    "tag_session",
     "tool",
 ]
