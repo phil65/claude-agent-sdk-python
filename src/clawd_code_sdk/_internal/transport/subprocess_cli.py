@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 import anyio
 import anyio.abc
 from anyio.streams.text import TextReceiveStream, TextSendStream
+from anyio.to_thread import run_sync
 
 from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError, ProcessError
 from clawd_code_sdk._internal.transport import Transport
@@ -40,10 +41,7 @@ _DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 1MB buffer limit
 class SubprocessCLITransport(Transport):
     """Subprocess transport using Claude Code CLI."""
 
-    def __init__(
-        self,
-        options: ClaudeAgentOptions | None = None,
-    ):
+    def __init__(self, options: ClaudeAgentOptions | None = None):
         self._options = options or ClaudeAgentOptions()
         self._cli_path = str(opts) if (opts := self._options.cli_path) is not None else None
         self._process: Process | None = None
@@ -76,8 +74,6 @@ class SubprocessCLITransport(Transport):
 
     async def connect(self) -> None:
         """Start subprocess."""
-        from anyio.to_thread import run_sync
-
         if self._process:
             return
         if self._cli_path is None:

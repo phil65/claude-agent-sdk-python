@@ -470,11 +470,7 @@ def _find_session_file_with_dir(
             if result:
                 return result
 
-        try:
-            worktree_paths = _get_worktree_paths(canonical)
-        except Exception:
-            worktree_paths = []
-        for wt in worktree_paths:
+        for wt in _get_worktree_paths(canonical):
             if wt == canonical:
                 continue
             wt_project_dir = _find_project_dir(wt)
@@ -548,7 +544,6 @@ def _append_to_session(session_id: str, data: str, directory: str | None) -> Non
 
     if directory:
         canonical = _canonicalize_path(directory)
-
         # Try the exact/prefix-matched project directory first.
         project_dir = _find_project_dir(canonical)
         if project_dir is not None and _try_append(project_dir / file_name, data):
@@ -556,11 +551,7 @@ def _append_to_session(session_id: str, data: str, directory: str | None) -> Non
 
         # Worktree fallback — matches list_sessions/get_session_messages.
         # Sessions may live under a different worktree root.
-        try:
-            worktree_paths = _get_worktree_paths(canonical)
-        except Exception:
-            worktree_paths = []
-        for wt in worktree_paths:
+        for wt in _get_worktree_paths(canonical):
             if wt == canonical:
                 continue  # already tried above
             wt_project_dir = _find_project_dir(wt)

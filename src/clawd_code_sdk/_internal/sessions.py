@@ -6,13 +6,14 @@ extracts metadata from stat + head/tail reads without full JSONL parsing.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Literal
+from typing import Any
 import unicodedata
 
 import anyenv
@@ -26,7 +27,6 @@ from clawd_code_sdk.models.session import SDKSessionInfo, SessionMessage
 
 # Size of the head/tail buffer for lite metadata reads.
 LITE_READ_BUF_SIZE = 65536
-
 # Maximum length for a single filesystem path component. Most filesystems
 # limit individual components to 255 bytes. We use 200 to leave room for
 # the hash suffix and separator.
@@ -50,6 +50,7 @@ _COMMAND_NAME_RE = re.compile(r"<command-name>(.*?)</command-name>")
 
 _SANITIZE_RE = re.compile(r"[^a-zA-Z0-9]")
 
+case_insensitive = sys.platform == "win32"
 
 # ---------------------------------------------------------------------------
 # UUID validation
@@ -314,16 +315,14 @@ def _extract_first_prompt_from_head(head: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(kw_only=True, slots=True)
 class _LiteSessionFile:
     """Result of reading a session file's head, tail, mtime and size."""
 
-    __slots__ = ("head", "mtime", "size", "tail")
-
-    def __init__(self, mtime: int, size: int, head: str, tail: str) -> None:
-        self.mtime = mtime
-        self.size = size
-        self.head = head
-        self.tail = tail
+    mtime: int
+    size: int
+    head: str
+    tail: str
 
 
 def _read_session_lite(file_path: Path) -> _LiteSessionFile | None:
@@ -381,12 +380,11 @@ def _get_worktree_paths(cwd: str) -> list[str]:
     if result.returncode != 0 or not result.stdout:
         return []
 
-    paths = []
-    for line in result.stdout.split("\n"):
-        if line.startswith("worktree "):
-            path = unicodedata.normalize("NFC", line[len("worktree ") :])
-            paths.append(path)
-    return paths
+    return [
+        unicodedata.normalize("NFC", i[len("worktree ") :])
+        for i in result.stdout.split("\n")
+        if i.startswith("worktree ")
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -554,15 +552,7 @@ def _list_sessions_for_project(
 ) -> list[SDKSessionInfo]:
     """Lists sessions for a specific project directory (and its worktrees)."""
     canonical_dir = _canonicalize_path(directory)
-
-    if include_worktrees:
-        try:
-            worktree_paths = _get_worktree_paths(canonical_dir)
-        except Exception:
-            worktree_paths = []
-    else:
-        worktree_paths = []
-
+    worktree_paths = _get_worktree_paths(canonical_dir) if include_worktrees else []
     # No worktrees (or git not available / scanning disabled) —
     # just scan the single project dir
     if len(worktree_paths) <= 1:
@@ -574,8 +564,6 @@ def _list_sessions_for_project(
 
     # Worktree-aware scanning: find all project dirs matching any worktree
     projects_dir = _get_projects_dir()
-    case_insensitive = sys.platform == "win32"
-
     # Sort worktree paths by sanitized prefix length (longest first) so
     # more specific matches take priority over shorter ones
     indexed = []
@@ -673,23 +661,6 @@ def list_sessions(
 
     Returns:
         List of ``SDKSessionInfo`` sorted by ``last_modified`` descending.
-
-    Example:
-        List sessions for a specific project::
-
-            sessions = list_sessions(directory="/path/to/project")
-
-        Paginate::
-
-            page1 = list_sessions(limit=50)
-            page2 = list_sessions(limit=50, offset=50)
-
-        List sessions without scanning git worktrees::
-
-            sessions = list_sessions(
-                directory="/path/to/project",
-                include_worktrees=False,
-            )
     """
     if directory:
         return _list_sessions_for_project(directory, limit, offset, include_worktrees)
@@ -701,10 +672,7 @@ def list_sessions(
 # ---------------------------------------------------------------------------
 
 
-def get_session_info(
-    session_id: str,
-    directory: str | None = None,
-) -> SDKSessionInfo | None:
+def get_session_info(session_id: str, directory: str | None = None) -> SDKSessionInfo | None:
     """Reads metadata for a single session by ID.
 
     Wraps ``_read_session_lite`` for one file — no O(n) directory scan.
@@ -721,20 +689,6 @@ def get_session_info(
     Returns:
         ``SDKSessionInfo`` for the session, or ``None`` if the session file
         is not found, is a sidechain session, or has no extractable summary.
-
-    Example:
-        Look up a session in a specific project::
-
-            info = get_session_info(
-                "550e8400-e29b-41d4-a716-446655440000",
-                directory="/path/to/project",
-            )
-            if info:
-                print(info.summary)
-
-        Search all projects for a session::
-
-            info = get_session_info("550e8400-e29b-41d4-a716-446655440000")
     """
     uuid = _validate_uuid(session_id)
     if not uuid:
@@ -744,25 +698,16 @@ def get_session_info(
     if directory:
         canonical = _canonicalize_path(directory)
         project_dir = _find_project_dir(canonical)
-        if project_dir is not None:
-            lite = _read_session_lite(project_dir / file_name)
-            if lite is not None:
-                return _parse_session_info_from_lite(uuid, lite, canonical)
-
+        if project_dir and (lite := _read_session_lite(project_dir / file_name)):
+            return _parse_session_info_from_lite(uuid, lite, canonical)
         # Worktree fallback — matches get_session_messages semantics.
         # Sessions may live under a different worktree root.
-        try:
-            worktree_paths = _get_worktree_paths(canonical)
-        except Exception:
-            worktree_paths = []
-        for wt in worktree_paths:
+        for wt in _get_worktree_paths(canonical):
             if wt == canonical:
                 continue
             wt_project_dir = _find_project_dir(wt)
-            if wt_project_dir is not None:
-                lite = _read_session_lite(wt_project_dir / file_name)
-                if lite is not None:
-                    return _parse_session_info_from_lite(uuid, lite, wt)
+            if wt_project_dir and (lite := _read_session_lite(wt_project_dir / file_name)):
+                return _parse_session_info_from_lite(uuid, lite, wt)
 
         return None
 
@@ -813,31 +758,19 @@ def _read_session_file(session_id: str, directory: str | None) -> str | None:
 
     if directory:
         canonical_dir = _canonicalize_path(directory)
-
         # Try the exact/prefix-matched project directory first
         project_dir = _find_project_dir(canonical_dir)
-        if project_dir is not None:
-            content = _try_read_session_file(project_dir, file_name)
-            if content:
-                return content
-
+        if project_dir and (content := _try_read_session_file(project_dir, file_name)):
+            return content
         # Try worktree paths — sessions may live under a different worktree root
-        try:
-            worktree_paths = _get_worktree_paths(canonical_dir)
-        except Exception:
-            worktree_paths = []
-
-        for wt in worktree_paths:
+        for wt in _get_worktree_paths(canonical_dir):
             if wt == canonical_dir:
                 continue  # already tried above
             wt_project_dir = _find_project_dir(wt)
-            if wt_project_dir is not None:
-                content = _try_read_session_file(wt_project_dir, file_name)
-                if content:
-                    return content
+            if wt_project_dir and (content := _try_read_session_file(wt_project_dir, file_name)):
+                return content
 
         return None
-
     # No directory provided — search all project directories
     projects_dir = _get_projects_dir()
     try:
@@ -846,8 +779,7 @@ def _read_session_file(session_id: str, directory: str | None) -> str | None:
         return None
 
     for entry in dirents:
-        content = _try_read_session_file(entry, file_name)
-        if content:
+        if content := (_try_read_session_file(entry, file_name)):
             return content
 
     return None
@@ -874,11 +806,8 @@ def _parse_transcript_entries(content: str) -> list[_TranscriptEntry]:
             continue
 
         try:
-            entry = anyenv.load_json(line)
+            entry = anyenv.load_json(line, return_type=dict)
         except (anyenv.JsonLoadError, ValueError):
-            continue
-
-        if not isinstance(entry, dict):
             continue
         entry_type = entry.get("type")
         if entry_type in _TRANSCRIPT_ENTRY_TYPES and isinstance(entry.get("uuid"), str):
@@ -901,26 +830,12 @@ def _build_conversation_chain(
     """
     if not entries:
         return []
-
-    # Index by uuid for O(1) parent lookup
-    by_uuid: dict[str, _TranscriptEntry] = {}
-    for entry in entries:
-        by_uuid[entry["uuid"]] = entry
-
+    by_uuid = {e["uuid"]: e for e in entries}
     # Build index of entry positions (file order) for tie-breaking
-    entry_index: dict[str, int] = {}
-    for i, entry in enumerate(entries):
-        entry_index[entry["uuid"]] = i
-
+    entry_index = {e["uuid"]: i for i, e in enumerate(entries)}
     # Find terminal messages (no children point to them via parentUuid)
-    parent_uuids: set[str] = set()
-    for entry in entries:
-        parent = entry.get("parentUuid")
-        if parent:
-            parent_uuids.add(parent)
-
+    parent_uuids = {parent for e in entries if (parent := e.get("parentUuid"))}
     terminals = [e for e in entries if e["uuid"] not in parent_uuids]
-
     # From each terminal, walk back to find the nearest user/assistant leaf
     leaves: list[_TranscriptEntry] = []
     for terminal in terminals:
@@ -995,12 +910,10 @@ def _is_visible_message(entry: _TranscriptEntry) -> bool:
 
 def _to_session_message(entry: _TranscriptEntry) -> SessionMessage:
     """Converts a transcript entry dict into a SessionMessage."""
-    entry_type = entry.get("type")
     # Narrow to the Literal type — _is_visible_message already guarantees
     # this is "user" or "assistant".
-    msg_type: Literal["user", "assistant"] = "user" if entry_type == "user" else "assistant"
-    return SessionMessage(  # pyright: ignore[reportCallIssue]
-        type=msg_type,
+    return SessionMessage(
+        type="user" if entry.get("type") == "user" else "assistant",
         uuid=entry.get("uuid", ""),
         session_id=entry.get("sessionId", ""),
         message=entry.get("message"),
@@ -1030,22 +943,6 @@ def get_session_messages(
         List of ``SessionMessage`` objects in chronological order. Returns
         an empty list if the session is not found, the session_id is not a
         valid UUID, or the transcript contains no visible messages.
-
-    Example:
-        Read all messages from a session::
-
-            messages = get_session_messages(
-                "550e8400-e29b-41d4-a716-446655440000",
-                directory="/path/to/project",
-            )
-            for msg in messages:
-                print(msg.type, msg.message)
-
-        Read with pagination::
-
-            page = get_session_messages(
-                session_id, limit=10, offset=20
-            )
     """
     if not _validate_uuid(session_id):
         return []
@@ -1100,11 +997,7 @@ def _resolve_session_file_path(session_id: str, directory: str | None) -> Path |
             if found is not None:
                 return found
 
-        try:
-            worktree_paths = _get_worktree_paths(canonical_dir)
-        except Exception:
-            worktree_paths = []
-
+        worktree_paths = _get_worktree_paths(canonical_dir)
         for wt in worktree_paths:
             if wt == canonical_dir:
                 continue
@@ -1265,35 +1158,19 @@ def get_subagent_messages(
         an empty list if the session or subagent is not found, the
         session_id is not a valid UUID, or the transcript contains no
         user/assistant messages.
-
-    Example:
-        Read all messages from a subagent::
-
-            messages = get_subagent_messages(
-                "550e8400-e29b-41d4-a716-446655440000",
-                "abc123",
-                directory="/path/to/project",
-            )
     """
     if not _validate_uuid(session_id):
         return []
     if not agent_id:
         return []
-
     subagents_dir = _resolve_subagents_dir(session_id, directory)
     if subagents_dir is None:
         return []
-
     # The agent file may be directly in subagents/ or in a nested
     # subdirectory — scan to find it.
-    match: Path | None = None
-    for found_id, file_path in _collect_agent_files(subagents_dir):
-        if found_id == agent_id:
-            match = file_path
-            break
+    match = next((p for id_, p in _collect_agent_files(subagents_dir) if id_ == agent_id), None)
     if match is None:
         return []
-
     try:
         content = match.read_text(encoding="utf-8")
     except OSError:
