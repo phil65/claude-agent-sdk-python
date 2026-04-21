@@ -151,10 +151,15 @@ class BaseMessage(BaseModel):
     uuid: str
 
 
-class UserMessage(BaseMessage):
+class UserMessage(BaseModel):
     """User message."""
 
+    model_config = ConfigDict(
+        extra="forbid" if IS_DEV else "ignore", arbitrary_types_allowed=True, populate_by_name=True
+    )
     type: Literal["user"] = "user"
+    uuid: str | None = None
+    """Always set for incoming user messages, can be omitted for objects created in query()."""
     session_id: str | None = None
     parent_tool_use_id: str | None = None
     tool_use_result: (
