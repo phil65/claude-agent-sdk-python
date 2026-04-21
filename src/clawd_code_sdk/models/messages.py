@@ -76,6 +76,7 @@ OverAgeDisabledReason = Literal[
     "no_limits_configured",
     "unknown",
 ]
+MessagePriority = Literal["now", "next", "later"]
 
 
 class HumanMessageOrigin(ClaudeCodeBaseModel):
@@ -151,6 +152,13 @@ class BaseMessage(BaseModel):
     uuid: str
 
 
+class FileAttachment(BaseModel):
+    """Attachment for a message."""
+
+    file_uuid: str
+    file_name: str
+
+
 class UserMessage(BaseModel):
     """User message."""
 
@@ -167,10 +175,10 @@ class UserMessage(BaseModel):
     ) = None
     is_replay: bool | None = Field(default=None, validation_alias="isReplay")
     is_synthetic: bool | None = Field(default=None, validation_alias="isSynthetic")
-    priority: Literal["now", "next", "later"] | None = None
+    priority: MessagePriority | None = None
     message: MessageParam
     timestamp: str | None = None
-    file_attachments: list[object] | None = None
+    file_attachments: list[FileAttachment] | None = None
     origin: SDKMessageOrigin | None = None
     should_query: bool | None = None
 
