@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel
+from clawd_code_sdk.models.base import IS_DEV, ClaudeCodeBaseModel
 
 
 class ModelUsage(ClaudeCodeBaseModel):
@@ -28,9 +28,14 @@ class Usage(BaseModel):
     """
 
     input_tokens: int = 0
+    """The number of input tokens which were used."""
     output_tokens: int = 0
+    """The number of output tokens which were used."""
     cache_creation_input_tokens: int = 0
+    """The number of input tokens used to create the cache entry."""
     cache_read_input_tokens: int = 0
+    """The number of input tokens read from the cache."""
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore", use_attribute_docstrings=True)
 
     @property
     def total_tokens(self) -> int:

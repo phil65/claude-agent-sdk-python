@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never, cast
 
+from anthropic.types import Model
 from anthropic.types.beta.beta_tool_use_block import Caller
 from pydantic import BaseModel, ConfigDict, Discriminator
 
@@ -199,7 +200,7 @@ class AssistantMessageContent(ClaudeCodeBaseModel):
     type: Literal["message"] = "message"
     role: Literal["assistant"] = "assistant"
     content: Sequence[AssistantContentBlock]
-    model: str
+    model: Model | str
     stop_reason: StopReason | None = None
     stop_sequence: str | None = None
     model_config = ConfigDict(extra="allow")
