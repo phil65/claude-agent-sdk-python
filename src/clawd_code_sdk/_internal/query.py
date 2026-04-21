@@ -54,6 +54,7 @@ if TYPE_CHECKING:
         OutgoingControlRequest,
         PermissionResult,
         RequestId,
+        SDKControlRequest,
     )
 
 logger = logging.getLogger(__name__)
@@ -461,6 +462,9 @@ class Query:
             return message
         raise StopAsyncIteration
 
-    async def write_json(self, data: Any) -> None:
+    async def write_json(
+        self,
+        data: SDKControlResponse | SDKControlRequest | dict[str, Any],
+    ) -> None:
         """Write a JSON-serializable object to the transport."""
         await self.transport.write(anyenv.dump_json(data) + "\n")

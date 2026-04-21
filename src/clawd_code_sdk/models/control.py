@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict, assert_never
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
+from pydantic.alias_generators import to_camel
 
 from clawd_code_sdk.models.agents import AgentWireDefinition
 from clawd_code_sdk.models.base import (
@@ -567,6 +568,7 @@ class SDKControlReadFileResponse(_ControlBase):
     contents: str
     abs_path: str
     truncated: bool | None = None
+    model_config = ConfigDict(alias_generator=to_camel)
 
 
 class SDKControlMcpCallRequest(_ControlBase):

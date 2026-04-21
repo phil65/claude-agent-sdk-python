@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 # =============================================================================
 # Content block types
 # =============================================================================
+ImageMediaType = Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
 
 
 class BaseContentBlock(BaseModel):
@@ -124,8 +125,8 @@ class ToolResultBlock(BaseContentBlock):
 class ImageSource(BaseContentBlock):
     """Base64-encoded image source data."""
 
-    type: Literal["base64"]
-    media_type: str
+    type: Literal["base64"] = "base64"
+    media_type: ImageMediaType
     data: str
 
 
