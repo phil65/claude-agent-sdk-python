@@ -76,6 +76,7 @@ if TYPE_CHECKING:
         SessionState,
         UserPrompt,
     )
+    from clawd_code_sdk.models.messages import MessagePriority
     from clawd_code_sdk.models.system_messages import SDKStatus
 
 
@@ -239,6 +240,8 @@ class ClaudeSDKClient:
         *prompts: str | UserPrompt,
         session_id: str = "default",
         parent_tool_use_id: str | None = None,
+        should_query: bool = True,
+        priority: MessagePriority | None = None,
     ) -> None:
         """Send a new user message with one or more content blocks.
 
@@ -248,6 +251,8 @@ class ClaudeSDKClient:
                 ``query(image_prompt, "What's in this image?")``.
             session_id: Session identifier for the message.
             parent_tool_use_id: If responding to a tool use, the tool_use block ID.
+            should_query: Whether to query the model for a response. Defaults to True.
+            priority: The priority of the message. Defaults to None.
         """
         prompt = prompts[0] if prompts else None
         self._logfire_prompt = str(prompt)
@@ -260,12 +265,20 @@ class ClaudeSDKClient:
             raise ValueError("At least one prompt is required")
         # Collect content blocks
         blocks = [UserTextPrompt(text=p) if isinstance(p, str) else p for p in prompts]
+        # message_content = [b.to_content_block() for b in blocks]
+        # wire_message = UserMessage(
+        #     parent_tool_use_id=parent_tool_use_id,
+        #     session_id=session_id,
+        #     message=MessageParam(content=message_content),
+        # )
         message_content = [cast(dict[str, Any], b.to_content_block()) for b in blocks]
         wire_message = {
             "type": "user",
             "message": {"role": "user", "content": message_content},
             "parent_tool_use_id": parent_tool_use_id,
             "session_id": session_id,
+            "should_query": should_query,
+            "priority": priority,
         }
         await self._query.write_json(wire_message)
 
