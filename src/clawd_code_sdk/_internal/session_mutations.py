@@ -52,11 +52,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def rename_session(
-    session_id: str,
-    title: str,
-    directory: str | None = None,
-) -> None:
+def rename_session(session_id: str, title: str, directory: str | None = None) -> None:
     """Rename a session by appending a custom-title entry.
 
     ``list_sessions`` reads the LAST custom-title from the file tail, so
@@ -429,10 +425,7 @@ def fork_session(
 # ---------------------------------------------------------------------------
 
 
-def _find_session_file(
-    session_id: str,
-    directory: str | None,
-) -> Path | None:
+def _find_session_file(session_id: str, directory: str | None) -> Path | None:
     """Find the path to a session's JSONL file.
 
     Returns the path if found, None otherwise.
@@ -441,10 +434,7 @@ def _find_session_file(
     return result[0] if result else None
 
 
-def _find_session_file_with_dir(
-    session_id: str,
-    directory: str | None,
-) -> tuple[Path, Path] | None:
+def _find_session_file_with_dir(session_id: str, directory: str | None) -> tuple[Path, Path] | None:
     """Find a session file and its containing project directory.
 
     Returns ``(file_path, project_dir)`` or None. The fork operation
@@ -455,8 +445,7 @@ def _find_session_file_with_dir(
     def _try_dir(project_dir: Path) -> tuple[Path, Path] | None:
         path = project_dir / file_name
         try:
-            st = path.stat()
-            if st.st_size > 0:
+            if path.stat().st_size > 0:
                 return (path, project_dir)
         except OSError:
             pass
@@ -464,20 +453,13 @@ def _find_session_file_with_dir(
 
     if directory:
         canonical = _canonicalize_path(directory)
-        project_dir = _find_project_dir(canonical)
-        if project_dir is not None:
-            result = _try_dir(project_dir)
-            if result:
-                return result
-
+        if (project_dir := _find_project_dir(canonical)) and (result := _try_dir(project_dir)):
+            return result
         for wt in _get_worktree_paths(canonical):
             if wt == canonical:
                 continue
-            wt_project_dir = _find_project_dir(wt)
-            if wt_project_dir is not None:
-                result = _try_dir(wt_project_dir)
-                if result:
-                    return result
+            if (wt_project_dir := _find_project_dir(wt)) and (result := _try_dir(wt_project_dir)):
+                return result
         return None
 
     projects_dir = _get_projects_dir()
@@ -486,8 +468,7 @@ def _find_session_file_with_dir(
     except OSError:
         return None
     for entry in dirents:
-        result = _try_dir(entry)
-        if result:
+        if result := _try_dir(entry):
             return result
     return None
 
@@ -514,22 +495,16 @@ def _parse_fork_transcript(
             entry = anyenv.load_json(stripped, return_type=dict)
         except (anyenv.JsonLoadError, ValueError):
             continue
-        # match entry:
-        #     case {
-        #         "type": "user" | "assistant" | "attachment" | "system" | "progress" as typ,
-        #         "uuid": str(id_),
-        #     }:
-        #         pass
-        entry_type = entry.get("type")
-        if entry_type in _TRANSCRIPT_TYPES and isinstance(entry.get("uuid"), str):
-            transcript.append(entry)
-        elif (
-            entry_type == "content-replacement"
-            and entry.get("sessionId") == session_id
-            and isinstance(entry.get("replacements"), list)
-        ):
-            content_replacements.extend(entry["replacements"])
-
+        match entry:
+            case {
+                "type": "user" | "assistant" | "attachment" | "system" | "progress",
+                "uuid": str(),
+            }:
+                transcript.append(entry)
+            case {"type": "content-replacement", "sessionId": str(sid), "replacements": list()} if (
+                sid == session_id
+            ):
+                content_replacements.extend(entry["replacements"])
     return transcript, content_replacements
 
 
@@ -545,23 +520,17 @@ def _append_to_session(session_id: str, data: str, directory: str | None) -> Non
     if directory:
         canonical = _canonicalize_path(directory)
         # Try the exact/prefix-matched project directory first.
-        project_dir = _find_project_dir(canonical)
-        if project_dir is not None and _try_append(project_dir / file_name, data):
+        if (proj_dir := _find_project_dir(canonical)) and _try_append(proj_dir / file_name, data):
             return
-
         # Worktree fallback — matches list_sessions/get_session_messages.
         # Sessions may live under a different worktree root.
         for wt in _get_worktree_paths(canonical):
             if wt == canonical:
                 continue  # already tried above
-            wt_project_dir = _find_project_dir(wt)
-            if wt_project_dir is not None and _try_append(wt_project_dir / file_name, data):
+            if (proj_dir := _find_project_dir(wt)) and _try_append(proj_dir / file_name, data):
                 return
 
-        raise FileNotFoundError(
-            f"Session {session_id} not found in project directory for {directory}"
-        )
-
+        raise FileNotFoundError(f"{session_id=} not found in project {directory=}")
     # No directory — search all project directories by trying each directly.
     projects_dir = _get_projects_dir()
     try:
