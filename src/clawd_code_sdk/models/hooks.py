@@ -22,6 +22,7 @@ HookEvent = Literal[
     "PreToolUse",
     "PostToolUse",
     "PostToolUseFailure",
+    "PostToolBatch",
     "UserPromptSubmit",
     "Stop",
     "StopFailure",
@@ -186,6 +187,22 @@ class PostToolUseFailureHookInput(BaseHookInput):
     is_interrupt: NotRequired[bool]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
+
+
+class PostToolBatchToolCall(BaseModel):
+    """Represents a tool call in a PostToolBatch hook event."""
+
+    tool_name: str
+    tool_input: dict[str, Any]
+    tool_use_id: str
+    tool_response: Any = None
+
+
+class PostToolBatchHookInput(BaseHookInput):
+    """Input data for PostToolBatch hook events."""
+
+    hook_event_name: Literal["PostToolBatch"]
+    tool_calls: list[PostToolBatchToolCall]
 
 
 class UserPromptSubmitHookInput(BaseHookInput):
@@ -420,6 +437,7 @@ HookInput = (
     PreToolUseHookInput
     | PostToolUseHookInput
     | PostToolUseFailureHookInput
+    | PostToolBatchHookInput
     | UserPromptSubmitHookInput
     | StopHookInput
     | StopFailureHookInput
@@ -471,6 +489,13 @@ class PostToolUseFailureHookSpecificOutput(TypedDict):
     """Hook-specific output for PostToolUseFailure events."""
 
     hookEventName: Literal["PostToolUseFailure"]
+    additionalContext: NotRequired[str]
+
+
+class PostToolBatchHookSpecificOutput(TypedDict):
+    """Hook-specific output for PostToolBatch events."""
+
+    hookEventName: Literal["PostToolBatch"]
     additionalContext: NotRequired[str]
 
 
@@ -567,6 +592,7 @@ HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
     | PostToolUseFailureHookSpecificOutput
+    | PostToolBatchHookSpecificOutput
     | PermissionDeniedHookSpecificOutput
     | UserPromptSubmitHookSpecificOutput
     | SessionStartHookSpecificOutput

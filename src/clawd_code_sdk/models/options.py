@@ -271,11 +271,14 @@ class ClaudeAgentOptions:
     include_builtin_system_prompt: bool = True
     """Whether to include Claude Code's builtin system prompt.
 
+
     When True (default) and system_prompt is set, it is appended to the
     builtin system prompt. When False, the system_prompt replaces it entirely.
     """
     exclude_dynamic_sections: bool | None = None
     """Whether to exclude dynamic sections from the system prompt."""
+    plan_mode_instructions: str | None = None
+    """Custom workflow body for the plan-mode system reminder."""
 
     hooks: dict[HookEvent, list[HookMatcher]] | None = None
     """Hook configurations."""

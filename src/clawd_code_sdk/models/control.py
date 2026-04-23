@@ -123,6 +123,11 @@ class SDKControlInitializeRequest(_ControlBase):
     exact name, plugin-qualified name, or ":name" suffix.
     Omit to load every discovered skill.
     Applies to the main session only; subagents use AgentDefinition.skills."""
+    plan_mode_instructions: str | None = Field(
+        default=None,
+        serialization_alias="planModeInstructions",
+    )
+    """Custom workflow body for the plan-mode system reminder."""
 
 
 class SDKControlSetPermissionModeRequest(_ControlBase):
@@ -496,6 +501,12 @@ class SDKControlGetContextUsageRequest(_ControlBase):
     subtype: Literal["get_context_usage"] = "get_context_usage"
 
 
+class SDKControlGetSessionCostRequest(_ControlBase):
+    """Requests the formatted session cost summary (the same text as /usage)."""
+
+    subtype: Literal["get_session_cost"] = "get_session_cost"
+
+
 class SDKControlGetSettingsRequest(_ControlBase):
     """Returns the effective merged settings and the raw per-source settings."""
 
@@ -506,6 +517,13 @@ class SDKControlSetProactiveRequest(_ControlBase):
     """Sets proactive mode configuration."""
 
     subtype: Literal["set_proactive"] = "set_proactive"
+
+
+class SDKControlSetColorRequest(_ControlBase):
+    """Sets the session accent color. Accepts an agent color name or "default" to reset."""
+
+    subtype: Literal["set_color"] = "set_color"
+    color: str
 
 
 class SDKControlClaudeOAuthWaitForCompletionRequest(_ControlBase):
@@ -622,6 +640,7 @@ OutgoingControlRequest = Annotated[
     | SDKControlStopTaskRequest
     | SDKControlApplyFlagSettingsRequest
     | SDKControlGetContextUsageRequest
+    | SDKControlGetSessionCostRequest
     | SDKControlGetSettingsRequest
     | SDKControlRewindFilesRequest
     | SDKControlCancelAsyncMessageRequest

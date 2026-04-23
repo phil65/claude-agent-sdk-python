@@ -208,6 +208,7 @@ class ClaudeSDKClient:
             agent_progress_summaries=options.agent_progress_summaries,
             title=title,
             skills=options.skills,
+            plan_mode_instructions=options.plan_mode_instructions,
         )
         response = await query._send_control_request(request, timeout=initialize_timeout)
         self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
@@ -474,6 +475,13 @@ class ClaudeSDKClient:
         request = SDKControlGetContextUsageRequest()
         result = await query._send_control_request(request)
         return SDKControlGetContextUsageResponse.model_validate(result)
+
+    # async def get_session_cost(self) -> SDKControlGetSessionCostResponse:
+    #     """Get the formatted session cost summary (the same text as /usage)."""
+    #     query = self._ensure_connected()
+    #     request = SDKControlGetSessionCostRequest()
+    #     result = await query._send_control_request(request)
+    #     return SDKControlGetSessionCostResponse.model_validate(result)
 
     async def mcp_authenticate(self, server_name: str) -> McpAuthenticateResponse:
         """Trigger OAuth authentication for an MCP server.
