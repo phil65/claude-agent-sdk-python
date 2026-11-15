@@ -19,7 +19,7 @@ PermissionMode = Literal[
     "auto",  # Auto-approves tool calls with background safety checks
 ]
 SdkBeta = Literal["context-1m-2025-08-07"]  # see https://docs.anthropic.com/en/api/beta-headers
-ModelName = Literal["sonnet", "opus", "haiku"]
+ModelName = Literal["sonnet", "opus", "haiku", "fable"]
 PermissionBehavior = Literal["allow", "deny", "ask"]
 HookPermissionDecision = Literal["allow", "deny", "ask", "defer"]
 ReasoningEffort = Literal["low", "medium", "high", "xhigh", "max"]

@@ -297,6 +297,12 @@ class AssistantMessage(BaseModel):
     usage_report: SDKUsageReport | None = None
     wire_tool_inputs: dict[str, dict[str, Any]] | None = None
     """Tool inputs as sent on the wire, keyed by tool_use ID (undocumented)."""
+    wire_ingest_context: dict[str, dict[str, Any]] | None = None
+    """Per-tool_use ingest context (e.g. cwd), keyed by tool_use ID (undocumented)."""
+    thinking_duration_ms: float | None = None
+    """How long the model spent thinking for this message (undocumented)."""
+    thinking_display: str | None = None
+    """Active thinking display mode (undocumented)."""
 
     @property
     def content(self) -> Sequence[AssistantContentBlock]:
