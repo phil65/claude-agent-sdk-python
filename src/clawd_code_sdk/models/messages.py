@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import re
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict
 
 from anthropic.types.beta import (
     BetaInputJSONDelta,
@@ -35,12 +35,15 @@ from clawd_code_sdk.models.base import (  # noqa: TC001
     IS_DEV,
     AssistantMessageError,
     ClaudeCodeBaseModel,
+    FastModeDisabledReason,
     FastModeState,
+    StartupFailureReason,
     StopReason,
     TerminalReason,
     ToolName,
 )
 from clawd_code_sdk.models.content_blocks import AssistantMessageContent, MessageParam, TextBlock
+from clawd_code_sdk.models.context_usage import SDKContextUsage, SDKUsageReport
 from clawd_code_sdk.models.input_types import ToolInput  # noqa: TC001
 from clawd_code_sdk.models.output_types import SDKDeferredToolUse, ToolUseResult
 from clawd_code_sdk.models.usage import ModelUsage, Usage
@@ -59,7 +62,14 @@ ErrorSubType = Literal[
     "error_max_budget_usd",
     "error_max_structured_output_retries",
 ]
-RateLimitType = Literal["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet"]
+RateLimitType = Literal[
+    "five_hour",
+    "seven_day",
+    "seven_day_opus",
+    "seven_day_sonnet",
+    "seven_day_overage_included",
+    "overage",
+]
 RateLimitStatus = Literal["allowed", "allowed_warning", "rejected"]
 OverAgeDisabledReason = Literal[
     "overage_not_provisioned",
@@ -74,6 +84,7 @@ OverAgeDisabledReason = Literal[
     "org_service_level_disabled",
     "org_service_zero_credit_limit",
     "no_limits_configured",
+    "fetch_error",
     "unknown",
 ]
 MessagePriority = Literal["now", "next", "later"]
@@ -97,13 +108,23 @@ class PeerMessageOrigin(ClaudeCodeBaseModel):
 
     kind: Literal["peer"] = "peer"
     from_: str = Field(..., alias="from")
+    from_mode: Literal["bypass", "prompting"] | None = None
     name: str | None = None
+    from_session: str | None = None
+    sender_task_id: str | None = None
+    body: str | None = None
+    verified_peer_pid: int | None = None
 
 
 class TaskNotificationMessageOrigin(ClaudeCodeBaseModel):
     """Task notification message origin."""
 
     kind: Literal["task-notification"] = "task-notification"
+    subkind: (
+        Literal["scheduled-trigger", "peer-send-message", "projects-relay", "session-inbox"] | None
+    ) = None
+    fire_reason: str | None = None
+    run_id: str | None = None
 
 
 class CoordinatorMessageOrigin(ClaudeCodeBaseModel):
@@ -112,12 +133,44 @@ class CoordinatorMessageOrigin(ClaudeCodeBaseModel):
     kind: Literal["coordinator"] = "coordinator"
 
 
-SDKMessageOrigin = (
-    ChannelMessageOrigin
+class UnclassifiedMessageOrigin(ClaudeCodeBaseModel):
+    """Unclassified message origin."""
+
+    kind: Literal["unclassified"] = "unclassified"
+
+
+class ObserverMessageOrigin(ClaudeCodeBaseModel):
+    """Message injected by an observer agent."""
+
+    kind: Literal["observer"] = "observer"
+    from_: str = Field(..., alias="from")
+    sender_task_id: str
+
+
+class AutoContinuationMessageOrigin(ClaudeCodeBaseModel):
+    """Message synthesized for an automatic continuation."""
+
+    kind: Literal["auto-continuation"] = "auto-continuation"
+
+
+class ObserverActivityMessageOrigin(ClaudeCodeBaseModel):
+    """Observer activity message origin."""
+
+    kind: Literal["observer-activity"] = "observer-activity"
+
+
+SDKMessageOrigin = Annotated[
+    HumanMessageOrigin
+    | ChannelMessageOrigin
     | PeerMessageOrigin
     | TaskNotificationMessageOrigin
     | CoordinatorMessageOrigin
-)
+    | UnclassifiedMessageOrigin
+    | ObserverMessageOrigin
+    | AutoContinuationMessageOrigin
+    | ObserverActivityMessageOrigin,
+    Field(discriminator="kind"),
+]
 
 
 class RateLimitInfo(ClaudeCodeBaseModel):
@@ -131,7 +184,15 @@ class RateLimitInfo(ClaudeCodeBaseModel):
     overage_resets_at: int | None = None
     overage_disabled_reason: OverAgeDisabledReason | None = None
     is_using_overage: bool | None = None
+    overage_in_use: bool | None = None
+    overage_enabled: bool | None = None
     surpassed_threshold: float | None = None
+    limit_scope: Literal["service", "channel", "group_pool"] | None = None
+    error_code: Literal["credits_required"] | None = None
+    can_user_purchase_credits: bool | None = None
+    has_chargeable_saved_payment_method: bool | None = None
+    unified_windows: dict[str, Any] | None = None
+    """Per-window utilization/status (e.g. ``five_hour``, ``seven_day``); undocumented."""
 
 
 class SDKPermissionDenial(TypedDict):
@@ -180,7 +241,17 @@ class UserMessage(BaseModel):
     timestamp: str | None = None
     file_attachments: list[FileAttachment] | None = None
     origin: SDKMessageOrigin | None = None
-    should_query: bool | None = None
+    should_query: bool | None = Field(default=None, validation_alias="shouldQuery")
+    client_composed: bool | None = None
+    """Set when the host composed this message (as opposed to the user typing it)."""
+    pasted_content: list[Any] | None = None
+    inline_pastes: list[str] | None = None
+    agent_id: str | None = None
+    """Subagent ID when this message belongs to a subagent transcript."""
+    subagent_type: str | None = None
+    task_description: str | None = None
+    tool_result_meta: list[ToolResultMeta] | None = None
+    """Per-tool-result metadata, e.g. how permission was decided (undocumented)."""
 
     @property
     def content(self) -> str | Sequence[UserContentBlock]:
@@ -198,7 +269,7 @@ class UserMessage(BaseModel):
 class AssistantMessage(BaseModel):
     """Assistant message with content blocks."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore", arbitrary_types_allowed=True)
 
     type: Literal["assistant"] = "assistant"
     message: AssistantMessageContent
@@ -206,6 +277,26 @@ class AssistantMessage(BaseModel):
     error: AssistantMessageError | None = None
     session_id: str | None = None
     uuid: str | None = None
+    request_id: str | None = None
+    """API request ID that produced this message."""
+    user_message_uuid: str | None = None
+    """UUID of the user message this assistant message responds to."""
+    user_message_uuids: list[str] | None = None
+    """UUIDs of all user messages this assistant message responds to (batched turns)."""
+    resume_reason: str | None = None
+    resumed_from_incomplete_thinking: bool | None = None
+    supersedes: list[str] | None = None
+    """UUIDs of previously emitted assistant messages this one replaces."""
+    aborted: bool | None = None
+    """Set when the turn was aborted while this message was streaming."""
+    agent_id: str | None = None
+    subagent_type: str | None = None
+    task_description: str | None = None
+    timestamp: str | None = None
+    context_usage: SDKContextUsage | None = None
+    usage_report: SDKUsageReport | None = None
+    wire_tool_inputs: dict[str, dict[str, Any]] | None = None
+    """Tool inputs as sent on the wire, keyed by tool_use ID (undocumented)."""
 
     @property
     def content(self) -> Sequence[AssistantContentBlock]:
@@ -230,12 +321,16 @@ class AssistantMessage(BaseModel):
                 raise AuthenticationError(error_message, self.model)
             case "billing_error":
                 raise BillingError(error_message, self.model)
-            case "rate_limit":
+            case "rate_limit" | "overloaded":
                 raise RateLimitError(error_message, self.model)
             case "invalid_request":
                 raise InvalidRequestError(error_message, self.model)
             case "server_error":
                 raise ServerError(error_message, self.model)
+            case "oauth_org_not_allowed" | "account_on_hold" | "verification_required":
+                raise AuthenticationError(error_message, self.model)
+            case "model_not_found":
+                raise InvalidRequestError(error_message, self.model)
             case _ as unknown:
                 raise APIError(error_message, unknown, self.model)
 
@@ -254,6 +349,72 @@ class RateLimitMessage(BaseMessage):
     subtype: Literal["rate_limit"] = "rate_limit"
     session_id: str
     rate_limit_info: RateLimitInfo
+
+
+PostQueuedBehind = Literal["durable_post", "ephemeral_post", "retry_backoff", "hold", "none"]
+
+
+class SubagentRequestedCounts(TypedDict):
+    """How subagents were requested to run."""
+
+    background: int
+    foreground: int
+    unset: int
+
+
+class SubagentKilledCounts(TypedDict):
+    """Who killed subagents."""
+
+    parent: int
+    user: int
+    system: int
+
+
+class SubagentRefusedCounts(TypedDict):
+    """Why subagent spawns were refused."""
+
+    depth_limit: int
+    concurrency_limit: int
+    budget: int
+
+
+class SubagentStats(TypedDict):
+    """Subagent statistics for the turn (undocumented)."""
+
+    spawned: int
+    requested: SubagentRequestedCounts
+    started_in_background: int
+    max_depth: int
+    spawned_by_subagents: int
+    completed: int
+    failed: int
+    killed: SubagentKilledCounts
+    refused: SubagentRefusedCounts
+    by_type: dict[str, Any]
+
+
+class ToolPermissionDecisionMeta(TypedDict):
+    """How a tool call's permission was decided."""
+
+    decision: str
+    source: str
+    reason_type: NotRequired[str]
+
+
+class ToolResultMeta(TypedDict):
+    """Per-tool-result metadata attached to user messages (undocumented)."""
+
+    id: str
+    permission_decision: NotRequired[ToolPermissionDecisionMeta]
+
+
+class InvalidConfigFile(TypedDict):
+    """Details about a config file that failed to parse at startup."""
+
+    path: str
+    is_global: bool
+    backup_searched: bool
+    backup_path: NotRequired[str]
 
 
 class BaseResultMessage(BaseMessage):
@@ -288,6 +449,36 @@ class BaseResultMessage(BaseMessage):
     Unset when the loop was bypassed (local slash command) or interrupted externally
     (budget/retry limits checked between yields).
     """
+    fast_mode_disabled_reason: FastModeDisabledReason | None = None
+    queued_turn_count: int | None = None
+    """Number of turns still queued after this result."""
+    user_message_uuid: str | None = None
+    """UUID of the user message that started this turn."""
+    user_message_uuids: list[str] | None = None
+    """UUIDs of all user messages handled in this turn."""
+    resume_reason: str | None = None
+    result_index: int | None = None
+    credential_expires_at: str | None = None
+    origin: SDKMessageOrigin | None = None
+    model_usage_since_last_result: dict[str, ModelUsage] | None = None
+    """Per-model usage accrued since the previous result (undocumented)."""
+    process_turn_index: int | None = None
+    """Index of this turn within the CLI process (undocumented)."""
+    safety_stops: int | None = None
+    """Number of safety stops during the turn (undocumented)."""
+    subagent_stats: SubagentStats | None = None
+    """Subagent statistics for the turn (undocumented)."""
+    turn_start_resume_kind: str | None = None
+    """How the turn started relative to a resume, e.g. "none" (undocumented)."""
+    # Timing diagnostics (undocumented; maps of phase name -> milliseconds/counters)
+    time_to_request_cpu_ms: float | None = None
+    time_to_request_loop_lag_ms: float | None = None
+    time_to_request_major_faults: int | None = None
+    time_to_request_phases_ms: dict[str, float] | None = None
+    input_attachments_detail: dict[str, float | str] | None = None
+    tool_schema_build_detail: dict[str, float] | None = None
+    message_normalization_detail: dict[str, float] | None = None
+    request_build_detail: dict[str, float] | None = None
 
 
 class ResultSuccessMessage(BaseResultMessage):
@@ -298,6 +489,24 @@ class ResultSuccessMessage(BaseResultMessage):
     structured_output: Any = None
     deferred_tool_use: SDKDeferredToolUse | None = None
     api_error_status: int | None = None
+    local_command: str | None = None
+    """Set when the turn was a local slash command (no model call)."""
+    warm_spare_claimed: bool | None = None
+    time_origin_ms: float | None = None
+    time_to_request_ms: float | None = None
+    time_to_request_from_spawn_ms: float | None = None
+    request_sent_wall_ms: float | None = None
+    ttft_ms: float | None = None
+    ttft_stream_ms: float | None = None
+    first_content_frame_ms: float | None = None
+    first_stream_post_ms: float | None = None
+    first_stream_post_wall_ms: float | None = None
+    first_stream_post_queue_wait_ms: float | None = None
+    first_stream_post_queued_behind: PostQueuedBehind | None = None
+    first_text_post_ms: float | None = None
+    first_text_post_wall_ms: float | None = None
+    first_text_post_queue_wait_ms: float | None = None
+    first_text_post_queued_behind: PostQueuedBehind | None = None
 
 
 class ResultErrorMessage(BaseResultMessage):
@@ -305,6 +514,8 @@ class ResultErrorMessage(BaseResultMessage):
 
     subtype: ErrorSubType
     errors: list[str] | None = None
+    startup_failure_reason: StartupFailureReason | None = None
+    invalid_config_file: InvalidConfigFile | None = None
 
 
 ResultMessage = ResultSuccessMessage | ResultErrorMessage
@@ -318,6 +529,13 @@ class StreamEvent(BaseMessage):
     event: BetaRawMessageStreamEvent
     parent_tool_use_id: str | None = None
     ttft_ms: float | None = None
+    user_message_uuid: str | None = None
+    user_message_uuids: list[str] | None = None
+    resume_reason: str | None = None
+    api_message_id: str | None = None
+    """ID of the API message this event belongs to (undocumented)."""
+    thinking_display: str | None = None
+    """Active thinking display mode (undocumented)."""
 
     @classmethod
     def block_stop(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:
@@ -423,6 +641,17 @@ class StreamEvent(BaseMessage):
         return StreamEvent(event=delta_event, session_id=session_id, uuid=uuid)
 
 
+class SubagentRetry(TypedDict):
+    """Retry info when a subagent's API call is being retried."""
+
+    agent_id: str
+    attempt: int
+    max_retries: int
+    retry_delay_ms: float
+    error_status: int | None
+    error_category: str
+
+
 class ToolProgressMessage(BaseMessage):
     """Progress update for a running tool."""
 
@@ -433,6 +662,10 @@ class ToolProgressMessage(BaseMessage):
     parent_tool_use_id: str | None
     elapsed_time_seconds: float
     task_id: str | None = None
+    heartbeat: bool | None = None
+    """Keep-alive tick with no new progress."""
+    subagent_type: str | None = None
+    subagent_retry: SubagentRetry | None = None
 
 
 class ToolUseSummaryMessage(BaseMessage):
@@ -452,6 +685,20 @@ class AuthStatusMessage(BaseMessage):
     is_authenticating: bool = Field(False, validation_alias="isAuthenticating")
     output: list[str] | None = None
     error: str | None = None
+
+
+class ConversationResetMessage(BaseMessage):
+    """Emitted when the CLI starts a new conversation within the same session.
+
+    E.g. after /clear, exiting plan mode into a fresh context, or onboarding.
+    """
+
+    type: Literal["conversation_reset"] = "conversation_reset"
+    session_id: str
+    new_conversation_id: str
+    trigger: Literal["clear", "plan_mode_exit", "fresh_session", "onboarding"] | None = None
+    user_message_uuid: str | None = None
+    timestamp: str | None = None
 
 
 class PromptSuggestionMessage(BaseMessage):
@@ -496,6 +743,7 @@ MiscMessages = (
     | ToolUseSummaryMessage
     | AuthStatusMessage
     | PromptSuggestionMessage
+    | ConversationResetMessage
     | StreamlinedTextMessage
     | StreamlinedToolUseSummaryMessage
 )

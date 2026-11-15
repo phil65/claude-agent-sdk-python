@@ -62,11 +62,18 @@ class MessageParseError(ClaudeSDKError):
 # These correspond to the error types in types.AssistantMessageError
 APIErrorType = Literal[
     "authentication_failed",
+    "oauth_org_not_allowed",
+    "account_on_hold",
+    "verification_required",
     "billing_error",
     "rate_limit",
+    "overloaded",
     "invalid_request",
+    "model_not_found",
     "server_error",
     "unknown",
+    "max_output_tokens",
+    "cloud_credential_error",
 ]
 
 

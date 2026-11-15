@@ -48,6 +48,10 @@ HookEvent = Literal[
     "InstructionsLoaded",
     "CwdChanged",
     "FileChanged",
+    "PreModelSwitch",
+    "PostModelSwitch",
+    "DirectoryAdded",
+    "MessageDisplay",
 ]
 LoadReason = Literal["session_start", "nested_traversal", "path_glob_match", "include", "compact"]
 SessionEndReason = Literal[
@@ -143,6 +147,19 @@ Maps hook event names to lists of matcher configs. Example::
 """
 
 
+class HookEffort(TypedDict):
+    """Effort level active when the hook fired."""
+
+    level: str
+
+
+class McpServerProvenance(TypedDict):
+    """Which MCP server (and config source) a tool call belongs to."""
+
+    name: str
+    source: str
+
+
 # Hook input types - strongly typed for each hook event
 class BaseHookInput(TypedDict):
     """Base hook input fields present across many hook events."""
@@ -150,7 +167,10 @@ class BaseHookInput(TypedDict):
     session_id: str
     transcript_path: str
     cwd: str
+    prompt_id: NotRequired[str]
+    """ID of the user prompt that started the current turn."""
     permission_mode: NotRequired[str]
+    effort: NotRequired[HookEffort]
 
 
 class PreToolUseHookInput(BaseHookInput):
@@ -160,6 +180,7 @@ class PreToolUseHookInput(BaseHookInput):
     tool_name: str
     tool_input: dict[str, Any]
     tool_use_id: str
+    mcp_server: NotRequired[McpServerProvenance]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
 
@@ -172,6 +193,8 @@ class PostToolUseHookInput(BaseHookInput):
     tool_input: dict[str, Any]
     tool_response: Any
     tool_use_id: str
+    duration_ms: NotRequired[float]
+    mcp_server: NotRequired[McpServerProvenance]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
 
@@ -184,6 +207,8 @@ class PostToolUseFailureHookInput(BaseHookInput):
     tool_input: dict[str, Any]
     tool_use_id: str
     error: str
+    duration_ms: NotRequired[float]
+    mcp_server: NotRequired[McpServerProvenance]
     is_interrupt: NotRequired[bool]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
@@ -279,6 +304,7 @@ class PermissionRequestHookInput(BaseHookInput):
     tool_name: str
     tool_input: dict[str, Any]
     permission_suggestions: NotRequired[list[PermissionUpdate]]
+    mcp_server: NotRequired[McpServerProvenance]
     agent_id: NotRequired[str]
     agent_type: NotRequired[str]
 
@@ -291,6 +317,7 @@ class PermissionDeniedHookInput(BaseHookInput):
     tool_input: Any
     tool_use_id: str
     reason: str
+    mcp_server: NotRequired[McpServerProvenance]
 
 
 class SessionStartHookInput(BaseHookInput):
@@ -432,6 +459,59 @@ class UserPromptExpansionHookInput(BaseHookInput):
     prompt: str
 
 
+ModelSwitchCacheTtl = Literal["5m", "1h"]
+ModelSwitchPricing = Literal["configured", "catalog", "default"]
+
+
+class PreModelSwitchHookInput(BaseHookInput):
+    """Input data for PreModelSwitch hook events (before the session model changes)."""
+
+    hook_event_name: Literal["PreModelSwitch"]
+    from_model: str
+    to_model: str
+    requested_model: str | None
+    source: Literal["command", "picker", "sdk"]
+    context_tokens: int
+    prompt_cache_warm: bool
+    cache_ttl: ModelSwitchCacheTtl
+    estimated_cache_write_usd: float
+    pricing: ModelSwitchPricing
+
+
+class PostModelSwitchHookInput(BaseHookInput):
+    """Input data for PostModelSwitch hook events (after the session model changed)."""
+
+    hook_event_name: Literal["PostModelSwitch"]
+    from_model: str
+    to_model: str
+    requested_model: str | None
+    source: Literal["command", "picker", "sdk", "auto", "resume"]
+    context_tokens: int
+    prompt_cache_warm: bool
+    cache_ttl: ModelSwitchCacheTtl
+    estimated_cache_write_usd: float
+    pricing: ModelSwitchPricing
+
+
+class DirectoryAddedHookInput(BaseHookInput):
+    """Input data for DirectoryAdded hook events."""
+
+    hook_event_name: Literal["DirectoryAdded"]
+    directory: str
+    source: Literal["slash_command", "register_repo_root"]
+
+
+class MessageDisplayHookInput(BaseHookInput):
+    """Input data for MessageDisplay hook events (assistant text being displayed)."""
+
+    hook_event_name: Literal["MessageDisplay"]
+    turn_id: str
+    message_id: str
+    index: int
+    final: bool
+    delta: str
+
+
 # Union type for all hook inputs
 HookInput = (
     PreToolUseHookInput
@@ -463,6 +543,10 @@ HookInput = (
     | CwdChangedHookInput
     | FileChangedHookInput
     | UserPromptExpansionHookInput
+    | PreModelSwitchHookInput
+    | PostModelSwitchHookInput
+    | DirectoryAddedHookInput
+    | MessageDisplayHookInput
 )
 
 
@@ -482,6 +566,9 @@ class PostToolUseHookSpecificOutput(TypedDict):
 
     hookEventName: Literal["PostToolUse"]
     additionalContext: NotRequired[str]
+    classifierContext: NotRequired[str]
+    updatedToolOutput: NotRequired[Any]
+    """Replace the tool output the model sees (any tool)."""
     updatedMCPToolOutput: NotRequired[Any]
 
 
@@ -505,6 +592,8 @@ class UserPromptSubmitHookSpecificOutput(TypedDict):
     hookEventName: Literal["UserPromptSubmit"]
     additionalContext: NotRequired[str]
     sessionTitle: NotRequired[str]
+    suppressOriginalPrompt: NotRequired[bool]
+    """When decision is "block", omit the original prompt from the block message."""
 
 
 class SessionStartHookSpecificOutput(TypedDict):
@@ -588,6 +677,43 @@ class UserPromptExpansionHookSpecificOutput(TypedDict):
     additionalContext: NotRequired[str]
 
 
+class StopHookSpecificOutput(TypedDict):
+    """Hook-specific output for Stop events."""
+
+    hookEventName: Literal["Stop"]
+    additionalContext: NotRequired[str]
+
+
+class SubagentStopHookSpecificOutput(TypedDict):
+    """Hook-specific output for SubagentStop events."""
+
+    hookEventName: Literal["SubagentStop"]
+    additionalContext: NotRequired[str]
+
+
+class PreModelSwitchHookSpecificOutput(TypedDict):
+    """Hook-specific output for PreModelSwitch events."""
+
+    hookEventName: Literal["PreModelSwitch"]
+    permissionDecision: NotRequired[Literal["allow", "deny", "ask"]]
+    permissionDecisionReason: NotRequired[str]
+
+
+class PostModelSwitchHookSpecificOutput(TypedDict):
+    """Hook-specific output for PostModelSwitch events."""
+
+    hookEventName: Literal["PostModelSwitch"]
+    additionalContext: NotRequired[str]
+
+
+class MessageDisplayHookSpecificOutput(TypedDict):
+    """Hook-specific output for MessageDisplay events."""
+
+    hookEventName: Literal["MessageDisplay"]
+    displayContent: NotRequired[str]
+    """Replacement text to display instead of the delta."""
+
+
 HookSpecificOutput = (
     PreToolUseHookSpecificOutput
     | PostToolUseHookSpecificOutput
@@ -605,6 +731,11 @@ HookSpecificOutput = (
     | FileChangedHookSpecificOutput
     | WorktreeCreateHookSpecificOutput
     | UserPromptExpansionHookSpecificOutput
+    | StopHookSpecificOutput
+    | SubagentStopHookSpecificOutput
+    | PreModelSwitchHookSpecificOutput
+    | PostModelSwitchHookSpecificOutput
+    | MessageDisplayHookSpecificOutput
 )
 
 
@@ -661,8 +792,9 @@ class SyncHookJSONOutput(TypedDict):
     # Decision fields
     # Note: "approve" is deprecated for PreToolUse (use permissionDecision instead)
     # For other hooks, only "block" is meaningful
-    decision: NotRequired[Literal["block"]]
+    decision: NotRequired[Literal["approve", "block"]]
     systemMessage: NotRequired[str]
+    terminalSequence: NotRequired[str]
     reason: NotRequired[str]
     # Hook-specific outputs
     hookSpecificOutput: NotRequired[HookSpecificOutput]
@@ -704,3 +836,9 @@ class HookMatcher(BaseModel):
     hooks: Sequence[HookCallback] = field(default_factory=list)
     # Timeout in seconds for all hooks in this matcher (default: 60)
     timeout: float | None = None
+    on_failure: Literal["continue", "block"] | None = None
+    """What to do when a hook callback fails (raises, times out).
+
+    ``"continue"`` ignores the failure, ``"block"`` fails closed and blocks the action.
+    Requires a CLI that reports ``hook_on_failure_supported``.
+    """

@@ -81,6 +81,10 @@ class AgentWireDefinition(ClaudeCodeBaseModel):
     effort: ReasoningEffort | int | None = None
     permission_mode: PermissionMode | None = None
     isolation: Literal["worktree"] | None = None
+    auto_compact_window: int | None = None
+    omit_claude_md: bool | None = Field(default=None, serialization_alias="omitClaudeMd")
+    observer: str | None = None
+    observer_message: str | None = None
 
 
 class AgentDefinition(ClaudeCodeBaseModel):
@@ -172,6 +176,20 @@ class AgentDefinition(ClaudeCodeBaseModel):
     )
     """Isolation mode. ``"worktree"`` runs the agent in a separate git worktree."""
 
+    auto_compact_window: int | None = Field(default=None, title="Auto-Compact Window")
+    """Token count at which this agent compacts its own conversation as a subagent.
+
+    Only lowers the inherited window. No effect on the main session agent."""
+
+    omit_claude_md: bool | None = Field(default=None, title="Omit CLAUDE.md")
+    """Run without user/project/local CLAUDE.md files when running as a subagent."""
+
+    observer: str | None = Field(default=None, title="Observer Agent")
+    """Agent type(s) (comma-separated, max 4) auto-spawned as background observers."""
+
+    observer_message: str | None = Field(default=None, title="Observer Message")
+    """Supplemental postamble appended to each activity digest sent to the observer."""
+
     def to_wire(self) -> dict[str, Any]:
         """Serialize to the wire-format dict for the CLI control protocol.
 
@@ -212,4 +230,8 @@ class AgentDefinition(ClaudeCodeBaseModel):
             effort=self.effort,
             permission_mode=self.permission_mode,
             isolation=self.isolation,
+            auto_compact_window=self.auto_compact_window,
+            omit_claude_md=self.omit_claude_md,
+            observer=self.observer,
+            observer_message=self.observer_message,
         )

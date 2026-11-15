@@ -176,6 +176,12 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.permission_mode:
         cmd.extend(["--permission-mode", options.permission_mode])
 
+    if options.permission_prompts:
+        cmd.extend(["--permission-prompts", options.permission_prompts])
+
+    if options.project_config_root is not None:
+        cmd.append(f"--project-config-root={options.project_config_root}")
+
     session = options.get_session()
     match session:
         case NewSession(session_id=str() as sid):
@@ -187,7 +193,9 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             if fork:
                 cmd.append("--fork-session")
             if at_msg is not None:
-                cmd.extend(["--resume-session-at", at_msg])
+                cmd.append(f"--resume-session-at={at_msg}")
+            if session.drops_turn is not None:
+                cmd.append(f"--resume-drops-turn={session.drops_turn}")
         case ContinueLatest(fork=fork):
             cmd.append("--continue")
             if fork:
@@ -200,7 +208,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             assert_never(unreachable)
 
     if not session.persist:
-        cmd.append("--no-persist-session")
+        cmd.append("--no-session-persistence")
 
     # Handle settings and sandbox: merge sandbox into settings if both are provided
     if settings_value := options.build_settings_value():
@@ -214,7 +222,11 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     match options.mcp_servers:
         case dict() as servers if servers:
             servers_for_cli = {
-                name: {k: v for k, v in dataclasses.asdict(cfg).items() if k != "instance"}
+                name: {
+                    k: v
+                    for k, v in dataclasses.asdict(cfg).items()
+                    if k != "instance" and v is not None
+                }
                 for name, cfg in servers.items()
             }
             dct = anyenv.dump_json({"mcpServers": servers_for_cli})
@@ -256,6 +268,8 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     # Add plugin directories
     for plugin in options.plugins:
         match plugin:
+            case SdkPluginConfig(skip_mcp_discovery=True):
+                cmd.extend(["--plugin-dir-no-mcp", plugin.path])
             case SdkPluginConfig():
                 cmd.extend(["--plugin-dir", plugin.path])
             case _:
@@ -268,12 +282,16 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     # Resolve thinking config → --max-thinking-tokens
     match options.thinking:
-        case ThinkingConfigAdaptive():
-            cmd.extend(["--max-thinking-tokens", "32000"])
-        case ThinkingConfigEnabled(budget_tokens=budget):
+        case ThinkingConfigAdaptive(display=display):
+            cmd.append("--thinking=adaptive")
+            if display:
+                cmd.extend(["--thinking-display", display])
+        case ThinkingConfigEnabled(budget_tokens=budget, display=display):
             cmd.extend(["--max-thinking-tokens", str(budget)])
+            if display:
+                cmd.extend(["--thinking-display", display])
         case ThinkingConfigDisabled():
-            cmd.extend(["--max-thinking-tokens", "0"])
+            cmd.append("--thinking=disabled")
 
     if options.effort is not None:
         cmd.extend(["--effort", options.effort])

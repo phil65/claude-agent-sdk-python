@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 import anyenv
 from pydantic import ValidationError
@@ -14,6 +14,7 @@ from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
+    ClaudeCodeModelInfo,
     ClaudeCodeServerInfo,
     ClaudeOAuthWaitForCompletionResponse,
     GetSettingsResponse,
@@ -25,25 +26,41 @@ from clawd_code_sdk.models import (
     ResultErrorMessage,
     ResultSuccessMessage,
     SDKControlApplyFlagSettingsRequest,
+    SDKControlBackgroundTasksRequest,
     SDKControlCancelAsyncMessageRequest,
     SDKControlChannelEnableRequest,
     SDKControlClaudeOAuthWaitForCompletionRequest,
     SDKControlEndSessionRequest,
+    SDKControlGetBinaryVersionRequest,
     SDKControlGetContextUsageRequest,
     SDKControlGetContextUsageResponse,
+    SDKControlGetHooksListingRequest,
     SDKControlGetSettingsRequest,
+    SDKControlGetTaskOutputRequest,
+    SDKControlGetTaskOutputResponse,
+    SDKControlGetUsageRequest,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
+    SDKControlInterruptResponse,
+    SDKControlListModelsRequest,
+    SDKControlListPermissionRulesRequest,
     SDKControlMcpAuthenticateRequest,
     SDKControlMcpCallRequest,
     SDKControlMcpClearAuthRequest,
     SDKControlMcpOAuthCallbackUrlRequest,
+    SDKControlMcpReadResourceRequest,
+    SDKControlMcpReadResourceResponse,
     SDKControlMcpReconnectRequest,
     SDKControlMcpSetServersRequest,
     SDKControlMcpStatusRequest,
     SDKControlMcpToggleRequest,
     SDKControlReadFileRequest,
     SDKControlReadFileResponse,
+    SDKControlRegisterRepoRootRequest,
+    SDKControlReloadOutputStylesRequest,
+    SDKControlReloadOutputStylesResponse,
+    SDKControlReloadSkillsRequest,
+    SDKControlReloadSkillsResponse,
     SDKControlRemoteControlRequest,
     SDKControlRewindFilesRequest,
     SDKControlSeedReadStateRequest,
@@ -52,6 +69,7 @@ from clawd_code_sdk.models import (
     SDKControlSetPermissionModeRequest,
     SDKControlSideQuestionRequest,
     SDKControlStopTaskRequest,
+    SDKControlUpdateSettingsRequest,
     SessionStateChangedMessage,
     SideQuestionResponse,
     StatusSystemMessage,
@@ -68,6 +86,7 @@ if TYPE_CHECKING:
     from clawd_code_sdk import Transport
     from clawd_code_sdk.models import (
         ClaudeCodeAgentInfo,
+        ClaudeCodeCommandInfo,
         ClaudeCodeSettings,
         ExternalMcpServerConfig,
         McpServerStatusEntry,
@@ -209,9 +228,30 @@ class ClaudeSDKClient:
             title=title,
             skills=options.skills,
             plan_mode_instructions=options.plan_mode_instructions,
+            system_prompt_snapshot=options.system_prompt_snapshot,
+            forward_subagent_text=options.forward_subagent_text or None,
+            tool_aliases=options.tool_aliases,
+            per_task_stop_affordance=options.per_task_stop_affordance,
         )
         response = await query._send_control_request(request, timeout=initialize_timeout)
-        self._initialization_result = ClaudeCodeServerInfo.model_validate(response)
+        self._initialization_result = info = ClaudeCodeServerInfo.model_validate(response)
+        blocks_on_failure = any(
+            m.on_failure not in (None, "continue")
+            for matchers in (options.hooks or {}).values()
+            for m in matchers
+        )
+        if blocks_on_failure:
+            if not info.hook_on_failure_supported:
+                raise CLIConnectionError(
+                    "The process answering initialize does not honor on_failure on hook "
+                    "matchers, so a failing hook would not block. "
+                    'Update Claude Code or remove on_failure="block".'
+                )
+            if info.hooks_applied is False:
+                raise CLIConnectionError(
+                    "This session was already running and did not register your hooks, "
+                    'so a hook set to on_failure="block" would never run.'
+                )
 
     async def receive_messages(self) -> AsyncIterator[Message]:
         """Receive all messages from Claude."""
@@ -278,16 +318,27 @@ class ClaudeSDKClient:
             "message": {"role": "user", "content": message_content},
             "parent_tool_use_id": parent_tool_use_id,
             "session_id": session_id,
-            "should_query": should_query,
+            "shouldQuery": should_query,
             "priority": priority,
         }
+        if self.options.verbatim_prompts:
+            wire_message["client_composed"] = True
         await self._query.write_json(wire_message)
 
-    async def interrupt(self) -> None:
-        """Send interrupt signal (only works with streaming mode)."""
+    async def interrupt(self, *, cancel_queued: bool = False) -> SDKControlInterruptResponse | None:
+        """Send interrupt signal (only works with streaming mode).
+
+        Args:
+            cancel_queued: Also cancel queued (not yet started) user messages.
+
+        Returns:
+            Which queued messages are still queued / were cancelled
+            (None on CLIs that don't report it).
+        """
         query = self._ensure_connected()
-        request = SDKControlInterruptRequest()
-        await query._send_control_request(request)
+        request = SDKControlInterruptRequest(cancel_queued=cancel_queued or None)
+        result = await query._send_control_request(request)
+        return SDKControlInterruptResponse.model_validate(result) if result else None
 
     async def set_permission_mode(self, mode: PermissionMode) -> None:
         """Change permission mode during conversation (only works with streaming mode).
@@ -469,10 +520,12 @@ class ClaudeSDKClient:
         result = await query._send_control_request(request)
         return GetSettingsResponse.model_validate(result)
 
-    async def get_context_usage(self) -> SDKControlGetContextUsageResponse:
+    async def get_context_usage(
+        self, detail: Literal["summary", "full"] | None = None
+    ) -> SDKControlGetContextUsageResponse:
         """Get a breakdown of current context window usage by category."""
         query = self._ensure_connected()
-        request = SDKControlGetContextUsageRequest()
+        request = SDKControlGetContextUsageRequest(detail=detail)
         result = await query._send_control_request(request)
         return SDKControlGetContextUsageResponse.model_validate(result)
 
@@ -546,11 +599,113 @@ class ClaudeSDKClient:
         req = SDKControlChannelEnableRequest(server_name=server_name)
         await query._send_control_request(req)
 
-    async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
-        """Set the maximum number of thinking tokens for extended thinking."""
+    async def set_max_thinking_tokens(
+        self,
+        max_thinking_tokens: int | None,
+        thinking_display: Literal["summarized", "omitted", "highlights"] | None = None,
+    ) -> None:
+        """Set the maximum number of thinking tokens (and optionally the display mode)."""
         query = self._ensure_connected()
-        request = SDKControlSetMaxThinkingTokensRequest(max_thinking_tokens=max_thinking_tokens)
+        request = SDKControlSetMaxThinkingTokensRequest(
+            max_thinking_tokens=max_thinking_tokens, thinking_display=thinking_display
+        )
         await query._send_control_request(request)
+
+    async def background_tasks(self, tool_use_id: str | None = None) -> bool:
+        """Move running foreground tasks (or a single tool use) to the background.
+
+        Returns:
+            Whether anything was backgrounded.
+        """
+        query = self._ensure_connected()
+        request = SDKControlBackgroundTasksRequest(tool_use_id=tool_use_id)
+        result = await query._send_control_request(request)
+        return bool((result or {}).get("backgrounded", True))
+
+    async def get_task_output(self, task_id: str) -> SDKControlGetTaskOutputResponse:
+        """Read the output collected so far for a background task."""
+        query = self._ensure_connected()
+        request = SDKControlGetTaskOutputRequest(task_id=task_id)
+        result = await query._send_control_request(request)
+        return SDKControlGetTaskOutputResponse.model_validate(result)
+
+    async def get_usage(self, *, skip_behaviors: bool = False) -> dict[str, Any]:
+        """Get the structured usage report (experimental, shape may change)."""
+        query = self._ensure_connected()
+        request = SDKControlGetUsageRequest(skip_behaviors=skip_behaviors or None)
+        return await query._send_control_request(request)
+
+    async def get_binary_version(self) -> dict[str, Any]:
+        """Get version info of the running Claude Code binary."""
+        query = self._ensure_connected()
+        return await query._send_control_request(SDKControlGetBinaryVersionRequest())
+
+    async def list_models(self) -> list[ClaudeCodeModelInfo]:
+        """Fetch the list of available models from the CLI."""
+        query = self._ensure_connected()
+        result = await query._send_control_request(SDKControlListModelsRequest())
+        return [ClaudeCodeModelInfo.model_validate(m) for m in (result or {}).get("models", [])]
+
+    async def reload_skills(self) -> list[ClaudeCodeCommandInfo]:
+        """Re-scan skills from disk and return the refreshed skill list."""
+        query = self._ensure_connected()
+        result = await query._send_control_request(SDKControlReloadSkillsRequest())
+        return SDKControlReloadSkillsResponse.model_validate(result).skills
+
+    async def reload_output_styles(self) -> list[str]:
+        """Re-scan output styles from disk and return the available style names."""
+        query = self._ensure_connected()
+        result = await query._send_control_request(SDKControlReloadOutputStylesRequest())
+        return SDKControlReloadOutputStylesResponse.model_validate(result).available_output_styles
+
+    async def read_mcp_resource(
+        self, server_name: str, uri: str
+    ) -> SDKControlMcpReadResourceResponse:
+        """Read a resource from a connected MCP server."""
+        query = self._ensure_connected()
+        request = SDKControlMcpReadResourceRequest(server_name=server_name, uri=uri)
+        result = await query._send_control_request(request)
+        return SDKControlMcpReadResourceResponse.model_validate(result)
+
+    async def update_settings(
+        self,
+        source: Literal["localSettings", "userSettings"],
+        settings: dict[str, Any],
+    ) -> None:
+        """Persist settings to the local or user settings file."""
+        query = self._ensure_connected()
+        request = SDKControlUpdateSettingsRequest(source=source, settings=settings)
+        await query._send_control_request(request)
+
+    async def list_permission_rules(self) -> dict[str, Any]:
+        """List the effective permission rules (raw ``state`` payload)."""
+        query = self._ensure_connected()
+        result = await query._send_control_request(SDKControlListPermissionRulesRequest())
+        state: dict[str, Any] = (result or {}).get("state", {})
+        return state
+
+    async def register_repo_root(
+        self,
+        directory: str | Path,
+        *,
+        reload_claude_md: bool | None = None,
+        reload_plugins: bool | None = None,
+        reload_skills: bool | None = None,
+    ) -> None:
+        """Register an additional repository root for the session (like /add-dir)."""
+        query = self._ensure_connected()
+        request = SDKControlRegisterRepoRootRequest(
+            directory=str(directory),
+            reload_claude_md=reload_claude_md,
+            reload_plugins=reload_plugins,
+            reload_skills=reload_skills,
+        )
+        await query._send_control_request(request)
+
+    async def get_hooks_listing(self) -> dict[str, Any]:
+        """Get the listing of configured hooks (same data as /hooks)."""
+        query = self._ensure_connected()
+        return await query._send_control_request(SDKControlGetHooksListingRequest())
 
     async def supported_agents(self) -> list[ClaudeCodeAgentInfo]:
         """Get the list of available subagents for the current session.

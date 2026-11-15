@@ -174,6 +174,8 @@ class Query:
                 matcher_cfg = {"matcher": matcher.get("matcher"), "hookCallbackIds": callback_ids}
                 if matcher.get("timeout") is not None:
                     matcher_cfg["timeout"] = matcher.get("timeout")
+                if matcher.get("on_failure") is not None:
+                    matcher_cfg["onFailure"] = matcher.get("on_failure")
                 hooks_config[event].append(matcher_cfg)
         return hooks_config or None
 

@@ -12,6 +12,10 @@ Usage:
 
     # Specific version
     python scripts/update_sdk_reference.py --version 0.2.51
+
+After extracting, a structured diff (added / removed / changed declarations and
+fields) against the previous reference files is printed and written to
+reference/CHANGES.md. See scripts/diff_sdk_reference.py.
 """
 
 from __future__ import annotations
@@ -23,6 +27,8 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+
+from diff_sdk_reference import build_report
 
 
 NPM_PACKAGE = "@anthropic-ai/claude-agent-sdk"
@@ -84,7 +90,8 @@ def extract_files(tarball_path: Path, version: str) -> list[Path]:
                 print(f"  Warning: Could not read {target}", file=sys.stderr)
                 continue
 
-            content = fileobj.read()
+            # Normalize line endings so git diffs stay readable
+            content = fileobj.read().replace(b"\r\n", b"\n")
             # Strip the "package/" prefix for the output filename
             output_name = target.removeprefix("package/")
             output_path = OUTPUT_DIR / output_name
@@ -105,6 +112,19 @@ def extract_files(tarball_path: Path, version: str) -> list[Path]:
     return extracted
 
 
+def read_current() -> tuple[str | None, dict[str, str]]:
+    """Snapshot the current reference files (version, {filename: content})."""
+    version = None
+    metadata_path = OUTPUT_DIR / "VERSION.json"
+    if metadata_path.exists():
+        version = json.loads(metadata_path.read_text()).get("version")
+    contents = {}
+    for target in FILES_TO_EXTRACT:
+        path = OUTPUT_DIR / target.removeprefix("package/")
+        contents[path.name] = path.read_text() if path.exists() else ""
+    return version, contents
+
+
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -115,6 +135,11 @@ def main() -> None:
         default=None,
         help="Specific package version to download (default: latest)",
     )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Skip generating reference/CHANGES.md",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -122,6 +147,8 @@ def main() -> None:
     print("=" * 60)
 
     version: str = args.version or get_latest_version()
+    old_version, old_contents = read_current()
+    print(f"Current version: {old_version}")
     print(f"Target version: {version}")
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -138,6 +165,14 @@ def main() -> None:
     print(f"\nReference files in: {OUTPUT_DIR}")
     for path in extracted:
         print(f"  {path.name}")
+
+    pairs = [(p.name, old_contents.get(p.name, ""), p.read_text()) for p in extracted]
+    report = build_report(pairs, old_version, version)
+    if not args.no_report:
+        report_path = OUTPUT_DIR / "CHANGES.md"
+        report_path.write_text(report)
+        print(f"\nWrote change report to {report_path}\n")
+        print(report)
 
 
 if __name__ == "__main__":

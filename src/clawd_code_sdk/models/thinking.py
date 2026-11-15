@@ -7,7 +7,7 @@ from typing import Literal
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 
 
-ThinkingDisplay = Literal["summarized", "omitted"]
+ThinkingDisplay = Literal["summarized", "omitted", "highlights"]
 
 
 # Thinking configuration types

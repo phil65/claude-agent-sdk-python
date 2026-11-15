@@ -73,11 +73,23 @@ class McpServerToolPolicy:
     """Per-tool permission policy carried on mcp_set_servers for remote servers."""
 
     name: str
-    permission_policy: Literal["always_allow", "always_ask", "always_deny"]
+    permission_policy: Literal["always_allow", "always_ask", "always_deny"] | None = None
+    org_max_permission: Literal["allow", "ask", "blocked"] | None = None
+    """Most permissive setting the organization allows for this tool."""
 
 
 @dataclass(kw_only=True)
-class McpStdioServerConfig:
+class BaseMcpServerConfig:
+    """Base MCP server configuration."""
+
+    alwaysLoad: bool | None = None  # noqa: N815
+    """Always load this server's tools up front instead of deferring them to tool search."""
+    timeout: float | None = None
+    """Per-request timeout for this server in milliseconds."""
+
+
+@dataclass(kw_only=True)
+class McpStdioServerConfig(BaseMcpServerConfig):
     """MCP stdio server configuration."""
 
     type: Literal["stdio"] = "stdio"
@@ -87,7 +99,7 @@ class McpStdioServerConfig:
 
 
 @dataclass(kw_only=True)
-class McpSSEServerConfig:
+class McpSSEServerConfig(BaseMcpServerConfig):
     """MCP SSE server configuration."""
 
     type: Literal["sse"] = "sse"
@@ -97,7 +109,7 @@ class McpSSEServerConfig:
 
 
 @dataclass(kw_only=True)
-class McpHttpServerConfig:
+class McpHttpServerConfig(BaseMcpServerConfig):
     """MCP HTTP server configuration."""
 
     type: Literal["http"] = "http"
@@ -112,6 +124,9 @@ class McpSdkServerConfig:
 
     type: Literal["sdk"] = "sdk"
     name: str
+    timeout: float | None = None
+    """Per-request timeout for this server in milliseconds."""
+    tools: list[McpServerToolPolicy] | None = None
 
 
 @dataclass(kw_only=True)
@@ -128,6 +143,7 @@ class McpClaudeAIProxyServerConfig:
     type: Literal["claudeai-proxy"] = "claudeai-proxy"
     url: str
     id: str
+    timeout: float | None = None
 
 
 ExternalMcpServerConfig = McpStdioServerConfig | McpSSEServerConfig | McpHttpServerConfig
@@ -152,6 +168,11 @@ class SdkPluginConfig(ClaudeCodeBaseModel):
 
     type: Literal["local"] = "local"
     path: str
+    skip_mcp_discovery: bool | None = None
+    """Load skills/hooks/agents/commands but not the plugin's MCP servers.
+
+    Use when the SDK host owns this plugin's MCP connections.
+    """
 
 
 # Pydantic models for MCP status responses

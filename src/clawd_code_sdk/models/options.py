@@ -75,6 +75,13 @@ class ResumeSession(BaseSessionConfig):
     """If True, fork to a new session ID instead of continuing in-place."""
     at_message: str | None = None
     """Resume from a specific message UUID within the session."""
+    drops_turn: str | None = None
+    """Guard for truncating resume (``--resume-drops-turn``).
+
+    Declares the user message UUID of the turn that ``at_message`` is expected to
+    drop. The CLI refuses the resume if the truncation would discard anything else.
+    Only meaningful together with ``at_message``.
+    """
 
 
 @dataclass(kw_only=True)
@@ -185,6 +192,13 @@ class ClaudeAgentOptions:
     AskUserQuestion tool. If not set, these requests fall through
     to on_permission (if it's a callback) for backwards compatibility.
     """
+    permission_prompts: Literal["host", "none"] | None = None
+    """Who answers permission prompts.
+
+    ``"host"`` (default): this process, through ``on_permission``.
+    ``"none"``: nobody - permission mode, rules and hooks still decide, and anything
+    that would otherwise prompt is denied immediately.
+    """
     on_elicitation: OnElicitation | None = None
     """Callback for handling MCP elicitation requests.
 
@@ -244,6 +258,12 @@ class ClaudeAgentOptions:
     """Add additional working directories."""
     cwd: str | Path | None = None
     """The working directory for the agent."""
+    project_config_root: str | Path | None = None
+    """The trusted checkout that ``cwd`` is a worktree of.
+
+    Project settings, ``.mcp.json``, the ``.claude`` config trees and
+    ``CLAUDE_PROJECT_DIR`` come from here instead of ``cwd``. Absolute path.
+    """
     # Settings
     settings: str | Path | ClaudeCodeSettings | None = None
     """Settings configuration.
@@ -277,6 +297,11 @@ class ClaudeAgentOptions:
     """
     exclude_dynamic_sections: bool | None = None
     """Whether to exclude dynamic sections from the system prompt."""
+    system_prompt_snapshot: bool | None = None
+    """Snapshot the system prompt on the first request and reuse it verbatim.
+
+    Keeps the prompt byte-identical across requests and resumes (better cache hits).
+    """
     plan_mode_instructions: str | None = None
     """Custom workflow body for the plan-mode system reminder."""
 
@@ -333,6 +358,28 @@ class ClaudeAgentOptions:
     """
     replay_user_messages: bool | None = None
     """Whether to replay user messages in the session."""
+    forward_subagent_text: bool = False
+    """Forward subagent text and thinking blocks as messages with ``parent_tool_use_id`` set.
+
+    By default only tool_use/tool_result blocks from subagents are emitted.
+    """
+    verbatim_prompts: bool = False
+    """Send every user message with ``client_composed: true``.
+
+    The CLI then delivers the prompt text as written: no ``@path`` expansion and
+    no slash-command dispatch. Requires Claude Code 2.1.248+.
+    """
+    tool_aliases: dict[str, str] | None = None
+    """Redirect built-in tool names to other tools, e.g. ``{"Bash": "mcp__ws__bash"}``.
+
+    Single-hop; complementary to ``disallowed_tools``, not a replacement.
+    """
+    per_task_stop_affordance: bool | None = None
+    """Declare that this consumer can stop individual background tasks (``stop_task``).
+
+    When declared, an interrupt only aborts the current turn and spares running
+    background agents/workflows.
+    """
     worktree: bool | str = False
     """Create a new git worktree for the session (with optional name)."""
     instrument: bool = False

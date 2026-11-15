@@ -1,0 +1,1254 @@
+# SDK reference changes: 0.2.118 → 0.3.325
+
+## sdk.d.ts
+
+### Added (81)
+
+- `const BUILTIN_TOOL_NAMES`
+    - `export declare const BUILTIN_TOOL_NAMES:readonly['Agent','Artifact','AskUserQuestion','Bash','ClaudeDesign','CronCreate','CronDelete','CronList','Edit','EndConversation','EnterPlanMode','EnterWorktree','ExitPlanMode','ExitWorktree','Glob','Grep','ListAgents','ListMcpResourcesTool','LSP','Monitor','NotebookEdit','OfferChromeSetup','PowerShell','Projects','propose_skills','ProposeGoal','PushNotific…`
+- `type BackgroundTaskSummary`
+    - `id:string`
+    - `type:string`
+    - `status:string`
+    - `description:string`
+    - `command?:string`
+    - `agent_type?:string`
+    - `server?:string`
+    - `tool?:string`
+    - `name?:string`
+- `type ClaimOptions`
+    - `cwd:string`
+    - `env?:Record<string,string>`
+    - `additionalDirectories?:string[]`
+    - `model?:string`
+    - `permissionMode?:PermissionMode`
+    - `maxThinkingTokens?:number|null`
+    - `settings?:Parameters<Query['applyFlagSettings']>[0]`
+    - `appendSystemPrompt?:string`
+    - `title?:string`
+    - `agents?:Record<string,AgentDefinition>`
+- `type DeniedModelsMatch`
+    - `denied:boolean[]`
+    - `warnings:string[]`
+- `type DirectoryAddedHookInput`
+    - `hook_event_name:'DirectoryAdded'`
+    - `directory:string`
+    - `source:'slash_command'|'register_repo_root'`
+- `type FastModeDisabledReason`
+    - `'disabled_by_env' | 'extra_usage_disabled' | 'free' | 'model_not_allowed' | 'network_error' | 'not_first_party' | 'pending' | 'preference' | 'sdk_opt_in_required' | 'unknown'`
+- `const LEGACY_TOOL_NAME_ALIASES`
+    - `export declare const LEGACY_TOOL_NAME_ALIASES:Readonly<Record<string,string>>`
+- `type McpServerProvenance`
+    - `name:string`
+    - `source:string`
+- `type MessageDisplayHookInput`
+    - `hook_event_name:'MessageDisplay'`
+    - `turn_id:string`
+    - `message_id:string`
+    - `index:number`
+    - `final:boolean`
+    - `delta:string`
+- `type MessageDisplayHookSpecificOutput`
+    - `hookEventName:'MessageDisplay'`
+    - `displayContent?:string`
+- `const ORG_POLICY_LIMIT_PREFIXES`
+    - `export declare const ORG_POLICY_LIMIT_PREFIXES:readonly['This service is disabled for your org']`
+- `type OnUserDialog`
+    - `export declare type OnUserDialog=(request:UserDialogRequest,options:{signal:AbortSignal;requestId:string;})=>Promise<UserDialogResult|null>`
+- `type PolicySettingsOrigin`
+    - `'file' | 'helper' | 'hkcu' | 'hklm' | 'parent' | 'plist' | 'remote'`
+- `type PostModelSwitchHookInput`
+    - `from_model:string`
+    - `to_model:string`
+    - `requested_model:string|null`
+    - `source:'command'|'picker'|'sdk'|'auto'|'resume'`
+    - `context_tokens:number`
+    - `prompt_cache_warm:boolean`
+    - `cache_ttl:'5m'|'1h'`
+    - `estimated_cache_write_usd:number`
+    - `pricing:'configured'|'catalog'|'default'`
+- `type PostModelSwitchHookSpecificOutput`
+    - `hookEventName:'PostModelSwitch'`
+    - `additionalContext?:string`
+- `type PreModelSwitchHookInput`
+    - `from_model:string`
+    - `to_model:string`
+    - `requested_model:string|null`
+    - `source:'command'|'picker'|'sdk'`
+    - `context_tokens:number`
+    - `prompt_cache_warm:boolean`
+    - `cache_ttl:'5m'|'1h'`
+    - `estimated_cache_write_usd:number`
+    - `pricing:'configured'|'catalog'|'default'`
+- `type PreModelSwitchHookSpecificOutput`
+    - `hookEventName:'PreModelSwitch'`
+    - `permissionDecision?:'allow'|'deny'|'ask'`
+    - `permissionDecisionReason?:string`
+- `type ProvenanceEntry`
+    - `source:ResolvedSettingSource`
+    - `path?:string`
+    - `policyOrigin?:PolicySettingsOrigin`
+- `type ResolveSettingsOptions`
+    - `cwd?:string`
+    - `settingSources?:SettingSource[]`
+    - `managedSettings?:Settings`
+    - `serverManagedSettings?:Settings`
+- `type ResolvedSettingSource`
+    - `'flag' | 'managed' | SettingSource`
+- `type ResolvedSettings`
+    - `effective:Settings`
+    - `provenance:Partial<Record<keyof Settings,ProvenanceEntry>>`
+    - `sources:Array<{source:ResolvedSettingSource;settings:Settings;path?:string;policyOrigin?:PolicySettingsOrigin;}>`
+    - `machinePolicy?:{didNotLoad:false|Array<'profile'|'registry'|'file'>;}`
+- `type SDKActiveGoalMessage`
+    - `type:'active_goal'`
+    - `value:{condition:string;iterations:number;set_at:number;tokens_at_start:number;last_reason?:string;}|null`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKBackgroundTasksChangedMessage`
+    - `type:'system'`
+    - `subtype:'background_tasks_changed'`
+    - `tasks:{task_id:string;run_id?:string;task_type:string;subagent_type?:string;description:string;parent_task_id?:string;ambient?:boolean;}[]`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKCommandsChangedMessage`
+    - `type:'system'`
+    - `subtype:'commands_changed'`
+    - `commands:SlashCommand[]`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKContextUsage`
+    - `model:string`
+    - `total_tokens:number`
+    - `raw_max_tokens:number`
+    - `percentage:number`
+    - `over_limit?:{tokens_over:number;kind:'hard_limit'|'compaction_window';}`
+    - `categories:SDKContextUsageCategory[]`
+    - `mcp_tools:{name:string;server_name:string;tokens:number;}[]`
+    - `memory_files:{path:string;type:string;tokens:number;}[]`
+    - `agents:{agent_type:string;source:string;tokens:number;}[]`
+    - `skills?:{name:string;source:string;plugin_name?:string;tokens:number;}[]`
+- `type SDKContextUsageCategory`
+    - `name:string`
+    - `tokens:number`
+    - `kind:'used'|'free'|'buffer'|'deferred'`
+- `type SDKControlBackgroundTasksRequest`
+    - `subtype:'background_tasks'`
+    - `tool_use_id?:string`
+- `type SDKControlGetBinaryVersionRequest`
+    - `subtype:'get_binary_version'`
+- `type SDKControlGetHooksListingRequest`
+    - `subtype:'get_hooks_listing'`
+- `type SDKControlGetHooksListingResponse`
+    - `events:{name:string;summary:string;supportsMatcher:boolean;hookCount:number;}[]`
+    - `hooks:{event:string;matcher:string;source:string;sourceLabel:string;pluginName?:string;type:string;displayText:string;commandText:string;contentLabel:string;co…`
+    - `eventCatalog:{name:string;summary:string;supportsMatcher:boolean;}[]`
+    - `policy:{disabledByPolicy:boolean;managedOnly:boolean;pluginOnly:boolean;allDisabled:boolean;policyHookCount:number;policyUnreadable?:true;}`
+    - `safeMode?:{managedHooksStillApply:boolean;exitHint:string;}`
+    - `bareMode?:{exitHint:string;}`
+    - `errors?:coreTypes.SDKSettingsParseError[]`
+- `type SDKControlGetTaskOutputRequest`
+    - `subtype:'get_task_output'`
+    - `task_id:string`
+- `type SDKControlGetTaskOutputResponse`
+    - `output:string`
+    - `total_bytes:number`
+    - `truncated:boolean`
+- `type SDKControlGetUsageRequest`
+    - `subtype:'get_usage'`
+    - `skip_behaviors?:boolean`
+- `type SDKControlGetUsageResponse`
+    - `session:{total_cost_usd:number;total_api_duration_ms:number;total_duration_ms:number;total_lines_added:number;total_lines_removed:number;model_usage:Record<str…`
+    - `subscription_type:string|null`
+    - `rate_limits_available:boolean`
+    - `rate_limits:{five_hour?:{utilization:number|null;resets_at:string|null;}|null;seven_day?:{utilization:number|null;resets_at:string|null;}|null;seven_day_oauth_…`
+    - `behaviors:{day:{request_count:number;session_count:number;behaviors:{key:'cache_miss'|'long_context'|'subagent_heavy'|'high_parallel'|'cron'|'max_effort'|'work…`
+- `type SDKControlInterruptResponse`
+    - `still_queued:string[]`
+    - `cancelled?:string[]`
+- `type SDKControlListModelsRequest`
+    - `subtype:'list_models'`
+- `type SDKControlListPermissionRulesRequest`
+    - `subtype:'list_permission_rules'`
+- `type SDKControlListPermissionRulesResponse`
+    - `state:SDKControlPermissionRulesState`
+- `type SDKControlMcpReadResourceRequest`
+    - `subtype:'mcp_read_resource'`
+    - `serverName:string`
+    - `uri:string`
+- `type SDKControlMcpReadResourceResponse`
+    - `contents:{uri:string;mimeType?:string;text?:string;blob?:string;_meta?:Record<string,unknown>;}[]`
+- `type SDKControlPermissionRulesState`
+    - `rules:SDKPermissionRuleEntry[]`
+    - `workspaceDirectories:SDKPermissionWorkspaceDirectory[]`
+    - `originalCwd:string`
+    - `managedOnly:boolean`
+    - `errors?:coreTypes.SDKSettingsParseError[]`
+    - `withheld?:boolean`
+- `type SDKControlRegisterRepoRootRequest`
+    - `subtype:'register_repo_root'`
+    - `directory:string`
+    - `reload_claude_md?:boolean`
+    - `reload_plugins?:boolean`
+    - `reload_skills?:boolean`
+- `type SDKControlReloadOutputStylesRequest`
+    - `subtype:'reload_output_styles'`
+- `type SDKControlReloadOutputStylesResponse`
+    - `available_output_styles:string[]`
+- `type SDKControlReloadSkillsRequest`
+    - `subtype:'reload_skills'`
+- `type SDKControlReloadSkillsResponse`
+    - `skills:coreTypes.SlashCommand[]`
+- `type SDKControlRequestProgressMessage`
+    - `type:'system'`
+    - `subtype:'control_request_progress'`
+    - `request_id:string`
+    - `status:'started'|'api_retry'`
+    - `attempt?:number`
+    - `max_retries?:number`
+    - `retry_delay_ms?:number`
+    - `error_status?:number|null`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKControlSetHasSubscribersRequest`
+    - `subtype:'set_has_subscribers'`
+    - `has_subscribers:boolean|null`
+- `type SDKControlUpdateSettingsRequest`
+    - `subtype:'update_settings'`
+    - `source:'localSettings'|'userSettings'`
+    - `settings:Record<string,unknown>`
+- `type SDKConversationResetMessage`
+    - `type:'conversation_reset'`
+    - `new_conversation_id:UUID`
+    - `uuid:UUID`
+    - `session_id:string`
+    - `trigger?:'clear'|'plan_mode_exit'|'fresh_session'|'onboarding'`
+    - `user_message_uuid?:string`
+    - `timestamp?:string`
+- `type SDKInformationalMessage`
+    - `type:'system'`
+    - `subtype:'informational'`
+    - `content:string`
+    - `level:'info'|'notice'|'suggestion'|'warning'`
+    - `tool_use_id?:string`
+    - `prevent_continuation?:boolean`
+    - `tag?:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKMcpResourceLink`
+    - `uri:string`
+    - `name:string`
+    - `title?:string`
+    - `description?:string`
+    - `mimeType?:string`
+    - `size?:number`
+    - `annotations?:Record<string,unknown>`
+- `type SDKModelRefusalFallbackMessage`
+    - `type:'system'`
+    - `subtype:'model_refusal_fallback'`
+    - `trigger:'refusal'`
+    - `direction:'retry'|'revert'|'sticky'`
+    - `scope?:'session'|'local'`
+    - `original_model:string`
+    - `fallback_model:string`
+    - `request_id:string|null`
+    - `api_refusal_category?:string|null`
+    - `api_refusal_explanation?:string|null`
+    - `retracted_message_uuids?:string[]`
+    - `refused_user_message_uuid?:string|null`
+    - `content:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKModelRefusalNoFallbackMessage`
+    - `type:'system'`
+    - `subtype:'model_refusal_no_fallback'`
+    - `original_model:string`
+    - `request_id:string|null`
+    - `api_refusal_category?:string|null`
+    - `api_refusal_explanation?:string|null`
+    - `refused_user_message_uuid?:string|null`
+    - `content:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKPermissionDeniedMessage`
+    - `type:'system'`
+    - `subtype:'permission_denied'`
+    - `tool_name:string`
+    - `tool_use_id:string`
+    - `agent_id?:string`
+    - `decision_reason_type?:string`
+    - `decision_reason?:string`
+    - `message:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKPermissionRuleDescription`
+    - `prefix:string`
+    - `emphasis?:string`
+    - `suffix?:string`
+- `type SDKPermissionRuleEntry`
+    - `behavior:'allow'|'deny'|'ask'`
+    - `source:'userSettings'|'projectSettings'|'localSettings'|'flagSettings'|'policySettings'|'cliArg'|'command'|'session'|'mcpMount'|'toolsNarrowing'|'mcpServerPoli…`
+    - `rule:string`
+    - `description?:SDKPermissionRuleDescription`
+    - `editability:'persistent'|'session'|'readonly'`
+    - `notInEffect?:boolean`
+- `type SDKPermissionWorkspaceDirectory`
+    - `path:string`
+    - `source:string`
+- `type SDKSessionWritesLostMessage`
+    - `type:'system'`
+    - `subtype:'session_writes_lost'`
+    - `error_code:'ENOSPC'|'EDQUOT'`
+    - `lost:('transcript'|'global_config')[]`
+    - `transcript_session_ids?:string[]`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKStartupFailureReason`
+    - `'bypass_root' | 'cli_version_too_old' | 'config_file_invalid' | 'cwd_unavailable' | 'gateway_access_denied' | 'gateway_signin_required' | 'initialize_not_first' | 'managed_settings_invalid' | 'managed_settings_not_delivered' | 'org_config_refused' | 'org_config_required_unavailable' | 'org_pin_api_key_conflict' | 'org_pin_mismatch' | 'org_verify_failed' | 'provider_not_allowed' | 'proxy_invalid' …`
+- `type SDKThinkingTokensMessage`
+    - `type:'system'`
+    - `subtype:'thinking_tokens'`
+    - `estimated_tokens:number`
+    - `estimated_tokens_delta:number`
+    - `user_message_uuid?:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SDKUsageReport`
+    - `session:{total_cost_usd:number;total_api_duration_ms:number;total_duration_ms:number;total_lines_added:number;total_lines_removed:number;model_usage:Record<str…`
+    - `rate_limits:{limits:{kind:string;group:string;percent:number;resets_at:string|null;scope?:{model?:{display_name:string;}|null;surface?:{display_name:string;}|n…`
+- `type SDKWorkerShuttingDownMessage`
+    - `type:'system'`
+    - `subtype:'worker_shutting_down'`
+    - `reason:string`
+    - `uuid:UUID`
+    - `session_id:string`
+- `type SandboxCredentialsConfig`
+    - `export declare type SandboxCredentialsConfig=NonNullable<z.infer<ReturnType<typeof SandboxCredentialsConfigSchema>>>`
+- `const SandboxCredentialsConfigSchema`
+    - `declare const SandboxCredentialsConfigSchema:()=>z.ZodOptional<z.ZodObject<{files:z.ZodOptional<z.ZodArray<z.ZodPreprocess<z.ZodObject<{path:z.ZodString;mode:z.ZodEnum<{deny:"deny";mask:"mask";}>;extract:z.ZodOptional<z.ZodString>;onExtractNoMatch:z.ZodOptional<z.ZodEnum<{deny:"deny";error:"error";warn:"warn";}>>;decode:z.ZodOptional<z.ZodEnum<{jwt:"jwt";}>>;maskClaims:z.ZodOptional<z.ZodArray<z.…`
+- `type SessionCronSummary`
+    - `id:string`
+    - `schedule:string`
+    - `recurring:boolean`
+    - `prompt:string`
+- `type SessionStoreFlush`
+    - `'batched' | 'eager'`
+- `interface SpareProcess`
+    - `claim(params:{prompt:string|AsyncIterable<SDKUserMessage>;options:ClaimOptions;}):Query`
+    - `readonly claimed:Promise<{cwd:string;sessionId:string;parkedMs?:number;sdkMcpSettled:boolean;}>`
+    - `readonly exited:Promise<void>`
+    - `close():void`
+- `type StopHookSpecificOutput`
+    - `hookEventName:'Stop'`
+    - `additionalContext?:string`
+- `type SubagentStopHookSpecificOutput`
+    - `hookEventName:'SubagentStop'`
+    - `additionalContext?:string`
+- `const USAGE_LIMIT_ERROR_PREFIXES`
+    - `export declare const USAGE_LIMIT_ERROR_PREFIXES:readonly["You've hit your","You've reached your","You're out of usage credits",'Your org is out of usage · add funds to continue','Your org is out of usage · contact your admin',"Your seat type doesn't include usage credits","Your seat type doesn't include usage",'Your usage allocation has been disabled by your admin',"Your group's usage limit is se…`
+- `const USAGE_TRANSITION_PREFIXES`
+    - `export declare const USAGE_TRANSITION_PREFIXES:readonly["You're now using usage credits","You're now using your usage allocation",'Now using your usage allocation','Now using usage credits','Now using credits',"You're now using extra usage",'Now using extra usage']`
+- `const USAGE_WARNING_PREFIXES`
+    - `export declare const USAGE_WARNING_PREFIXES:readonly["You've used","You're close to"]`
+- `type UserDialogRequest`
+    - `dialogKind:string`
+    - `payload:Record<string,unknown>`
+    - `toolUseID?:string`
+- `type UserDialogResult`
+    - `{behavior:'cancelled';} | {behavior:'completed';result:unknown;}`
+- `function archiveSession`
+    - `export declare function archiveSession(_sessionId:string,_options?:SessionMutationOptions):Promise<void>`
+- `function filterEscalatingDefaultMode`
+    - `export declare function filterEscalatingDefaultMode(_resolved:ResolvedSettings):Settings`
+- `function matchDeniedModels`
+    - `export declare function matchDeniedModels(_models:readonly string[],_deniedModels:readonly string[]|undefined):Promise<DeniedModelsMatch>`
+- `function prewarm`
+    - `export declare function prewarm(_params?:{options?:Options;initializeTimeoutMs?:number;}):Promise<SpareProcess>`
+- `function resolveSettings`
+    - `export declare function resolveSettings(_opts?:ResolveSettingsOptions):Promise<ResolvedSettings>`
+- `function unarchiveSession`
+    - `export declare function unarchiveSession(_sessionId:string,_options?:SessionMutationOptions):Promise<void>`
+
+### Removed (12)
+
+- `type ConnectRemoteControlError`
+- `type ConnectRemoteControlOptions`
+- `type ConnectRemoteControlResult`
+- `type InboundPrompt`
+- `type PromptRequest`
+- `type PromptRequestOption`
+- `type PromptResponse`
+- `interface SDKSession`
+- `type SDKSessionOptions`
+- `function unstable_v2_createSession`
+- `function unstable_v2_prompt`
+- `function unstable_v2_resumeSession`
+
+### Changed (92)
+
+- `type AccountInfo`
+    - `~` `apiProvider?:'firstParty'|'bedrock'|'vertex'|'foundry'|'anthropicAws'|'mantle'` → `apiProvider?:'firstParty'|'bedrock'|'vertex'|'foundry'|'anthropicAws'|'anthropicGoogleCloud'|'mantle'|'gateway'`
+- `type AgentDefinition`
+    - `+` `autoCompactWindow?:number`
+    - `+` `observer?:string`
+    - `+` `observerMessage?:string`
+    - `+` `omitClaudeMd?:boolean`
+- `type ApiKeySource`
+    - `+` `'/login managed key'`
+    - `+` `'ANTHROPIC_API_KEY'`
+    - `+` `'apiKeyHelper'`
+    - `+` `'none'`
+- `type BaseHookInput`
+    - `+` `effort?:{level:string;}`
+    - `+` `prompt_id?:string`
+- `type CanUseTool`
+    - old: `export declare type CanUseTool=(toolName:string,input:Record<string,unknown>,options:{signal:AbortSignal;suggestions?:PermissionUpdate[];blockedPath?:string;decisionReason?:string;title?:string;displayName?:string;description?:string;toolUseID:string;agentID?:string;})=>Promise<PermissionResult>`
+    - new: `export declare type CanUseTool=(toolName:string,input:Record<string,unknown>,options:{signal:AbortSignal;suggestions?:PermissionUpdate[];blockedPath?:string;mcpServer?:{name:string;source:string;};decisionReason?:string;title?:string;displayName?:string;description?:string;defaultToNo?:boolean;supp…`
+- `type ControlErrorResponse`
+    - `+` `pending_elicitation_requests?:SDKControlRequest[]`
+    - `+` `pending_user_dialog_requests?:SDKControlRequest[]`
+- `type ControlResponse`
+    - `+` `pending_elicitation_requests?:SDKControlRequest[]`
+    - `+` `pending_permission_requests?:SDKControlRequest[]`
+    - `+` `pending_user_dialog_requests?:SDKControlRequest[]`
+- `type CreateSdkMcpServerOptions`
+    - `+` `alwaysLoad?:boolean`
+    - `+` `instructions?:string`
+    - `+` `timeout?:number`
+- `const EXIT_REASONS`
+    - old: `export declare const EXIT_REASONS:readonly["clear","resume","logout","prompt_input_exit","other","bypass_permissions_disabled"]`
+    - new: `export declare const EXIT_REASONS:readonly['clear','resume','logout','prompt_input_exit','other']`
+- `type ExitReason`
+    - `-` `'bypass_permissions_disabled'`
+- `const HOOK_EVENTS`
+    - old: `export declare const HOOK_EVENTS:readonly["PreToolUse","PostToolUse","PostToolUseFailure","PostToolBatch","Notification","UserPromptSubmit","UserPromptExpansion","SessionStart","SessionEnd","Stop","StopFailure","SubagentStart","SubagentStop","PreCompact","PostCompact","PermissionRequest","Permissio…`
+    - new: `export declare const HOOK_EVENTS:readonly['PreToolUse','PostToolUse','PostToolUseFailure','PostToolBatch','Notification','UserPromptSubmit','UserPromptExpansion','SessionStart','SessionEnd','Stop','StopFailure','SubagentStart','SubagentStop','PreCompact','PostCompact','PreModelSwitch','PostModelSwi…`
+- `interface HookCallbackMatcher`
+    - `+` `onFailure?:'continue'|'block'`
+- `type HookEvent`
+    - `+` `'DirectoryAdded'`
+    - `+` `'MessageDisplay'`
+    - `+` `'PostModelSwitch'`
+    - `+` `'PreModelSwitch'`
+- `type HookInput`
+    - `+` `DirectoryAddedHookInput`
+    - `+` `MessageDisplayHookInput`
+    - `+` `PostModelSwitchHookInput`
+    - `+` `PreModelSwitchHookInput`
+- `type ListSessionsOptions`
+    - `+` `includeProgrammatic?:boolean`
+- `type McpClaudeAIProxyServerConfig`
+    - `+` `timeout?:number`
+- `type McpHttpServerConfig`
+    - `+` `alwaysLoad?:boolean`
+    - `+` `timeout?:number`
+- `type McpSSEServerConfig`
+    - `+` `alwaysLoad?:boolean`
+    - `+` `timeout?:number`
+- `type McpSdkServerConfig`
+    - `+` `timeout?:number`
+    - `+` `tools?:McpServerToolPolicy[]`
+- `type McpServerStatus`
+    - `+` `source?:string`
+    - `~` `tools?:{name:string;description?:string;annotations?:{readOnly?:boolean;destructive?:boolean;openWorld?:boolean;};}[]` → `tools?:{name:string;description?:string;annotations?:{readOnly?:boolean;destructive?:boolean;openWorld?:boolean;};_meta?:Record<string,unknown>;}[]`
+- `type McpServerToolPolicy`
+    - `+` `org_max_permission?:'allow'|'ask'|'blocked'`
+    - `~` `permission_policy:'always_allow'|'always_ask'|'always_deny'` → `permission_policy?:'always_allow'|'always_ask'|'always_deny'`
+- `type McpStdioServerConfig`
+    - `+` `alwaysLoad?:boolean`
+    - `+` `timeout?:number`
+- `type ModelInfo`
+    - `+` `resolvedModel?:string`
+- `type ModelUsage`
+    - `+` `cacheCreationEphemeral1hInputTokens?:number`
+    - `+` `cacheCreationEphemeral5mInputTokens?:number`
+    - `+` `canonicalModel?:string`
+    - `+` `costBasis?:'list'|'managed'|'unknown'`
+    - `+` `provider?:string`
+    - `+` `thinkingTokens?:number`
+- `type NonNullableUsage`
+    - `~` `[K in keyof BetaUsage]:NonNullable<BetaUsage[K]>` → `[K in keyof BetaUsage]:K extends 'fallback_credit'?BetaUsage[K]:NonNullable<BetaUsage[K]>`
+- `type OnElicitation`
+    - old: `export declare type OnElicitation=(request:ElicitationRequest,options:{signal:AbortSignal;})=>Promise<ElicitationResult>`
+    - new: `export declare type OnElicitation=(request:ElicitationRequest,options:{signal:AbortSignal;requestId:string;})=>Promise<ElicitationResult|null>`
+- `type Options`
+    - `+` `forwardSubagentText?:boolean`
+    - `+` `onUserDialog?:OnUserDialog`
+    - `+` `perTaskStopAffordance?:boolean`
+    - `+` `permissionPrompts?:'host'|'none'`
+    - `+` `pluginDelivery?:'argv'|'initialize'`
+    - `+` `projectConfigRoot?:string`
+    - `+` `resumeDropsTurn?:string`
+    - `+` `sessionStoreFlush?:SessionStoreFlush`
+    - `+` `skills?:string[]|'all'`
+    - `+` `supportedDialogKinds?:string[]`
+    - `+` `toolAliases?:Record<string,string>`
+    - `+` `verbatimPrompts?:boolean`
+    - `~` `systemPrompt?:string|string[]|{type:'preset';preset:'claude_code';append?:string;excludeDynamicSections?:boolean;}` → `systemPrompt?:string|string[]|{type:'custom';prompt:string|string[];snapshot?:boolean;}|{type:'preset';preset:'claude_code';append?:string;excludeDynamicSectio…`
+- `type PermissionDeniedHookInput`
+    - `+` `mcp_server?:McpServerProvenance`
+- `type PermissionRequestHookInput`
+    - `+` `mcp_server?:McpServerProvenance`
+- `type PostToolUseFailureHookInput`
+    - `+` `duration_ms?:number`
+    - `+` `mcp_server?:McpServerProvenance`
+- `type PostToolUseHookInput`
+    - `+` `duration_ms?:number`
+    - `+` `mcp_server?:McpServerProvenance`
+- `type PostToolUseHookSpecificOutput`
+    - `+` `classifierContext?:string`
+    - `+` `updatedToolOutput?:unknown`
+- `type PreToolUseHookInput`
+    - `+` `mcp_server?:McpServerProvenance`
+- `interface Query`
+    - `+` `backgroundTasks(toolUseId?:string):Promise<boolean>`
+    - `+` `readMcpResource(serverName:string,uri:string):Promise<SDKControlMcpReadResourceResponse>`
+    - `+` `reinitialize():Promise<SDKControlInitializeResponse>`
+    - `+` `reloadOutputStyles():Promise<SDKControlReloadOutputStylesResponse>`
+    - `+` `reloadSkills():Promise<SDKControlReloadSkillsResponse>`
+    - `+` `setMcpPermissionModeOverride(serverName:string,mode:'default'|'auto'|null):Promise<{warning?:string;}>`
+    - `+` `updateSettings(source:'localSettings'|'userSettings',settings:Record<string,unknown>):Promise<void>`
+    - `+` `usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET(opts?:{skipBehaviors?:boolean;}):Promise<SDKControlGetUsageResponse>`
+    - `~` `applyFlagSettings(settings:Settings):Promise<void>` → `applyFlagSettings(settings:{[K in keyof Settings]?:K extends 'effortLevel'?EffortLevel|null:Settings[K]|null;}):Promise<void>`
+    - `~` `getContextUsage():Promise<SDKControlGetContextUsageResponse>` → `getContextUsage(opts?:{detail?:'summary'|'full';}):Promise<SDKControlGetContextUsageResponse>`
+    - `~` `interrupt():Promise<void>` → `interrupt():Promise<SDKControlInterruptResponse|undefined>`
+    - `~` `readFile(path:string,options?:{maxBytes?:number;}):Promise<SDKControlReadFileResponse|null>` → `readFile(path:string,options?:{maxBytes?:number;encoding?:'utf-8'|'base64';}):Promise<SDKControlReadFileResponse|null>`
+    - `~` `reloadPlugins():Promise<SDKControlReloadPluginsResponse>` → `reloadPlugins(options?:{holdOnCacheImpact?:boolean;addPlugins?:SdkPluginConfig[];refuseIfBusy?:boolean;}):Promise<SDKControlReloadPluginsResponse>`
+    - `~` `setMaxThinkingTokens(maxThinkingTokens:number|null):Promise<void>` → `setMaxThinkingTokens(maxThinkingTokens:number|null,thinkingDisplay?:'summarized'|'omitted'|'highlights'|null):Promise<void>`
+- `type RewindFilesResult`
+    - `+` `skippedLinks?:number`
+- `type SDKAPIRetryMessage`
+    - `+` `no_response?:{waited_ms:number;retry_wait_ms:number;}`
+- `type SDKAssistantMessage`
+    - `+` `aborted?:true`
+    - `+` `agent_id?:string`
+    - `+` `context_usage?:SDKContextUsage`
+    - `+` `request_id?:string`
+    - `+` `resume_reason?:string`
+    - `+` `resumed_from_incomplete_thinking?:true`
+    - `+` `subagent_type?:string`
+    - `+` `supersedes?:UUID[]`
+    - `+` `task_description?:string`
+    - `+` `timestamp?:string`
+    - `+` `usage_report?:SDKUsageReport`
+    - `+` `user_message_uuid?:string`
+    - `+` `user_message_uuids?:string[]`
+- `type SDKAssistantMessageError`
+    - `+` `'account_on_hold'`
+    - `+` `'cloud_credential_error'`
+    - `+` `'model_not_found'`
+    - `+` `'oauth_org_not_allowed'`
+    - `+` `'overloaded'`
+    - `+` `'verification_required'`
+- `type SDKCompactBoundaryMessage`
+    - `~` `compact_metadata:{trigger:'manual'|'auto';pre_tokens:number;post_tokens?:number;duration_ms?:number;preserved_segment?:{head_uuid:UUID;anchor_uuid:UUID;tail_uu…` → `compact_metadata:{trigger:'manual'|'auto';pre_tokens:number;post_tokens?:number;duration_ms?:number;preserved_segment?:{head_uuid:UUID;anchor_uuid:UUID;tail_uu…`
+- `type SDKControlElicitationRequest`
+    - `+` `property_order?:string[]`
+- `type SDKControlGetContextUsageRequest`
+    - `+` `detail?:'summary'|'full'`
+- `type SDKControlGetContextUsageResponse`
+    - `+` `mcpInstructions?:{serverName:string;tokens:number;}[]`
+    - `~` `agents:{agentType:string;source:string;tokens:number;}[]` → `agents:{agentType:string;source:string;pluginId?:string;path?:string;tokens:number;}[]`
+    - `~` `categories:{name:string;tokens:number;color:string;isDeferred?:boolean;}[]` → `categories:{id?:'system_prompt'|'system_tools'|'mcp_tools'|'mcp_instructions'|'mcp_tools_deferred'|'system_tools_deferred'|'custom_agents'|'memory_files'|'skil…`
+    - `~` `skills?:{totalSkills:number;includedSkills:number;tokens:number;skillFrontmatter:{name:string;source:string;tokens:number;}[];}` → `skills?:{totalSkills:number;includedSkills:number;tokens:number;skillFrontmatter:{name:string;source:string;pluginName?:string;pluginId?:string;path?:string;to…`
+- `type SDKControlInitializeRequest`
+    - `+` `forwardSubagentText?:boolean`
+    - `+` `perTaskStopAffordance?:boolean`
+    - `+` `plugins?:coreTypes.SdkPluginConfig[]`
+    - `+` `sdkMcpServerConfigs?:Record<string,{timeout?:number;tools?:coreTypes.McpServerToolPolicy[];}>`
+    - `+` `sdkMcpServerManifests?:Record<string,{initializeResult:Record<string,unknown>;toolsListResult?:Record<string,unknown>;}>`
+    - `+` `sdkMcpServerManifestsOrigin?:'host_per_send'`
+    - `+` `supportedDialogKinds?:string[]`
+    - `+` `systemPromptSnapshot?:boolean`
+    - `+` `toolAliases?:Record<string,string>`
+- `type SDKControlInitializeResponse`
+    - `+` `claude_code_version?:string`
+    - `+` `fast_mode_disabled_reason?:coreTypes.FastModeDisabledReason`
+    - `+` `hook_on_failure_supported?:boolean`
+    - `+` `hooks_applied?:boolean`
+    - `+` `plugins_applied?:boolean`
+    - `+` `sdk_mcp_manifests_parked?:Record<string,'parked'|'already_connected'|'protocol_version_mismatch'|'malformed'|'not_honoured'>`
+- `type SDKControlInterruptRequest`
+    - `+` `cancel_queued?:boolean`
+- `type SDKControlMcpCallRequest`
+    - `+` `check_permissions?:boolean`
+    - `+` `expires_at?:string`
+    - `+` `input_files?:{name:string;lane_path:string;}[]`
+    - `+` `output_files?:{name:string;lane_path:string;if_match?:string;}[]`
+    - `+` `result_not_for_model?:boolean`
+    - `+` `timeout_ms?:number`
+- `type SDKControlMcpStatusRequest`
+    - `+` `liveReply?:boolean`
+- `type SDKControlPermissionRequest`
+    - `+` `default_to_no?:boolean`
+    - `+` `matched_ask_rule?:{source:string;tool_name:string;rule_content?:string;}`
+    - `+` `mcp_server?:coreTypes.McpServerProvenance`
+    - `+` `requires_user_interaction?:boolean`
+    - `+` `suppress_always_allow_rule?:boolean`
+- `type SDKControlReadFileRequest`
+    - `+` `encoding?:'utf-8'|'base64'`
+- `type SDKControlReadFileResponse`
+    - `+` `encoding?:'base64'`
+    - `+` `lossy?:boolean`
+- `type SDKControlReloadPluginsRequest`
+    - `+` `add_plugins?:coreTypes.SdkPluginConfig[]`
+    - `+` `hold_on_cache_impact?:boolean`
+    - `+` `refuse_if_busy?:boolean`
+- `type SDKControlReloadPluginsResponse`
+    - `+` `cache_impact?:{mcp_servers_added:string[];mcp_servers_removed:string[];lsp_tool_change:('adds'|'may-add'|'removes'|'may-remove')|null;}`
+    - `+` `held?:boolean`
+    - `~` `plugins:{name:string;path:string;source?:string;}[]` → `plugins:{name:string;path:string;source?:string;version?:string;}[]`
+- `type SDKControlRenameSessionRequest`
+    - `+` `session_id?:string`
+    - `+` `source?:'remote'|'host'`
+- `type SDKControlRequestInner`
+    - `+` `SDKControlBackgroundTasksRequest`
+    - `+` `SDKControlGetBinaryVersionRequest`
+    - `+` `SDKControlGetHooksListingRequest`
+    - `+` `SDKControlGetTaskOutputRequest`
+    - `+` `SDKControlGetUsageRequest`
+    - `+` `SDKControlListModelsRequest`
+    - `+` `SDKControlListPermissionRulesRequest`
+    - `+` `SDKControlMcpReadResourceRequest`
+    - `+` `SDKControlRegisterRepoRootRequest`
+    - `+` `SDKControlReloadOutputStylesRequest`
+    - `+` `SDKControlReloadSkillsRequest`
+    - `+` `SDKControlSetHasSubscribersRequest`
+    - `+` `SDKControlUpdateSettingsRequest`
+    - `-` `SDKControlChannelEnableRequest`
+    - `-` `SDKControlClaudeAuthenticateRequest`
+    - `-` `SDKControlClaudeOAuthCallbackRequest`
+    - `-` `SDKControlClaudeOAuthWaitForCompletionRequest`
+    - `-` `SDKControlEndSessionRequest`
+    - `-` `SDKControlGenerateSessionTitleRequest`
+    - `-` `SDKControlMcpAuthenticateRequest`
+    - `-` `SDKControlMcpClearAuthRequest`
+    - `-` `SDKControlMcpOAuthCallbackUrlRequest`
+    - `-` `SDKControlMessageRatedRequest`
+    - `-` `SDKControlOAuthTokenRefreshRequest`
+    - `-` `SDKControlRemoteControlRequest`
+    - `-` `SDKControlSideQuestionRequest`
+    - `-` `SDKControlUltrareviewLaunchRequest`
+- `type SDKControlSetMaxThinkingTokensRequest`
+    - `+` `thinking_display?:('summarized'|'omitted'|'highlights')|null`
+    - `~` `max_thinking_tokens:number|null` → `max_thinking_tokens?:number|null`
+- `type SDKControlSetModelRequest`
+    - `~` `model?:string` → `model?:string|null`
+- `type SDKHookCallbackMatcher`
+    - `+` `onFailure?:'continue'|'block'`
+- `type SDKMemoryRecallMessage`
+    - `~` `memories:{path:string;scope:'personal'|'team';content?:string;}[]` → `memories:{path:string;scope:'personal'|'team'|'organization';content?:string;}[]`
+- `type SDKMessage`
+    - `+` `SDKBackgroundTasksChangedMessage`
+    - `+` `SDKCommandsChangedMessage`
+    - `+` `SDKControlRequestProgressMessage`
+    - `+` `SDKConversationResetMessage`
+    - `+` `SDKInformationalMessage`
+    - `+` `SDKModelRefusalFallbackMessage`
+    - `+` `SDKModelRefusalNoFallbackMessage`
+    - `+` `SDKPermissionDeniedMessage`
+    - `+` `SDKSessionWritesLostMessage`
+    - `+` `SDKThinkingTokensMessage`
+    - `+` `SDKWorkerShuttingDownMessage`
+- `type SDKMessageOrigin`
+    - `+` `{kind:'auto-continuation';}`
+    - `+` `{kind:'observer';from:string;senderTaskId:string;}`
+    - `+` `{kind:'observer-activity';}`
+    - `+` `{kind:'peer';from:string;fromMode?:'bypass'|'prompting';name?:string;fromSession?:string;senderTaskId?:string;body?:string;verifiedPeerPid?:number;}`
+    - `+` `{kind:'task-notification';subkind?:'scheduled-trigger'|'peer-send-message'|'projects-relay'|'session-inbox';fireReason?:string;runId?:string;}`
+    - `+` `{kind:'unclassified';}`
+    - `-` `{kind:'peer';from:string;name?:string;}`
+    - `-` `{kind:'task-notification';}`
+- `type SDKPartialAssistantMessage`
+    - `+` `resume_reason?:string`
+    - `+` `user_message_uuid?:string`
+    - `+` `user_message_uuids?:string[]`
+- `type SDKRateLimitInfo`
+    - `+` `canUserPurchaseCredits?:boolean`
+    - `+` `errorCode?:'credits_required'`
+    - `+` `hasChargeableSavedPaymentMethod?:boolean`
+    - `+` `limitScope?:'service'|'channel'|'group_pool'`
+    - `+` `overageEnabled?:boolean`
+    - `+` `overageInUse?:boolean`
+    - `~` `overageDisabledReason?:'overage_not_provisioned'|'org_level_disabled'|'org_level_disabled_until'|'out_of_credits'|'seat_tier_level_disabled'|'member_level_disa…` → `overageDisabledReason?:'overage_not_provisioned'|'org_level_disabled'|'org_level_disabled_until'|'out_of_credits'|'seat_tier_level_disabled'|'member_level_disa…`
+    - `~` `rateLimitType?:'five_hour'|'seven_day'|'seven_day_opus'|'seven_day_sonnet'|'overage'` → `rateLimitType?:'five_hour'|'seven_day'|'seven_day_opus'|'seven_day_sonnet'|'seven_day_overage_included'|'overage'`
+- `type SDKResultError`
+    - `+` `credential_expires_at?:string`
+    - `+` `fast_mode_disabled_reason?:FastModeDisabledReason`
+    - `+` `invalid_config_file?:{path:string;is_global:boolean;backup_searched:boolean;backup_path?:string;}`
+    - `+` `origin?:SDKMessageOrigin`
+    - `+` `queued_turn_count?:number`
+    - `+` `result_index?:number`
+    - `+` `resume_reason?:string`
+    - `+` `startup_failure_reason?:SDKStartupFailureReason`
+    - `+` `user_message_uuid?:string`
+    - `+` `user_message_uuids?:string[]`
+- `type SDKResultSuccess`
+    - `+` `credential_expires_at?:string`
+    - `+` `fast_mode_disabled_reason?:FastModeDisabledReason`
+    - `+` `first_content_frame_ms?:number`
+    - `+` `first_stream_post_ack_ms?:number`
+    - `+` `first_stream_post_ms?:number`
+    - `+` `first_stream_post_queue_wait_ms?:number`
+    - `+` `first_stream_post_queued_behind?:'durable_post'|'ephemeral_post'|'retry_backoff'|'hold'|'none'`
+    - `+` `first_stream_post_wall_ms?:number`
+    - `+` `first_text_post_ms?:number`
+    - `+` `first_text_post_queue_wait_ms?:number`
+    - `+` `first_text_post_queued_behind?:'durable_post'|'ephemeral_post'|'retry_backoff'|'hold'|'none'`
+    - `+` `first_text_post_wall_ms?:number`
+    - `+` `local_command?:string`
+    - `+` `origin?:SDKMessageOrigin`
+    - `+` `queued_turn_count?:number`
+    - `+` `request_sent_wall_ms?:number`
+    - `+` `result_index?:number`
+    - `+` `resume_reason?:string`
+    - `+` `time_origin_ms?:number`
+    - `+` `time_to_request_from_spawn_ms?:number`
+    - `+` `time_to_request_ms?:number`
+    - `+` `ttft_ms?:number`
+    - `+` `ttft_stream_ms?:number`
+    - `+` `user_message_uuid?:string`
+    - `+` `user_message_uuids?:string[]`
+    - `+` `warm_spare_claimed?:boolean`
+- `type SDKSessionInfo`
+    - `+` `archived?:boolean`
+- `type SDKSystemMessage`
+    - `+` `capabilities?:string[]`
+    - `+` `effort?:('low'|'medium'|'high'|'xhigh'|'max')|null`
+    - `+` `fast_mode_disabled_reason?:FastModeDisabledReason`
+    - `+` `plugin_errors?:{plugin:string;type:string;message:string;path?:string;managed_lock?:{plugin_enabled:boolean;name:string;marketplace?:string;};}[]`
+    - `+` `terminal_slash_commands?:string[]`
+    - `+` `view_mode?:'focus'|'default'`
+    - `~` `mcp_servers:{name:string;status:string;}[]` → `mcp_servers:{name:string;status:string;source?:string;}[]`
+    - `~` `plugins:{name:string;path:string;}[]` → `plugins:{name:string;path:string;version?:string;}[]`
+- `type SDKTaskNotificationMessage`
+    - `+` `ambient?:boolean`
+    - `+` `reason?:'worker_restart'`
+    - `+` `resource_links?:SDKMcpResourceLink[]`
+    - `+` `run_id?:string`
+- `type SDKTaskProgressMessage`
+    - `+` `run_id?:string`
+    - `+` `subagent_type?:string`
+- `type SDKTaskStartedMessage`
+    - `+` `ambient?:boolean`
+    - `+` `is_backgrounded?:boolean`
+    - `+` `parent_task_id?:string`
+    - `+` `run_id?:string`
+    - `+` `spawn_depth?:number`
+    - `+` `subagent_type?:string`
+- `type SDKTaskUpdatedMessage`
+    - `+` `run_id?:string`
+    - `~` `patch:{status?:'pending'|'running'|'completed'|'failed'|'killed';description?:string;end_time?:number;total_paused_ms?:number;error?:string;is_backgrounded?:bo…` → `patch:{status?:'pending'|'running'|'completed'|'failed'|'killed'|'paused';description?:string;end_time?:number;total_paused_ms?:number;error?:string;is_backgro…`
+- `type SDKToolProgressMessage`
+    - `+` `heartbeat?:boolean`
+    - `+` `subagent_retry?:{agent_id:string;attempt:number;max_retries:number;retry_delay_ms:number;error_status:number|null;error_category:string;}`
+    - `+` `subagent_type?:string`
+- `type SDKUserMessage`
+    - `+` `agent_id?:string`
+    - `+` `client_composed?:true`
+    - `+` `inline_pastes?:string[]`
+    - `+` `pasted_content?:MessageParam['content'][]`
+    - `+` `subagent_type?:string`
+    - `+` `task_description?:string`
+- `type SDKUserMessageReplay`
+    - `+` `client_composed?:true`
+- `const SandboxFilesystemConfigSchema`
+    - old: `declare const SandboxFilesystemConfigSchema:()=>z.ZodOptional<z.ZodObject<{allowWrite:z.ZodOptional<z.ZodArray<z.ZodString>>;denyWrite:z.ZodOptional<z.ZodArray<z.ZodString>>;denyRead:z.ZodOptional<z.ZodArray<z.ZodString>>;allowRead:z.ZodOptional<z.ZodArray<z.ZodString>>;allowManagedReadPathsOnly:z.…`
+    - new: `declare const SandboxFilesystemConfigSchema:()=>z.ZodOptional<z.ZodObject<{allowWrite:z.ZodOptional<z.ZodArray<z.ZodString>>;denyWrite:z.ZodOptional<z.ZodArray<z.ZodString>>;denyRead:z.ZodOptional<z.ZodArray<z.ZodString>>;allowRead:z.ZodOptional<z.ZodArray<z.ZodString>>;allowManagedReadPathsOnly:z.…`
+- `const SandboxNetworkConfigSchema`
+    - old: `declare const SandboxNetworkConfigSchema:()=>z.ZodOptional<z.ZodObject<{allowedDomains:z.ZodOptional<z.ZodArray<z.ZodString>>;deniedDomains:z.ZodOptional<z.ZodArray<z.ZodString>>;allowManagedDomainsOnly:z.ZodOptional<z.ZodBoolean>;allowUnixSockets:z.ZodOptional<z.ZodArray<z.ZodString>>;allowAllUnix…`
+    - new: `declare const SandboxNetworkConfigSchema:()=>z.ZodOptional<z.ZodObject<{allowedDomains:z.ZodOptional<z.ZodArray<z.ZodString>>;deniedDomains:z.ZodOptional<z.ZodArray<z.ZodString>>;strictAllowlist:z.ZodOptional<z.ZodBoolean>;allowManagedDomainsOnly:z.ZodOptional<z.ZodBoolean>;allowUnixSockets:z.ZodOp…`
+- `const SandboxSettingsSchema`
+    - old: `declare const SandboxSettingsSchema:()=>z.ZodObject<{enabled:z.ZodOptional<z.ZodBoolean>;failIfUnavailable:z.ZodOptional<z.ZodBoolean>;autoAllowBashIfSandboxed:z.ZodOptional<z.ZodBoolean>;allowUnsandboxedCommands:z.ZodOptional<z.ZodBoolean>;network:z.ZodOptional<z.ZodObject<{allowedDomains:z.ZodOpt…`
+    - new: `declare const SandboxSettingsSchema:()=>z.ZodObject<{enabled:z.ZodOptional<z.ZodBoolean>;failIfUnavailable:z.ZodOptional<z.ZodBoolean>;autoAllowBashIfSandboxed:z.ZodOptional<z.ZodBoolean>;allowUnsandboxedCommands:z.ZodOptional<z.ZodBoolean>;network:z.ZodOptional<z.ZodObject<{allowedDomains:z.ZodOpt…`
+- `type SdkPluginConfig`
+    - `+` `skipMcpDiscovery?:boolean`
+- `type SessionMessage`
+    - `+` `parent_agent_id:string|null`
+    - `~` `parent_tool_use_id:null` → `parent_tool_use_id:string|null`
+- `type SessionStartHookInput`
+    - `+` `context_tokens?:number`
+    - `+` `estimated_cache_write_usd?:number`
+    - `+` `prompt_cache_likely_expired?:boolean`
+    - `+` `seconds_since_last_response?:number`
+    - `+` `session_title?:string`
+    - `~` `source:'startup'|'resume'|'clear'|'compact'` → `source:'startup'|'resume'|'clear'|'compact'|'fork'`
+- `type SessionStartHookSpecificOutput`
+    - `+` `reloadSkills?:boolean`
+    - `+` `sessionTitle?:string`
+- `interface Settings`
+    - `+` `additionalMarketplaces?:{[k:string]:{source:{source:'url';url:string;headers?:{[k:string]:string;};headersHelper?:string;}|{source:'github';repo:string;ref?:st…`
+    - `+` `agentPushNotifEnabled?:boolean`
+    - `+` `allowAllClaudeAiMcps?:boolean`
+    - `+` `allowClaudeInChromeWithManagedMcp?:boolean`
+    - `+` `allowedMarketplaces?:({source:'url';url:string;headers?:{[k:string]:string;};headersHelper?:string;}|{source:'github';repo:string;ref?:string;path?:string;spar…`
+    - `+` `allowedProviders?:('anthropic'|'customEndpoint'|'bedrock'|'vertex'|'foundry'|'anthropicAws'|'mantle'|'gateway')[]`
+    - `+` `appendPlugins?:string[]`
+    - `+` `askUserQuestionTimeout?:'60s'|'5m'|'10m'|'never'`
+    - `+` `attributionProject?:string`
+    - `+` `attributionProjectPolicy?:{default?:string;}`
+    - `+` `autoCompactEnabled?:boolean`
+    - `+` `autoContinueAtUsageLimit?:boolean`
+    - `+` `autoMode?:{allow?:string[];soft_deny?:string[];hard_deny?:string[];environment?:string[];classifyAllShell?:boolean;}`
+    - `+` `autoScrollEnabled?:boolean`
+    - `+` `autoUploadSessions?:boolean`
+    - `+` `availableModelsMatch?:'prefix'|'exact'`
+    - `+` `bashEditDiffEnabled?:boolean`
+    - `+` `bashOutputMaxChars?:number`
+    - `+` `claudeMd?:string`
+    - `+` `crossSessionInbound?:'accept'|'hold'|'refuse'`
+    - `+` `daemonColdStart?:'transient'|'ask'`
+    - `+` `defaultView?:'chat'|'transcript'`
+    - `+` `deniedModels?:string[]`
+    - `+` `desktopSessionCleanupPeriodDays?:number`
+    - `+` `dialogExpiry?:'60s'|'5m'|'10m'|'never'`
+    - `+` `disableAgentView?:boolean`
+    - `+` `disableArtifact?:boolean`
+    - `+` `disableBundledSkills?:boolean`
+    - `+` `disableClaudeAiConnectors?:boolean`
+    - `+` `disableCommandPluginSources?:boolean`
+    - `+` `disableDeepLinkRegistration?:'disable'`
+    - `+` `disableRemoteControl?:boolean`
+    - `+` `disableReplyCheck?:boolean`
+    - `+` `disableSideloadFlags?:boolean`
+    - `+` `disableWindowsBashCommandSplit?:boolean`
+    - `+` `disableWorkflows?:boolean`
+    - `+` `editorMode?:'normal'|'vim'`
+    - `+` `emojiCompletionEnabled?:boolean`
+    - `+` `enableArtifact?:boolean`
+    - `+` `enableWorkflows?:boolean`
+    - `+` `enforceAvailableModels?:boolean`
+    - `+` `fallbackModel?:string[]`
+    - `+` `feedbackDrafts?:'notify'|'quiet'|'off'`
+    - `+` `fileCheckpointingEnabled?:boolean`
+    - `+` `footerLinksRegexes?:({type:'regex';pattern:string;url:string;label?:string;[k:string]:unknown;}|{type:string;[k:string]:unknown;})[]`
+    - `+` `forceLoginGatewayUrl?:string`
+    - `+` `gatewayInternalNetworks?:string[]`
+    - `+` `idleCompaction?:boolean`
+    - `+` `inputNeededNotifEnabled?:boolean`
+    - `+` `isolatePeerMachines?:boolean`
+    - `+` `keybindingFlavor?:'classic'|'readline'`
+    - `+` `managedMcpServers?:{[k:string]:{[k:string]:unknown;};}`
+    - `+` `managedSourcesBehavior?:'first-wins'|'merge'`
+    - `+` `maxEffortLevel?:'low'|'medium'|'high'|'xhigh'|'max'`
+    - `+` `maxProseWidth?:number`
+    - `+` `modelPicker?:{options:{model:string;label?:string;description?:string;behavesAs?:string;}[];replaceBuiltInOptions?:boolean;}`
+    - `+` `modelPricing?:{multiplier?:number;overrides?:{[k:string]:{input:number;output:number;cacheRead:number;cacheWrite:number;};};}`
+    - `+` `modelSettings?:{[k:string]:{effortLevel?:'low'|'medium'|'high'|'xhigh';maxEffortLevel?:'low'|'medium'|'high'|'xhigh'|'max';autoCompactWindow?:'auto'|number;[k:…`
+    - `+` `parentSettingsBehavior?:'first-wins'|'merge'`
+    - `+` `pluginSuggestionMarketplaces?:string[]`
+    - `+` `policyHelper?:{path:string;timeoutMs?:number;refreshIntervalMs?:0|number;}`
+    - `+` `prUrlTemplate?:string`
+    - `+` `precomputeCompactionEnabled?:boolean`
+    - `+` `preferredNotifChannel?:'auto'|'iterm2'|'terminal_bell'|'iterm2_with_bell'|'kitty'|'ghostty'|'notifications_disabled'`
+    - `+` `prependPlugins?:string[]`
+    - `+` `processWrapper?:string`
+    - `+` `promptCacheTtl?:'5m'|'1h'`
+    - `+` `remoteControlAtStartup?:boolean`
+    - `+` `requiredMaximumVersion?:string`
+    - `+` `requiredMinimumVersion?:string`
+    - `+` `respondToBashCommands?:boolean`
+    - `+` `showMessageTimestamps?:boolean`
+    - `+` `showTurnDuration?:boolean`
+    - `+` `skipAutoPermissionPrompt?:boolean`
+    - `+` `spellcheck?:{enabled?:boolean;checker?:string;language?:string;color?:string;[k:string]:unknown;}`
+    - `+` `sshHostCommands?:unknown[]`
+    - `+` `subagentPromptCacheTtl?:'5m'|'1h'`
+    - `+` `switchModelsOnFlag?:boolean`
+    - `+` `syncClaudeAiPlugins?:boolean`
+    - `+` `syncClaudeAiSkills?:boolean`
+    - `+` `taskOutputMaxChars?:number`
+    - `+` `teammateMode?:'auto'|'tmux'|'iterm2'|'in-process'`
+    - `+` `terminalProgressBarEnabled?:boolean`
+    - `+` `theme?:('auto'|'dark'|'light'|'light-daltonized'|'dark-daltonized'|'light-ansi'|'dark-ansi')|string`
+    - `+` `timeFormat?:('auto'|'12-hour'|'24-hour'|'24-hour-utc')|string`
+    - `+` `timeZone?:string`
+    - `+` `todoFeatureEnabled?:boolean`
+    - `+` `ultracode?:boolean`
+    - `+` `useAutoModeDuringPlan?:boolean`
+    - `+` `verbose?:boolean`
+    - `+` `vimInsertModeRemaps?:{[k:string]:unknown;}`
+    - `+` `voiceEnabled?:boolean`
+    - `+` `wheelScrollAccelerationEnabled?:boolean`
+    - `+` `workflowKeywordTriggerEnabled?:boolean`
+    - `+` `workflowSizeGuideline?:'unrestricted'|'small'|'medium'|'large'`
+    - `~` `$schema?:'https://json.schemastore.org/claude-code-settings.json'` → `$schema?:string`
+    - `~` `attribution?:{commit?:string;pr?:string;}` → `attribution?:boolean|{commit?:string;pr?:string;sessionUrl?:boolean;[k:string]:unknown;}`
+    - `~` `blockedMarketplaces?:({source:'url';url:string;headers?:{[k:string]:string;};}|{source:'github';repo:string;ref?:string;path?:string;sparsePaths?:string[];}|{s…` → `blockedMarketplaces?:({source:'url';url:string;headers?:{[k:string]:string;};headersHelper?:string;}|{source:'github';repo:string;ref?:string;path?:string;spar…`
+    - `~` `extraKnownMarketplaces?:{[k:string]:{source:{source:'url';url:string;headers?:{[k:string]:string;};}|{source:'github';repo:string;ref?:string;path?:string;spar…` → `extraKnownMarketplaces?:{[k:string]:{source:{source:'url';url:string;headers?:{[k:string]:string;};headersHelper?:string;}|{source:'github';repo:string;ref?:st…`
+    - `~` `forceLoginMethod?:'claudeai'|'console'` → `forceLoginMethod?:'claudeai'|'console'|'gateway'`
+    - `~` `hooks?:{[k:string]:{matcher?:string;hooks:({type:'command';command:string;if?:string;shell?:'bash'|'powershell';timeout?:number;statusMessage?:string;once?:boo…` → `hooks?:{[k:string]:{matcher?:string;hooks:({type:'command';command:string;args?:string[];if?:string;shell?:'bash'|'powershell';timeout?:number;onFailure?:'cont…`
+    - `~` `permissions?:{allow?:string[];deny?:string[];ask?:string[];defaultMode?:'acceptEdits'|'auto'|'bypassPermissions'|'default'|'dontAsk'|'plan';disableBypassPermis…` → `permissions?:{allow?:string[];deny?:string[];ask?:string[];defaultMode?:'acceptEdits'|'auto'|'bypassPermissions'|'default'|'dontAsk'|'plan';disableBypassPermis…`
+    - `~` `pluginConfigs?:{[k:string]:{mcpServers?:{[k:string]:{[k:string]:string|number|boolean|string[];};};options?:{[k:string]:string|number|boolean|string[];};};}` → `pluginConfigs?:{[k:string]:{mcpServers?:{[k:string]:{[k:string]:string|number|boolean|string[];};};options?:{[k:string]:string|number|boolean|string[];};}|{[k:…`
+    - `~` `sandbox?:{enabled?:boolean;failIfUnavailable?:boolean;autoAllowBashIfSandboxed?:boolean;allowUnsandboxedCommands?:boolean;network?:{allowedDomains?:string[];de…` → `sandbox?:{enabled?:boolean;failIfUnavailable?:boolean;autoAllowBashIfSandboxed?:boolean;allowUnsandboxedCommands?:boolean;network?:{allowedDomains?:string[];de…`
+    - `~` `spinnerTipsOverride?:{excludeDefault?:boolean;tips:string[];}` → `spinnerTipsOverride?:{excludeDefault?:boolean;tips?:(string|{[k:string]:unknown;})[];tipsFile?:string;label?:string;[k:string]:unknown;}`
+    - `~` `statusLine?:{type:'command';command:string;padding?:number;refreshInterval?:number;}` → `statusLine?:{type:'command';command:string;padding?:number;refreshInterval?:number;hideVimModeIndicator?:boolean;}`
+    - `~` `strictKnownMarketplaces?:({source:'url';url:string;headers?:{[k:string]:string;};}|{source:'github';repo:string;ref?:string;path?:string;sparsePaths?:string[];…` → `strictKnownMarketplaces?:({source:'url';url:string;headers?:{[k:string]:string;};headersHelper?:string;}|{source:'github';repo:string;ref?:string;path?:string;…`
+    - `~` `worktree?:{symlinkDirectories?:string[];sparsePaths?:string[];}` → `worktree?:{symlinkDirectories?:string[];sparsePaths?:string[];baseRef?:'fresh'|'head';bgIsolation?:'worktree'|'none';location?:string;}`
+- `type SlashCommand`
+    - `+` `aliases?:string[]`
+    - `+` `builtin?:boolean`
+- `interface SpawnedProcess`
+    - `+` `readonly signalCode?:NodeJS.Signals|null`
+- `type StdoutMessage`
+    - `+` `coreTypes.SDKActiveGoalMessage`
+    - `-` `coreTypes.SDKPostTurnSummaryMessage`
+    - `-` `coreTypes.SDKTranscriptMirrorMessage`
+- `type StopHookInput`
+    - `+` `background_tasks?:BackgroundTaskSummary[]`
+    - `+` `session_crons?:SessionCronSummary[]`
+- `type SubagentStopHookInput`
+    - `+` `background_tasks?:BackgroundTaskSummary[]`
+    - `+` `session_crons?:SessionCronSummary[]`
+- `type SyncHookJSONOutput`
+    - `+` `terminalSequence?:string`
+    - `~` `hookSpecificOutput?:PreToolUseHookSpecificOutput|UserPromptSubmitHookSpecificOutput|UserPromptExpansionHookSpecificOutput|SessionStartHookSpecificOutput|SetupH…` → `hookSpecificOutput?:PreToolUseHookSpecificOutput|UserPromptSubmitHookSpecificOutput|UserPromptExpansionHookSpecificOutput|SessionStartHookSpecificOutput|SetupH…`
+- `type TerminalReason`
+    - `+` `'api_error'`
+    - `+` `'background_requested'`
+    - `+` `'budget_exhausted'`
+    - `+` `'malformed_tool_use_exhausted'`
+    - `+` `'structured_output_retry_exhausted'`
+    - `+` `'tool_deferred_unavailable'`
+    - `+` `'turn_setup_failed'`
+- `interface Transport`
+    - `+` `expectControlResponse?(requestId:string):void`
+    - `+` `markDelivered?(message:object):void`
+    - `+` `waitForExit?():Promise<void>`
+- `type UserPromptExpansionHookSpecificOutput`
+    - `+` `suppressOriginalPrompt?:boolean`
+- `type UserPromptSubmitHookInput`
+    - `+` `source?:'user'|'sdk'|'system'|'loop_wakeup'|'schedule_wakeup'|'poll_event'`
+- `type UserPromptSubmitHookSpecificOutput`
+    - `+` `suppressOriginalPrompt?:boolean`
+
+## sdk-tools.d.ts
+
+### Added (50)
+
+- `interface ArtifactInput`
+    - `action?:|"publish"|"list"|"read"|"list_types"|"watch"|"unwatch"|"status"|"upload_asset"|"list_assets"|"read_asset"|"delete_asset"|"pin"|"unpin"`
+    - `file_path?:string`
+    - `favicon?:string`
+    - `icon?:string`
+    - `limit?:number`
+    - `page_token?:string`
+    - `scope?:"mine"|"shared"|"all"`
+    - `title?:string`
+    - `description?:string`
+    - `label?:string`
+    - `url?:string`
+    - `prompt?:string`
+    - `force?:boolean`
+    - `pin?:boolean`
+    - `out_dir?:string`
+    - `file_paths?:[string,...string[]]`
+    - `asset_id?:string`
+    - `after?:string`
+    - `capabilities?:{[k:string]:unknown;}`
+    - `contract?:"latest"|string`
+- `type ArtifactOutput`
+    - `{artifacts:{title:string;url:string;favicon?:string;updatedAt?:string;rel?:"mine"|"shared";external?:true;role?:"editor"|"commenter"|"reader"|"viewer";outsidersMayHaveWritten?:true;pinned?:boolean;}[];truncated?:boolean;total?:number;total_at_least?:true;next_page_token?:string;pins_enabled?:boolean;scope?:"shared"|"all";external_listed?:true;} | {asset_list:{url:string;assets:{id:string;url:stri…`
+- `interface ClaudeDesignInput`
+    - `operation:string`
+    - `arguments:{[k:string]:unknown;}`
+- `interface ClaudeDesignOutput`
+    - `operation:string`
+    - `content:{[k:string]:unknown;}[]`
+    - `isError?:boolean`
+- `interface CronCreateInput`
+    - `cron:string`
+    - `prompt:string`
+    - `recurring?:boolean`
+    - `durable?:boolean`
+- `interface CronCreateOutput`
+    - `id:string`
+    - `humanSchedule:string`
+    - `recurring:boolean`
+    - `durable?:boolean`
+    - `nextFireAt?:number`
+- `interface CronDeleteInput`
+    - `id:string`
+- `interface CronDeleteOutput`
+    - `id:string`
+    - `endedLoopWakeup?:true`
+- `interface CronListInput`
+    - `export interface CronListInput{}`
+- `interface CronListOutput`
+    - `jobs:{id:string;cron:string;humanSchedule:string;prompt:string;recurring?:boolean;durable?:boolean;nextFireAt?:number;}[]`
+- `interface EnterPlanModeInput`
+    - `export interface EnterPlanModeInput{}`
+- `interface EnterPlanModeOutput`
+    - `message:string`
+- `interface MonitorInput`
+    - `description:string`
+    - `timeout_ms:number`
+    - `command?:string`
+    - `ws?:{url:string;protocols?:string[];}`
+- `interface MonitorOutput`
+    - `taskId:string`
+    - `timeoutMs:number`
+    - `persistent?:boolean`
+- `interface OfferChromeSetupInput`
+    - `reason?:string`
+- `interface OfferChromeSetupOutput`
+    - `outcome:"connected"|"not_now"|"no_attempt_yet"`
+- `interface ProjectsInput`
+    - `method:|"project_info"|"project_read"|"project_search"|"project_write"|"project_delete"|"project_memory_list"|"project_memory_read"`
+    - `path?:string`
+    - `content?:string`
+    - `local_path?:string`
+    - `present_to_user?:boolean`
+    - `query?:string`
+    - `n?:number`
+- `type ProjectsOutput`
+    - `{method:"project_delete";notice?:string;path:string;deleted:boolean;} | {method:"project_info";notice?:string;local_file?:string;name:string;description:string;instructions:string;docs:{path:string;created_at:string|null;}[];files?:{path:string;file_kind:string;created_at:string|null;}[];sync_sources?:{type:string|null;config:{[k:string]:unknown;};}[];knowledge:{knowledge_size:number;max_knowledg…`
+- `interface ProposeGoalInput`
+    - `condition:string`
+    - `ask_user?:boolean`
+- `interface ProposeGoalOutput`
+    - `condition:string`
+    - `askUser:boolean`
+- `interface ProposeSkillsInput`
+    - `proposals:|[{name:string;kind:"new"|"improvement";target?:string;description:string;evidence?:string[];edits?:[{old_string:string;new_string:string;},...{old_s…`
+- `interface ProposeSkillsOutput`
+    - `proposalCount:number`
+- `interface PushNotificationInput`
+    - `message:string`
+    - `status?:"proactive"`
+- `interface PushNotificationOutput`
+    - `message:string`
+    - `pushSent?:boolean`
+    - `localSent?:boolean`
+    - `disabledReason?:"config_off"|"user_present"|"no_transport"`
+    - `sentAt?:string`
+- `interface ReadMcpResourceDirInput`
+    - `server:string`
+    - `uri:string`
+- `interface ReadMcpResourceDirOutput`
+    - `resources:{uri:string;name:string;mimeType?:string;}[]`
+    - `error?:string`
+- `interface ReadNotificationsInput`
+    - `export interface ReadNotificationsInput{}`
+- `interface ReadNotificationsOutput`
+    - `notifications:{notification_id:string;origin:string;queued_at:string;content:string;arrived_at?:string;}[]`
+    - `remaining:number`
+    - `read_at?:string`
+- `interface RefreshMcpToolsInput`
+    - `server?:string`
+- `type RefreshMcpToolsOutput`
+    - `export type RefreshMcpToolsOutput={server:string;status:"refreshed"|"error"|"not_connected";toolCount?:number;added?:string[];removed?:string[];error?:string;}[]`
+- `interface RemoteTriggerInput`
+    - `action:"list"|"get"|"create"|"update"|"run"|"create_webhook_trigger"|"list_runs"|"get_run_log"`
+    - `trigger_id?:string`
+    - `session_id?:string`
+    - `cursor?:string`
+    - `body?:{[k:string]:unknown;}`
+- `interface RemoteTriggerOutput`
+    - `status:number`
+    - `json:string`
+    - `summary?:string`
+- `interface ReportFindingsInput`
+    - `level?:"low"|"medium"|"high"|"xhigh"|"max"`
+    - `findings:{file:string;line?:number;summary:string;short_summary?:string;failure_scenario:string;category?:string;verdict?:"CONFIRMED"|"PLAUSIBLE";outcome?:"fix…`
+- `interface ReportFindingsOutput`
+    - `count:number`
+    - `level?:"low"|"medium"|"high"|"xhigh"|"max"`
+    - `findings:{file:string;line?:number;summary:string;short_summary?:string;failure_scenario:string;category?:string;verdict?:"CONFIRMED"|"PLAUSIBLE";outcome?:"fix…`
+- `interface ScheduleWakeupInput`
+    - `delaySeconds?:number`
+    - `reason?:string`
+    - `prompt?:string`
+    - `stop?:boolean`
+    - `noop?:boolean`
+- `interface ScheduleWakeupOutput`
+    - `scheduledFor:number`
+    - `clampedDelaySeconds:number`
+    - `wasClamped:boolean`
+    - `stopped?:boolean`
+    - `cancelledWakeups?:number`
+- `interface SendFeedbackInput`
+    - `type:"bug"|"idea"|"missing_capability"`
+    - `title:string`
+    - `details:string`
+    - `area?:string`
+    - `failure_mode?:|"instruction_following"|"destructive_actions"|"code_quality"|"repetition_and_looping"|"model_regression"|"overconfidence_and_hallucination"|"con…`
+    - `task_category?:"code_edit"|"debug"|"explain"|"plan"|"shell"|"search"|"review"|"other"`
+- `interface SendFeedbackOutput`
+    - `success:boolean`
+    - `message:string`
+- `interface ShowOnboardingRolePickerInput`
+    - `export interface ShowOnboardingRolePickerInput{}`
+- `interface ShowOnboardingRolePickerOutput`
+    - `role?:string`
+    - `dismissed?:boolean`
+- `interface TaskCreateInput`
+    - `subject:string`
+    - `description:string`
+    - `activeForm?:string`
+    - `metadata?:{[k:string]:unknown;}`
+- `interface TaskCreateOutput`
+    - `task:{id:string;subject:string;description?:string;}`
+- `interface TaskGetInput`
+    - `taskId:string`
+- `interface TaskGetOutput`
+    - `task:{id:string;subject:string;description:string;status:"pending"|"in_progress"|"completed";blocks:string[];blockedBy:string[];}|null`
+- `interface TaskListInput`
+    - `export interface TaskListInput{}`
+- `interface TaskListOutput`
+    - `tasks:{id:string;subject:string;status:"pending"|"in_progress"|"completed";owner?:string;blockedBy:string[];}[]`
+- `interface TaskUpdateInput`
+    - `taskId:string`
+    - `subject?:string`
+    - `description?:string`
+    - `activeForm?:string`
+    - `status?:("pending"|"in_progress"|"completed")|"deleted"`
+    - `addBlocks?:string[]`
+    - `addBlockedBy?:string[]`
+    - `owner?:string`
+    - `metadata?:{[k:string]:unknown;}`
+- `interface TaskUpdateOutput`
+    - `success:boolean`
+    - `taskId:string`
+    - `updatedFields:string[]`
+    - `error?:string`
+    - `statusChange?:{from:string;to:string;}`
+- `interface WorkflowInput`
+    - `script?:string`
+    - `name?:string`
+    - `description?:string`
+    - `title?:string`
+    - `args?:{[k:string]:unknown;}`
+    - `scriptPath?:string`
+    - `resumeFromRunId?:string`
+- `interface WorkflowOutput`
+    - `status:"async_launched"|"remote_launched"`
+    - `taskId:string`
+    - `taskType?:"local_workflow"|"remote_agent"`
+    - `workflowName?:string`
+    - `runId?:string`
+    - `summary?:string`
+    - `transcriptDir?:string`
+    - `scriptPath?:string`
+    - `sessionUrl?:string`
+    - `warning?:string`
+    - `error?:string`
+
+### Removed (1)
+
+- `interface TaskOutputInput`
+
+### Changed (20)
+
+- `interface AgentInput`
+    - `+` `effort?:"low"|"medium"|"high"|"xhigh"|"max"`
+    - `~` `isolation?:"worktree"` → `isolation?:"worktree"|"remote"`
+    - `~` `model?:"sonnet"|"opus"|"haiku"` → `model?:"sonnet"|"opus"|"haiku"|"fable"`
+- `type AgentOutput`
+    - `+` `{agentId:string;agentType?:string;content:{type:"text";text:string;citations?:unknown[]|null;}[];resolvedModel?:string;modelsUsed?:string[];totalToolUseCount:n…`
+    - `+` `{status:"async_launched";isAsync?:true;agentId:string;description:string;resolvedModel?:string;modelsUsed?:string[];prompt:string;outputFile:string;canReadOutp…`
+    - `+` `{status:"remote_launched";taskId:string;sessionUrl:string;description:string;prompt:string;outputFile:string;}`
+    - `-` `{agentId:string;agentType?:string;content:{type:"text";text:string;}[];totalToolUseCount:number;totalDurationMs:number;totalTokens:number;usage:{input_tokens:n…`
+    - `-` `{status:"async_launched";agentId:string;description:string;prompt:string;outputFile:string;canReadOutputFile?:boolean;}`
+- `interface AskUserQuestionOutput`
+    - `+` `afkTimeoutMs?:number`
+    - `+` `response?:string`
+    - `~` `annotations?:{[k:string]:{preview?:string;notes?:string;};}` → `annotations?:{[k:string]:{preview?:string;notes?:string;unanswered?:"skipped"|"replied_in_chat"|"dismissed";};}`
+- `interface BashOutput`
+    - `+` `backgroundCwdHint?:string`
+    - `+` `backgroundEndsWithFinalResponse?:true`
+    - `+` `backgroundWakesOwner?:true`
+    - `+` `gitOperation?:{commit?:{sha:string;kind:"committed"|"amended"|"cherry-picked";branch?:string;};push?:{branch:string;};branch?:{ref:string;action:"merged"|"reba…`
+    - `+` `timedOutAfterMs?:number`
+    - `-` `assistantAutoBackgrounded?:boolean`
+- `interface FileEditOutput`
+    - `+` `staged?:boolean`
+- `interface FileReadInput`
+    - `+` `allow_large?:boolean`
+- `type FileReadOutput`
+    - `+` `{type:"parts";file:{filePath:string;originalSize:number;count:number;outputDir:string;};firstPage?:number;pages?:{base64:string;mediaType:"image/jpeg"|"image/p…`
+    - `+` `{type:"text";file:{filePath:string;content:string;numLines:number;startLine:number;totalLines:number;truncatedByTokenCap?:boolean;};artifactRead?:{slug:string;…`
+    - `-` `{type:"file_unchanged";file:{filePath:string;};}`
+    - `-` `{type:"parts";file:{filePath:string;originalSize:number;count:number;outputDir:string;};}`
+    - `-` `{type:"text";file:{filePath:string;content:string;numLines:number;startLine:number;totalLines:number;};}`
+- `interface FileWriteOutput`
+    - `+` `staged?:boolean`
+- `interface GlobOutput`
+    - `+` `countIsComplete?:boolean`
+    - `+` `timedOut?:boolean`
+    - `+` `totalMatches?:number`
+- `interface GrepInput`
+    - `+` `"-o"?:boolean`
+- `interface GrepOutput`
+    - `+` `timedOut?:boolean`
+    - `+` `totalFiles?:number`
+    - `+` `totalLines?:number`
+- `type McpOutput`
+    - old: `export type McpOutput=string`
+    - new: `export type McpOutput=|string|{type:string;[k:string]:unknown;}[]|{[k:string]:unknown;}`
+- `interface NotebookEditOutput`
+    - `+` `old_source?:string`
+- `interface ReadMcpResourceOutput`
+    - `+` `error?:string`
+- `interface TodoWriteOutput`
+    - `-` `verificationNudgeNeeded?:boolean`
+- `type ToolInputSchemas`
+    - `+` `ArtifactInput`
+    - `+` `ClaudeDesignInput`
+    - `+` `CronCreateInput`
+    - `+` `CronDeleteInput`
+    - `+` `CronListInput`
+    - `+` `EnterPlanModeInput`
+    - `+` `MonitorInput`
+    - `+` `OfferChromeSetupInput`
+    - `+` `ProjectsInput`
+    - `+` `ProposeGoalInput`
+    - `+` `ProposeSkillsInput`
+    - `+` `PushNotificationInput`
+    - `+` `ReadMcpResourceDirInput`
+    - `+` `ReadNotificationsInput`
+    - `+` `RefreshMcpToolsInput`
+    - `+` `RemoteTriggerInput`
+    - `+` `ReportFindingsInput`
+    - `+` `ScheduleWakeupInput`
+    - `+` `SendFeedbackInput`
+    - `+` `ShowOnboardingRolePickerInput`
+    - `+` `TaskCreateInput`
+    - `+` `TaskGetInput`
+    - `+` `TaskListInput`
+    - `+` `TaskUpdateInput`
+    - `+` `WorkflowInput`
+    - `-` `TaskOutputInput`
+- `type ToolOutputSchemas`
+    - `+` `ArtifactOutput`
+    - `+` `ClaudeDesignOutput`
+    - `+` `CronCreateOutput`
+    - `+` `CronDeleteOutput`
+    - `+` `CronListOutput`
+    - `+` `EnterPlanModeOutput`
+    - `+` `MonitorOutput`
+    - `+` `OfferChromeSetupOutput`
+    - `+` `ProjectsOutput`
+    - `+` `ProposeGoalOutput`
+    - `+` `ProposeSkillsOutput`
+    - `+` `PushNotificationOutput`
+    - `+` `ReadMcpResourceDirOutput`
+    - `+` `ReadNotificationsOutput`
+    - `+` `RefreshMcpToolsOutput`
+    - `+` `RemoteTriggerOutput`
+    - `+` `ReportFindingsOutput`
+    - `+` `ScheduleWakeupOutput`
+    - `+` `SendFeedbackOutput`
+    - `+` `ShowOnboardingRolePickerOutput`
+    - `+` `TaskCreateOutput`
+    - `+` `TaskGetOutput`
+    - `+` `TaskListOutput`
+    - `+` `TaskUpdateOutput`
+    - `+` `WorkflowOutput`
+- `interface WebFetchInput`
+    - `+` `offset?:number`
+- `interface WebFetchOutput`
+    - `+` `artifactRead?:{slug:string;ver?:string;seeded?:false;}`
+- `interface WebSearchOutput`
+    - `+` `searchCount?:number`
+    - `~` `results:(|{tool_use_id:string;content:{title:string;url:string;}[];}|string)[]` → `results:(|{tool_use_id:string;content:{title:string;url:string;snippet?:string;}[];}|string)[]`

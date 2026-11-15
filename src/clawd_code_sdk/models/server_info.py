@@ -7,10 +7,24 @@ from typing import Literal
 from anthropic.types import Model
 from pydantic import Field
 
-from clawd_code_sdk.models.base import ClaudeCodeBaseModel, EffortLevel, FastModeState
+from clawd_code_sdk.models.base import (
+    ClaudeCodeBaseModel,
+    EffortLevel,
+    FastModeDisabledReason,
+    FastModeState,
+)
 
 
-ApiProvider = Literal["firstParty", "bedrock", "vertex", "foundry", "anthropicAws", "mantle"]
+ApiProvider = Literal[
+    "firstParty",
+    "bedrock",
+    "vertex",
+    "foundry",
+    "anthropicAws",
+    "anthropicGoogleCloud",
+    "mantle",
+    "gateway",
+]
 
 
 class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
@@ -38,6 +52,9 @@ class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     """Whether the model supports fast mode."""
 
     supports_auto_mode: bool | None = None
+    supports_thinking_off: bool | None = None
+    resolved_model: str | None = None
+    """Concrete model ID this entry resolves to (e.g. for aliases)."""
     """Whether the model supports auto mode."""
 
 
@@ -52,6 +69,12 @@ class ClaudeCodeCommandInfo(ClaudeCodeBaseModel):
 
     argument_hint: str
     """Usage hint for command arguments (may be empty string)."""
+
+    aliases: list[str] | None = None
+    """Alternate names that resolve to the command (e.g., /cost / /stats both resolve to /usage)."""
+
+    builtin: bool | None = None
+    """Whether this is a built-in command (as opposed to a skill/plugin/custom command)."""
 
 
 class ClaudeCodeAccountInfo(ClaudeCodeBaseModel):
@@ -93,6 +116,12 @@ class ClaudeCodeAgentInfo(ClaudeCodeBaseModel):
     """Model alias this agent uses. If omitted, inherits the parent's model."""
 
 
+class FeedbackMode(ClaudeCodeBaseModel):
+    """Feedback collection mode."""
+
+    kind: str
+
+
 class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     """Complete server initialization info from Claude Code.
 
@@ -121,6 +150,58 @@ class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
 
     fast_mode_state: FastModeState | None = None
     """Fast mode state: off, in cooldown after rate limit, or actively enabled."""
+
+    fast_mode_disabled_reason: FastModeDisabledReason | None = None
+    """Why fast mode is unavailable, if it is."""
+
+    claude_code_version: str | None = None
+    """Version of the Claude Code process answering initialize."""
+
+    capabilities: list[str] | None = None
+    """Feature capability tags supported by the CLI (undocumented, informational)."""
+
+    current_permission_mode: str | None = None
+    """Permission mode the session is currently in (undocumented)."""
+
+    session_state: str | None = None
+    """Current session state, e.g. "idle" (undocumented)."""
+
+    user_output_styles_dir: str | None = None
+    """Directory for user-defined output styles (undocumented)."""
+
+    feedback_mode: FeedbackMode | None = None
+    """How the CLI collects feedback (undocumented)."""
+
+    analytics_disabled: bool | None = None
+    other_hook_ask_outranks_host: bool | None = None
+    remote_control_available: bool | None = None
+    remote_control_auto_enable: bool | None = None
+    remote_control_auto_connect_default: bool | None = None
+    remote_control_auto_on_by_default: bool | None = None
+    ide_rc_auto_enable_gate: bool | None = None
+
+    hooks_applied: bool | None = None
+    """False when the process was already running and did not register SDK hooks."""
+
+    hook_on_failure_supported: bool | None = None
+    """Whether the CLI honors ``on_failure`` on hook matchers."""
+
+    plugins_applied: bool | None = None
+    """Whether every plugin sent via initialize is loaded."""
+
+    sdk_mcp_manifests_parked: (
+        dict[
+            str,
+            Literal[
+                "parked",
+                "already_connected",
+                "protocol_version_mismatch",
+                "malformed",
+                "not_honoured",
+            ],
+        ]
+        | None
+    ) = None
 
     pid: int | None = None
     """Process id."""

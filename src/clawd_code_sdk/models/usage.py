@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+from typing import Any, Literal, TypedDict
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from clawd_code_sdk.models.base import IS_DEV, ClaudeCodeBaseModel
+
+
+class AgentServerToolUse(TypedDict):
+    """Server-side tool usage statistics."""
+
+    web_search_requests: int
+    """Number of web search requests made."""
+    web_fetch_requests: int
+    """Number of web fetch requests made."""
 
 
 class ModelUsage(ClaudeCodeBaseModel):
@@ -12,12 +23,52 @@ class ModelUsage(ClaudeCodeBaseModel):
 
     input_tokens: int
     output_tokens: int
+    thinking_tokens: int | None = None
     cache_read_input_tokens: int
     cache_creation_input_tokens: int
+    cache_creation_ephemeral5m_input_tokens: int | None = Field(
+        default=None, alias="cacheCreationEphemeral5mInputTokens"
+    )
+    cache_creation_ephemeral1h_input_tokens: int | None = Field(
+        default=None, alias="cacheCreationEphemeral1hInputTokens"
+    )
     web_search_requests: int
     cost_usd: float = Field(default=..., alias="costUSD")
     context_window: int
     max_output_tokens: int
+    canonical_model: str | None = None
+    provider: str | None = None
+    cost_basis: Literal["list", "managed", "unknown"] | None = None
+
+
+class CacheCreationUsage(BaseModel):
+    """Cache-write tokens split by TTL."""
+
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore")
+
+    ephemeral_5m_input_tokens: int = 0
+    ephemeral_1h_input_tokens: int = 0
+
+
+class OutputTokensDetails(BaseModel):
+    """Breakdown of output tokens."""
+
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore")
+
+    thinking_tokens: int = 0
+
+
+class UsageIteration(BaseModel):
+    """Usage of a single API iteration within a turn."""
+
+    model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore")
+
+    type: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_creation: CacheCreationUsage | None = None
 
 
 class Usage(BaseModel):
@@ -35,6 +86,22 @@ class Usage(BaseModel):
     """The number of input tokens used to create the cache entry."""
     cache_read_input_tokens: int = 0
     """The number of input tokens read from the cache."""
+    cache_creation: CacheCreationUsage | None = None
+    """Cache-write tokens split by TTL."""
+    server_tool_use: AgentServerToolUse | None = None
+    """Server-side tool usage counters."""
+    output_tokens_details: OutputTokensDetails | None = None
+    """Breakdown of output tokens."""
+    service_tier: str | None = None
+    """Service tier the request was served on (e.g. "standard")."""
+    inference_geo: str | None = None
+    """Inference geography (e.g. "global")."""
+    speed: str | None = None
+    """Speed mode (e.g. "standard", "fast")."""
+    iterations: list[UsageIteration] | None = None
+    """Per-iteration usage for the turn."""
+    fallback_credit: Any = None
+    """Fallback credit info (may be null)."""
     model_config = ConfigDict(extra="forbid" if IS_DEV else "ignore", use_attribute_docstrings=True)
 
     @property

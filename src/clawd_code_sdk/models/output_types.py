@@ -15,6 +15,9 @@ from typing import Any, Literal, NotRequired, TypedDict
 
 from clawd_code_sdk.models import AskUserQuestionOption, TodoItem  # noqa: TC001
 from clawd_code_sdk.models.base import ToolName  # noqa: TC001
+from clawd_code_sdk.models.usage import (
+    AgentServerToolUse as AgentServerToolUse,  # noqa: TC001, PLC0414
+)
 
 
 # ---------------------------------------------------------------------------
@@ -45,15 +48,6 @@ class AgentOutputTextContent(TypedDict):
     """Content type, always 'text'."""
     text: str
     """The text content."""
-
-
-class AgentServerToolUse(TypedDict):
-    """Server-side tool usage statistics."""
-
-    web_search_requests: int
-    """Number of web search requests made."""
-    web_fetch_requests: int
-    """Number of web fetch requests made."""
 
 
 class AgentCacheCreation(TypedDict):

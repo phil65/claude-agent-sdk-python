@@ -48,6 +48,9 @@ class SDKSessionInfo(BaseModel):
     created_at: int | None = None
     """Creation time in milliseconds since epoch."""
 
+    archived: bool | None = None
+    """Whether the session has been archived."""
+
     @classmethod
     def from_session_file(cls, session_path: Path, project_cwd: str | None) -> Self:
         """Build an SDKSessionInfo from a session JSONL file.

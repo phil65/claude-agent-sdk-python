@@ -11,7 +11,6 @@
 export type ToolInputSchemas =
   | AgentInput
   | BashInput
-  | TaskOutputInput
   | ExitPlanModeInput
   | FileEditInput
   | FileReadInput
@@ -20,13 +19,38 @@ export type ToolInputSchemas =
   | GrepInput
   | TaskStopInput
   | ListMcpResourcesInput
+  | RefreshMcpToolsInput
   | McpInput
   | NotebookEditInput
+  | ReadMcpResourceDirInput
   | ReadMcpResourceInput
+  | ReportFindingsInput
   | TodoWriteInput
   | WebFetchInput
   | WebSearchInput
   | AskUserQuestionInput
+  | SendFeedbackInput
+  | ClaudeDesignInput
+  | ProjectsInput
+  | EnterPlanModeInput
+  | TaskCreateInput
+  | TaskGetInput
+  | TaskUpdateInput
+  | TaskListInput
+  | WorkflowInput
+  | CronCreateInput
+  | CronDeleteInput
+  | CronListInput
+  | ScheduleWakeupInput
+  | RemoteTriggerInput
+  | ShowOnboardingRolePickerInput
+  | OfferChromeSetupInput
+  | ReadNotificationsInput
+  | MonitorInput
+  | ProposeSkillsInput
+  | ProposeGoalInput
+  | ArtifactInput
+  | PushNotificationInput
   | EnterWorktreeInput
   | ExitWorktreeInput
   | ToolOutputSchemas;
@@ -41,15 +65,40 @@ export type ToolOutputSchemas =
   | GrepOutput
   | TaskStopOutput
   | ListMcpResourcesOutput
+  | RefreshMcpToolsOutput
   | McpOutput
   | NotebookEditOutput
+  | ReadMcpResourceDirOutput
   | ReadMcpResourceOutput
+  | ReportFindingsOutput
   | TodoWriteOutput
   | WebFetchOutput
   | WebSearchOutput
   | AskUserQuestionOutput
+  | SendFeedbackOutput
   | EnterWorktreeOutput
-  | ExitWorktreeOutput;
+  | ExitWorktreeOutput
+  | TaskCreateOutput
+  | TaskGetOutput
+  | TaskUpdateOutput
+  | TaskListOutput
+  | ArtifactOutput
+  | RemoteTriggerOutput
+  | ShowOnboardingRolePickerOutput
+  | OfferChromeSetupOutput
+  | ReadNotificationsOutput
+  | ScheduleWakeupOutput
+  | MonitorOutput
+  | ProposeSkillsOutput
+  | ProposeGoalOutput
+  | EnterPlanModeOutput
+  | WorkflowOutput
+  | CronCreateOutput
+  | CronDeleteOutput
+  | CronListOutput
+  | PushNotificationOutput
+  | ClaudeDesignOutput
+  | ProjectsOutput;
 export type AgentOutput =
   | {
       agentId: string;
@@ -57,7 +106,10 @@ export type AgentOutput =
       content: {
         type: "text";
         text: string;
+        citations?: unknown[] | null;
       }[];
+      resolvedModel?: string;
+      modelsUsed?: string[];
       totalToolUseCount: number;
       totalDurationMs: number;
       totalTokens: number;
@@ -70,12 +122,20 @@ export type AgentOutput =
           web_search_requests: number;
           web_fetch_requests: number;
         } | null;
-        service_tier: ("standard" | "priority" | "batch") | null;
+        service_tier: string | null;
         cache_creation: {
           ephemeral_1h_input_tokens: number;
           ephemeral_5m_input_tokens: number;
         } | null;
+        inference_geo?: string | null;
+        speed?: string | null;
+        iterations?: unknown;
+        output_tokens_details?: {
+          thinking_tokens?: number | null;
+        } | null;
+        fallback_credit?: unknown;
       };
+      toolsUsed?: string[];
       toolStats?: {
         readCount: number;
         searchCount: number;
@@ -84,12 +144,16 @@ export type AgentOutput =
         linesAdded: number;
         linesRemoved: number;
         otherToolCount: number;
+        frameCount?: number;
       };
       status: "completed";
       prompt: string;
+      worktreePath?: string;
+      worktreeBranch?: string;
     }
   | {
       status: "async_launched";
+      isAsync?: true;
       /**
        * The ID of the async agent
        */
@@ -98,6 +162,14 @@ export type AgentOutput =
        * The description of the task
        */
       description: string;
+      /**
+       * Model in use at the backgrounding transition (a pre-background swap is reflected here)
+       */
+      resolvedModel?: string;
+      /**
+       * Ordered distinct models used before backgrounding (length > 1 means a mid-run swap)
+       */
+      modelsUsed?: string[];
       /**
        * The prompt for the agent
        */
@@ -110,6 +182,29 @@ export type AgentOutput =
        * Whether the calling agent has Read/Bash tools to check progress
        */
       canReadOutputFile?: boolean;
+    }
+  | {
+      status: "remote_launched";
+      /**
+       * The ID of the remote agent task
+       */
+      taskId: string;
+      /**
+       * The URL of the cloud session
+       */
+      sessionUrl: string;
+      /**
+       * The description of the task
+       */
+      description: string;
+      /**
+       * The prompt for the agent
+       */
+      prompt: string;
+      /**
+       * Path to the output file for checking agent progress
+       */
+      outputFile: string;
     };
 export type FileReadOutput =
   | {
@@ -135,6 +230,17 @@ export type FileReadOutput =
          * Total number of lines in the file
          */
         totalLines: number;
+        /**
+         * True when a whole-file read was auto-paginated because it exceeded the token cap (the content is a partial first page). A programmatic signal for internal consumers; survives output reconstruction (unlike the render-time banner).
+         */
+        truncatedByTokenCap?: boolean;
+      };
+      /**
+       * Set when this Read completed a saved Artifact source file: the Artifact and the version of it that now counts as viewed.
+       */
+      artifactRead?: {
+        slug: string;
+        ver: string;
       };
     }
   | {
@@ -225,15 +331,27 @@ export type FileReadOutput =
          */
         outputDir: string;
       };
-    }
-  | {
-      type: "file_unchanged";
-      file: {
+      /**
+       * Document page number of the first extracted page (1 when no range was requested); labels the page images in the model-facing tool_result
+       */
+      firstPage?: number;
+      /**
+       * Extracted page images, in page order. Present only transiently in-process: the page image bytes are delivered solely as image blocks in the model-facing tool_result content and are not retained on the tool_use_result, so this key is absent on the emitted/persisted result
+       */
+      pages?: {
         /**
-         * The path to the file
+         * Base64-encoded page image; empty when the page could not be processed
          */
-        filePath: string;
-      };
+        base64: string;
+        /**
+         * The MIME type of the image
+         */
+        mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+        /**
+         * Why the page could not be processed as an image; set only when base64 is empty
+         */
+        error?: string;
+      }[];
     };
 export type ListMcpResourcesOutput = {
   /**
@@ -257,10 +375,392 @@ export type ListMcpResourcesOutput = {
    */
   server: string;
 }[];
+export type RefreshMcpToolsOutput = {
+  /**
+   * Server name
+   */
+  server: string;
+  /**
+   * refreshed: tool list re-queried and applied. error: the re-query failed and the previous tool set was kept. not_connected: the server has no live connection to query (this tool never dials).
+   */
+  status: "refreshed" | "error" | "not_connected";
+  /**
+   * Number of tools now available from this server
+   */
+  toolCount?: number;
+  /**
+   * Tool names this refresh added
+   */
+  added?: string[];
+  /**
+   * Tool names this refresh removed
+   */
+  removed?: string[];
+  /**
+   * Why the refresh failed or the server was unavailable
+   */
+  error?: string;
+}[];
 /**
  * MCP tool execution result
  */
-export type McpOutput = string;
+export type McpOutput =
+  | string
+  | {
+      type: string;
+      [k: string]: unknown;
+    }[]
+  | {
+      [k: string]: unknown;
+    };
+export type ArtifactOutput =
+  | {
+      url: string;
+      path: string;
+      artifact_id?: string;
+      title?: string;
+      version?: string;
+      capabilities?: unknown;
+      stored?: {
+        contract: string;
+        preferredContract?: string;
+        capabilities?: {
+          [k: string]: unknown;
+        };
+        carried?: boolean;
+        read?: string;
+      };
+      warnings?: string[];
+      publishesRemaining?: number;
+      publishesResetAt?: number;
+      contract?: string;
+      updated?: boolean;
+      owned?: boolean;
+      icon?: string;
+      faviconSent?: true;
+      iconDropped?: true;
+      audience?: string;
+      seq?: number;
+      unchanged?: true;
+      liveSubscription?: string;
+      pinned?: boolean;
+    }
+  | {
+      artifacts: {
+        title: string;
+        url: string;
+        favicon?: string;
+        updatedAt?: string;
+        rel?: "mine" | "shared";
+        external?: true;
+        role?: "editor" | "commenter" | "reader" | "viewer";
+        outsidersMayHaveWritten?: true;
+        pinned?: boolean;
+      }[];
+      truncated?: boolean;
+      total?: number;
+      total_at_least?: true;
+      next_page_token?: string;
+      pins_enabled?: boolean;
+      scope?: "shared" | "all";
+      external_listed?: true;
+    }
+  | {
+      read: {
+        url: string;
+        bytes: number;
+        code: number;
+        codeText: string;
+        result: string;
+        durationMs: number;
+        title?: string;
+      };
+      owned?: boolean;
+      artifactRead?: {
+        slug: string;
+        ver?: string;
+        seeded?: false;
+      };
+    }
+  | {
+      watch: {
+        url: string;
+        watching: boolean;
+        outcome: string;
+        reason?: string;
+        durable_skip_reason?: string;
+        task_id?: string;
+        since?: number;
+        token_expires_at?: number;
+        rail?: string;
+        trigger_id?: string;
+        durable_since?: string;
+        status?: number;
+        detail?: string;
+        note?: string;
+        events?: string[];
+      };
+    }
+  | {
+      unwatch: {
+        url: string;
+        was_watching: boolean;
+      };
+    }
+  | {
+      watches: (
+        | {
+            url: string;
+            task_id: string;
+            since: number;
+            explicit: boolean;
+            connected: boolean;
+            connecting?: boolean;
+            token_expires_at: number;
+            armed_via?: string;
+          }
+        | {
+            url: string;
+            rail: "durable_wake";
+            trigger_id: string;
+            since: string;
+            events?: string[];
+            restored?: boolean;
+          }
+        | {
+            url: string;
+            rail: "live_stopped";
+            since?: number;
+            explicit?: boolean;
+            armed_via?: string;
+            stop_kind: string;
+          }
+      )[];
+      filter_url?: string;
+      arms?: {
+        url: string;
+        rail?: string;
+        state: string;
+        reconnect?: boolean;
+        failures?: number;
+        max_failures?: number;
+        next_in_s?: number;
+        last_failure?: string;
+        reason?: string;
+        detail?: string;
+        server_message?: string;
+        at?: number;
+      }[];
+    }
+  | {
+      written?: {
+        url: string;
+      };
+      owned?: boolean;
+      asset_upload: {
+        id: string;
+        url: string;
+        size_bytes: number;
+        content_type: string;
+        sha256?: string;
+        file_name: string;
+      };
+    }
+  | {
+      written?: {
+        url: string;
+      };
+      owned?: boolean;
+      asset_uploads: {
+        url: string;
+        /**
+         * @minItems 1
+         * @maxItems 25
+         */
+        results: [
+          (
+            | {
+                file_path: string;
+                status: "uploaded";
+                id: string;
+                url: string;
+                size_bytes: number;
+                content_type: string;
+                sha256?: string;
+                file_name: string;
+              }
+            | {
+                file_path: string;
+                status: "failed" | "not_attempted";
+                reason: string;
+                message: string;
+                may_be_stored?: true;
+              }
+          ),
+          ...(
+            | {
+                file_path: string;
+                status: "uploaded";
+                id: string;
+                url: string;
+                size_bytes: number;
+                content_type: string;
+                sha256?: string;
+                file_name: string;
+              }
+            | {
+                file_path: string;
+                status: "failed" | "not_attempted";
+                reason: string;
+                message: string;
+                may_be_stored?: true;
+              }
+          )[]
+        ];
+      };
+    }
+  | {
+      asset_list: {
+        url: string;
+        /**
+         * @maxItems 1000
+         */
+        assets: {
+          id: string;
+          url: string;
+          content_type: string;
+          size_bytes: number;
+          sha256?: string;
+          created_at: string;
+        }[];
+        usage: {
+          files: number;
+          bytes: number;
+          max_files: number;
+          max_bytes: number;
+        };
+        next?: string;
+        cowritten?: true;
+        outside_writer?: true;
+      };
+    }
+  | {
+      asset_read: {
+        id: string;
+        path: string;
+        size_bytes: number;
+        content_type: string;
+        sha256: string;
+        cowritten?: true;
+        outside_writer?: true;
+        public_read?: true;
+        foreign?: true;
+      };
+    }
+  | {
+      written?: {
+        url: string;
+      };
+      owned?: boolean;
+      asset_delete: {
+        id: string;
+        deleted: boolean;
+      };
+    }
+  | {
+      pin: {
+        action: "pin" | "unpin";
+        url: string;
+        pinned: boolean;
+        title?: string;
+      };
+    };
+export type ProjectsOutput =
+  | {
+      method: "project_info";
+      notice?: string;
+      local_file?: string;
+      name: string;
+      description: string;
+      instructions: string;
+      docs: {
+        path: string;
+        created_at: string | null;
+      }[];
+      files?: {
+        path: string;
+        file_kind: string;
+        created_at: string | null;
+      }[];
+      sync_sources?: {
+        type: string | null;
+        config: {
+          [k: string]: unknown;
+        };
+      }[];
+      knowledge: {
+        knowledge_size: number;
+        max_knowledge_size: number;
+      };
+    }
+  | {
+      method: "project_read";
+      notice?: string;
+      path: string;
+      file_kind?: string;
+      content?: string;
+      local_file?: string;
+      created_at: string | null;
+    }
+  | {
+      method: "project_search";
+      notice?: string;
+      rag: boolean;
+      hits?: {
+        name?: string;
+        doc_uuid?: string;
+        text?: string;
+        image_attached?: boolean;
+        page?: number;
+      }[];
+      docs?: string[];
+    }
+  | {
+      method: "project_write";
+      notice?: string;
+      path: string;
+      doc_uuid: string;
+      replaced: boolean;
+      present_to_user?: boolean;
+      local_path?: string;
+    }
+  | {
+      method: "project_delete";
+      notice?: string;
+      path: string;
+      deleted: boolean;
+    }
+  | {
+      method: "project_memory_list";
+      notice?: string;
+      files: {
+        path: string;
+        size_bytes: number;
+        updated_at: string | null;
+        truncated: boolean;
+      }[];
+      truncated: boolean;
+    }
+  | {
+      method: "project_memory_read";
+      notice?: string;
+      path: string;
+      content?: string;
+      local_file?: string;
+      size_bytes: number;
+      updated_at: string | null;
+      truncated: boolean;
+    };
 
 export interface AgentInput {
   /**
@@ -276,11 +776,15 @@ export interface AgentInput {
    */
   subagent_type?: string;
   /**
-   * Optional model override for this agent. Takes precedence over the agent definition's model frontmatter. If omitted, uses the agent definition's model, or inherits from the parent.
+   * Optional model override for this agent. Takes precedence over the agent definition's model frontmatter and the configured default subagent model. If omitted, uses the agent definition's model, else the default (inherits from the parent unless a default subagent model is configured). Ignored for subagent_type: "fork" — forks always inherit the parent model.
    */
-  model?: "sonnet" | "opus" | "haiku";
+  model?: "sonnet" | "opus" | "haiku" | "fable";
   /**
-   * Set to true to run this agent in the background. You will be notified when it completes.
+   * Reasoning effort for this agent. Set this ONLY when the user, or instructions such as CLAUDE.md or a skill, explicitly ask that this agent or delegated work run at a specific effort level, never on your own judgment; otherwise omit it and the agent runs at its usual effort. Ignored for subagent_type: "fork": a fork runs at your own effort.
+   */
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  /**
+   * Agents run in the background by default; you will be notified when one completes. Set to false only when your very next action depends on this agent's result and nothing else could usefully happen while it runs — otherwise leave it in the background so the user can hand you other work.
    */
   run_in_background?: boolean;
   /**
@@ -288,17 +792,17 @@ export interface AgentInput {
    */
   name?: string;
   /**
-   * Team name for spawning. Uses current team context if omitted.
+   * Deprecated; ignored. The session has a single implicit team.
    */
   team_name?: string;
   /**
-   * Permission mode for spawned teammate (e.g., "plan" to require plan approval).
+   * Deprecated; ignored. Subagents inherit the parent session's permission mode; agent-definition frontmatter may override it.
    */
   mode?: "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
   /**
-   * Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo.
+   * Isolation mode. "worktree" creates a temporary git worktree so the agent works on an isolated copy of the repo. "remote" launches the agent in a remote cloud environment (always runs in background; availability is gated).
    */
-  isolation?: "worktree";
+  isolation?: "worktree" | "remote";
 }
 export interface BashInput {
   /**
@@ -306,11 +810,13 @@ export interface BashInput {
    */
   command: string;
   /**
-   * Optional timeout in milliseconds (max 600000)
+   * Optional timeout in milliseconds (max 600000 for a foreground command)
    */
   timeout?: number;
   /**
    * Clear, concise description of what this command does in active voice. Never use words like "complex" or "risk" in the description - just describe what it does.
+   *
+   * Say what the command does in plain words: do not echo the command's text, its flags, or file paths - the user reads this description, often without seeing the command.
    *
    * For simple commands (git, npm, standard CLI tools), keep it brief (5-10 words):
    * - ls → "List files in current directory"
@@ -324,7 +830,7 @@ export interface BashInput {
    */
   description?: string;
   /**
-   * Set to true to run this command in the background. Use Read to read the output later.
+   * Set to true to run this command in the background. With it, `timeout` limits how long the command may run in the background before it is stopped (default 1800000 ms, max 7200000 ms).
    */
   run_in_background?: boolean;
   /**
@@ -332,23 +838,9 @@ export interface BashInput {
    */
   dangerouslyDisableSandbox?: boolean;
 }
-export interface TaskOutputInput {
-  /**
-   * The task ID to get output from
-   */
-  task_id: string;
-  /**
-   * Whether to wait for completion
-   */
-  block: boolean;
-  /**
-   * Max wait time in ms
-   */
-  timeout: number;
-}
 export interface ExitPlanModeInput {
   /**
-   * Prompt-based permissions needed to implement the plan. These describe categories of actions rather than specific commands.
+   * Deprecated: no longer used.
    */
   allowedPrompts?: {
     /**
@@ -397,6 +889,10 @@ export interface FileReadInput {
    * Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request.
    */
   pages?: string;
+  /**
+   * Set to true to read a text file, or a line range of one, that is over the usual size limits, up to what still fits in your context. Only use this when you genuinely need all of it or the user asked for the whole file; otherwise read it in parts with offset and limit, or search it.
+   */
+  allow_large?: boolean;
 }
 export interface FileWriteInput {
   /**
@@ -460,6 +956,10 @@ export interface GrepInput {
    */
   "-i"?: boolean;
   /**
+   * Print only the matched (non-empty) parts of each matching line, one match per output line (rg -o / --only-matching). Requires output_mode: "content", ignored otherwise. Defaults to false.
+   */
+  "-o"?: boolean;
+  /**
    * File type to search (rg --type). Common types: js, py, rust, go, java, etc. More efficient than include for standard file types.
    */
   type?: string;
@@ -478,7 +978,7 @@ export interface GrepInput {
 }
 export interface TaskStopInput {
   /**
-   * The ID of the background task to stop
+   * The ID of the background task to stop. Agent-team teammates and named background agents are also accepted by agent ID or name.
    */
   task_id?: string;
   /**
@@ -489,6 +989,12 @@ export interface TaskStopInput {
 export interface ListMcpResourcesInput {
   /**
    * Optional server name to filter resources by
+   */
+  server?: string;
+}
+export interface RefreshMcpToolsInput {
+  /**
+   * Optional server name: refresh only this server. Omit to refresh all connected servers.
    */
   server?: string;
 }
@@ -517,6 +1023,16 @@ export interface NotebookEditInput {
    */
   edit_mode?: "replace" | "insert" | "delete";
 }
+export interface ReadMcpResourceDirInput {
+  /**
+   * The MCP server name
+   */
+  server: string;
+  /**
+   * The directory resource URI to list
+   */
+  uri: string;
+}
 export interface ReadMcpResourceInput {
   /**
    * The MCP server name
@@ -526,6 +1042,51 @@ export interface ReadMcpResourceInput {
    * The resource URI to read
    */
   uri: string;
+}
+export interface ReportFindingsInput {
+  /**
+   * Effort level the review ran at
+   */
+  level?: "low" | "medium" | "high" | "xhigh" | "max";
+  /**
+   * Verified findings, most-severe first; empty if none survived
+   *
+   * @maxItems 32
+   */
+  findings: {
+    /**
+     * Repo-relative path of the file the finding is in
+     */
+    file: string;
+    /**
+     * 1-indexed line the finding anchors to
+     */
+    line?: number;
+    /**
+     * One-sentence statement of the defect
+     */
+    summary: string;
+    /**
+     * Compressed label for compact UI (≤60 chars): the claim alone, no rationale or consequence clause
+     */
+    short_summary?: string;
+    /**
+     * Concrete inputs/state → wrong output/crash
+     */
+    failure_scenario: string;
+    /**
+     * Short kebab-case slug of the finding type, e.g. "correctness", "simplification", "efficiency", "test-coverage"
+     */
+    category?: string;
+    /**
+     * Set when a verify pass ran; absent on inline-only reviews
+     */
+    verdict?: "CONFIRMED" | "PLAUSIBLE";
+    /**
+     * Set ONLY when re-reporting after applying fixes: what happened to this finding
+     */
+    outcome?: "fixed" | "skipped" | "no_change_needed";
+  }[];
 }
 export interface TodoWriteInput {
   /**
@@ -546,6 +1107,10 @@ export interface WebFetchInput {
    * The prompt to run on the fetched content
    */
   prompt: string;
+  /**
+   * Character position in the page text to start reading from. Use it to read on through a page too long for one call, with the value the previous result gave.
+   */
+  offset?: number;
 }
 export interface WebSearchInput {
   /**
@@ -2138,13 +2703,734 @@ export interface AskUserQuestionInput {
     source?: string;
   };
 }
+export interface SendFeedbackInput {
+  /**
+   * What kind of feedback this is.
+   */
+  type: "bug" | "idea" | "missing_capability";
+  /**
+   * Short, specific one-line summary of the issue.
+   */
+  title: string;
+  /**
+   * Labeled bullets, in order: **What happened:** (observed vs. expected, exact error text if short); **What the user said:** (quoted, or "User didn't comment; observed by the model."); **Repro:** (minimal steps); **Evidence:** (request IDs, timestamps, paths, versions; omit if none); optionally a final **Cause:** only if verified in-session. One to three lines per bullet. No narrative paragraphs, no speculation, no secrets.
+   */
+  details: string;
+  /**
+   * Optional short tag naming the part of Claude Code this is about (e.g. "hooks config", "/help", "file editing"). Leave blank if unclear.
+   */
+  area?: string;
+  /**
+   * When the report is about MODEL BEHAVIOR (not a product bug), the closest failure mode, or `other` when it is a model-behavior issue that fits no listed value. Omit only when the report is a product/tool bug with no model-behavior component.
+   */
+  failure_mode?:
+    | "instruction_following"
+    | "destructive_actions"
+    | "code_quality"
+    | "repetition_and_looping"
+    | "model_regression"
+    | "overconfidence_and_hallucination"
+    | "context_and_memory"
+    | "overeager"
+    | "over_correction"
+    | "stopping_short"
+    | "dispute_or_decline"
+    | "subagent_overspawn"
+    | "tone_or_preachiness"
+    | "excessive_questions"
+    | "unwanted_scope"
+    | "other";
+  /**
+   * What kind of task the session was doing when the issue occurred, or `other` when it is a clear task that fits no listed value. Omit only if genuinely unclear.
+   */
+  task_category?: "code_edit" | "debug" | "explain" | "plan" | "shell" | "search" | "review" | "other";
+}
+export interface ClaudeDesignInput {
+  /**
+   * Claude Design action to perform. Call with "list" first to discover the available operations and their argument schemas.
+   */
+  operation: string;
+  /**
+   * Action input object (server-validated). Pass {} for operations that take no input.
+   */
+  arguments: {
+    [k: string]: unknown;
+  };
+}
+export interface ProjectsInput {
+  method:
+    | "project_info"
+    | "project_read"
+    | "project_search"
+    | "project_write"
+    | "project_delete"
+    | "project_memory_list"
+    | "project_memory_read";
+  /**
+   * project_read/project_write/project_delete: doc path. project_write: an existing path is replaced in place; a new bare filename (no "/") is namespaced to "claude/<name>". project_memory_read: memory file path as listed by project_memory_list.
+   */
+  path?: string;
+  /**
+   * project_write: inline doc text. Mutually exclusive with local_path. Use local_path for anything you have on disk.
+   */
+  content?: string;
+  /**
+   * project_write: a file inside the working directory to upload. The tool reads, encodes, and uploads directly — contents never enter your context. Mutually exclusive with content.
+   */
+  local_path?: string;
+  /**
+   * project_write: true marks this doc as the file the user needs to see — the deliverable they asked for or must act on. Defaults to false; leave it unset for routine saves, notes, and bulk writes.
+   */
+  present_to_user?: boolean;
+  /**
+   * project_search: knowledge-base query
+   */
+  query?: string;
+  /**
+   * project_search: number of hits (default 5)
+   */
+  n?: number;
+}
+export interface EnterPlanModeInput {}
+export interface TaskCreateInput {
+  /**
+   * A brief title for the task
+   */
+  subject: string;
+  /**
+   * What needs to be done
+   */
+  description: string;
+  /**
+   * Present continuous form shown in spinner when in_progress (e.g., "Running tests")
+   */
+  activeForm?: string;
+  /**
+   * Arbitrary metadata to attach to the task
+   */
+  metadata?: {
+    [k: string]: unknown;
+  };
+}
+export interface TaskGetInput {
+  /**
+   * The ID of the task to retrieve
+   */
+  taskId: string;
+}
+export interface TaskUpdateInput {
+  /**
+   * The ID of the task to update
+   */
+  taskId: string;
+  /**
+   * New subject for the task
+   */
+  subject?: string;
+  /**
+   * New description for the task
+   */
+  description?: string;
+  /**
+   * Present continuous form shown in spinner when in_progress (e.g., "Running tests")
+   */
+  activeForm?: string;
+  /**
+   * New status for the task
+   */
+  status?: ("pending" | "in_progress" | "completed") | "deleted";
+  /**
+   * Task IDs that this task blocks
+   */
+  addBlocks?: string[];
+  /**
+   * Task IDs that block this task
+   */
+  addBlockedBy?: string[];
+  /**
+   * New owner for the task
+   */
+  owner?: string;
+  /**
+   * Metadata keys to merge into the task. Set a key to null to delete it.
+   */
+  metadata?: {
+    [k: string]: unknown;
+  };
+}
+export interface TaskListInput {}
+export interface WorkflowInput {
+  /**
+   * Self-contained workflow script. Must begin with `export const meta = { name, description, phases }` (pure literal, no computed values) followed by the script body using agent()/parallel()/pipeline()/phase().
+   */
+  script?: string;
+  /**
+   * Name of a predefined workflow (built-in or from .claude/workflows/). Resolves to a self-contained script.
+   */
+  name?: string;
+  /**
+   * Ignored — set the workflow description in the script's `meta` block.
+   */
+  description?: string;
+  /**
+   * Ignored — set the workflow title in the script's `meta` block.
+   */
+  title?: string;
+  /**
+   * Optional input value exposed to the script as the global `args`, verbatim. Pass arrays/objects as actual JSON values, NOT as a JSON-encoded string — a stringified list breaks `args.filter`/`args.map` in the script. Use for parameterized named workflows (e.g. a research question).
+   */
+  args?: {
+    [k: string]: unknown;
+  };
+  /**
+   * Path to a workflow script file on disk. Every Workflow invocation persists its script under the session directory and returns the path in the tool result. To iterate, edit that file with Write/Edit and re-invoke Workflow with the same `scriptPath` instead of re-sending the full script. Takes precedence over `script` and `name`.
+   */
+  scriptPath?: string;
+  /**
+   * Run ID of a prior Workflow invocation to resume from. Completed agent() calls with unchanged (prompt, opts) return their cached results instantly; only edited or new calls re-run. Same-session only. Stop the prior run first (TaskStop) before resuming.
+   */
+  resumeFromRunId?: string;
+}
+export interface CronCreateInput {
+  /**
+   * Standard 5-field cron expression in local time: "M H DoM Mon DoW" (e.g. "* /5 * * * *" = every 5 minutes, "30 14 28 2 *" = Feb 28 at 2:30pm local once).
+   */
+  cron: string;
+  /**
+   * The prompt to enqueue at each fire time.
+   */
+  prompt: string;
+  /**
+   * true (default) = fire on every cron match until deleted or auto-expired after 7 days. false = fire once at the next match, then auto-delete. Use false for "remind me at X" one-shot requests with pinned minute/hour/dom/month.
+   */
+  recurring?: boolean;
+  /**
+   * true = persist to .claude/scheduled_tasks.json and survive restarts. false (default) = in-memory only, dies when this Claude session ends. Use true only when the user asks the task to survive across sessions.
+   */
+  durable?: boolean;
+}
+export interface CronDeleteInput {
+  /**
+   * Job ID returned by CronCreate.
+   */
+  id: string;
+}
+export interface CronListInput {}
+export interface ScheduleWakeupInput {
+  /**
+   * Seconds from now to wake up. Clamped to [60, 3600] by the runtime. Required unless `stop` is true.
+   */
+  delaySeconds?: number;
+  /**
+   * One short sentence explaining the chosen delay. Goes to telemetry and is shown to the user. Be specific. Required unless `stop` is true.
+   */
+  reason?: string;
+  /**
+   * The /loop input to fire on wake-up. Pass the same /loop input verbatim each turn so the next firing re-enters the skill and continues the loop. For autonomous /loop (no user prompt), pass the literal sentinel `<<autonomous-loop-dynamic>>` instead (the dynamic-pacing variant, not the CronCreate-mode `<<autonomous-loop>>`). Required unless `stop` is true.
+   */
+  prompt?: string;
+  /**
+   * Set to true to end the dynamic loop immediately instead of scheduling another wakeup. When true, all other fields are ignored and no further wakeups fire.
+   */
+  stop?: boolean;
+  /**
+   * true = nothing changed (you checked and there is nothing to report). false = something happened worth keeping (edited a file, posted a message, advanced state, surfaced a finding). Consecutive noop:true ticks are collapsed in the user's terminal view and tracked as a streak. Required unless `stop` is true.
+   */
+  noop?: boolean;
+}
+export interface RemoteTriggerInput {
+  action: "list" | "get" | "create" | "update" | "run" | "create_webhook_trigger" | "list_runs" | "get_run_log";
+  /**
+   * Required for get, update, run, and list_runs
+   */
+  trigger_id?: string;
+  /**
+   * Required for get_run_log: a run session id (cse_… or session_…, from list_runs)
+   */
+  session_id?: string;
+  /**
+   * The next_cursor from the previous page of the same listing (list_runs with the same trigger_id, or get_run_log with the same session_id), passed back unchanged. Not an offset, a count or an event number.
+   */
+  cursor?: string;
+  /**
+   * Required for create and update; optional for run
+   */
+  body?: {
+    [k: string]: unknown;
+  };
+}
+export interface ShowOnboardingRolePickerInput {}
+export interface OfferChromeSetupInput {
+  /**
+   * A short phrase naming what the task needs the user's own browser for.
+   */
+  reason?: string;
+}
+export interface ReadNotificationsInput {}
+export interface MonitorInput {
+  /**
+   * Short human-readable description of what you are monitoring (shown in notifications).
+   */
+  description: string;
+  /**
+   * Kill the monitor after this deadline. Default 300000ms. Deadlines above 1800000ms are capped to 1800000ms. You are notified at expiry and can re-arm.
+   */
+  timeout_ms: number;
+  /**
+   * Shell command or script. Each stdout line is an event; exit ends the watch.
+   */
+  command?: string;
+  /**
+   * WebSocket to open. Each text frame is an event; binary frames are reported as a placeholder line. Socket close ends the watch. Cannot be combined with command.
+   */
+  ws?: {
+    url: string;
+    protocols?: string[];
+  };
+}
+export interface ProposeSkillsInput {
+  /**
+   * @minItems 1
+   * @maxItems 3
+   */
+  proposals:
+    | [
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        }
+      ]
+    | [
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        },
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        }
+      ]
+    | [
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        },
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        },
+        {
+          /**
+           * kebab-case skill slug; must not contain "claude" or "anthropic"; at most 64 characters for a new skill
+           */
+          name: string;
+          kind: "new" | "improvement";
+          /**
+           * Name of the existing skill to update. Required when kind is 'improvement'; omit for 'new'.
+           */
+          target?: string;
+          /**
+           * One short sentence saying when to use this skill: aim for under 200 characters, never more than 1024, and no angle brackets. Shown on the review card and saved as the skill's description, which is what decides when the skill is used. For an improvement, reuse the existing skill's description unless the change alters when the skill applies.
+           */
+          description: string;
+          /**
+           * memory file paths where this procedure was observed
+           */
+          evidence?: string[];
+          /**
+           * For an improvement, in place of skillMd: your changes to the skill's SKILL.md, applied in order. They apply to that file as it is now, not to an earlier proposal of yours. The card shows the whole updated file. The name and description come from the fields above, not from the frontmatter.
+           *
+           * @minItems 1
+           * @maxItems 100
+           */
+          edits?: [
+            {
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            },
+            ...{
+              /**
+               * Text to replace. It must occur exactly once in that SKILL.md
+               */
+              old_string: string;
+              /**
+               * Text to put in its place
+               */
+              new_string: string;
+            }[]
+          ];
+          /**
+           * For a new skill or a full rewrite. The complete SKILL.md exactly as it should be saved: frontmatter plus the full body. When the user saves, the body below the frontmatter becomes the skill's entire instructions and the name and description come from the fields above; other frontmatter keys are not kept. For an improvement this replaces the existing skill's SKILL.md entirely, so read that skill's current SKILL.md first and include everything worth keeping, not only the changes.
+           */
+          skillMd?: string;
+        }
+      ];
+}
+export interface ProposeGoalInput {
+  /**
+   * The completion condition to propose, written so a separate evaluator can verify it from the conversation (e.g. "all tests in test/auth pass (bun test exits 0)"). At most 500 characters — the user must be able to read the whole condition in the approval dialog.
+   */
+  condition: string;
+  /**
+   * Whether to ask the user for approval before the goal is set. Defaults to true — an approval dialog is shown. Set false ONLY when the user's own words in this conversation stated this outcome as what they want; the goal is then set directly, with a visible notice in the transcript, and the user can clear it with /goal clear.
+   */
+  ask_user?: boolean;
+}
+export interface ArtifactInput {
+  /**
+   * Omit (or 'publish') to publish file_path. 'list' enumerates artifacts — the user's own by default, see `scope`; only `limit`, `scope` and `page_token` may accompany it. 'read' returns the content of the published artifact at `url` (raw HTML for the user's own; an isolated summary, steered by the optional `prompt`, for one someone else owns, though a page published in this session's own Slack channel can come back in full as untrusted content) — see **Calls**. 'watch', 'unwatch', and 'status' manage live-update subscriptions through which a session keeps track of new versions of an artifact published elsewhere, and those aren't available in this session: 'watch' only reports that — this session does not keep track of new versions — and 'status' lists this session's artifact watches (pass `url` to check one). 'upload_asset' adds one local media, PDF, font, or text file to an existing artifact — pass `url` and `file_path` (or `file_paths` for several in one call). 'list_assets' lists the files in an artifact's asset store (pass `url`; `after` continues a listing), 'read_asset' saves one of them to a local file named by its id (pass `url` and `asset_id`, optionally `out_dir`), and 'delete_asset' permanently removes one (pass `url` and `asset_id`). See **Artifact assets** above. 'pin' adds the artifact at `url` to the user's pinned list in their claude.ai sidebar and 'unpin' removes it (nothing else may accompany either) — private to the user, reversible, and no change to who can see the artifact.
+   */
+  action?:
+    | "publish"
+    | "list"
+    | "read"
+    | "list_types"
+    | "watch"
+    | "unwatch"
+    | "status"
+    | "upload_asset"
+    | "list_assets"
+    | "read_asset"
+    | "delete_asset"
+    | "pin"
+    | "unpin";
+  /**
+   * Path to the .html file to render. Required to publish (the default action). Use a short, distinctive basename — it is the last-resort title when the HTML has no <title> and no `title` parameter is given. For 'upload_asset', the local image, video, PDF, font, stylesheet (CSS), script (JS), or text (CSV, Markdown, JSON, plain text) file to upload.
+   */
+  file_path?: string;
+  /**
+   * Deprecated; omit it. Use `icon`.
+   */
+  favicon?: string;
+  /**
+   * One short generic word for the artifact's browser-tab icon, such as chart, calendar, recipe, code or map — a plain signifier, not a product or brand name. Include it on every page's first publish; omit when republishing to keep the current icon, and pass a new one only when the user asks.
+   */
+  icon?: string;
+  /**
+   * list only: maximum artifacts to return (default 25).
+   */
+  limit?: number;
+  /**
+   * list only: the `next_page_token` a listing of the same scope gave, to list the artifacts after it.
+   */
+  page_token?: string;
+  /**
+   * list only: 'mine' (default) lists artifacts the user owns; 'shared' lists artifacts other people shared with the user; 'all' lists both. Rows are labeled (mine)/(shared) whenever scope is not 'mine'.
+   */
+  scope?: "mine" | "shared" | "all";
+  /**
+   * Title for the artifact — the name shown in the browser tab and gallery. A short, distinctive noun-phrase name — not a generic label, a summary, or a name with an appended explainer. Prefer a <title> tag at the top of the HTML itself; this parameter fills in only when the file lacks one in the first 8KB of the file, and never overrides the tag. HTML publishes only — Markdown pages keep their filename identity. Content always comes from file_path — there is no inline content parameter.
+   */
+  title?: string;
+  /**
+   * One-sentence subtitle shown on the gallery card. Say what the page is or does.
+   */
+  description?: string;
+  /**
+   * A short name for this publish, max 60 chars (e.g. "Draft to legal"). Optional — a few words, not a description.
+   */
+  label?: string;
+  /**
+   * An existing artifact's claude.ai link (claude.ai/artifact/{id} or claude.ai/code/artifact/{uuid}; a chat, project or session link is not one) to update in place. Pass whenever the user wants to update an artifact this conversation did not publish — "update my artifact", "keep the same link", a pasted artifact URL — and find the URL with action: "list" or ask the user for the link if you don't have it; without this, the publish creates a separate artifact instead of updating the existing one. Omit for new artifacts and same-conversation redeploys. Must be an artifact the user owns or was given edit access to (a read of it says "writer"). Before publishing to an artifact this conversation has neither read nor published, read it (action: "read") and build on what comes back; a publish sent without that read is refused. A refusal that hands you the live version counts as that read: merge your edits into that version and publish that; never resend the refused content unchanged. For 'read' and the other url-addressed actions: the artifact to act on.
+   */
+  url?: string;
+  /**
+   * read only: what to extract from an artifact shared with the user — its content reaches you as an isolated summary answering this. Ignored for artifacts the user owns and for a page published in this session's own Slack channel (raw content is returned); optional.
+   */
+  prompt?: string;
+  /**
+   * Last-resort overwrite that DISCARDS the newer published version's page — another session's publish, or someone's save from a page that can publish new versions of itself. On a conflict the fix is to merge your changes onto the newer content (handed to you in the rejection, or re-read) and publish again — not force. Pass force:true only when the user has explicitly said to discard that specific version; never to get past a conflict on your own judgment. The tracked baseVersion is still sent; with force:true the server treats it as informational and overwrites, unless it refuses force over a version saved from inside the page. Omit (or false) so a concurrent write conflicts instead of being silently clobbered.
+   */
+  force?: boolean;
+  /**
+   * publish only: true also pins the published artifact to the user's claude.ai sidebar once it is published — pass it only when the user asked for that; a pin that fails never fails the publish (the result says so).
+   */
+  pin?: boolean;
+  /**
+   * read_asset: directory to save into — default: this artifact’s folder in your scratchpad directory, where saving needs no approval and which you can Read from. read_asset names the file by the asset id plus the extension for its type; saving to any directory other than the default is an ordinary file save the user may be asked to approve.
+   */
+  out_dir?: string;
+  /**
+   * upload_asset: several local image, video, PDF, font, stylesheet or script files in place of `file_path`, up to 25 in one call, all into the artifact that `url` names; one approval covers the call, and the result lists each file's id and url, or why it was not uploaded. A CSV, Markdown, JSON or plain-text file, a symbolic or hard link, and a file outside the working directory each go in a call of their own with `file_path`.
+   *
+   * @minItems 1
+   * @maxItems 25
+   */
+  file_paths?: [string, ...string[]];
+  /**
+   * read_asset and delete_asset: the asset's id (32 hex characters), from a list_assets or upload_asset result.
+   */
+  asset_id?: string;
+  /**
+   * list_assets only: the `next` value from a previous list_assets result, to continue that listing.
+   */
+  after?: string;
+  /**
+   * Runtime capabilities this page declares, as {name: config}. The control plane is the authority on valid names and config shapes. An empty object clears any previously stored declaration; omit the field on a redeploy to carry the stored declaration forward unchanged. Before declaring any capability, load the `artifact-capabilities` skill for the current contract and per-capability guidance.
+   */
+  capabilities?: {
+    [k: string]: unknown;
+  };
+  /**
+   * The artifact's runtime version. Omit to keep its current version (the default); 'latest' to upgrade; a specific version to pin or roll back. Changing it changes how the published page behaves — pass only when the author explicitly intends the change, never as a side effect of editing.
+   */
+  contract?: "latest" | string;
+}
+export interface PushNotificationInput {
+  /**
+   * The notification body. Keep it under 200 characters; mobile OSes truncate.
+   */
+  message: string;
+  status?: "proactive";
+}
 export interface EnterWorktreeInput {
   /**
    * Optional name for a new worktree. Each "/"-separated segment may contain only letters, digits, dots, underscores, and dashes; max 64 chars total. A random name is generated if not provided. Mutually exclusive with `path`.
    */
   name?: string;
   /**
-   * Path to an existing worktree of the current repository to switch into instead of creating a new one. Must appear in `git worktree list` for the current repo. Mutually exclusive with `name`.
+   * Path to an existing worktree to switch into instead of creating a new one. Must appear in `git worktree list` for the current repo — or, on first entry from the launch directory, for a repo nested inside it (multi-repo workspace). Mutually exclusive with `name`.
    */
   path?: string;
 }
@@ -2188,9 +3474,21 @@ export interface BashOutput {
    */
   backgroundedByUser?: boolean;
   /**
-   * True if assistant-mode auto-backgrounded a long-running blocking command
+   * Set when the command hit its timeout and was auto-backgrounded; the timeout value in ms
    */
-  assistantAutoBackgrounded?: boolean;
+  timedOutAfterMs?: number;
+  /**
+   * Model-facing note that the session cwd was not changed by a backgrounded command containing a directory-change builtin (cd/pushd/popd/chdir)
+   */
+  backgroundCwdHint?: string;
+  /**
+   * True when this backgrounded command is terminated at its caller's final response, so no completion notification can follow (a synchronous subagent's command, or a headless session that takes no further input and is not waiting for background commands); absent when the command survives
+   */
+  backgroundEndsWithFinalResponse?: true;
+  /**
+   * True when the subagent that owns this backgrounded command parks for its end and is woken by it
+   */
+  backgroundWakesOwner?: true;
   /**
    * Flag to indicate if sandbox mode was overridden
    */
@@ -2223,6 +3521,38 @@ export interface BashOutput {
    * Model-facing system-reminder appended when a gh command reports a GitHub API rate-limit error
    */
   ghRateLimitHint?: string;
+  /**
+   * Structured classification of git/gh operations detected in this command (commit/push/merge/rebase/PR). Client-facing — lets clients render git activity without re-parsing stdout; not surfaced to the model.
+   */
+  gitOperation?: {
+    commit?: {
+      sha: string;
+      kind: "committed" | "amended" | "cherry-picked";
+      branch?: string;
+    };
+    push?: {
+      branch: string;
+    };
+    branch?: {
+      ref: string;
+      action: "merged" | "rebased";
+    };
+    pr?: {
+      number: number;
+      url?: string;
+      action:
+        | "created"
+        | "edited"
+        | "merged"
+        | "commented"
+        | "closed"
+        | "reopened"
+        | "ready"
+        | "draft"
+        | "auto-merge-enabled"
+        | "auto-merge-disabled";
+    };
+  };
 }
 export interface ExitPlanModeOutput {
   /**
@@ -2298,6 +3628,10 @@ export interface FileEditOutput {
      */
     repository?: string | null;
   };
+  /**
+   * True when the edit was held for the machine owner to review instead of written; the file is unchanged
+   */
+  staged?: boolean;
 }
 export interface FileWriteOutput {
   /**
@@ -2313,7 +3647,7 @@ export interface FileWriteOutput {
    */
   content: string;
   /**
-   * Diff patch showing the changes
+   * Diff patch showing the changes (empty when nothing changed, the diff timed out, or — with originalFile null on an update — the previous content was too large to diff)
    */
   structuredPatch: {
     oldStart: number;
@@ -2323,7 +3657,7 @@ export interface FileWriteOutput {
     lines: string[];
   }[];
   /**
-   * The original file content before the write (null for new files)
+   * The original file content before the write (null for new files, or when the previous content was too large to include)
    */
   originalFile: string | null;
   gitDiff?: {
@@ -2342,6 +3676,10 @@ export interface FileWriteOutput {
    * True when the user edited the proposed content in the permission dialog before accepting
    */
   userModified?: boolean;
+  /**
+   * True when the write was held for the machine owner to review instead of written; the file is unchanged
+   */
+  staged?: boolean;
 }
 export interface GlobOutput {
   /**
@@ -2349,7 +3687,7 @@ export interface GlobOutput {
    */
   durationMs: number;
   /**
-   * Total number of files found
+   * Number of file paths returned (after any truncation)
    */
   numFiles: number;
   /**
@@ -2360,6 +3698,18 @@ export interface GlobOutput {
    * Whether results were truncated (limited to 100 files)
    */
   truncated: boolean;
+  /**
+   * Total number of matching files before truncation. A lower bound when countIsComplete is false. Absent on results persisted by CLI versions predating this field.
+   */
+  totalMatches?: number;
+  /**
+   * Whether totalMatches is the exact total (true) or a floor because the underlying search truncated its own output (false). Absent on results persisted by CLI versions predating this field.
+   */
+  countIsComplete?: boolean;
+  /**
+   * True when the time limit stopped the search after these paths were read, so more matches may exist. Absent otherwise.
+   */
+  timedOut?: boolean;
 }
 export interface GrepOutput {
   mode?: "content" | "files_with_matches" | "count";
@@ -2368,8 +3718,11 @@ export interface GrepOutput {
   content?: string;
   numLines?: number;
   numMatches?: number;
+  totalFiles?: number;
+  totalLines?: number;
   appliedLimit?: number;
   appliedOffset?: number;
+  timedOut?: boolean;
 }
 export interface TaskStopOutput {
   /**
@@ -2394,6 +3747,10 @@ export interface NotebookEditOutput {
    * The new source code that was written to the cell
    */
   new_source: string;
+  /**
+   * The previous cell source (replace/delete only). Enables cell-relative diff rendering without re-reading the notebook.
+   */
+  old_source?: string;
   /**
    * The ID of the cell that was edited
    */
@@ -2427,6 +3784,29 @@ export interface NotebookEditOutput {
    */
   updated_file: string;
 }
+export interface ReadMcpResourceDirOutput {
+  /**
+   * Direct children of the directory resource. Subdirectories appear with mimeType "inode/directory".
+   */
+  resources: {
+    /**
+     * Child resource URI
+     */
+    uri: string;
+    /**
+     * Child resource name
+     */
+    name: string;
+    /**
+     * Child MIME type
+     */
+    mimeType?: string;
+  }[];
+  /**
+   * Human-readable error when the server could not list the directory
+   */
+  error?: string;
+}
 export interface ReadMcpResourceOutput {
   contents: {
     /**
@@ -2446,6 +3826,57 @@ export interface ReadMcpResourceOutput {
      */
     blobSavedTo?: string;
   }[];
+  /**
+   * Human-readable error when the server could not read the resource
+   */
+  error?: string;
+}
+export interface ReportFindingsOutput {
+  /**
+   * Number of findings reported
+   */
+  count: number;
+  /**
+   * Effort level the review ran at
+   */
+  level?: "low" | "medium" | "high" | "xhigh" | "max";
+  /**
+   * Echoed for the result body
+   */
+  findings: {
+    /**
+     * Repo-relative path of the file the finding is in
+     */
+    file: string;
+    /**
+     * 1-indexed line the finding anchors to
+     */
+    line?: number;
+    /**
+     * One-sentence statement of the defect
+     */
+    summary: string;
+    /**
+     * Compressed label for compact UI (≤60 chars): the claim alone, no rationale or consequence clause
+     */
+    short_summary?: string;
+    /**
+     * Concrete inputs/state → wrong output/crash
+     */
+    failure_scenario: string;
+    /**
+     * Short kebab-case slug of the finding type, e.g. "correctness", "simplification", "efficiency", "test-coverage"
+     */
+    category?: string;
+    /**
+     * Set when a verify pass ran; absent on inline-only reviews
+     */
+    verdict?: "CONFIRMED" | "PLAUSIBLE";
+    /**
+     * Set ONLY when re-reporting after applying fixes: what happened to this finding
+     */
+    outcome?: "fixed" | "skipped" | "no_change_needed";
+  }[];
 }
 export interface TodoWriteOutput {
   /**
@@ -2464,7 +3895,6 @@ export interface TodoWriteOutput {
     status: "pending" | "in_progress" | "completed";
     activeForm: string;
   }[];
-  verificationNudgeNeeded?: boolean;
 }
 export interface WebFetchOutput {
   /**
@@ -2491,6 +3921,11 @@ export interface WebFetchOutput {
    * The URL that was fetched
    */
   url: string;
+  artifactRead?: {
+    slug: string;
+    ver?: string;
+    seeded?: false;
+  };
 }
 export interface WebSearchOutput {
   /**
@@ -2518,6 +3953,10 @@ export interface WebSearchOutput {
            * The URL of the search result
            */
           url: string;
+          /**
+           * Page text. PostToolUse hooks get it; tool_use_result does not.
+           */
+          snippet?: string;
         }[];
       }
     | string
@@ -2526,6 +3965,10 @@ export interface WebSearchOutput {
    * Time taken to complete the search operation
    */
   durationSeconds: number;
+  /**
+   * Number of web searches performed
+   */
+  searchCount?: number;
 }
 export interface AskUserQuestionOutput {
   /**
@@ -2691,6 +4134,10 @@ export interface AskUserQuestionOutput {
     [k: string]: string;
   };
   /**
+   * Freeform text the user typed instead of selecting a structured option
+   */
+  response?: string;
+  /**
    * Optional per-question annotations from the user (e.g., notes on preview selections). Keyed by question text.
    */
   annotations?: {
@@ -2703,8 +4150,20 @@ export interface AskUserQuestionOutput {
        * Free-text notes the user added to their selection.
        */
       notes?: string;
+      /**
+       * How the question went unanswered: 'skipped' (the user skipped it), 'replied_in_chat' (the user sent a chat message instead), or 'dismissed' (the user closed the card). The model does not see this field; put the text it should read in `answers`. Absent when the question was answered, and also when the answering client did not report it (in a session that does not advertise ask_user_question_unanswered_v1, from an older client, or in an older transcript): then only the text in `answers` says how it ended. Treat any other value as absent.
+       */
+      unanswered?: "skipped" | "replied_in_chat" | "dismissed";
     };
   };
+  /**
+   * Set when the dialog auto-resolved after this many milliseconds of idle (user away from keyboard). Absent on every human-resolved path.
+   */
+  afkTimeoutMs?: number;
+}
+export interface SendFeedbackOutput {
+  success: boolean;
+  message: string;
 }
 export interface EnterWorktreeOutput {
   worktreePath: string;
@@ -2720,4 +4179,227 @@ export interface ExitWorktreeOutput {
   discardedFiles?: number;
   discardedCommits?: number;
   message: string;
+}
+export interface TaskCreateOutput {
+  task: {
+    id: string;
+    subject: string;
+    /**
+     * The task's description as saved. It can differ from the tool_use input if Claude Code corrects a malformed call or a PreToolUse hook changes the input. Absent in results from older Claude Code versions.
+     */
+    description?: string;
+  };
+}
+export interface TaskGetOutput {
+  task: {
+    id: string;
+    subject: string;
+    description: string;
+    status: "pending" | "in_progress" | "completed";
+    blocks: string[];
+    blockedBy: string[];
+  } | null;
+}
+export interface TaskUpdateOutput {
+  success: boolean;
+  taskId: string;
+  updatedFields: string[];
+  error?: string;
+  statusChange?: {
+    from: string;
+    to: string;
+  };
+}
+export interface TaskListOutput {
+  tasks: {
+    id: string;
+    subject: string;
+    status: "pending" | "in_progress" | "completed";
+    owner?: string;
+    blockedBy: string[];
+  }[];
+}
+export interface RemoteTriggerOutput {
+  status: number;
+  json: string;
+  summary?: string;
+}
+export interface ShowOnboardingRolePickerOutput {
+  role?: string;
+  dismissed?: boolean;
+}
+export interface OfferChromeSetupOutput {
+  outcome: "connected" | "not_now" | "no_attempt_yet";
+}
+export interface ReadNotificationsOutput {
+  notifications: {
+    /**
+     * Server-assigned stable id — the dedup key across redeliveries.
+     */
+    notification_id: string;
+    /**
+     * Server-attested source token: "github_webhook" | "trigger_fire" | "mcp_send_message" (open set; unknown well-formed tokens pass through verbatim, off-grammar values coerce to "unknown").
+     */
+    origin: string;
+    /**
+     * RFC3339 timestamp of when the backend queued it.
+     */
+    queued_at: string;
+    /**
+     * Verbatim notification body.
+     */
+    content: string;
+    /**
+     * RFC3339 timestamp, by this machine's clock, of when the notification reached this session's queue. Missing from results saved before this field existed.
+     */
+    arrived_at?: string;
+  }[];
+  /**
+   * Notifications still queued after this drain (drains are size-budgeted); call the tool again to read them.
+   */
+  remaining: number;
+  /**
+   * RFC3339 timestamp, by this machine's clock, of when this call read the queue. Missing from results saved before this field existed.
+   */
+  read_at?: string;
+}
+export interface ScheduleWakeupOutput {
+  /**
+   * Epoch ms timestamp when the next wakeup will fire
+   */
+  scheduledFor: number;
+  /**
+   * Actual delay used after clamping to runtime bounds
+   */
+  clampedDelaySeconds: number;
+  /**
+   * True if the requested delaySeconds was outside [60, 3600]
+   */
+  wasClamped: boolean;
+  /**
+   * True when the model ended the loop via `stop: true`
+   */
+  stopped?: boolean;
+  /**
+   * How many pending dynamic-loop wakeups stop:true cancelled. 0 means nothing was pending — a recurring /loop cron is not cancelled by stop:true.
+   */
+  cancelledWakeups?: number;
+}
+export interface MonitorOutput {
+  /**
+   * ID of the background monitor task.
+   */
+  taskId: string;
+  /**
+   * Timeout deadline in milliseconds (0 when persistent).
+   */
+  timeoutMs: number;
+  /**
+   * No timeout — runs until TaskStop or session end.
+   */
+  persistent?: boolean;
+}
+export interface ProposeSkillsOutput {
+  /**
+   * Number of proposals shown on the review card
+   */
+  proposalCount: number;
+}
+export interface ProposeGoalOutput {
+  /**
+   * The condition shown to the user for approval, or set directly when ask_user was false
+   */
+  condition: string;
+  /**
+   * Whether the user was asked for approval (true) or the goal was set directly (false)
+   */
+  askUser: boolean;
+}
+export interface EnterPlanModeOutput {
+  /**
+   * Confirmation that plan mode was entered
+   */
+  message: string;
+}
+export interface WorkflowOutput {
+  status: "async_launched" | "remote_launched";
+  taskId: string;
+  /**
+   * TaskType of the registered background task — 'local_workflow' for in-process runs, 'remote_agent' when remote:true dispatches to CCR. Set on all new writes; absent only on transcripts written before this field existed.
+   */
+  taskType?: "local_workflow" | "remote_agent";
+  /**
+   * meta.name from the workflow script — same value as task_started.workflow_name. Set on all new writes; absent only on transcripts written before this field existed.
+   */
+  workflowName?: string;
+  /**
+   * Local workflow run identifier for resumeFromRunId. Absent for remote_launched (the CCR session URL is the resume handle there) and on transcripts written before this field existed.
+   */
+  runId?: string;
+  summary?: string;
+  /**
+   * Directory where subagent transcripts are written during execution
+   */
+  transcriptDir?: string;
+  /**
+   * Path to the persisted workflow script for this invocation. Editable via Write/Edit; pass back as `scriptPath` to re-run without resending the script.
+   */
+  scriptPath?: string;
+  /**
+   * CCR session URL when status is remote_launched
+   */
+  sessionUrl?: string;
+  /**
+   * Non-blocking heads-up (e.g. local git state diverges from the pushed branch the cloud session will clone)
+   */
+  warning?: string;
+  /**
+   * Set if syntax check failed
+   */
+  error?: string;
+}
+export interface CronCreateOutput {
+  id: string;
+  humanSchedule: string;
+  recurring: boolean;
+  durable?: boolean;
+  /**
+   * Epoch ms of the job's next run, the scheduler's per-job offset included
+   */
+  nextFireAt?: number;
+}
+export interface CronDeleteOutput {
+  id: string;
+  endedLoopWakeup?: true;
+}
+export interface CronListOutput {
+  jobs: {
+    id: string;
+    cron: string;
+    humanSchedule: string;
+    prompt: string;
+    recurring?: boolean;
+    durable?: boolean;
+    /**
+     * Epoch ms of the job's next run, the scheduler's per-job offset included
+     */
+    nextFireAt?: number;
+  }[];
+}
+export interface PushNotificationOutput {
+  message: string;
+  pushSent?: boolean;
+  localSent?: boolean;
+  disabledReason?: "config_off" | "user_present" | "no_transport";
+  /**
+   * ISO timestamp captured at tool execution on the emitting process. Optional — resumed sessions replay pre-sentAt outputs verbatim.
+   */
+  sentAt?: string;
+}
+export interface ClaudeDesignOutput {
+  operation: string;
+  content: {
+    [k: string]: unknown;
+  }[];
+  isError?: boolean;
 }

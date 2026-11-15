@@ -16,7 +16,12 @@ from clawd_code_sdk.models.base import (
     PermissionMode,
 )
 from clawd_code_sdk.models.hooks import HookEvent, HookInput
-from clawd_code_sdk.models.mcp import ExternalMcpServerConfig, JSONRPCMessage, McpServerStatusEntry
+from clawd_code_sdk.models.mcp import (
+    ExternalMcpServerConfig,
+    JSONRPCMessage,
+    McpServerStatusEntry,
+    SdkPluginConfig,
+)
 from clawd_code_sdk.models.permissions import PermissionUpdate
 from clawd_code_sdk.models.server_info import (
     ClaudeCodeAccountInfo,
@@ -54,6 +59,17 @@ class SDKControlInterruptRequest(_ControlBase):
     """SDK control interrupt request."""
 
     subtype: Literal["interrupt"] = "interrupt"
+    cancel_queued: bool | None = None
+    """Also cancel queued (not yet started) user messages."""
+
+
+class SDKControlInterruptResponse(BaseModel):
+    """Response to an interrupt request."""
+
+    still_queued: list[str] = Field(default_factory=list)
+    """UUIDs of user messages still queued after the interrupt."""
+    cancelled: list[str] | None = None
+    """UUIDs of queued user messages that were cancelled."""
 
 
 class SDKControlPermissionRequest(_ControlBase):
@@ -128,6 +144,19 @@ class SDKControlInitializeRequest(_ControlBase):
         serialization_alias="planModeInstructions",
     )
     """Custom workflow body for the plan-mode system reminder."""
+    system_prompt_snapshot: bool | None = Field(
+        default=None, serialization_alias="systemPromptSnapshot"
+    )
+    forward_subagent_text: bool | None = Field(
+        default=None, serialization_alias="forwardSubagentText"
+    )
+    tool_aliases: dict[str, str] | None = Field(default=None, serialization_alias="toolAliases")
+    per_task_stop_affordance: bool | None = Field(
+        default=None, serialization_alias="perTaskStopAffordance"
+    )
+    supported_dialog_kinds: list[str] | None = Field(
+        default=None, serialization_alias="supportedDialogKinds"
+    )
 
 
 class SDKControlSetPermissionModeRequest(_ControlBase):
@@ -207,12 +236,14 @@ class SDKControlSetMaxThinkingTokensRequest(_ControlBase):
 
     subtype: Literal["set_max_thinking_tokens"] = "set_max_thinking_tokens"
     max_thinking_tokens: int | None = None
+    thinking_display: Literal["summarized", "omitted", "highlights"] | None = None
 
 
 class SDKControlMcpStatusRequest(_ControlBase):
     """Requests the current status of all MCP server connections."""
 
     subtype: Literal["mcp_status"] = "mcp_status"
+    live_reply: bool | None = Field(default=None, serialization_alias="liveReply")
 
 
 class SDKControlMcpSetServersRequest(_ControlBase):
@@ -226,6 +257,11 @@ class SDKControlReloadPluginsRequest(_ControlBase):
     """Reloads plugins from disk and returns the refreshed session components."""
 
     subtype: Literal["reload_plugins"] = "reload_plugins"
+    hold_on_cache_impact: bool | None = None
+    """Don't apply the reload if it would change the tool list the prompt cache depends on."""
+    add_plugins: list[SdkPluginConfig] | None = None
+    """Additional plugins to load as part of the reload."""
+    refuse_if_busy: bool | None = None
 
 
 class PluginInfo(ClaudeCodeBaseModel):
@@ -234,6 +270,15 @@ class PluginInfo(ClaudeCodeBaseModel):
     name: str
     path: str
     source: str | None = None
+    version: str | None = None
+
+
+class ReloadPluginsCacheImpact(BaseModel):
+    """How a reload would change the session's tool list."""
+
+    mcp_servers_added: list[str]
+    mcp_servers_removed: list[str]
+    lsp_tool_change: Literal["adds", "may-add", "removes", "may-remove"] | None
 
 
 class SDKControlReloadPluginsResponse(ClaudeCodeBaseModel):
@@ -248,6 +293,9 @@ class SDKControlReloadPluginsResponse(ClaudeCodeBaseModel):
     plugins: list[PluginInfo]
     mcp_servers: list[McpServerStatusEntry]
     error_count: int
+    held: bool | None = None
+    """True when the reload was held back because of cache impact."""
+    cache_impact: ReloadPluginsCacheImpact | None = None
 
 
 class SDKControlMcpReconnectRequest(_ControlBase):
@@ -283,6 +331,8 @@ class SDKControlRenameSessionRequest(_ControlBase):
 
     subtype: Literal["rename_session"] = "rename_session"
     title: str
+    source: Literal["remote", "host"] | None = None
+    session_id: str | None = None
 
 
 class SDKControlMcpAuthenticateRequest(_ControlBase):
@@ -499,6 +549,7 @@ class SDKControlGetContextUsageRequest(_ControlBase):
     """Requests a breakdown of current context window usage by category."""
 
     subtype: Literal["get_context_usage"] = "get_context_usage"
+    detail: Literal["summary", "full"] | None = None
 
 
 class SDKControlGetSessionCostRequest(_ControlBase):
@@ -578,6 +629,7 @@ class SDKControlReadFileRequest(_ControlBase):
     subtype: Literal["read_file"] = "read_file"
     path: str
     max_bytes: int | None = None
+    encoding: Literal["utf-8", "base64"] | None = None
 
 
 class SDKControlReadFileResponse(_ControlBase):
@@ -586,7 +638,138 @@ class SDKControlReadFileResponse(_ControlBase):
     contents: str
     abs_path: str
     truncated: bool | None = None
+    encoding: Literal["base64"] | None = None
+    lossy: bool | None = None
+    """True when non-UTF-8 bytes were replaced while decoding."""
     model_config = ConfigDict(alias_generator=to_camel)
+
+
+class SDKControlBackgroundTasksRequest(_ControlBase):
+    """Moves running foreground tasks (or one tool use) to the background."""
+
+    subtype: Literal["background_tasks"] = "background_tasks"
+    tool_use_id: str | None = None
+
+
+class SDKControlGetTaskOutputRequest(_ControlBase):
+    """Reads the output collected so far for a background task."""
+
+    subtype: Literal["get_task_output"] = "get_task_output"
+    task_id: str
+
+
+class SDKControlGetTaskOutputResponse(BaseModel):
+    """Output of a background task."""
+
+    output: str
+    total_bytes: int
+    truncated: bool
+
+
+class SDKControlGetUsageRequest(_ControlBase):
+    """Requests the structured usage report (session cost + rate limits). Experimental."""
+
+    subtype: Literal["get_usage"] = "get_usage"
+    skip_behaviors: bool | None = None
+
+
+class SDKControlGetBinaryVersionRequest(_ControlBase):
+    """Requests the version of the running Claude Code binary."""
+
+    subtype: Literal["get_binary_version"] = "get_binary_version"
+
+
+class SDKControlListModelsRequest(_ControlBase):
+    """Requests the list of available models."""
+
+    subtype: Literal["list_models"] = "list_models"
+
+
+class SDKControlReloadSkillsRequest(_ControlBase):
+    """Re-scans skills from disk."""
+
+    subtype: Literal["reload_skills"] = "reload_skills"
+
+
+class SDKControlReloadSkillsResponse(BaseModel):
+    """Skills after reload."""
+
+    skills: list[ClaudeCodeCommandInfo]
+
+
+class SDKControlReloadOutputStylesRequest(_ControlBase):
+    """Re-scans output styles from disk."""
+
+    subtype: Literal["reload_output_styles"] = "reload_output_styles"
+
+
+class SDKControlReloadOutputStylesResponse(BaseModel):
+    """Output styles after reload."""
+
+    available_output_styles: list[str]
+
+
+class SDKControlMcpReadResourceRequest(_ControlBase):
+    """Reads a resource from a connected MCP server."""
+
+    subtype: Literal["mcp_read_resource"] = "mcp_read_resource"
+    server_name: str = Field(serialization_alias="serverName")
+    uri: str
+
+
+class McpResourceContents(BaseModel):
+    """A single resource content entry."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    uri: str
+    mime_type: str | None = Field(default=None, alias="mimeType")
+    text: str | None = None
+    blob: str | None = None
+    meta: dict[str, Any] | None = Field(default=None, alias="_meta")
+
+
+class SDKControlMcpReadResourceResponse(BaseModel):
+    """Contents of an MCP resource."""
+
+    contents: list[McpResourceContents]
+
+
+class SDKControlUpdateSettingsRequest(_ControlBase):
+    """Writes settings to the local or user settings file."""
+
+    subtype: Literal["update_settings"] = "update_settings"
+    source: Literal["localSettings", "userSettings"]
+    settings: dict[str, Any]
+
+
+class SDKControlListPermissionRulesRequest(_ControlBase):
+    """Lists the effective permission rules."""
+
+    subtype: Literal["list_permission_rules"] = "list_permission_rules"
+
+
+class SDKControlRegisterRepoRootRequest(_ControlBase):
+    """Registers an additional repository root (like /add-dir)."""
+
+    subtype: Literal["register_repo_root"] = "register_repo_root"
+    directory: str
+    reload_claude_md: bool | None = None
+    reload_plugins: bool | None = None
+    reload_skills: bool | None = None
+
+
+class SDKControlGetHooksListingRequest(_ControlBase):
+    """Requests the listing of configured hooks (same data as /hooks)."""
+
+    subtype: Literal["get_hooks_listing"] = "get_hooks_listing"
+
+
+class SDKControlSetHasSubscribersRequest(_ControlBase):
+    """Tells the CLI whether anyone is watching the session output."""
+
+    subtype: Literal["set_has_subscribers"] = "set_has_subscribers"
+    has_subscribers: bool | None
 
 
 class SDKControlMcpCallRequest(_ControlBase):
@@ -646,7 +829,20 @@ OutgoingControlRequest = Annotated[
     | SDKControlCancelAsyncMessageRequest
     | SDKControlSeedReadStateRequest
     | SDKControlReadFileRequest
-    | SDKControlMcpCallRequest,
+    | SDKControlMcpCallRequest
+    | SDKControlBackgroundTasksRequest
+    | SDKControlGetTaskOutputRequest
+    | SDKControlGetUsageRequest
+    | SDKControlGetBinaryVersionRequest
+    | SDKControlListModelsRequest
+    | SDKControlReloadSkillsRequest
+    | SDKControlReloadOutputStylesRequest
+    | SDKControlMcpReadResourceRequest
+    | SDKControlUpdateSettingsRequest
+    | SDKControlListPermissionRulesRequest
+    | SDKControlRegisterRepoRootRequest
+    | SDKControlGetHooksListingRequest
+    | SDKControlSetHasSubscribersRequest,
     Discriminator("subtype"),
 ]
 
