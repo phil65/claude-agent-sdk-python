@@ -266,6 +266,19 @@ class UserMessage(BaseModel):
         return match.group(1) if match else None
 
 
+class ToolUseMeta(ClaudeCodeBaseModel):
+    """Display metadata for a tool_use block in an assistant message (undocumented)."""
+
+    id: str
+    """ID of the tool_use block this metadata belongs to."""
+    tool_name: str
+    """Name of the tool (without MCP server prefix)."""
+    display_name: str | None = None
+    """Human-readable tool name."""
+    server_display_name: str | None = None
+    """Display name of the MCP server providing the tool."""
+
+
 class AssistantMessage(BaseModel):
     """Assistant message with content blocks."""
 
@@ -303,6 +316,8 @@ class AssistantMessage(BaseModel):
     """How long the model spent thinking for this message (undocumented)."""
     thinking_display: str | None = None
     """Active thinking display mode (undocumented)."""
+    tool_use_meta: list[ToolUseMeta] | None = None
+    """Display metadata for the tool_use blocks in this message (undocumented)."""
 
     @property
     def content(self) -> Sequence[AssistantContentBlock]:
