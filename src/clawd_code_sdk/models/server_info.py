@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from anthropic.types import Model
 from pydantic import Field
@@ -53,6 +53,8 @@ class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
 
     supports_auto_mode: bool | None = None
     supports_thinking_off: bool | None = None
+    disabled: bool | None = None
+    """Visible but not selectable (only set for entries in ``unavailable_models``)."""
     resolved_model: str | None = None
     """Concrete model ID this entry resolves to (e.g. for aliases)."""
     """Whether the model supports auto mode."""
@@ -116,6 +118,13 @@ class ClaudeCodeAgentInfo(ClaudeCodeBaseModel):
     """Model alias this agent uses. If omitted, inherits the parent's model."""
 
 
+class AuthConflict(ClaudeCodeBaseModel):
+    """Sources of the auth token and API key when both are configured."""
+
+    token_source: str
+    api_key_source: str
+
+
 class FeedbackMode(ClaudeCodeBaseModel):
     """Feedback collection mode."""
 
@@ -142,8 +151,17 @@ class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
     available_output_styles: list[str] = Field(default_factory=list)
     """List of all available output styles."""
 
+    unavailable_models: list[ClaudeCodeModelInfo] | None = None
+    """Models the account can see but not select (e.g. excluded by org ZDR settings)."""
+
     account: ClaudeCodeAccountInfo | None = Field(default=None)
     """Account and authentication information."""
+
+    auth_conflict: AuthConflict | None = None
+    """Set when both an auth token and an API key are configured (source names only)."""
+
+    current_model: str | None = None
+    """The CLI's active model at connect time."""
 
     agents: list[ClaudeCodeAgentInfo] = Field(default_factory=list)
     """List of available subagents."""
@@ -185,6 +203,48 @@ class ClaudeCodeServerInfo(ClaudeCodeBaseModel):
 
     hook_on_failure_supported: bool | None = None
     """Whether the CLI honors ``on_failure`` on hook matchers."""
+
+    hooks_when_unanswered_kept: int | None = None
+    """Number of registered hook matchers whose ``whenUnanswered`` the CLI kept."""
+
+    code_running_mcp_tools_applied: dict[str, list[str]] | None = None
+    """MCP tools declared via ``codeRunningMcpTools``, keyed by server name."""
+
+    managed_settings_applied: bool | None = None
+    """Whether the initialize's ``managedSettings`` match the ones stored at launch."""
+
+    mcp_servers_applied: bool | None = None
+    """Whether the initialize's ``mcpServers`` match the set read at launch."""
+
+    host_worded_asks: bool | None = None
+    """Desktop host only: PreToolUse asks are sent to the host as can_use_tool requests."""
+
+    workspace_trust_recorded: bool | None = None
+    """Outcome of the ``workspaceTrust`` attestation."""
+
+    inbound_read_receipts: bool | None = None
+    """Remote Control hosts only: client messages get processing/processed receipts."""
+
+    permission_mode_from_default_fallback: bool | None = None
+    """IDE hosts only: permission mode is auto because no settings source configured one."""
+
+    auto_default_nudge: str | None = None
+    """IDE hosts only: the defaultMode the auto-default nudge offers to replace."""
+
+    footer_indicator: dict[str, Any] | None = None
+    """The terminal's configured footer pill (undocumented structure)."""
+
+    feedback_survey_config: dict[str, Any] | None = None
+    """Present only when the host may show the feedback survey (undocumented structure)."""
+
+    survey_followup_box: dict[str, Any] | None = None
+    """Survey follow-up config for VS Code/desktop hosts (undocumented structure)."""
+
+    claude_in_chrome_at_startup: bool | None = None
+    """Whether an IDE host should connect Claude in Chrome when the session starts."""
+
+    claude_in_chrome_prompt_disabled: bool | None = None
+    """True when CLAUDE_CODE_DISABLE_CFC_PROMPT is set."""
 
     plugins_applied: bool | None = None
     """Whether every plugin sent via initialize is loaded."""
