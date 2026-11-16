@@ -321,6 +321,7 @@ from .session import (
 )
 from .usage import ModelUsage, Usage
 from .messages import (
+    ApiErrorParams,
     AssistantMessage,
     BaseResultMessage,
     PromptSuggestionMessage,
@@ -502,6 +503,7 @@ __all__ = [
     "AgentOutputUsage",
     "AgentServerToolUse",
     "AgentWireDefinition",
+    "ApiErrorParams",
     "ApiKeySource",
     "AppliedSettings",
     "AskUserQuestion",

@@ -266,6 +266,41 @@ class UserMessage(BaseModel):
         return match.group(1) if match else None
 
 
+class ApiErrorParams(ClaudeCodeBaseModel):
+    """Parameters of an API error, present only for the error kinds that have any (undocumented)."""
+
+    effort: str | None = None
+    """Effort level the API refused (effort_requires_thinking)."""
+    provider: (
+        Literal[
+            "bedrock",
+            "anthropicAws",
+            "mantle",
+            "anthropicGoogleCloud",
+            "vertex",
+            "foundry",
+            "gateway",
+        ]
+        | None
+    ) = None
+    remedy: (
+        Literal[
+            "refresh_command",
+            "refresh_credentials",
+            "adc",
+            "gateway_token",
+            "host_managed",
+            "model_access",
+        ]
+        | None
+    ) = None
+    media: Literal["image", "document"] | None = None
+    """Kind of block the API refused (media_removed)."""
+    media_reason: Literal["unprocessable", "unsupported_by_model", "media_budget"] | None = None
+    rate_limit_info: RateLimitInfo | None = None
+    cut: Literal["output_limit", "context_window"] | None = None
+
+
 class ToolUseMeta(ClaudeCodeBaseModel):
     """Display metadata for a tool_use block in an assistant message (undocumented)."""
 
@@ -318,6 +353,16 @@ class AssistantMessage(BaseModel):
     """Active thinking display mode (undocumented)."""
     tool_use_meta: list[ToolUseMeta] | None = None
     """Display metadata for the tool_use blocks in this message (undocumented)."""
+    is_api_error_message: bool | None = None
+    """True when this assistant message wraps an API error (undocumented)."""
+    api_error_status: int | None = None
+    """HTTP status code of the API error when `is_api_error_message` is true."""
+    api_error_type: str | None = None
+    """The `error.type` of the API error response body, e.g. `rate_limit_error`."""
+    api_error_origin: Literal["first_party"] | None = None
+    """`first_party` when Anthropic's own API sent the error response."""
+    api_error_params: ApiErrorParams | None = None
+    """Parameters of the API error, for the error kinds that have any."""
 
     @property
     def content(self) -> Sequence[AssistantContentBlock]:
