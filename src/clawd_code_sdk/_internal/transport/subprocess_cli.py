@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import atexit
 from contextlib import suppress
 import logging
 import os
 from pathlib import Path
 import platform
+import signal
 from typing import TYPE_CHECKING, Any
 
 import anyio
@@ -18,6 +20,7 @@ from clawd_code_sdk._errors import CLIConnectionError, CLINotFoundError, Process
 from clawd_code_sdk._internal.transport import Transport
 from clawd_code_sdk._internal.transport.subprocess_utils import (
     CREATION_FLAGS,
+    LineFramer,
     check_claude_version,
     find_cli,
     get_env_vars,
@@ -36,6 +39,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 1MB buffer limit
+
+_ACTIVE_CHILDREN: set[Process] = set()
+"""CLI processes that have not been reaped yet (terminated on interpreter exit)."""
+
+
+def _kill_active_children() -> None:
+    """Terminate CLI children still alive when the parent exits (upstream #916).
+
+    The CLI runs in its own session (``start_new_session=True``), so it does
+    not receive the terminal's SIGHUP and would otherwise outlive a parent that
+    crashed or exited without awaiting ``close()``.
+    """
+    for proc in list(_ACTIVE_CHILDREN):
+        with suppress(Exception):
+            proc.send_signal(signal.SIGTERM)  # On Windows anyio maps this to terminate()
+    _ACTIVE_CHILDREN.clear()
+
+
+atexit.register(_kill_active_children)
 
 
 class SubprocessCLITransport(Transport):
@@ -131,6 +153,7 @@ class SubprocessCLITransport(Transport):
                 start_new_session=True,
                 creationflags=CREATION_FLAGS,
             )
+            _ACTIVE_CHILDREN.add(self._process)
 
             if self._process.stdout:
                 self._stdout_stream = TextReceiveStream(self._process.stdout, errors="replace")
@@ -168,74 +191,124 @@ class SubprocessCLITransport(Transport):
         if not self._stderr_stream:
             return
 
-        try:
-            async for line in self._stderr_stream:
-                line_str = line.rstrip()
-                if not line_str:
-                    continue
-
-                # Always collect stderr lines for error reporting
-                self._stderr_lines.append(line_str)
-                # Call the stderr callback if provided
-                if self._options.stderr:
+        def emit(line: str) -> None:
+            line_str = line.rstrip()
+            if not line_str:
+                return
+            # Always collect stderr lines for error reporting
+            self._stderr_lines.append(line_str)
+            # Isolate the callback per line so a raise in user code doesn't end
+            # the loop and silently drop every later line.
+            if self._options.stderr:
+                try:
                     self._options.stderr(line_str)
+                except Exception:
+                    logger.debug("stderr callback raised; continuing", exc_info=True)
+
+        # `options.stderr` receives lines, but the stream yields chunks, so frame
+        # the lines here rather than handing over whatever a read returned.
+        framer = LineFramer()
+        try:
+            async for chunk in self._stderr_stream:
+                for line in framer.push(chunk):
+                    emit(line)
+                # A producer that never emits a newline can't grow the buffer
+                # without bound; flush it as a partial line instead.
+                if framer.pending_len > self._max_buffer_size:
+                    emit(framer.flush())
         except anyio.ClosedResourceError:
             pass  # Stream closed, exit normally
         except Exception:
-            pass  # Ignore other errors during stderr reading
+            logger.debug("stderr stream read failed", exc_info=True)
+        finally:
+            # In a `finally` so the last partial line still arrives when close()
+            # cancels this task. `emit` is synchronous, so it is safe during
+            # cancellation unwind.
+            emit(framer.flush())
 
     async def close(self) -> None:
-        """Close the transport and clean up resources."""
+        """Close the transport and clean up resources.
+
+        The whole body runs inside a shielded cancel scope (upstream #1082).
+        Cleanup is routinely reached while the caller's task is being cancelled
+        (e.g. ``async with ClaudeSDKClient()`` unwinding on cancel), and an
+        unshielded close() would abort at the first await, before the
+        terminate/kill escalation ran, orphaning the CLI child. Every await in
+        the scope is bounded (~20s worst case), so cancellation is delayed but
+        never blocked.
+
+        A raw asyncio cancellation (``asyncio.timeout``, a bare ``task.cancel()``)
+        is not deferred by an anyio shield. For that case the ``finally`` keeps a
+        still-running child in ``_ACTIVE_CHILDREN`` for the atexit reaper
+        instead of dropping it.
+        """
         if not self._process:
             self._ready = False
             return
 
-        # Close stderr task group if active
-        if self._stderr_task_group:
-            with suppress(Exception):
-                self._stderr_task_group.cancel_scope.cancel()
-                await self._stderr_task_group.__aexit__(None, None, None)
-            self._stderr_task_group = None
-
-        # Close stdin stream (acquire lock to prevent race with concurrent writes)
-        async with self._write_lock:
-            self._ready = False  # Set inside lock to prevent TOCTOU with write()
-            if self._stdin_stream:
+        process = self._process
+        with anyio.CancelScope(shield=True):
+            # Close stderr task group if active
+            if self._stderr_task_group:
                 with suppress(Exception):
-                    await self._stdin_stream.aclose()
-                self._stdin_stream = None
+                    self._stderr_task_group.cancel_scope.cancel()
+                    await self._stderr_task_group.__aexit__(None, None, None)
+                self._stderr_task_group = None
 
-        if self._stderr_stream:
-            with suppress(Exception):
-                await self._stderr_stream.aclose()
-            self._stderr_stream = None
-
-        # Wait for process to exit gracefully after stdin EOF,
-        # giving the CLI time to flush the session transcript.
-        # Only resort to SIGTERM if it doesn't exit in time.
-        if self._process.returncode is None:
+            # Close stdin stream (hold the write lock to prevent a race with
+            # concurrent writes). Bounded: a writer blocked on a full stdin pipe
+            # must not pin the shielded scope forever.
+            lock_held = False
+            with anyio.move_on_after(5):
+                await self._write_lock.acquire()
+                lock_held = True
             try:
-                with anyio.fail_after(5):
-                    await self._process.wait()
-            except TimeoutError:
-                # Graceful shutdown timed out — force terminate
-                with suppress(ProcessLookupError):
-                    self._process.terminate()
-                try:
-                    with anyio.fail_after(5):
-                        await self._process.wait()
-                except TimeoutError:
-                    # SIGTERM handler blocked — force kill (SIGKILL)
-                    with suppress(ProcessLookupError):
-                        self._process.kill()
+                self._ready = False  # Set inside lock to prevent TOCTOU with write()
+                if self._stdin_stream:
                     with suppress(Exception):
-                        await self._process.wait()
+                        await self._stdin_stream.aclose()
+                    self._stdin_stream = None
+            finally:
+                if lock_held:
+                    self._write_lock.release()
 
-        self._process = None
-        self._stdout_stream = None
-        self._stdin_stream = None
-        self._stderr_stream = None
-        self._exit_error = None
+            if self._stderr_stream:
+                with suppress(Exception):
+                    await self._stderr_stream.aclose()
+                self._stderr_stream = None
+
+            # Wait for process to exit gracefully after stdin EOF,
+            # giving the CLI time to flush the session transcript.
+            # Only resort to SIGTERM if it doesn't exit in time.
+            try:
+                if process.returncode is None:
+                    try:
+                        with anyio.fail_after(5):
+                            await process.wait()
+                    except TimeoutError:
+                        # Graceful shutdown timed out - force terminate
+                        with suppress(ProcessLookupError):
+                            process.terminate()
+                        try:
+                            with anyio.fail_after(5):
+                                await process.wait()
+                        except TimeoutError:
+                            # SIGTERM handler blocked - force kill (SIGKILL)
+                            with suppress(ProcessLookupError):
+                                process.kill()
+                            with suppress(Exception), anyio.fail_after(5):
+                                await process.wait()
+            finally:
+                # Only stop tracking a child we actually reaped. A still-running
+                # process stays in the set so the atexit reaper gets a chance at it.
+                if process.returncode is not None:
+                    _ACTIVE_CHILDREN.discard(process)
+
+            self._process = None
+            self._stdout_stream = None
+            self._stdin_stream = None
+            self._stderr_stream = None
+            self._exit_error = None
 
     async def write(self, data: str) -> None:
         """Write raw data to the transport."""

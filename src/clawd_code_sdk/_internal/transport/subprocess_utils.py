@@ -185,11 +185,13 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     session = options.get_session()
     match session:
         case NewSession(session_id=str() as sid):
-            cmd.extend(["--session-id", sid])
+            cmd.append(f"--session-id={sid}")
         case NewSession():
             pass
         case ResumeSession(session_id=sid, fork=fork, at_message=at_msg):
-            cmd.extend(["--resume", sid])
+            # Equals form: --resume takes an optional value, so a separate token
+            # starting with "-" would be parsed as a flag (upstream #1123).
+            cmd.append(f"--resume={sid}")
             if fork:
                 cmd.append("--fork-session")
             if at_msg is not None:
@@ -344,49 +346,93 @@ def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
     return process_env
 
 
+class LineFramer:
+    """Reassembles complete lines from a stream that yields arbitrary chunks.
+
+    anyio's TextReceiveStream yields CHUNKS (one per receive() call, up to 64KiB
+    on the asyncio backend), not lines, so a large line spans several chunks and
+    a chunk boundary can fall anywhere, including inside a JSON string value.
+    Splitting on newlines and never stripping a chunk is what keeps whitespace
+    at the seam intact. (Backported from upstream #1083.)
+    """
+
+    def __init__(self) -> None:
+        # Only ever holds fragments of the line currently being received, none
+        # of which contain a newline. Joining once a newline arrives keeps
+        # reassembly linear in the line's size.
+        self._pending: list[str] = []
+        self.pending_len = 0
+
+    def push(self, chunk: str) -> list[str]:
+        """Add a chunk, returning any lines it completed."""
+        self._pending.append(chunk)
+        self.pending_len += len(chunk)
+        if "\n" not in chunk:
+            return []
+        *lines, tail = "".join(self._pending).split("\n")
+        self._pending, self.pending_len = [tail], len(tail)
+        return lines
+
+    def flush(self) -> str:
+        """Take the trailing partial line, if any."""
+        line = "".join(self._pending)
+        self._pending, self.pending_len = [], 0
+        return line
+
+
+def parse_stdout_line(line: str) -> dict[str, Any] | None:
+    """Parse one complete line of the CLI's NDJSON stdout.
+
+    Returns None for lines that carry no message: blank lines, and non-JSON
+    output such as ``[SandboxDebug] ...`` that some CLI builds write to stdout.
+    A line that looks like JSON but does not parse is corrupt (with proper
+    line framing no later data could complete it), so it raises rather than
+    silently dropping a message.
+    """
+    # `line` is a complete line, so surrounding whitespace (e.g. the "\r" of a
+    # CRLF) is meaningless. Only chunks must never be stripped.
+    stripped = line.strip()
+    if not stripped:
+        return None
+    if not stripped.startswith("{"):
+        logger.debug("Skipping non-JSON line from CLI stdout: %s", stripped[:200])
+        return None
+    try:
+        return anyenv.load_json(stripped, return_type=dict)
+    except anyenv.JsonLoadError as e:
+        raise SDKJSONDecodeError(stripped[:200], e) from e
+
+
 async def parse_stream(
     stream: TextReceiveStream,
     max_buffer_size: int,
 ) -> AsyncIterator[dict[str, Any]]:
-    json_buffer = ""
-    async for line in stream:
-        line_str = line.strip()
-        if not line_str:
-            continue
+    """Yield the JSON messages of the CLI's NDJSON stdout, one per line."""
+    framer = LineFramer()
 
-        # Accumulate partial JSON until we can parse it
-        # Note: TextReceiveStream can truncate long lines, so we need to buffer
-        # and speculatively parse until we get a complete JSON object
-        for json_line in line_str.split("\n"):
-            stripped = json_line.strip()
-            if not stripped:
-                continue
-            # Skip non-JSON lines (e.g. [SandboxDebug]) when not
-            # mid-parse — they corrupt the buffer otherwise (#347).
-            if not json_buffer and not stripped.startswith("{"):
-                logger.debug(
-                    "Skipping non-JSON line from CLI stdout: %s",
-                    json_line[:200],
-                )
-                continue
+    def guard(length: int) -> None:
+        """Bound a single message, whether it is complete yet or not."""
+        if length > max_buffer_size:
+            raise SDKJSONDecodeError(
+                f"JSON message exceeded {max_buffer_size=}b",
+                ValueError(f"buffer_length={length} exceeds {max_buffer_size=}"),
+            )
 
-            # Keep accumulating partial JSON until we can parse it
-            json_buffer += stripped
-
-            if len(json_buffer) > max_buffer_size:
-                buffer_length = len(json_buffer)
-                json_buffer = ""
-                raise SDKJSONDecodeError(
-                    f"JSON message exceeded {max_buffer_size=}b",
-                    ValueError(f"{buffer_length=} exceeds {max_buffer_size=}"),
-                )
-
-            try:
-                data = anyenv.load_json(json_buffer, return_type=dict)
-                json_buffer = ""
+    async for chunk in stream:
+        for line in framer.push(chunk):
+            guard(len(line))
+            if (data := parse_stdout_line(line)) is not None:
                 yield data
-            except anyenv.JsonLoadError:
-                # We are speculatively decoding the buffer until we get
-                # a full JSON object. If there is an actual issue, we
-                # raise an error after exceeding the configured limit.
-                continue
+        guard(framer.pending_len)
+
+    # The CLI terminates every message with "\n", so a residual tail means either
+    # a producer that omits the final newline (yield it) or one cut off
+    # mid-write (unrecoverable, drop it).
+    tail = framer.flush()
+    try:
+        data = parse_stdout_line(tail)
+    except SDKJSONDecodeError:
+        logger.debug("Dropping truncated JSON at end of CLI stdout: %s", tail[:200])
+        data = None
+    if data is not None:
+        yield data
