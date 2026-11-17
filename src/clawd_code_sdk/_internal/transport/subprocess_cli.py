@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import atexit
 from contextlib import suppress
 import logging
@@ -70,7 +71,7 @@ class SubprocessCLITransport(Transport):
         self._stdout_stream: TextReceiveStream | None = None
         self._stdin_stream: TextSendStream | None = None
         self._stderr_stream: TextReceiveStream | None = None
-        self._stderr_task_group: anyio.abc.TaskGroup | None = None
+        self._stderr_task: asyncio.Task[None] | None = None
         self._ready = False
         self._exit_error: Exception | None = None  # Track process exit errors
         self._max_buffer_size = self._options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
@@ -161,10 +162,11 @@ class SubprocessCLITransport(Transport):
             # Setup stderr stream if piped
             if self._process.stderr:
                 self._stderr_stream = TextReceiveStream(self._process.stderr, errors="replace")
-                # Start async task to read stderr
-                self._stderr_task_group = anyio.create_task_group()
-                await self._stderr_task_group.__aenter__()
-                self._stderr_task_group.start_soon(self._handle_stderr)
+                # Read stderr in a standalone task. A task group entered here and
+                # exited in close()/read_messages() would span two call sites (and
+                # possibly two tasks), and cancelling its scope would cancel the
+                # caller itself.
+                self._stderr_task = asyncio.get_running_loop().create_task(self._handle_stderr())
 
             # Setup stdin for streaming (always used now)
             if self._process.stdin:
@@ -226,6 +228,17 @@ class SubprocessCLITransport(Transport):
             # cancellation unwind.
             emit(framer.flush())
 
+    async def _stop_stderr_reader(self, grace: float) -> None:
+        """Stop the stderr reader task, giving it ``grace`` seconds to finish on its own."""
+        task, self._stderr_task = self._stderr_task, None
+        if task is None:
+            return
+        if not task.done() and grace > 0:
+            await asyncio.wait({task}, timeout=grace)
+        if not task.done():
+            task.cancel()
+            await asyncio.wait({task})
+
     async def close(self) -> None:
         """Close the transport and clean up resources.
 
@@ -248,12 +261,8 @@ class SubprocessCLITransport(Transport):
 
         process = self._process
         with anyio.CancelScope(shield=True):
-            # Close stderr task group if active
-            if self._stderr_task_group:
-                with suppress(Exception):
-                    self._stderr_task_group.cancel_scope.cancel()
-                    await self._stderr_task_group.__aexit__(None, None, None)
-                self._stderr_task_group = None
+            # Stop the stderr reader (it flushes its last partial line on cancel)
+            await self._stop_stderr_reader(grace=0)
 
             # Close stdin stream (hold the write lock to prevent a race with
             # concurrent writes). Bounded: a writer blocked on a full stdin pipe
@@ -361,13 +370,9 @@ class SubprocessCLITransport(Transport):
         except Exception:
             returncode = -1
 
-        # Wait for stderr reader to finish draining
-        if self._stderr_task_group:
-            with suppress(Exception):
-                with anyio.move_on_after(5):
-                    self._stderr_task_group.cancel_scope.cancel()
-                    await self._stderr_task_group.__aexit__(None, None, None)
-            self._stderr_task_group = None
+        # The process has exited, so stderr reaches EOF shortly: let the reader
+        # drain what is left before stopping it.
+        await self._stop_stderr_reader(grace=5)
 
         # Use exit code for error detection
         if returncode:
