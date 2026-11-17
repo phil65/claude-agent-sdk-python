@@ -13,9 +13,17 @@ from typing import TYPE_CHECKING, Any, Self, assert_never, cast
 import anyenv
 import anyio
 
-from clawd_code_sdk._errors import ClaudeSDKError, ControlRequestError, ControlRequestTimeoutError
+from clawd_code_sdk._errors import (
+    ClaudeSDKError,
+    ControlRequestError,
+    ControlRequestTimeoutError,
+    ProcessError,
+    ResultError,
+    error_result_text,
+)
+from clawd_code_sdk._internal.sdk_mcp_bridge import SdkMcpBridge
 from clawd_code_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
-from clawd_code_sdk.mcp_utils import process_mcp_request
+from clawd_code_sdk.mcp_utils import restore_document_blocks
 from clawd_code_sdk.models import (
     AskUserQuestionInput,
     ControlErrorResponse,
@@ -105,6 +113,10 @@ class Query:
             for event, matchers in (hooks or {}).items()
         }
         self.sdk_mcp_servers = sdk_mcp_servers or {}
+        # One bridge per SDK server for the lifetime of this Query (mcp 1.x and 2.x)
+        self._sdk_mcp_bridges = {
+            name: SdkMcpBridge(name, server) for name, server in self.sdk_mcp_servers.items()
+        }
         # Control protocol state
         self.pending_control_responses: dict[str, anyio.Event] = {}
         self.pending_control_results: dict[str, dict[str, Any] | Exception] = {}
@@ -121,6 +133,10 @@ class Query:
         self._closed = False
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
+        # The last result frame if it had is_error and nothing but the post-turn
+        # session_state_changed marker followed it. A ProcessError while this is
+        # set is the CLI's deliberate non-zero exit after that error result.
+        self._last_error_result: dict[str, Any] | None = None
 
     @classmethod
     def from_options(cls, options: ClaudeAgentOptions, transport: Transport | None = None) -> Query:
@@ -241,8 +257,14 @@ class Query:
                             inflight.cancel()
                     case {"type": "result"}:
                         self._first_result_event.set()
+                        self._last_error_result = message if message.get("is_error") else None
+                        await self._message_send.send(message)
+                    case {"type": "system", "subtype": "session_state_changed"}:
                         await self._message_send.send(message)
                     case _:  # Regular SDK messages go to the stream
+                        # The conversation moved on: a ProcessError now is a fresh
+                        # crash, not the exit that follows an error result.
+                        self._last_error_result = None
                         await self._message_send.send(message)
 
         except anyio.get_cancelled_exc_class():
@@ -250,14 +272,31 @@ class Query:
             logger.debug("Read task cancelled")
             raise  # Re-raise to properly handle cancellation
         except Exception as e:
-            logger.exception("Fatal error in message reader")
-            # Signal all pending control requests so they fail fast instead of timing out
+            # After an is_error result the CLI exits non-zero on purpose. The
+            # trailing ProcessError says nothing beyond the exit code, so replace
+            # it with a ResultError carrying what the CLI already reported.
+            pending_error: Exception = e
+            if isinstance(e, ProcessError) and self._last_error_result is not None:
+                text = error_result_text(self._last_error_result)
+                pending_error = ResultError(
+                    f"Claude Code returned an error result: {text}",
+                    data=self._last_error_result,
+                    exit_code=e.exit_code,
+                )
+                pending_error.__cause__ = e
+                logger.debug("Replacing ProcessError (exit code %s) with ResultError", e.exit_code)
+            else:
+                logger.exception("Fatal error in message reader")
+            # Signal all pending control requests so they fail fast instead of
+            # timing out. This includes an `initialize` still in flight when the
+            # CLI reports an error result during startup (e.g. a refused resume).
             for request_id, event in list(self.pending_control_responses.items()):
                 if request_id not in self.pending_control_results:
-                    self.pending_control_results[request_id] = e
+                    self.pending_control_results[request_id] = pending_error
                     event.set()
-            # Put error in stream so iterators can handle it
-            await self._message_send.send({"type": "error", "error": str(e)})
+            # Put the typed error in the stream so iterators re-raise it as-is
+            error_msg = {"type": "error", "error": str(pending_error), "exception": pending_error}
+            await self._message_send.send(error_msg)
         finally:
             # Always signal end of stream
             await self._message_send.send({"type": "end"})
@@ -278,7 +317,10 @@ class Query:
                     response_data = await self._handle_hook_callback(req)
                 case SDKControlMcpMessageRequest(server_name=server_name, message=message):
                     mcp_resp = await self._handle_sdk_mcp_request(server_name, message)
-                    response_data = {"mcp_response": mcp_resp}
+                    # JSON-RPC notifications get no reply, but the control
+                    # request that carried one still expects an ack.
+                    ack = {"jsonrpc": "2.0", "result": {}}
+                    response_data = {"mcp_response": mcp_resp if mcp_resp is not None else ack}
                 case SDKControlElicitationRequest() as req:
                     response_data = await self._handle_elicitation_request(req)
                 case _ as unreachable:
@@ -385,26 +427,32 @@ class Query:
 
     async def _handle_sdk_mcp_request(
         self, server_name: str, message: JSONRPCMessage
-    ) -> JSONRPCResponse:
-        """Handle an MCP request for an SDK server.
+    ) -> JSONRPCResponse | None:
+        """Route a JSON-RPC message from the CLI to the named SDK MCP server.
 
-        This acts as a bridge between JSONRPC messages from the CLI
-        and the in-process MCP server. Ideally the MCP SDK would provide
-        a method to handle raw JSONRPC, but for now we route manually.
+        Returns the JSON-RPC response for requests, or ``None`` when the
+        message was a notification or response and there is nothing to send
+        back. A message that cannot be delivered at all (unknown server,
+        malformed JSON-RPC, a session that went away underneath it) is
+        answered with a JSON-RPC error so the CLI's MCP client can fail that
+        one request.
 
         Args:
             server_name: Name of the SDK MCP server
             message: The JSONRPC message
-
-        Returns:
-            The response message
         """
-        if server_name not in self.sdk_mcp_servers:
-            dct = JSONRPCError(code=-32601, message=f"Server '{server_name}' not found")
-            id_ = get_jsonrpc_request_id(message)
-            return JSONRPCErrorResponse(jsonrpc="2.0", id=id_, error=dct)
-        server = self.sdk_mcp_servers[server_name]
-        return await process_mcp_request(message, server)
+        id_ = get_jsonrpc_request_id(message)
+        if (bridge := self._sdk_mcp_bridges.get(server_name)) is None:
+            error = JSONRPCError(code=-32601, message=f"Server '{server_name}' not found")
+            return JSONRPCErrorResponse(jsonrpc="2.0", id=id_, error=error)
+        try:
+            response = await bridge.handle(dict(message))
+        except Exception as e:
+            error = JSONRPCError(code=-32603, message=str(e) or type(e).__name__)
+            return JSONRPCErrorResponse(jsonrpc="2.0", id=id_, error=error)
+        if response is None:
+            return None
+        return cast("JSONRPCResponse", restore_document_blocks(response))
 
     async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""
@@ -414,6 +462,8 @@ class Query:
                 case "end":
                     break
                 case "error":
+                    if isinstance(exc := message.get("exception"), Exception):
+                        raise exc
                     raise ClaudeSDKError(message.get("error", "Unknown error"))
                 case _:
                     yield message
@@ -432,6 +482,9 @@ class Query:
                 await self._read_task
         self._read_task = None
 
+        for bridge in self._sdk_mcp_bridges.values():
+            with suppress(Exception):
+                await bridge.aclose()
         await self.transport.close()
         # clean up
         self.hook_callbacks.clear()

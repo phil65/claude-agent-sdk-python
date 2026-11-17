@@ -1,28 +1,34 @@
-"""Claude SDK for Python."""
+"""In-process (SDK) MCP servers: the ``@tool`` decorator and ``create_sdk_mcp_server``.
+
+Servers built here are regular ``mcp.server.Server`` instances. The SDK serves
+them to the CLI through mcp's own in-memory transport (see
+``clawd_code_sdk._internal.sdk_mcp_bridge``), which works on mcp 1.x and 2.x.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import TYPE_CHECKING, Any, assert_never
 
-from mcp.types import ListToolsResult
-from pydantic import AnyUrl, TypeAdapter, create_model
+import jsonschema
+from mcp.types import CallToolResult, Tool
+from pydantic import TypeAdapter, create_model
 
-from clawd_code_sdk.models import (
-    JSONRPCError,
-    JSONRPCErrorResponse,
-    JSONRPCResultResponse,
-    McpSdkServerConfigWithInstance,
-)
+from clawd_code_sdk._internal.mcp_compat import build_tool_server
+from clawd_code_sdk.models import McpSdkServerConfigWithInstance
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterator
+    from collections.abc import Awaitable, Callable
 
-    from mcp.server import Server as McpServer
-    from mcp.types import ContentBlock, ToolAnnotations
+    from mcp.types import ToolAnnotations
 
-    from clawd_code_sdk.models import JSONRPCMessage, JSONRPCResponse
+
+logger = logging.getLogger(__name__)
+
+DOCUMENT_URI_PREFIX = "document://"
+"""URI scheme marking an embedded resource that carries an Anthropic document block."""
 
 
 @dataclass
@@ -39,6 +45,7 @@ class SdkMcpTool[T]:
     meta: dict[str, Any] | None = None
     search_hint: str | None = None
     always_load: bool | None = None
+    max_result_size_chars: int | None = None
 
 
 def tool(
@@ -52,6 +59,7 @@ def tool(
     meta: dict[str, Any] | None = None,
     search_hint: str | None = None,
     always_load: bool | None = None,
+    max_result_size_chars: int | None = None,
 ) -> Callable[[Callable[[Any], Awaitable[dict[str, Any]]]], SdkMcpTool[Any]]:
     """Decorator for defining MCP tools with type safety.
 
@@ -76,6 +84,8 @@ def tool(
         meta: Optional metadata dict sent as ``_meta`` on the tool definition.
         search_hint: Optional hint text for tool search/discovery.
         always_load: Optional flag indicating whether the tool should always be loaded.
+        max_result_size_chars: Optional size (in characters) up to which Claude Code
+            keeps the tool's result inline instead of persisting it with a preview.
 
     Returns:
         A decorator function that wraps the tool implementation and returns
@@ -100,6 +110,7 @@ def tool(
             meta=meta,
             search_hint=search_hint,
             always_load=always_load,
+            max_result_size_chars=max_result_size_chars,
         )
 
     return decorator
@@ -112,7 +123,6 @@ def create_sdk_mcp_server(
 ) -> McpSdkServerConfigWithInstance:
     """Create an in-process MCP server that runs within your Python application.
 
-    Server lifecycle is managed automatically by the SDK
     Unlike external MCP servers that run as separate processes, SDK MCP servers
     run directly in your application's process. This provides:
     - Better performance (no IPC overhead)
@@ -131,8 +141,9 @@ def create_sdk_mcp_server(
 
     Returns:
         McpSdkServerConfigWithInstance: A configuration object that can be passed to
-        ClaudeAgentOptions.mcp_servers. This config contains the server
-        instance and metadata needed for the SDK to route tool calls.
+        ClaudeAgentOptions.mcp_servers. Its ``instance`` is a regular
+        ``mcp.server.Server`` that the SDK connects to Claude Code over an
+        in-memory MCP transport.
 
     Example:
         Simple calculator server:
@@ -140,351 +151,212 @@ def create_sdk_mcp_server(
         ... async def add(args):
         ...     return {"content": [{"type": "text", "text": f"Sum: {args['a'] + args['b']}"}]}
         >>>
-        >>> @tool("multiply", "Multiply numbers", {"a": float, "b": float})
-        ... async def multiply(args):
-        ...     return {"content": [{"type": "text", "text": f"Product: {args['a'] * args['b']}"}]}
-        >>>
-        >>> calculator = create_sdk_mcp_server(
-        ...     name="calculator",
-        ...     version="2.0.0",
-        ...     tools=[add, multiply]
-        ... )
-        >>>
-        >>> # Use with Claude
-        >>> options = ClaudeAgentOptions(
-        ...     mcp_servers={"calc": calculator},
-        ...     allowed_tools=["add", "multiply"]
-        ... )
+        >>> calculator = create_sdk_mcp_server(name="calculator", tools=[add])
+        >>> options = ClaudeAgentOptions(mcp_servers={"calc": calculator})
 
-        Server with application state access:
-        >>> class DataStore:
-        ...     def __init__(self):
-        ...         self.items = []
-        ...
-        >>> store = DataStore()
-        >>>
-        >>> @tool("add_item", "Add item to store", {"item": str})
-        ... async def add_item(args):
-        ...     store.items.append(args["item"])
-        ...     return {"content": [{"type": "text", "text": f"Added: {args['item']}"}]}
-        >>>
-        >>> server = create_sdk_mcp_server("store", tools=[add_item])
+        Bringing your own server: any ``mcp.server.Server`` built with the
+        installed ``mcp`` package can be used in place of this helper, and the
+        requests it handles (tools, resources, prompts, ...) are served.
+        Requests and notifications the server sends to the client (sampling,
+        elicitation, roots, logging, progress, list_changed) are not forwarded:
+        >>> from mcp.server import Server
+        >>> my_server = Server("mine")  # register handlers with the mcp API
+        >>> config = McpSdkServerConfigWithInstance(name="mine", instance=my_server)
+
+    Notes:
+        - Tool arguments are validated against the tool's input schema. Unknown
+          tools, invalid arguments and exceptions raised by a handler are all
+          reported to Claude as error results rather than failing the request.
+        - Works with both mcp 1.x and mcp 2.x.
     """
-    from mcp.server import Server
-    from mcp.types import (
-        AudioContent,
-        BlobResourceContents,
-        EmbeddedResource,
-        ImageContent,
-        ResourceLink,
-        TextContent,
-        Tool,
-    )
+    tool_defs = tools or []
+    tools_by_name = {tool_def.name: tool_def for tool_def in tool_defs}
+    schemas = {tool_def.name: build_input_schema(tool_def.input_schema) for tool_def in tool_defs}
+    wire_tools = [
+        Tool.model_validate(
+            {
+                "name": tool_def.name,
+                "title": tool_def.title,
+                "description": tool_def.description,
+                "inputSchema": schemas[tool_def.name],
+                "outputSchema": tool_def.output_schema,
+                "annotations": tool_def.annotations,
+                "_meta": build_tool_meta(tool_def),
+            }
+        )
+        for tool_def in tool_defs
+    ]
 
-    server = Server(name, version=version)
-    # Register tools if provided
-    if tools:
-        # Store tools for access in handlers
-        tool_map = {tool_def.name: tool_def for tool_def in tools}
-
-        # Register list_tools handler to expose available tools
-        @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
-        async def list_tools() -> list[Tool]:
-            """Return the list of available tools."""
-            tool_list = []
-            for tool_def in tools:
-                match tool_def.input_schema:
-                    case {"type": _typ, "properties": _props} as dct:
-                        schema = dct
-                    case dict() as input_schema:
-                        # Simple dict mapping names to types - build a Pydantic model
-                        # This handles required/optional, nested types, unions, etc.
-
-                        fields = {k: (v, ...) for k, v in input_schema.items()}
-                        model = create_model("Input", **fields)  # type: ignore[call-overload]  # ty:ignore[no-matching-overload]
-                        schema = TypeAdapter(model).json_schema()
-                    case type() as tp:
-                        schema = TypeAdapter(tp).json_schema()
-                    case _ as unreachable:
-                        assert_never(unreachable)  # ty:ignore[type-assertion-failure]
-                mcp_tool = Tool(
-                    name=tool_def.name,
-                    title=tool_def.title,
-                    description=tool_def.description,
-                    inputSchema=schema,  # type: ignore[arg-type]
-                    outputSchema=tool_def.output_schema,
-                    annotations=tool_def.annotations,
-                )
-                tool_list.append(mcp_tool)
-            return tool_list
-
-        # Register call_tool handler to execute tools
-        @server.call_tool()  # type: ignore[untyped-decorator]
-        async def call_tool(name: str, arguments: dict[str, Any]) -> list[ContentBlock]:
-            """Execute a tool by name with given arguments."""
-            if name not in tool_map:
-                raise ValueError(f"Tool '{name}' not found")
-
-            tool_def = tool_map[name]
+    async def run_tool(tool_name: str, arguments: dict[str, Any]) -> CallToolResult:
+        # The SDK owns these semantics so a tool behaves the same on every
+        # supported mcp version: unknown tools, invalid arguments and handler
+        # failures all come back as isError results the model can read, never
+        # as protocol errors.
+        tool_def = tools_by_name.get(tool_name)
+        if tool_def is None:
+            return _tool_error_result(f"Tool '{tool_name}' not found")
+        try:
+            try:
+                jsonschema.validate(instance=arguments, schema=schemas[tool_name])
+            except jsonschema.ValidationError as e:
+                return _tool_error_result(f"Input validation error: {e.message}")
             result = await tool_def.handler(arguments)
-            # Convert result to MCP format
-            # The decorator expects us to return the content, not a CallToolResult
-            # It will wrap our return value in CallToolResult
-            content: list[ContentBlock] = []
-            for item in result.get("content", []):
-                match item:
-                    case {"type": "text"}:
-                        content.append(TextContent.model_validate(item))
-                    case {"type": "image"}:
-                        content.append(ImageContent.model_validate(item))
-                    case {"type": "audio"}:
-                        content.append(AudioContent.model_validate(item))
-                    case {"type": "resource_link"}:
-                        content.append(ResourceLink.model_validate(item))
-                    case {"type": "document"}:
-                        # Convert document to EmbeddedResource with BlobResourceContents
-                        # This preserves document data through MCP for conversion to
-                        # Anthropic document format in query.py
-                        source = item.get("source", {})
-                        blob = BlobResourceContents(
-                            uri=AnyUrl(f"document://{source.get('type', 'base64')}"),
-                            mimeType=source.get("media_type", "application/pdf"),
-                            blob=source.get("data", ""),
-                        )
-                        content.append(EmbeddedResource(type="resource", resource=blob))
+            return CallToolResult.model_validate(
+                {
+                    "content": convert_tool_content(result.get("content", [])),
+                    "isError": bool(result.get("is_error", False)),
+                }
+            )
+        except Exception as e:
+            return _tool_error_result(str(e))
 
-            # Return just the content list - the decorator wraps it
-            return content
-
-    # Attach tool definitions to server for _meta injection in process_mcp_request
-    server._sdk_tool_defs = tools or []  # type: ignore[attr-defined]
-
-    # Return SDK server configuration
-    return McpSdkServerConfigWithInstance(type="sdk", name=name, instance=server)
+    server = build_tool_server(name, version, wire_tools, run_tool)
+    return McpSdkServerConfigWithInstance(name=name, instance=server)
 
 
-def _detect_capabilities(server: McpServer) -> dict[str, Any]:
-    """Detect which MCP capabilities a server supports based on registered handlers."""
-    from mcp.types import (
-        CallToolRequest,
-        GetPromptRequest,
-        ListPromptsRequest,
-        ListResourcesRequest,
-        ListResourceTemplatesRequest,
-        ListToolsRequest,
-        ReadResourceRequest,
-    )
+def build_input_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]:
+    """Turn a tool's declared input_schema into the JSON Schema sent on the wire.
 
-    capabilities: dict[str, Any] = {}
-    handlers = server.request_handlers
-    if handlers.get(ListToolsRequest) or handlers.get(CallToolRequest):
-        capabilities["tools"] = {}
-    if (
-        handlers.get(ListResourcesRequest)
-        or handlers.get(ReadResourceRequest)
-        or handlers.get(ListResourceTemplatesRequest)
-    ):
-        capabilities["resources"] = {}
-    if handlers.get(ListPromptsRequest) or handlers.get(GetPromptRequest):
-        capabilities["prompts"] = {}
-    return capabilities
-
-
-def _build_tool_meta(tool_def: SdkMcpTool[Any] | None) -> dict[str, Any] | None:
-    """Build _meta dict for a tool's JSONRPC response.
-
-    Merges explicit meta from the tool definition with Anthropic-specific
-    hints extracted from annotations. The CLI reads
-    ``anthropic/maxResultSizeChars`` from ``_meta`` to override its
-    layer-2 tool-result spill threshold.
+    Accepts a full JSON Schema dict, a dict mapping parameter names to Python
+    types (all required), or a type (TypedDict, dataclass, pydantic model).
     """
-    if tool_def is None:
-        return None
+    match input_schema:
+        case dict() as dct if isinstance(dct.get("type"), str) and isinstance(
+            dct.get("properties"), dict
+        ):
+            return dct
+        case dict() as mapping:
+            # Simple dict mapping names to types - build a Pydantic model.
+            # This handles required/optional, nested types, unions, etc.
+            fields = {k: (v, ...) for k, v in mapping.items()}
+            model = create_model("Input", **fields)  # type: ignore[call-overload]  # ty:ignore[no-matching-overload]
+            return TypeAdapter(model).json_schema()
+        case type() as tp:
+            return TypeAdapter(tp).json_schema()
+        case _ as unreachable:
+            assert_never(unreachable)  # ty:ignore[type-assertion-failure]
+
+
+def build_tool_meta(tool_def: SdkMcpTool[Any]) -> dict[str, Any] | None:
+    """Build the ``_meta`` dict sent with a tool definition.
+
+    Client-specific hints travel in ``_meta`` under namespaced keys because MCP
+    clients drop annotation fields they do not know. Claude Code reads:
+
+    - ``anthropic/maxResultSizeChars``: the size up to which a tool result is
+      kept inline rather than persisted with a preview (``max_result_size_chars``,
+      or a ``maxResultSizeChars`` field on the annotations object, which only
+      survives as an extra field on mcp 1.x),
+    - ``anthropic/alwaysLoad``: never defer the tool behind tool search,
+    - ``anthropic/searchHint``: extra text for tool search to match on.
+
+    Explicit ``meta`` from the tool definition is merged last and wins.
+    """
     meta: dict[str, Any] = {}
+    if tool_def.max_result_size_chars is not None:
+        meta["anthropic/maxResultSizeChars"] = tool_def.max_result_size_chars
+    elif tool_def.annotations is not None:
+        # Covers both an extra field and a field declared on a subclass.
+        dumped = tool_def.annotations.model_dump(by_alias=True)
+        if (max_size := dumped.get("maxResultSizeChars")) is not None:
+            meta["anthropic/maxResultSizeChars"] = max_size
+    if tool_def.always_load is not None:
+        meta["anthropic/alwaysLoad"] = tool_def.always_load
+    if tool_def.search_hint is not None:
+        meta["anthropic/searchHint"] = tool_def.search_hint
     if tool_def.meta:
         meta.update(tool_def.meta)
-    if tool_def.annotations is not None:
-        max_size = getattr(tool_def.annotations, "maxResultSizeChars", None)
-        if max_size is not None:
-            meta["anthropic/maxResultSizeChars"] = max_size
     return meta or None
 
 
-async def process_mcp_request(message: JSONRPCMessage, server: McpServer) -> JSONRPCResponse:
-    from mcp.types import (
-        CallToolRequest,
-        CallToolRequestParams,
-        CallToolResult,
-        GetPromptRequest,
-        GetPromptRequestParams,
-        GetPromptResult,
-        ListPromptsRequest,
-        ListPromptsResult,
-        ListResourcesRequest,
-        ListResourcesResult,
-        ListResourceTemplatesRequest,
-        ListResourceTemplatesResult,
-        ListToolsRequest,
-        ReadResourceRequest,
-        ReadResourceRequestParams,
-        ReadResourceResult,
+def _tool_error_result(message: str) -> CallToolResult:
+    return CallToolResult.model_validate(
+        {
+            "content": [{"type": "text", "text": message}],
+            "isError": True,
+        }
     )
 
-    raw_id = message.get("id")
-    msg_id = raw_id if isinstance(raw_id, str | int) else 0
-    try:
-        # TODO: Python MCP SDK lacks the Transport abstraction that TypeScript has.
-        # TypeScript: server.connect(transport) allows custom transports
-        # Python: server.run(read_stream, write_stream) requires actual streams
-        #
-        # This forces us to manually route methods. When Python MCP adds Transport
-        # support, we can refactor to match the TypeScript approach.
-        match message:
-            case {"method": "initialize"}:
-                # Handle MCP initialization - hardcoded for tools only, no listChanged
-                init_result = {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": _detect_capabilities(server),
-                    "serverInfo": {"name": server.name, "version": server.version or "1.0.0"},
-                }
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=init_result)
 
-            case {"method": "tools/list"} if handler := server.request_handlers.get(
-                ListToolsRequest
-            ):
-                request = ListToolsRequest()
-                result = await handler(request)
-                assert isinstance(result.root, ListToolsResult)
-                # Convert MCP result to JSONRPC response, injecting _meta
-                # for Anthropic-specific hints (e.g. maxResultSizeChars)
-                sdk_tools: list[SdkMcpTool[Any]] = getattr(server, "_sdk_tool_defs", [])
-                tool_defs = {t.name: t for t in sdk_tools}
-                data = []
-                for mcp_tool in result.root.tools:
-                    tool_data = mcp_tool.model_dump(exclude_none=True, by_alias=True)
-                    meta = _build_tool_meta(tool_defs.get(mcp_tool.name))
-                    if meta:
-                        tool_data["_meta"] = meta
-                    data.append(tool_data)
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"tools": data})
+def convert_tool_content(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Map the content of a tool handler's result dict to MCP content blocks.
 
-            case {"method": "tools/call", "params": dict() as params} if (
-                handler := server.request_handlers.get(CallToolRequest)
-            ):
-                call_params = CallToolRequestParams(**params)
-                call_request = CallToolRequest(params=call_params)
-                result = await handler(call_request)
-                # Convert MCP result to JSONRPC response
-                assert isinstance(result.root, CallToolResult)
-                content = list(process_content_blocks(result.root.content))
-                response_data: dict[str, Any] = {"content": content}
-                if result.root.isError:
-                    response_data["is_error"] = True
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result=response_data)
-            case {"method": "resources/list"} if handler := server.request_handlers.get(
-                ListResourcesRequest
-            ):
-                list_resources_request = ListResourcesRequest()
-                result = await handler(list_resources_request)
-                assert isinstance(result.root, ListResourcesResult)
-                data = [
-                    r.model_dump(exclude_none=True, by_alias=True) for r in result.root.resources
-                ]
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"resources": data})
-
-            case {"method": "resources/read", "params": dict() as params} if (
-                handler := server.request_handlers.get(ReadResourceRequest)
-            ):
-                read_params = ReadResourceRequestParams(**params)
-                read_resource_request = ReadResourceRequest(params=read_params)
-                result = await handler(read_resource_request)
-                assert isinstance(result.root, ReadResourceResult)
-                contents = [
-                    c.model_dump(exclude_none=True, by_alias=True) for c in result.root.contents
-                ]
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0", id=msg_id, result={"contents": contents}
-                )
-
-            case {"method": "resources/templates/list"} if handler := server.request_handlers.get(
-                ListResourceTemplatesRequest
-            ):
-                list_templates_request = ListResourceTemplatesRequest()
-                result = await handler(list_templates_request)
-                assert isinstance(result.root, ListResourceTemplatesResult)
-                data = [
-                    t.model_dump(exclude_none=True, by_alias=True)
-                    for t in result.root.resourceTemplates
-                ]
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0", id=msg_id, result={"resourceTemplates": data}
-                )
-
-            case {"method": "prompts/list"} if handler := server.request_handlers.get(
-                ListPromptsRequest
-            ):
-                list_prompts_request = ListPromptsRequest()
-                result = await handler(list_prompts_request)
-                assert isinstance(result.root, ListPromptsResult)
-                data = [p.model_dump(exclude_none=True, by_alias=True) for p in result.root.prompts]
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={"prompts": data})
-
-            case {"method": "prompts/get", "params": dict() as params} if (
-                handler := server.request_handlers.get(GetPromptRequest)
-            ):
-                get_params = GetPromptRequestParams(**params)
-                get_prompt_request = GetPromptRequest(params=get_params)
-                result = await handler(get_prompt_request)
-                assert isinstance(result.root, GetPromptResult)
-                return JSONRPCResultResponse(
-                    jsonrpc="2.0",
-                    id=msg_id,
-                    result=result.root.model_dump(exclude_none=True, by_alias=True),
-                )
-
-            case {"method": "notifications/initialized"}:
-                # Handle initialized notification - just acknowledge it
-                return JSONRPCResultResponse(jsonrpc="2.0", id=msg_id, result={})
-            case {"method": method}:
-                error = JSONRPCError(code=-32601, message=f"Method '{method}' not found")
-                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-            case _ as msg:
-                error = JSONRPCError(code=-32601, message=f"Invalid JSON message {msg}")
-                return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-    except Exception as e:
-        error = JSONRPCError(code=-32603, message=str(e))
-        return JSONRPCErrorResponse(jsonrpc="2.0", id=msg_id, error=error)
-
-
-def process_content_blocks(content: list[ContentBlock]) -> Iterator[dict[str, Any]]:
-    from mcp.types import (
-        AudioContent,
-        BlobResourceContents,
-        EmbeddedResource,
-        ImageContent,
-        ResourceLink,
-        TextContent,
-        TextResourceContents,
-    )
-
-    for item in content:
+    - text, image and audio blocks pass through;
+    - ``document`` blocks (Anthropic format) are carried as an embedded blob
+      resource with a ``document://`` URI and restored to a document block
+      on the way to the CLI (see ``restore_document_blocks``);
+    - resource links and text resources are flattened to text, which is what
+      the CLI renders;
+    - other binary resources and unknown block types are dropped with a warning.
+    """
+    content: list[dict[str, Any]] = []
+    for item in items:
         match item:
-            case TextContent() | ImageContent() | AudioContent():
-                yield item.model_dump(exclude_none=True, by_alias=True)
-            case EmbeddedResource(
-                resource=BlobResourceContents(mimeType=mime, uri=uri)
-                | TextResourceContents(mimeType=mime, uri=uri) as resource
-            ) if (uri_str := str(uri)).startswith("document://") or mime == "application/pdf":
-                # EmbeddedResource - check if it's a document (PDF, etc.)
-                typ = (
-                    uri_str.removeprefix("document://")
-                    if uri_str.startswith("document://")
+            case {"type": "text" | "image" | "audio"}:
+                content.append(item)
+            case {"type": "document", "source": dict() as source}:
+                content.append(
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "uri": f"{DOCUMENT_URI_PREFIX}{source.get('type', 'base64')}",
+                            "mimeType": source.get("media_type", "application/pdf"),
+                            "blob": source.get("data", ""),
+                        },
+                    }
+                )
+            case {"type": "resource_link"}:
+                parts = [
+                    str(part)
+                    for part in (item.get("name"), item.get("uri"), item.get("description"))
+                    if part
+                ]
+                text = "\n".join(parts) if parts else "Resource link"
+                content.append({"type": "text", "text": text})
+            case {"type": "resource", "resource": {"text": str() as text}}:
+                content.append({"type": "text", "text": text})
+            case {"type": "resource"}:
+                logger.warning("Binary embedded resource cannot be converted to text, skipping")
+            case _:
+                logger.warning(
+                    "Unsupported content type %r in tool result, skipping", item.get("type")
+                )
+    return content
+
+
+def restore_document_blocks(response: dict[str, Any]) -> dict[str, Any]:
+    """Rewrite document resources in a ``tools/call`` JSON-RPC response for the CLI.
+
+    Embedded blob resources with a ``document://`` URI or a PDF mime type are
+    turned back into Anthropic ``document`` blocks, which Claude Code passes
+    on to the model. Every other part of the response is left untouched.
+    """
+    match response:
+        case {"result": {"content": list() as content} as result}:
+            pass
+        case _:
+            return response
+    restored: list[Any] = []
+    changed = False
+    for block in content:
+        match block:
+            case {
+                "type": "resource",
+                "resource": {"uri": str() as uri, "blob": str() as data} as resource,
+            } if (
+                uri.startswith(DOCUMENT_URI_PREFIX) or resource.get("mimeType") == "application/pdf"
+            ):
+                source_type = (
+                    uri.removeprefix(DOCUMENT_URI_PREFIX)
+                    if uri.startswith(DOCUMENT_URI_PREFIX)
                     else "base64"
                 )
-                data = resource.blob if isinstance(resource, BlobResourceContents) else ""
-                dct = {"type": typ, "media_type": mime, "data": data}
-                yield {"type": "document", "source": dct}
-            case ResourceLink() | EmbeddedResource():
-                pass
-            case _ as unreachable:
-                assert_never(unreachable)
+                media_type = resource.get("mimeType", "application/pdf")
+                source = {"type": source_type, "media_type": media_type, "data": data}
+                restored.append({"type": "document", "source": source})
+                changed = True
+            case _:
+                restored.append(block)
+    if not changed:
+        return response
+    return {**response, "result": {**result, "content": restored}}

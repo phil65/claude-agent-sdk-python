@@ -17,6 +17,7 @@ from ._errors import (
     CLINotFoundError,
     InvalidRequestError,
     ProcessError,
+    ResultError,
     RateLimitError,
     ServerError,
 )
@@ -212,6 +213,7 @@ __all__ = [
     "PromptHookHandler",
     "RateLimitError",
     "RemoteControlResponse",
+    "ResultError",
     "ResultErrorMessage",
     "ResultMessage",
     "ResultSuccessMessage",

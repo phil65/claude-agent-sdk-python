@@ -476,7 +476,11 @@ class SDKControlElicitationRequest(_ControlBase):
     """Permission-display description from `_meta['anthropic/permissionDisplay'].description`."""
 
     def to_mcp(self) -> mcp.types.ElicitRequestParams:
-        """Convert to the corresponding MCP elicitation request params."""
+        """Convert to the corresponding MCP elicitation request params.
+
+        Built from the wire format (camelCase keys, ``_meta``), which both
+        mcp 1.x and 2.x accept, so this works on either major.
+        """
         from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
 
         meta = {
@@ -490,18 +494,24 @@ class SDKControlElicitationRequest(_ControlBase):
             case "url":
                 assert self.url is not None
                 assert self.elicitation_id is not None
-                return ElicitRequestURLParams(
-                    message=self.message,
-                    url=self.url,
-                    elicitationId=self.elicitation_id,
-                    _meta=ElicitRequestURLParams.Meta.model_validate(meta),  # ty:ignore[unknown-argument]
+                return ElicitRequestURLParams.model_validate(
+                    {
+                        "mode": "url",
+                        "message": self.message,
+                        "url": self.url,
+                        "elicitationId": self.elicitation_id,
+                        "_meta": meta,
+                    }
                 )
             case "form":
                 assert self.requested_schema is not None
-                return ElicitRequestFormParams(
-                    message=self.message,
-                    requestedSchema=self.requested_schema,
-                    _meta=ElicitRequestFormParams.Meta.model_validate(meta),  # ty:ignore[unknown-argument]
+                return ElicitRequestFormParams.model_validate(
+                    {
+                        "mode": "form",
+                        "message": self.message,
+                        "requestedSchema": self.requested_schema,
+                        "_meta": meta,
+                    }
                 )
             case None:
                 raise ValueError("mode must be 'url' or 'form'")
@@ -514,35 +524,23 @@ class SDKControlElicitationRequest(_ControlBase):
         params: mcp.types.ElicitRequestParams,
         mcp_server_name: str,
     ) -> SDKControlElicitationRequest:
-        """Create from MCP elicitation request params."""
-        from mcp.types import ElicitRequestFormParams, ElicitRequestURLParams
-
-        match params:
-            case ElicitRequestURLParams(url=url, message=message, elicitationId=id_, meta=meta):
-                meta_dct = meta.model_dump().get("anthropic/permissionDisplay", {}) if meta else {}
-                return cls(
-                    mcp_server_name=mcp_server_name,
-                    message=message,
-                    mode="url",
-                    url=url,
-                    elicitation_id=id_,
-                    title=meta_dct.get("title"),
-                    display_name=meta_dct.get("displayName"),
-                    description=meta_dct.get("description"),
-                )
-            case ElicitRequestFormParams(message=message, requestedSchema=schema, meta=meta):
-                meta_dct = meta.model_dump().get("anthropic/permissionDisplay", {}) if meta else {}
-                return cls(
-                    mcp_server_name=mcp_server_name,
-                    message=message,
-                    mode="form",
-                    requested_schema=dict(schema),
-                    title=meta_dct.get("title"),
-                    display_name=meta_dct.get("displayName"),
-                    description=meta_dct.get("description"),
-                )
-            case _ as unreachable:
-                assert_never(unreachable)
+        """Create from MCP elicitation request params (mcp 1.x or 2.x)."""
+        wire = params.model_dump(by_alias=True, mode="json", exclude_none=True)
+        display = (wire.get("_meta") or {}).get("anthropic/permissionDisplay") or {}
+        common: dict[str, Any] = {
+            "mcp_server_name": mcp_server_name,
+            "message": wire["message"],
+            "title": display.get("title"),
+            "display_name": display.get("displayName"),
+            "description": display.get("description"),
+        }
+        match wire:
+            case {"url": str() as url, "elicitationId": str() as elicitation_id}:
+                return cls(**common, mode="url", url=url, elicitation_id=elicitation_id)
+            case {"requestedSchema": dict() as schema}:
+                return cls(**common, mode="form", requested_schema=schema)
+            case _:
+                raise ValueError(f"Unsupported elicitation params: {sorted(wire)}")
 
 
 class SDKControlGetContextUsageRequest(_ControlBase):

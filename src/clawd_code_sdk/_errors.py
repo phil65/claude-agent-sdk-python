@@ -41,6 +41,48 @@ class ProcessError(ClaudeSDKError):
         super().__init__(message)
 
 
+class ResultError(ProcessError):
+    """The CLI reported an error result and then exited non-zero.
+
+    Replaces the bare "exit code 1" ``ProcessError`` that follows an
+    ``is_error`` result frame (e.g. a refused resume, ``error_max_turns``), so
+    the exception carries what the CLI actually reported. Subclasses
+    ``ProcessError`` so existing handlers keep catching it. (Upstream #1198/#1205.)
+    """
+
+    def __init__(self, message: str, data: dict[str, Any], exit_code: int | None = None):
+        self.data = data
+        super().__init__(message, exit_code=exit_code)
+
+
+def error_result_text(message: dict[str, Any]) -> str:
+    """Pick the most informative text from a ``result`` frame with ``is_error``.
+
+    Terminal errors the CLI raises itself carry their prose in ``errors[]``. A
+    run that ends on an API failure arrives as ``subtype: "success"`` with
+    ``is_error: true`` and the prose in ``result``. Prefer ``errors[]``, then
+    ``result``, then a non-success ``subtype``, then the HTTP status.
+    """
+    match message.get("errors"):
+        case list() as errors if texts := [str(e) for e in errors if str(e).strip()]:
+            return "; ".join(texts)
+        case _:
+            pass
+    match message.get("result"):
+        case str() as result if result.strip():
+            return result.strip()
+        case _:
+            pass
+    match message.get("subtype"):
+        case str() as subtype if subtype and subtype != "success":
+            return subtype
+        case _:
+            pass
+    if (status := message.get("api_error_status")) is not None:
+        return f"API error (HTTP {status})"
+    return "unknown error"
+
+
 class CLIJSONDecodeError(ClaudeSDKError):
     """Raised when unable to decode JSON from CLI output."""
 
