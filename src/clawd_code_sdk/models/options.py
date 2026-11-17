@@ -399,12 +399,8 @@ class ClaudeAgentOptions:
         match self.settings:
             case _Settings() as model:
                 settings_obj = model.model_dump(by_alias=True, exclude_none=True)
-            case str() | Path() as path if self.sandbox and Path(path).exists():
-                with Path(path).open(encoding="utf-8") as f:
-                    settings_obj = json.load(f)
-            case str() | Path() as path if self.sandbox:
-                logger.warning("Settings file not found: %s", path)
-                settings_obj = {}
+            case str() | Path() as value if self.sandbox:
+                settings_obj = self._load_settings_for_sandbox_merge(value)
             case str() | Path() as path:  # No sandbox to merge, pass file path directly to CLI
                 return str(path)
             case None:
@@ -417,6 +413,45 @@ class ClaudeAgentOptions:
             settings_obj["sandbox"] = self.sandbox.model_dump(by_alias=True, exclude_none=True)
 
         return anyenv.dump_json(settings_obj) if settings_obj else None
+
+    def _load_settings_for_sandbox_merge(self, value: str | Path) -> dict[str, Any]:
+        """Load ``settings`` (inline JSON or a file) so sandbox can be merged into it.
+
+        Fails closed (upstream #1426): if the settings cannot be loaded, the CLI
+        must not start with the sandbox settings alone, silently missing the
+        caller's permission rules and hooks. A relative path is resolved against
+        ``cwd``, as the CLI does when it reads the file itself.
+
+        Raises:
+            CLIConnectionError: If the settings are missing, unreadable, invalid
+                JSON, or not a JSON object.
+        """
+        from clawd_code_sdk._errors import CLIConnectionError
+
+        if isinstance(value, str) and value.lstrip().startswith("{"):
+            try:
+                loaded = json.loads(value)
+            except json.JSONDecodeError as e:
+                # The inline value is not logged or echoed: it can hold secrets.
+                msg = f"Inline settings JSON is invalid (line {e.lineno}, column {e.colno})"
+                raise CLIConnectionError(msg) from None
+            source = "Inline settings JSON"
+        else:
+            path = Path(value)
+            if not path.is_absolute() and self.cwd is not None:
+                path = Path(self.cwd) / path
+            try:
+                loaded = json.loads(path.read_text(encoding="utf-8"))
+            except OSError as e:
+                msg = f"Cannot read settings file {path} to merge sandbox settings: {e}"
+                raise CLIConnectionError(msg) from e
+            except json.JSONDecodeError as e:
+                msg = f"Settings file {path} is not valid JSON: {e}"
+                raise CLIConnectionError(msg) from e
+            source = f"Settings file {path}"
+        if not isinstance(loaded, dict):
+            raise CLIConnectionError(f"{source} must contain a JSON object")
+        return loaded
 
     def get_json_schema(self) -> dict[str, Any] | None:
         from pydantic import TypeAdapter

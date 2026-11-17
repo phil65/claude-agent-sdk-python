@@ -43,11 +43,17 @@ class BasePermissionUpdate(ClaudeCodeBaseModel):
 
 
 class RulePermissionUpdate(BasePermissionUpdate):
-    """Permission update configuration."""
+    """Permission update configuration.
+
+    ``behavior`` is required: Claude Code rejects a rule update without it and
+    then ignores every update in the same response (upstream #1502). A rule
+    with ``rule_content=None`` applies to the whole tool and is sent without a
+    ``ruleContent`` key.
+    """
 
     type: Literal["addRules", "replaceRules", "removeRules"]
     rules: list[PermissionRuleValue]
-    behavior: PermissionBehavior | None = None
+    behavior: PermissionBehavior
 
 
 class DirectoryPermissionUpdate(BasePermissionUpdate):
