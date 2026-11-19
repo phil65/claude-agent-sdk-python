@@ -197,7 +197,7 @@ GrepInput = TypedDict(
     },
 )
 """Input for the Grep tool. Powerful search built on ripgrep with regex support."""
-GrepInput.__pydantic_config__ = ConfigDict(extra="allow")  # type: ignore[attr-defined]
+GrepInput.__pydantic_config__ = ConfigDict(extra="allow")  # ty: ignore[missing-attribute]
 
 
 @_extra_allow

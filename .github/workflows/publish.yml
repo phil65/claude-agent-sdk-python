@@ -52,9 +52,9 @@ jobs:
           ruff check src/ tests/
           ruff format --check src/ tests/
 
-      - name: Run mypy
+      - name: Run ty
         run: |
-          mypy src/
+          ty check
 
   build-wheels:
     needs: [test, lint]

@@ -56,7 +56,7 @@ jobs:
           
           # Allow Claude to run linters, typecheckers, and tests
           claude_args: |
-            --allowed-tools "Bash(python -m ruff check:*),Bash(python -m ruff format:*),Bash(python -m mypy:*),Bash(python -m pytest:*)"
+            --allowed-tools "Bash(python -m ruff check:*),Bash(python -m ruff format:*),Bash(ty check:*),Bash(python -m pytest:*)"
 
           # Optional: Add custom instructions for Claude to customize its behavior for your project
           # claude_args: --system-prompt "Follow our coding standards"

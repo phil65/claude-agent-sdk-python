@@ -234,7 +234,7 @@ def build_input_schema(input_schema: type | dict[str, Any]) -> dict[str, Any]:
         case type() as tp:
             return TypeAdapter(tp).json_schema()
         case _ as unreachable:
-            assert_never(unreachable)  # ty:ignore[type-assertion-failure]
+            assert_never(unreachable)
 
 
 def build_tool_meta(tool_def: SdkMcpTool[Any]) -> dict[str, Any] | None:

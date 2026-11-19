@@ -93,7 +93,7 @@ class Query:
         on_elicitation: OnElicitation | None = None,
         hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
-    ):
+    ) -> None:
         """Initialize Query with transport and callbacks.
 
         Args:

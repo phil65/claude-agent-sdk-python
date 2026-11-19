@@ -147,7 +147,7 @@ class ClaudeSDKClient:
         self,
         options: ClaudeAgentOptions | None = None,
         transport: Transport | None = None,
-    ):
+    ) -> None:
         """Initialize Claude SDK client."""
         options = options or ClaudeAgentOptions()
         self.options = options
@@ -783,7 +783,7 @@ class ClaudeSDKClient:
         input_messages: list[ChatMessage] = []
         if prompt := self._logfire_prompt:
             part = TextPart(type="text", content=prompt)
-            input_messages = [ChatMessage(role="user", parts=[part])]  # ty:ignore[invalid-argument-type]
+            input_messages = [ChatMessage(role="user", parts=[part])]
 
         span_data: dict[str, Any] = {
             OPERATION_NAME: "invoke_agent",

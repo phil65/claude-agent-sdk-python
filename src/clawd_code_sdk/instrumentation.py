@@ -63,7 +63,7 @@ class ConversationState:
         part = ToolCallResponsePart(
             type="tool_call_response", id=tool_use_id, name=tool_name, response=result
         )
-        msg = ChatMessage(role="tool", parts=[part])  # ty:ignore[invalid-argument-type]
+        msg = ChatMessage(role="tool", parts=[part])
         self._history.append(msg)
 
     def open_chat_span(self) -> None:
@@ -114,7 +114,7 @@ class ConversationState:
             self._current_span.set_attribute(REQUEST_MODEL, model)
             self._current_span.set_attribute(RESPONSE_MODEL, model)
             self._current_span.message = f"chat {model}"
-            self._current_span.update_name(f"chat {model}")  # type: ignore[attr-defined]  # ty:ignore[unresolved-attribute]
+            self._current_span.update_name(f"chat {model}")  # ty: ignore[missing-attribute]
         if error := message.error:
             self._current_span.set_attribute(ERROR_TYPE, str(error))
             self._current_span.set_level("error")

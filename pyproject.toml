@@ -40,7 +40,7 @@ dev = [
   "anyio[trio]>=4.0.0",
   "pytest-cov>=4.0.0",
   "pytest-timeout>=2.4.0",
-  "mypy>=1.0.0",
+  "ty",
   "ruff>=0.1.0",
   "fastmcp>=3.0.0",
   "types-jsonschema>=4.20.0",
@@ -64,23 +64,6 @@ include = [
   "/README.md",
   "/LICENSE",
 ]
-
-[tool.mypy]
-python_version = "3.13"
-strict = true
-exclude = ["examples/"]
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
 
 [tool.pytest]
 addopts = ["-m", "not slow and not acp_snapshot and not e2e"]
@@ -112,7 +95,7 @@ exclude = ["examples/"]
 future-annotations = true
 select = [
   "A",  # Flake8-builtins
-  # "ANN",  # Flake8-Annotations
+  "ANN",  # Flake8-Annotations (enforces complete annotations; ty does not)
   # "ASYNC",  # Flake8-Async
   # "ARG",  # # Flake8-Unused-Arguments
   "B",  # flake8-bugbear
@@ -172,6 +155,7 @@ select = [
   "YTT",  # flake8-2020
 ]
 ignore = [
+  "ANN401",  # Dynamically typed expressions (Any) are allowed
   "BLE001",
   "C408",  # Unnecessary {obj_type} call (rewrite as a literal)
   "C901",  # {name} is too complex ({complexity} > {max_complexity})
@@ -239,21 +223,25 @@ max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "I001"]
-"scripts/*" = ["INP001", "PLR2004"]
-"*tests/*" = ["D100", "PLR2004"]
+"scripts/*" = ["INP001", "PLR2004", "ANN"]
+"*tests/*" = ["D100", "PLR2004", "ANN"]  # tests need not be fully annotated
+"duties.py" = ["ANN"]  # tooling, not package code
 "src/clawd_code_sdk/models/settings.py" = ["ALL"]
 "docs/examples/**/*.py" = [
   "TC001",
 ]  # Examples don't need TYPE_CHECKING imports
+
+[tool.ty.src]
+# `ty check` (hooks, CI, editors) type-checks the package code only.
+include = ["src"]
 
 [tool.ty.environment]
 python-version = "3.13"
 python-platform = "all"
 
 [tool.ty.rules]
-unresolved-import = "ignore"
-unused-type-ignore-comment = "ignore"
-invalid-type-form = "ignore"
-not-subscriptable = "ignore"
+# Narrowing an overridden class attribute (e.g. pydantic discriminators,
+# `Config` attributes) is an intentional pattern.
+incompatible-mutable-override = "ignore"
 possibly-missing-import = "warn"
 division-by-zero = "warn"

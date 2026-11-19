@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 from anthropic.types.beta import (
     BetaBase64ImageSourceParam,
@@ -98,7 +98,9 @@ class UserDocumentPrompt:
             title=self.title,
             context=self.context,
         )
-        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
+        return cast(
+            "BetaRequestDocumentBlockParam", {k: v for k, v in block.items() if v is not None}
+        )
 
 
 @dataclass
@@ -120,7 +122,9 @@ class UserDocumentURLPrompt:
             title=self.title,
             context=self.context,
         )
-        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
+        return cast(
+            "BetaRequestDocumentBlockParam", {k: v for k, v in block.items() if v is not None}
+        )
 
 
 @dataclass
@@ -148,7 +152,9 @@ class UserPlainTextDocumentPrompt:
             title=self.title,
             context=self.context,
         )
-        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
+        return cast(
+            "BetaRequestDocumentBlockParam", {k: v for k, v in block.items() if v is not None}
+        )
 
 
 @dataclass
@@ -170,7 +176,9 @@ class UserFilePrompt:
             title=self.title,
             context=self.context,
         )
-        return {k: v for k, v in block.items() if v is not None}  # type: ignore[return-value]
+        return cast(
+            "BetaRequestDocumentBlockParam", {k: v for k, v in block.items() if v is not None}
+        )
 
 
 UserPrompt = (

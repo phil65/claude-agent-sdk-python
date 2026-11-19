@@ -20,7 +20,7 @@ class CLIConnectionError(ClaudeSDKError):
 class CLINotFoundError(CLIConnectionError):
     """Raised when Claude Code is not found or not installed."""
 
-    def __init__(self, message: str = "Claude Code not found", cli_path: str | None = None):
+    def __init__(self, message: str = "Claude Code not found", cli_path: str | None = None) -> None:
         if cli_path:
             message = f"{message}: {cli_path}"
         super().__init__(message)
@@ -29,7 +29,9 @@ class CLINotFoundError(CLIConnectionError):
 class ProcessError(ClaudeSDKError):
     """Raised when the CLI process fails."""
 
-    def __init__(self, message: str, exit_code: int | None = None, stderr: str | None = None):
+    def __init__(
+        self, message: str, exit_code: int | None = None, stderr: str | None = None
+    ) -> None:
         self.exit_code = exit_code
         self.stderr = stderr
 
@@ -50,7 +52,7 @@ class ResultError(ProcessError):
     ``ProcessError`` so existing handlers keep catching it. (Upstream #1198/#1205.)
     """
 
-    def __init__(self, message: str, data: dict[str, Any], exit_code: int | None = None):
+    def __init__(self, message: str, data: dict[str, Any], exit_code: int | None = None) -> None:
         self.data = data
         super().__init__(message, exit_code=exit_code)
 
@@ -86,7 +88,7 @@ def error_result_text(message: dict[str, Any]) -> str:
 class CLIJSONDecodeError(ClaudeSDKError):
     """Raised when unable to decode JSON from CLI output."""
 
-    def __init__(self, line: str, original_error: Exception):
+    def __init__(self, line: str, original_error: Exception) -> None:
         self.line = line
         self.original_error = original_error
         super().__init__(f"Failed to decode JSON: {line[:100]}...")
@@ -95,7 +97,7 @@ class CLIJSONDecodeError(ClaudeSDKError):
 class MessageParseError(ClaudeSDKError):
     """Raised when unable to parse a message from CLI output."""
 
-    def __init__(self, message: str, data: dict[str, Any] | None = None):
+    def __init__(self, message: str, data: dict[str, Any] | None = None) -> None:
         self.data = data
         super().__init__(f"{message}: {data}")
 
@@ -137,7 +139,7 @@ class APIError(ClaudeSDKError):
         message: str,
         error_type: APIErrorType,
         model: Model | None = None,
-    ):
+    ) -> None:
         self.error_type = error_type
         self.model = model
         super().__init__(message)
@@ -149,7 +151,7 @@ class AuthenticationError(APIError):
     This typically indicates an invalid API key or insufficient permissions.
     """
 
-    def __init__(self, message: str, model: Model | None = None):
+    def __init__(self, message: str, model: Model | None = None) -> None:
         super().__init__(message, "authentication_failed", model)
 
 
@@ -160,7 +162,7 @@ class BillingError(APIError):
     billing-related issues.
     """
 
-    def __init__(self, message: str, model: Model | None = None):
+    def __init__(self, message: str, model: Model | None = None) -> None:
         super().__init__(message, "billing_error", model)
 
 
@@ -171,7 +173,7 @@ class RateLimitError(APIError):
     when handling this exception.
     """
 
-    def __init__(self, message: str, model: Model | None = None):
+    def __init__(self, message: str, model: Model | None = None) -> None:
         super().__init__(message, "rate_limit", model)
 
 
@@ -182,7 +184,7 @@ class InvalidRequestError(APIError):
     Check the error message for details about what needs to be corrected.
     """
 
-    def __init__(self, message: str, model: Model | None = None):
+    def __init__(self, message: str, model: Model | None = None) -> None:
         super().__init__(message, "invalid_request", model)
 
 
@@ -193,14 +195,14 @@ class ServerError(APIError):
     Applications should implement retry logic for transient server errors.
     """
 
-    def __init__(self, message: str, model: Model | None = None):
+    def __init__(self, message: str, model: Model | None = None) -> None:
         super().__init__(message, "server_error", model)
 
 
 class ControlRequestError(ClaudeSDKError):
     """Raised when a control protocol request fails."""
 
-    def __init__(self, message: str, subtype: str | None = None):
+    def __init__(self, message: str, subtype: str | None = None) -> None:
         self.subtype = subtype
         super().__init__(message)
 
@@ -224,7 +226,7 @@ class McpError(ControlRequestError):
         error_code: int | None = None,
         server_name: str | None = None,
         subtype: str | None = None,
-    ):
+    ) -> None:
         self.error_code = error_code
         self.server_name = server_name
         super().__init__(message, subtype=subtype)

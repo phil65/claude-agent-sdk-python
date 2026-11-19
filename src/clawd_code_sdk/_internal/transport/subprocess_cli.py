@@ -64,7 +64,7 @@ atexit.register(_kill_active_children)
 class SubprocessCLITransport(Transport):
     """Subprocess transport using Claude Code CLI."""
 
-    def __init__(self, options: ClaudeAgentOptions | None = None):
+    def __init__(self, options: ClaudeAgentOptions | None = None) -> None:
         self._options = options or ClaudeAgentOptions()
         self._cli_path = str(opts) if (opts := self._options.cli_path) is not None else None
         self._process: Process | None = None
