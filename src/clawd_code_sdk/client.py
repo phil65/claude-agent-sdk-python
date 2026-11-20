@@ -507,10 +507,11 @@ class ClaudeSDKClient:
         other sources (user, project, etc.) to produce the effective settings.
 
         Args:
-            settings: Settings to apply. Only non-None fields will be sent.
+            settings: Settings to apply. Only fields that were set explicitly (and are
+                not None) are sent: defaults would override every other settings source.
         """
         query = self._ensure_connected()
-        serialized = settings.model_dump(by_alias=True, exclude_none=True)
+        serialized = settings.model_dump(by_alias=True, exclude_unset=True, exclude_none=True)
         req = SDKControlApplyFlagSettingsRequest(settings=serialized)
         await query._send_control_request(req)
 

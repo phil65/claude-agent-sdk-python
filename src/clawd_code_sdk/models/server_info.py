@@ -52,12 +52,16 @@ class ClaudeCodeModelInfo(ClaudeCodeBaseModel):
     """Whether the model supports fast mode."""
 
     supports_auto_mode: bool | None = None
+    """Whether the model supports auto mode."""
+
     supports_thinking_off: bool | None = None
+    """Whether thinking can be turned off for the model."""
+
     disabled: bool | None = None
     """Visible but not selectable (only set for entries in ``unavailable_models``)."""
+
     resolved_model: str | None = None
     """Concrete model ID this entry resolves to (e.g. for aliases)."""
-    """Whether the model supports auto mode."""
 
 
 class ClaudeCodeCommandInfo(ClaudeCodeBaseModel):
