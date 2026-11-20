@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel
 from clawd_code_sdk.models.usage import ModelUsage, Usage
@@ -274,6 +274,7 @@ class UsageReportDisplayName(ClaudeCodeBaseModel):
     """Wrapper holding a display name."""
 
     display_name: str
+    id: str | None = None
 
 
 class UsageReportLimitScope(ClaudeCodeBaseModel):
@@ -296,7 +297,13 @@ class UsageReportLimit(ClaudeCodeBaseModel):
 
 
 class UsageReportExtraUsage(ClaudeCodeBaseModel):
-    """Extra (overage) usage state."""
+    """Extra (overage) usage state.
+
+    Passed through from the claude.ai usage endpoint, which adds fields freely; unknown
+    fields are ignored even in strict (test) mode.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     is_enabled: bool
     monthly_limit: float | None
@@ -310,6 +317,44 @@ class UsageReportRateLimits(ClaudeCodeBaseModel):
 
     limits: list[UsageReportLimit] | None
     extra_usage: UsageReportExtraUsage | None = None
+
+
+class UsageWindow(ClaudeCodeBaseModel):
+    """Utilization of one plan rate-limit window."""
+
+    model_config = ConfigDict(extra="ignore")  # server-defined, see UsageReportExtraUsage
+
+    utilization: float | None
+    """Percentage of the window used, 0-100."""
+    resets_at: str | None
+    """ISO 8601 timestamp of the window's reset."""
+
+
+class ModelScopedUsageWindow(UsageWindow):
+    """Per-model weekly window."""
+
+    display_name: str
+
+
+class UsageRateLimits(ClaudeCodeBaseModel):
+    """Plan rate-limit windows from the claude.ai usage endpoint.
+
+    Only the fields documented by the TypeScript SDK are modelled; the endpoint carries
+    many experimental extras, which are ignored.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    five_hour: UsageWindow | None = None
+    seven_day: UsageWindow | None = None
+    seven_day_oauth_apps: UsageWindow | None = None
+    seven_day_opus: UsageWindow | None = None
+    seven_day_sonnet: UsageWindow | None = None
+    model_scoped: list[ModelScopedUsageWindow] | None = None
+    """Per-model weekly windows (absent when unknown, empty when there are none)."""
+    extra_usage: UsageReportExtraUsage | None = None
+    limits: list[UsageReportLimit] | None = None
+    """The server's usage rows, in the server's order (render verbatim)."""
 
 
 class SDKUsageReport(ClaudeCodeBaseModel):

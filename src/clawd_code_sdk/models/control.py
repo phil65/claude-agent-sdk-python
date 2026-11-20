@@ -15,6 +15,7 @@ from clawd_code_sdk.models.base import (
     ModelName,
     PermissionMode,
 )
+from clawd_code_sdk.models.context_usage import UsageRateLimits, UsageReportSession
 from clawd_code_sdk.models.hooks import HookEvent, HookInput
 from clawd_code_sdk.models.mcp import (
     ExternalMcpServerConfig,
@@ -669,6 +670,20 @@ class SDKControlGetUsageRequest(_ControlBase):
 
     subtype: Literal["get_usage"] = "get_usage"
     skip_behaviors: bool | None = None
+
+
+class SDKControlGetUsageResponse(ClaudeCodeBaseModel):
+    """Structured /usage data: session totals and plan rate-limit windows. Experimental."""
+
+    session: UsageReportSession
+    """Cost and usage accumulated by the current session."""
+    subscription_type: str | None
+    """claude.ai plan (e.g. "pro", "max"), None without a subscription."""
+    rate_limits_available: bool
+    """False when plan limits do not apply (API key, Bedrock, Vertex, ...)."""
+    rate_limits: UsageRateLimits | None
+    behaviors: dict[str, Any] | None = None
+    """What contributes to usage, from a scan of local transcripts (None if skipped)."""
 
 
 class SDKControlGetBinaryVersionRequest(_ControlBase):

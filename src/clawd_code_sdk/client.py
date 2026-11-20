@@ -39,6 +39,7 @@ from clawd_code_sdk.models import (
     SDKControlGetTaskOutputRequest,
     SDKControlGetTaskOutputResponse,
     SDKControlGetUsageRequest,
+    SDKControlGetUsageResponse,
     SDKControlInitializeRequest,
     SDKControlInterruptRequest,
     SDKControlInterruptResponse,
@@ -629,11 +630,17 @@ class ClaudeSDKClient:
         result = await query._send_control_request(request)
         return SDKControlGetTaskOutputResponse.model_validate(result)
 
-    async def get_usage(self, *, skip_behaviors: bool = False) -> dict[str, Any]:
-        """Get the structured usage report (experimental, shape may change)."""
+    async def get_usage(self, *, skip_behaviors: bool = True) -> SDKControlGetUsageResponse:
+        """Get session usage and plan rate-limit windows (experimental, shape may change).
+
+        Args:
+            skip_behaviors: Skip the (slow) scan of local transcripts that fills
+                ``behaviors``.
+        """
         query = self._ensure_connected()
         request = SDKControlGetUsageRequest(skip_behaviors=skip_behaviors or None)
-        return await query._send_control_request(request)
+        result = await query._send_control_request(request)
+        return SDKControlGetUsageResponse.model_validate(result)
 
     async def get_binary_version(self) -> dict[str, Any]:
         """Get version info of the running Claude Code binary."""
