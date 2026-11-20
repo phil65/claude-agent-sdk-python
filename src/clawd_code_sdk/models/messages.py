@@ -775,6 +775,28 @@ class ConversationResetMessage(BaseMessage):
     timestamp: str | None = None
 
 
+CommandLifecycleState = Literal[
+    "queued", "started", "completed", "cancelled", "discarded", "refused"
+]
+"""Where a uuid-stamped user message is in the CLI's command queue."""
+
+
+class CommandLifecycleMessage(BaseMessage):
+    """Progress of a user message that was sent with a ``uuid`` (capability ``msg_lifecycle_v1``).
+
+    ``queued``: waiting behind the running work. ``started``: taken in (the cycle it starts,
+    or the running cycle it was folded into). ``completed``: its work ended (after the
+    result for a message that started a cycle, before it for one folded into a cycle).
+    ``cancelled``: an interrupt stopped it. ``discarded`` / ``refused``: dropped before it ran.
+    """
+
+    type: Literal["command_lifecycle"] = "command_lifecycle"
+    command_uuid: str
+    """The ``uuid`` the message was sent with."""
+    state: CommandLifecycleState
+    session_id: str
+
+
 class PromptSuggestionMessage(BaseMessage):
     """Predicted next user prompt, emitted after each turn when promptSuggestions is enabled."""
 
@@ -818,6 +840,7 @@ MiscMessages = (
     | AuthStatusMessage
     | PromptSuggestionMessage
     | ConversationResetMessage
+    | CommandLifecycleMessage
     | StreamlinedTextMessage
     | StreamlinedToolUseSummaryMessage
 )

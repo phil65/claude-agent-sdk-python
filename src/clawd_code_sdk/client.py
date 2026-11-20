@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from uuid import uuid4
 
 import anyenv
 from pydantic import ValidationError
@@ -272,8 +273,9 @@ class ClaudeSDKClient:
                 ):
                     self.query_usage.accumulate(usage)
                     self.session_usage.accumulate(usage)
-                    # total_cost_usd is cumulative; derive per-query cost as delta
-                    self.query_cost = total_cost - self.session_cost
+                    # total_cost_usd is cumulative; a query adds the delta of each of its
+                    # results (a steered query has one per cycle)
+                    self.query_cost += total_cost - self.session_cost
                     self.session_cost = total_cost
             yield message
 
@@ -284,8 +286,11 @@ class ClaudeSDKClient:
         parent_tool_use_id: str | None = None,
         should_query: bool = True,
         priority: MessagePriority | None = None,
+        uuid: str | None = None,
     ) -> None:
         """Send a new user message with one or more content blocks.
+
+        Starts a new query: ``query_usage`` and ``query_cost`` count from here.
 
         Args:
             *prompts: One or more content blocks. Strings are converted to
@@ -295,11 +300,61 @@ class ClaudeSDKClient:
             parent_tool_use_id: If responding to a tool use, the tool_use block ID.
             should_query: Whether to query the model for a response. Defaults to True.
             priority: The priority of the message. Defaults to None.
+            uuid: ID of the message; the CLI then reports its progress as
+                ``CommandLifecycleMessage`` frames and names it in results.
         """
         prompt = prompts[0] if prompts else None
         self._logfire_prompt = str(prompt)
         self.query_usage.reset()
         self.query_cost = 0.0
+        await self._send_user_message(
+            prompts,
+            session_id=session_id,
+            parent_tool_use_id=parent_tool_use_id,
+            should_query=should_query,
+            priority=priority,
+            uuid=uuid,
+        )
+
+    async def steer(
+        self,
+        *prompts: str | UserPrompt,
+        priority: MessagePriority = "now",
+        session_id: str = "default",
+    ) -> str:
+        """Send a user message into the running query instead of starting a new one.
+
+        ``query_usage`` and ``query_cost`` keep counting the running query. With
+        ``"now"`` the CLI takes the message in at once: it ends the cycle that is
+        generating (which reports a result of its own) or moves a running foreground
+        tool to the background, and works on the message in the same query. ``"later"``
+        waits for the running cycle (e.g. while a permission request is open).
+
+        Args:
+            *prompts: Content blocks of the message (strings become text blocks).
+            priority: When the CLI takes the message in.
+            session_id: Session identifier for the message.
+
+        Returns:
+            The message's uuid, which ``CommandLifecycleMessage.command_uuid`` and the
+            results' ``user_message_uuids`` refer to.
+        """
+        message_uuid = str(uuid4())
+        await self._send_user_message(
+            prompts, session_id=session_id, priority=priority, uuid=message_uuid
+        )
+        return message_uuid
+
+    async def _send_user_message(
+        self,
+        prompts: tuple[str | UserPrompt, ...],
+        *,
+        session_id: str,
+        parent_tool_use_id: str | None = None,
+        should_query: bool = True,
+        priority: MessagePriority | None = None,
+        uuid: str | None = None,
+    ) -> None:
         self._ensure_connected()
         if not self._query:
             raise CLIConnectionError("Not connected. Call connect() first.")
@@ -322,6 +377,8 @@ class ClaudeSDKClient:
             "shouldQuery": should_query,
             "priority": priority,
         }
+        if uuid is not None:
+            wire_message["uuid"] = uuid
         if self.options.verbatim_prompts:
             wire_message["client_composed"] = True
         await self._query.write_json(wire_message)

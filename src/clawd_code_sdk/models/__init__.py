@@ -348,6 +348,8 @@ from .messages import (
     SDKPermissionDenial,
     StreamEvent,
     AuthStatusMessage,
+    CommandLifecycleMessage,
+    CommandLifecycleState,
     ConversationResetMessage,
     SDKMessageOrigin,
     ToolProgressMessage,
@@ -472,6 +474,7 @@ MessageUnion = (
     | AuthStatusMessage
     | PromptSuggestionMessage
     | ConversationResetMessage
+    | CommandLifecycleMessage
     | SystemMessageUnion
 )
 
@@ -487,6 +490,7 @@ Message = Annotated[
     | Annotated[AuthStatusMessage, Tag("auth_status")]
     | Annotated[PromptSuggestionMessage, Tag("prompt_suggestion")]
     | Annotated[ConversationResetMessage, Tag("conversation_reset")]
+    | Annotated[CommandLifecycleMessage, Tag("command_lifecycle")]
     | Annotated[SystemMessageUnion, Tag("system")],
     Discriminator(_message_discriminator),
 ]
@@ -552,6 +556,8 @@ __all__ = [
     "ClaudeCodeSettings",
     "ClaudeOAuthWaitForCompletionResponse",
     "CommandHookHandler",
+    "CommandLifecycleMessage",
+    "CommandLifecycleState",
     "CommandsChangedMessage",
     "CompactBoundarySystemMessage",
     "ConfigOutput",
