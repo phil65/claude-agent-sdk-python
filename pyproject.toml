@@ -19,7 +19,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "anthropic>=0.77.0",
+  "anthropic>=2.9.0",  # BetaFallbackBlock / BetaMCPToolListingBlock
   "anyenv>=2.0.15",
   "anyio>=4.0.0",
   "logfire>=4.31.0",

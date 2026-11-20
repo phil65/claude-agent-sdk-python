@@ -42,6 +42,7 @@ from clawd_code_sdk.models.content_blocks import (
     TextBlock,
     ThinkingBlock,
     ToolUseBlock,
+    is_server_block,
 )
 
 
@@ -54,6 +55,7 @@ if TYPE_CHECKING:
     )
 
     from clawd_code_sdk.models import Message
+    from clawd_code_sdk.models.content_blocks import AssistantContentBlock, ServerContentBlock
 
 
 async def to_anthropic_events(
@@ -171,9 +173,14 @@ def _synthesize_events(
 
 
 def _to_anthropic_block(
-    block: TextBlock | ThinkingBlock | ToolUseBlock,
-) -> ATextBlock | AThinkingBlock | AToolUseBlock | None:
-    """Convert a content block to its Anthropic start-event form (empty content)."""
+    block: AssistantContentBlock,
+) -> ATextBlock | AThinkingBlock | AToolUseBlock | ServerContentBlock | None:
+    """Convert a content block to its Anthropic start-event form (empty content).
+
+    API-produced blocks already are Anthropic models and are sent complete.
+    """
+    if is_server_block(block):
+        return block
     match block:
         case TextBlock():
             return ATextBlock(type="text", text="")
@@ -186,7 +193,7 @@ def _to_anthropic_block(
 
 
 def _to_anthropic_delta(
-    block: TextBlock | ThinkingBlock | ToolUseBlock,
+    block: AssistantContentBlock,
 ) -> BetaTextDelta | BetaThinkingDelta | BetaInputJSONDeltaType | None:
     """Convert a content block's content into a single delta event."""
     from anthropic.types.beta import BetaInputJSONDelta

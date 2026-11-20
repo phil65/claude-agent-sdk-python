@@ -404,7 +404,15 @@ class AssistantMessage(BaseModel):
         """Convert SDK content block objects into semconv OutputMessages."""
         from logfire._internal.integrations.llm_providers.semconv import OutputMessage
 
-        parts: list[MessagePart] = [b.to_otel() for b in self.content]
+        from clawd_code_sdk.models.content_blocks import is_server_block, server_block_to_otel
+
+        parts: list[MessagePart] = []
+        for block in self.content:
+            if is_server_block(block):
+                if (part := server_block_to_otel(block)) is not None:
+                    parts.append(part)
+            else:
+                parts.append(block.to_otel())
         return OutputMessage(role="assistant", parts=parts)
 
 

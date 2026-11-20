@@ -54,11 +54,32 @@ from __future__ import annotations
 import json as _json
 from typing import TYPE_CHECKING, assert_never
 
-from anthropic.types.beta import BetaMessage, BetaRawMessageStartEvent, BetaUsage
+from anthropic.types.beta import (
+    BetaAdvisorToolResultBlock,
+    BetaBashCodeExecutionToolResultBlock,
+    BetaCodeExecutionToolResultBlock,
+    BetaCompactionBlock,
+    BetaContainerUploadBlock,
+    BetaFallbackBlock,
+    BetaMCPToolListingBlock,
+    BetaMCPToolResultBlock,
+    BetaMCPToolUseBlock,
+    BetaMessage,
+    BetaRawContentBlockStartEvent,
+    BetaRawMessageStartEvent,
+    BetaRedactedThinkingBlock,
+    BetaServerToolUseBlock,
+    BetaTextEditorCodeExecutionToolResultBlock,
+    BetaToolSearchToolResultBlock,
+    BetaUsage,
+    BetaWebFetchToolResultBlock,
+    BetaWebSearchToolResultBlock,
+)
 
 from clawd_code_sdk.models import (
     AssistantMessage,
     AssistantMessageContent,
+    DocumentBlock,
     ImageBlock,
     MessageParam,
     ResultErrorMessage,
@@ -184,8 +205,30 @@ def _make_block_start(
             yield StreamEvent.block_start_tool_use(
                 tool_use_id=block_id, name=name, index=index, session_id=session_id, uuid=uuid
             )
-        case ToolResultBlock() | ImageBlock():
+        case ToolResultBlock() | ImageBlock() | DocumentBlock():
             return
+        case (
+            BetaRedactedThinkingBlock()
+            | BetaServerToolUseBlock()
+            | BetaWebSearchToolResultBlock()
+            | BetaWebFetchToolResultBlock()
+            | BetaAdvisorToolResultBlock()
+            | BetaCodeExecutionToolResultBlock()
+            | BetaBashCodeExecutionToolResultBlock()
+            | BetaTextEditorCodeExecutionToolResultBlock()
+            | BetaToolSearchToolResultBlock()
+            | BetaMCPToolUseBlock()
+            | BetaMCPToolResultBlock()
+            | BetaContainerUploadBlock()
+            | BetaCompactionBlock()
+            | BetaFallbackBlock()
+            | BetaMCPToolListingBlock()
+        ):
+            # API-produced blocks arrive complete in their content_block_start.
+            event = BetaRawContentBlockStartEvent(
+                type="content_block_start", index=index, content_block=block
+            )
+            yield StreamEvent(event=event, session_id=session_id, uuid=uuid)
         case _ as unreachable:
             assert_never(unreachable)
 
@@ -220,7 +263,27 @@ def _make_block_delta(
                 session_id=session_id,
                 uuid=uuid,
             )
-        case ToolResultBlock() | ImageBlock():
+        # Results, images, documents and API-produced blocks carry no deltas.
+        case (
+            ToolResultBlock()
+            | ImageBlock()
+            | DocumentBlock()
+            | BetaRedactedThinkingBlock()
+            | BetaServerToolUseBlock()
+            | BetaWebSearchToolResultBlock()
+            | BetaWebFetchToolResultBlock()
+            | BetaAdvisorToolResultBlock()
+            | BetaCodeExecutionToolResultBlock()
+            | BetaBashCodeExecutionToolResultBlock()
+            | BetaTextEditorCodeExecutionToolResultBlock()
+            | BetaToolSearchToolResultBlock()
+            | BetaMCPToolUseBlock()
+            | BetaMCPToolResultBlock()
+            | BetaContainerUploadBlock()
+            | BetaCompactionBlock()
+            | BetaFallbackBlock()
+            | BetaMCPToolListingBlock()
+        ):
             return
         case _ as unreachable:
             assert_never(unreachable)

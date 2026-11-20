@@ -8,9 +8,26 @@ therefore serves both purposes, avoiding a redundant conversion layer.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Annotated, Any, Literal, assert_never, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal, TypeIs, assert_never, cast, get_args
 
 from anthropic.types import Model
+from anthropic.types.beta import (
+    BetaAdvisorToolResultBlock,
+    BetaBashCodeExecutionToolResultBlock,
+    BetaCodeExecutionToolResultBlock,
+    BetaCompactionBlock,
+    BetaContainerUploadBlock,
+    BetaFallbackBlock,
+    BetaMCPToolListingBlock,
+    BetaMCPToolResultBlock,
+    BetaMCPToolUseBlock,
+    BetaRedactedThinkingBlock,
+    BetaServerToolUseBlock,
+    BetaTextEditorCodeExecutionToolResultBlock,
+    BetaToolSearchToolResultBlock,
+    BetaWebFetchToolResultBlock,
+    BetaWebSearchToolResultBlock,
+)
 from anthropic.types.beta.beta_tool_use_block import Caller
 from pydantic import BaseModel, ConfigDict, Discriminator
 
@@ -21,6 +38,7 @@ from clawd_code_sdk.models.base import ClaudeCodeBaseModel, StopReason, ToolName
 if TYPE_CHECKING:
     from logfire._internal.integrations.llm_providers.semconv import (
         BlobPart,
+        MessagePart,
         ReasoningPart,
         TextPart,
         ToolCallPart,
@@ -148,24 +166,153 @@ class ImageBlock(BaseContentBlock):
         )
 
 
+class Base64PDFSource(BaseContentBlock):
+    """Base64-encoded PDF document."""
+
+    type: Literal["base64"] = "base64"
+    media_type: Literal["application/pdf"] = "application/pdf"
+    data: str
+
+
+class PlainTextSource(BaseContentBlock):
+    """Plain text document."""
+
+    type: Literal["text"] = "text"
+    media_type: Literal["text/plain"] = "text/plain"
+    data: str
+
+
+class URLPDFSource(BaseContentBlock):
+    """PDF document referenced by URL."""
+
+    type: Literal["url"] = "url"
+    url: str
+
+
+class FileDocumentSource(BaseContentBlock):
+    """Document uploaded through the Files API."""
+
+    type: Literal["file"] = "file"
+    file_id: str
+
+
+class ContentDocumentSource(BaseContentBlock):
+    """Document made of content blocks (text / images)."""
+
+    type: Literal["content"] = "content"
+    content: str | list[dict[str, Any]]
+
+
+type DocumentSource = Annotated[
+    Base64PDFSource | PlainTextSource | URLPDFSource | FileDocumentSource | ContentDocumentSource,
+    Discriminator("type"),
+]
+
+
+class DocumentBlock(BaseContentBlock):
+    """Document content block (e.g. an attached PDF) in a user message."""
+
+    type: Literal["document"] = "document"
+    source: DocumentSource
+    title: str | None = None
+    context: str | None = None
+    citations: dict[str, Any] | None = None
+
+
 # =============================================================================
 # Unions and adapters
 # =============================================================================
 
+type ServerContentBlock = (
+    BetaRedactedThinkingBlock
+    | BetaServerToolUseBlock
+    | BetaWebSearchToolResultBlock
+    | BetaWebFetchToolResultBlock
+    | BetaAdvisorToolResultBlock
+    | BetaCodeExecutionToolResultBlock
+    | BetaBashCodeExecutionToolResultBlock
+    | BetaTextEditorCodeExecutionToolResultBlock
+    | BetaToolSearchToolResultBlock
+    | BetaMCPToolUseBlock
+    | BetaMCPToolResultBlock
+    | BetaContainerUploadBlock
+    | BetaCompactionBlock
+    | BetaFallbackBlock
+    | BetaMCPToolListingBlock
+)
+"""Assistant content blocks produced by the API itself (server tools, MCP connector, ...).
+
+These use the Anthropic SDK's models directly; clawd has no extra behaviour for them.
+"""
+
+SERVER_CONTENT_BLOCK_TYPES: tuple[type[BaseModel], ...] = get_args(ServerContentBlock.__value__)
+"""Runtime tuple of :data:`ServerContentBlock` members (for ``isinstance`` checks)."""
+
+
+def is_server_block(block: object) -> TypeIs[ServerContentBlock]:
+    """Whether a content block was produced by the API itself (see :data:`ServerContentBlock`)."""
+    return isinstance(block, SERVER_CONTENT_BLOCK_TYPES)
+
+
+def server_block_to_otel(block: ServerContentBlock) -> MessagePart | None:
+    """OpenTelemetry semconv part for an API-produced block (None if it has no equivalent)."""
+    from logfire._internal.integrations.llm_providers.semconv import (
+        ReasoningPart,
+        ToolCallPart,
+        ToolCallResponsePart,
+    )
+
+    match block:
+        case BetaRedactedThinkingBlock():
+            return ReasoningPart(type="reasoning", content="[redacted]")
+        case (
+            BetaServerToolUseBlock(id=tool_id, name=name, input=input_)
+            | BetaMCPToolUseBlock(id=tool_id, name=name, input=input_)
+        ):
+            return ToolCallPart(type="tool_call", id=tool_id, name=name, arguments=input_)
+        case (
+            BetaWebSearchToolResultBlock(tool_use_id=tool_id)
+            | BetaWebFetchToolResultBlock(tool_use_id=tool_id)
+            | BetaAdvisorToolResultBlock(tool_use_id=tool_id)
+            | BetaCodeExecutionToolResultBlock(tool_use_id=tool_id)
+            | BetaBashCodeExecutionToolResultBlock(tool_use_id=tool_id)
+            | BetaTextEditorCodeExecutionToolResultBlock(tool_use_id=tool_id)
+            | BetaToolSearchToolResultBlock(tool_use_id=tool_id)
+            | BetaMCPToolResultBlock(tool_use_id=tool_id)
+        ):
+            response = block.model_dump(mode="json", exclude={"type", "tool_use_id"})
+            return ToolCallResponsePart(type="tool_call_response", id=tool_id, response=response)
+        case (
+            BetaContainerUploadBlock()
+            | BetaCompactionBlock()
+            | BetaFallbackBlock()
+            | BetaMCPToolListingBlock()
+        ):
+            return None
+        case _ as unreachable:
+            assert_never(unreachable)
+
+
 AssistantContentBlock = Annotated[
-    TextBlock | ThinkingBlock | ToolUseBlock,
+    TextBlock | ThinkingBlock | ToolUseBlock | ServerContentBlock,
     Discriminator("type"),
 ]
-"""Content blocks that appear in assistant messages."""
+"""Content blocks that appear in assistant messages (any Messages API block type)."""
 
 UserContentBlock = Annotated[
-    TextBlock | ToolResultBlock | ImageBlock,
+    TextBlock | ToolResultBlock | ImageBlock | DocumentBlock,
     Discriminator("type"),
 ]
 """Content blocks that appear in user messages."""
 
 ContentBlock = Annotated[
-    TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | ImageBlock,
+    TextBlock
+    | ThinkingBlock
+    | ToolUseBlock
+    | ToolResultBlock
+    | ImageBlock
+    | DocumentBlock
+    | ServerContentBlock,
     Discriminator("type"),
 ]
 """All content block types (used for storage/JSONL which doesn't distinguish by role)."""
