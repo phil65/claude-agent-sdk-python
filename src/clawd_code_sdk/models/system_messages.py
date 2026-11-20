@@ -260,6 +260,8 @@ class InitSystemMessage(BaseSystemMessage):
     per_turn_effort_active: bool | None = None
     ultrathink_available: bool | None = None
     ultrathink_typed_raises: bool | None = None
+    served_by_anthropic: bool | None = None
+    """Whether requests are served by Anthropic directly (undocumented)."""
     startup_timing: dict[str, Any] | None = None
     """Startup timing diagnostics (undocumented, nested phase timings)."""
 
