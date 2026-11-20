@@ -530,6 +530,8 @@ class BaseResultMessage(BaseMessage):
     """UUID of the user message that started this turn."""
     user_message_uuids: list[str] | None = None
     """UUIDs of all user messages handled in this turn."""
+    begun_message_ids: list[str] | None = None
+    """API message IDs (``msg_...``) the turn began (undocumented, CLI 2.1.330+)."""
     resume_reason: str | None = None
     result_index: int | None = None
     credential_expires_at: str | None = None
