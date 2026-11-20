@@ -50,7 +50,9 @@ from .context_usage import (
     SDKUsageReport,
     ContextUsageMcpInstructions,
     ModelScopedUsageWindow,
+    UsageMoney,
     UsageRateLimits,
+    UsageSpend,
     UsageWindow,
 )
 from .control import (
@@ -878,7 +880,9 @@ __all__ = [
     "TriggerMetadata",
     "URLPDFSource",
     "Usage",
+    "UsageMoney",
     "UsageRateLimits",
+    "UsageSpend",
     "UsageWindow",
     "UserContentBlock",
     "UserDocumentPrompt",

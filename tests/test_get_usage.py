@@ -63,9 +63,16 @@ RESPONSE: dict[str, Any] = {
         "model_scoped": [
             {"display_name": "Fable", "utilization": 0, "resets_at": "2026-11-22T13:00:00+00:00"}
         ],
-        # Undocumented, experimental fields are ignored
+        # Undocumented, experimental fields are ignored (spend is modelled)
         "pace": {"status": "on_track"},
-        "spend": {"percent": 0},
+        "spend": {
+            "used": {"amount_minor": 1250, "currency": "USD", "exponent": 2},
+            "limit": {"amount_minor": 5000, "currency": "USD", "exponent": 2},
+            "percent": 25,
+            "severity": "normal",
+            "enabled": True,
+            "disclaimer": "Usage credits cover you when you hit your plan limits.",
+        },
     },
     "behaviors": None,
 }
@@ -83,6 +90,11 @@ def test_parses_real_response() -> None:
     assert limits.model_scoped[0].display_name == "Fable"
     assert limits.limits is not None
     assert [row.kind for row in limits.limits] == ["session", "weekly_scoped"]
+    assert limits.spend is not None
+    assert limits.spend.enabled
+    assert limits.spend.percent == 25
+    assert limits.spend.used is not None
+    assert limits.spend.used.amount == 12.5
 
 
 def test_without_plan_limits() -> None:

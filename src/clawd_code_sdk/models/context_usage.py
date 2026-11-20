@@ -336,6 +336,34 @@ class ModelScopedUsageWindow(UsageWindow):
     display_name: str
 
 
+class UsageMoney(ClaudeCodeBaseModel):
+    """An amount in minor units (amount_minor / 10**exponent in currency)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    amount_minor: int
+    currency: str
+    exponent: int
+
+    @property
+    def amount(self) -> float:
+        """The amount in major units (e.g. dollars)."""
+        return self.amount_minor / 10**self.exponent
+
+
+class UsageSpend(ClaudeCodeBaseModel):
+    """Usage-credit spend beyond the plan windows (undocumented, server-defined)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    enabled: bool = False
+    used: UsageMoney | None = None
+    limit: UsageMoney | None = None
+    percent: float | None = None
+    """Share of the spend limit used, 0-100."""
+    severity: str | None = None
+
+
 class UsageRateLimits(ClaudeCodeBaseModel):
     """Plan rate-limit windows from the claude.ai usage endpoint.
 
@@ -355,6 +383,8 @@ class UsageRateLimits(ClaudeCodeBaseModel):
     extra_usage: UsageReportExtraUsage | None = None
     limits: list[UsageReportLimit] | None = None
     """The server's usage rows, in the server's order (render verbatim)."""
+    spend: UsageSpend | None = None
+    """Usage-credit spend (not documented by the TypeScript SDK; may change)."""
 
 
 class SDKUsageReport(ClaudeCodeBaseModel):
