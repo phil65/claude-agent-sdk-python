@@ -336,6 +336,17 @@ class SDKControlRenameSessionRequest(_ControlBase):
     session_id: str | None = None
 
 
+class SDKControlGenerateSessionTitleRequest(_ControlBase):
+    """Generates a title for a session from a description of it."""
+
+    subtype: Literal["generate_session_title"] = "generate_session_title"
+    description: str
+    """Text to title, e.g. the conversation's latest user and assistant text."""
+    persist: bool | None = None
+    """Store the title as the current session's title. A session that has one already
+    (the CLI titles new sessions itself) returns it instead of generating another."""
+
+
 class SDKControlMcpAuthenticateRequest(_ControlBase):
     """Authenticates with an MCP server."""
 
@@ -824,6 +835,7 @@ OutgoingControlRequest = Annotated[
     | SDKControlMcpToggleRequest
     | SDKControlChannelEnableRequest
     | SDKControlRenameSessionRequest
+    | SDKControlGenerateSessionTitleRequest
     | SDKControlEndSessionRequest
     | SDKControlMcpAuthenticateRequest
     | SDKControlMcpClearAuthRequest

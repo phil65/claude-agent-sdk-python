@@ -32,6 +32,7 @@ from clawd_code_sdk.models import (
     SDKControlChannelEnableRequest,
     SDKControlClaudeOAuthWaitForCompletionRequest,
     SDKControlEndSessionRequest,
+    SDKControlGenerateSessionTitleRequest,
     SDKControlGetBinaryVersionRequest,
     SDKControlGetContextUsageRequest,
     SDKControlGetContextUsageResponse,
@@ -533,6 +534,25 @@ class ClaudeSDKClient:
         query = self._ensure_connected()
         request = SDKControlMcpToggleRequest(server_name=server_name, enabled=enabled)
         await query._send_control_request(request)
+
+    async def generate_session_title(
+        self, description: str, *, persist: bool = False
+    ) -> str | None:
+        """Generate a session title from ``description`` with the CLI's title model.
+
+        Args:
+            description: Text to title (the CLI reads its trailing ~1000 characters).
+            persist: Store it as the current session's title; a session that has a title
+                already returns that one.
+
+        Returns:
+            The title, or None when the text is too short to title.
+        """
+        query = self._ensure_connected()
+        request = SDKControlGenerateSessionTitleRequest(description=description, persist=persist)
+        result = await query._send_control_request(request)
+        title = (result or {}).get("title")
+        return title if isinstance(title, str) and title else None
 
     async def end_session(self) -> None:
         """End the current session."""
