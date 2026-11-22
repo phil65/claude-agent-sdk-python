@@ -1,6 +1,6 @@
 {
   "package": "@anthropic-ai/claude-agent-sdk",
-  "version": "0.3.325",
+  "version": "0.3.330",
   "files": [
     "sdk.d.ts",
     "sdk-tools.d.ts"

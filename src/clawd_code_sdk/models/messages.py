@@ -121,7 +121,14 @@ class TaskNotificationMessageOrigin(ClaudeCodeBaseModel):
 
     kind: Literal["task-notification"] = "task-notification"
     subkind: (
-        Literal["scheduled-trigger", "peer-send-message", "projects-relay", "session-inbox"] | None
+        Literal[
+            "scheduled-trigger",
+            "peer-send-message",
+            "projects-relay",
+            "session-inbox",
+            "external-event",
+        ]
+        | None
     ) = None
     fire_reason: str | None = None
     run_id: str | None = None
@@ -572,6 +579,11 @@ class ResultSuccessMessage(BaseResultMessage):
     time_to_request_ms: float | None = None
     time_to_request_from_spawn_ms: float | None = None
     request_sent_wall_ms: float | None = None
+    first_request_input_tokens: int | None = None
+    """Input tokens (cache reads and writes included) of the model call sent at
+    ``request_sent_wall_ms``; only with it, and only when above zero (internal, CLI 2.1.330+)."""
+    first_request_cache_read_input_tokens: int | None = None
+    """The cache-read part of ``first_request_input_tokens`` (internal, CLI 2.1.330+)."""
     ttft_ms: float | None = None
     ttft_stream_ms: float | None = None
     first_content_frame_ms: float | None = None
@@ -612,6 +624,9 @@ class StreamEvent(BaseMessage):
     """ID of the API message this event belongs to (undocumented)."""
     thinking_display: str | None = None
     """Active thinking display mode (undocumented)."""
+    owed_rows: list[str] | None = None
+    """Uuids of transcript rows the turn wrote before its first model request that change
+    what Claude holds of a claude.ai Project or an attached PDF (internal, CLI 2.1.330+)."""
 
     @classmethod
     def block_stop(cls, *, index: int, session_id: str, uuid: str) -> StreamEvent:

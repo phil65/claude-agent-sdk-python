@@ -18,6 +18,8 @@ from clawd_code_sdk.models import (
     ResultSuccessMessage,
     ResumeSession,
     SdkPluginConfig,
+    StatusSystemMessage,
+    StreamEvent,
     ThinkingTokensMessage,
     UserMessage,
     message_adapter,
@@ -185,3 +187,58 @@ def test_new_cli_option_flags() -> None:
     assert args[args.index("--permission-prompts") + 1] == "none"
     assert "--project-config-root=/repo" in args
     assert args[args.index("--plugin-dir-no-mcp") + 1] == "/p"
+
+
+def test_status_message_carries_user_message_uuids() -> None:
+    """CLI 2.1.330 sends ``user_message_uuids`` on status (and init) messages."""
+    data = {
+        "type": "system",
+        "subtype": "status",
+        "status": "requesting",
+        "user_message_uuids": ["m1"],
+        **BASE,
+    }
+    message = message_adapter.validate_python(data)
+    assert isinstance(message, StatusSystemMessage)
+    assert message.user_message_uuids == ["m1"]
+
+
+def test_stream_event_carries_owed_rows() -> None:
+    """CLI 2.1.330 sends the internal ``owed_rows`` on stream events."""
+    data = {
+        "type": "stream_event",
+        "event": {"type": "message_stop"},
+        "parent_tool_use_id": None,
+        "user_message_uuids": ["m1"],
+        "owed_rows": [],
+        **BASE,
+    }
+    message = message_adapter.validate_python(data)
+    assert isinstance(message, StreamEvent)
+    assert message.owed_rows == []
+
+
+def test_result_carries_first_request_tokens() -> None:
+    """CLI 2.1.330 reports the first model call's prompt size on success results."""
+    data = {
+        "type": "result",
+        "subtype": "success",
+        "duration_ms": 10,
+        "duration_api_ms": 8,
+        "is_error": False,
+        "num_turns": 1,
+        "result": "ok",
+        "total_cost_usd": 0.0,
+        "stop_reason": "end_turn",
+        "usage": {"input_tokens": 1, "output_tokens": 1, "service_tier": "standard"},
+        "request_sent_wall_ms": 1795000000000,
+        "first_request_input_tokens": 51568,
+        "first_request_cache_read_input_tokens": 41324,
+        **BASE,
+    }
+    message = message_adapter.validate_python(data)
+    assert isinstance(message, ResultSuccessMessage)
+    assert (message.first_request_input_tokens, message.first_request_cache_read_input_tokens) == (
+        51568,
+        41324,
+    )

@@ -1066,6 +1066,7 @@ class ArtifactUrlOutput(TypedDict):
     faviconSent: NotRequired[Literal[True]]
     iconDropped: NotRequired[Literal[True]]
     audience: NotRequired[str]
+    folder_audience: NotRequired[Literal["others", "unknown"]]
     seq: NotRequired[float]
     unchanged: NotRequired[Literal[True]]
     liveSubscription: NotRequired[str]
@@ -1750,6 +1751,9 @@ class MonitorOutput(TypedDict):
     """Timeout deadline in milliseconds (0 when persistent)."""
     persistent: NotRequired[bool]
     """No timeout — runs until TaskStop or session end."""
+    keptInSandboxByCheck: NotRequired[bool]
+    """True when the command ran in the sandbox only because its permission check relied on
+    the sandbox; the settings would otherwise have exempted it."""
 
 
 class ProposeSkillsOutput(TypedDict):
@@ -1809,6 +1813,14 @@ class WorkflowOutput(TypedDict):
     """Set if syntax check failed"""
 
 
+class CronCreateOneShot(TypedDict):
+    """``otherOneShots`` entry of CronCreate."""
+
+    id: str
+    humanSchedule: str
+    prompt: str
+
+
 class CronCreateOutput(TypedDict):
     """Output of the CronCreate tool."""
 
@@ -1818,6 +1830,10 @@ class CronCreateOutput(TypedDict):
     durable: NotRequired[bool]
     nextFireAt: NotRequired[float]
     """Epoch ms of the job's next run, the scheduler's per-job offset included"""
+    maxAgeMs: NotRequired[float]
+    """Age at which a recurring job ends; 0 = never"""
+    otherOneShots: NotRequired[list[CronCreateOneShot]]
+    """Other session-only one-shot tasks that have yet to fire"""
 
 
 class CronDeleteOutput(TypedDict):

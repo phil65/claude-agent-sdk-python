@@ -94,7 +94,7 @@ ToolName = Literal[
     "PowerShell",
     "Projects",
     "propose_skills",
-    "ProposeGoal",
+    "ProposeGoal",  # Before CLI 2.1.330, which names it SetGoal
     "PushNotification",
     "Read",
     "ReadMcpResourceDirTool",
@@ -107,6 +107,7 @@ ToolName = Literal[
     "SendMessage",
     "SendUserFile",
     "SendUserMessage",
+    "SetGoal",
     "ShareOnboardingGuide",
     "ShowOnboardingRolePicker",
     "Skill",
@@ -193,6 +194,7 @@ StartupFailureReason = Literal[
     "initialize_not_first",
     "config_file_invalid",
     "managed_settings_not_delivered",
+    "initialize_fields_not_delivered",
 ]
 IS_DEV = "pytest" in sys.modules
 SYSTEM_PROMPT_DYNAMIC_BOUNDARY = "__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__"

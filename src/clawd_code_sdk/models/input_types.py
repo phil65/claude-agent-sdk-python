@@ -409,6 +409,12 @@ class ReportFindingsFinding(TypedDict):
 
     "correctness", "simplification", "efficiency", "test-coverage"
     """
+    severity: NotRequired[Literal["important", "pre_existing", "nit"]]
+    """Set when the review instructions ask for it.
+
+    important: a bug the change adds or makes worse; pre_existing: a bug that was there
+    before the change; nit: a minor issue
+    """
     verdict: NotRequired[Literal["CONFIRMED", "PLAUSIBLE"]]
     """Set when a verify pass ran; absent on inline-only reviews"""
     outcome: NotRequired[Literal["fixed", "skipped", "no_change_needed"]]

@@ -264,6 +264,8 @@ class InitSystemMessage(BaseSystemMessage):
     """Whether requests are served by Anthropic directly (undocumented)."""
     startup_timing: dict[str, Any] | None = None
     """Startup timing diagnostics (undocumented, nested phase timings)."""
+    user_message_uuids: list[str] | None = None
+    """Client uuids of the user messages the turn takes in (undocumented, CLI 2.1.330+)."""
 
 
 class HookStartedSystemMessage(BaseSystemMessage):
@@ -283,6 +285,8 @@ class StatusSystemMessage(BaseSystemMessage):
     permission_mode: PermissionMode | None = Field(None, validation_alias="permissionMode")
     compact_result: Literal["success", "failed"] | None = None
     compact_error: str | None = None
+    user_message_uuids: list[str] | None = None
+    """Client uuids of the user messages the turn takes in (undocumented, CLI 2.1.330+)."""
 
 
 class PreservedSegment(TypedDict):

@@ -440,6 +440,7 @@ export type ArtifactOutput =
       faviconSent?: true;
       iconDropped?: true;
       audience?: string;
+      folder_audience?: "others" | "unknown";
       seq?: number;
       unchanged?: true;
       liveSubscription?: string;
@@ -1063,7 +1064,7 @@ export interface ReportFindingsInput {
      */
     line?: number;
     /**
-     * One-sentence statement of the defect
+     * Statement of the defect
      */
     summary: string;
     /**
@@ -1078,6 +1079,10 @@ export interface ReportFindingsInput {
      * Short kebab-case slug of the finding type, e.g. "correctness", "simplification", "efficiency", "test-coverage"
      */
     category?: string;
+    /**
+     * Set when the review instructions ask for it. important: a bug the change adds or makes worse; pre_existing: a bug that was there before the change; nit: a minor issue
+     */
+    severity?: "important" | "pre_existing" | "nit";
     /**
      * Set when a verify pass ran; absent on inline-only reviews
      */
@@ -2887,7 +2892,7 @@ export interface WorkflowInput {
    */
   scriptPath?: string;
   /**
-   * Run ID of a prior Workflow invocation to resume from. Completed agent() calls with unchanged (prompt, opts) return their cached results instantly; only edited or new calls re-run. Same-session only. Stop the prior run first (TaskStop) before resuming.
+   * Run ID of a prior Workflow invocation to resume from. The cache is positional: agent() calls replay from cache up to the first call that failed, no longer matches the earlier run (edited, added, removed or reordered) or never started in it; that call and every call after it run again, even when their own (prompt, opts) are unchanged. A call a usage limit refused, or one still running when the run stopped, usually runs again without ending reuse: finished calls after it still come from cache. Same-session only. Stop the prior run first (TaskStop) before resuming.
    */
   resumeFromRunId?: string;
 }
@@ -2901,11 +2906,11 @@ export interface CronCreateInput {
    */
   prompt: string;
   /**
-   * true (default) = fire on every cron match until deleted or auto-expired after 7 days. false = fire once at the next match, then auto-delete. Use false for "remind me at X" one-shot requests with pinned minute/hour/dom/month.
+   * true (default) = fire on every cron match until deleted or auto-expired after 30 days. false = fire once at the next match, then auto-delete. Use false for "remind me at X" one-shot requests with pinned minute/hour/dom/month.
    */
   recurring?: boolean;
   /**
-   * true = persist to .claude/scheduled_tasks.json and survive restarts. false (default) = in-memory only, dies when this Claude session ends. Use true only when the user asks the task to survive across sessions.
+   * true = persist to .claude/scheduled_tasks.json and survive restarts (the result says Session-only if the job could not be saved). false (default) = in-memory only, dies when this Claude session ends. Use true only when the user asks the task to survive across sessions.
    */
   durable?: boolean;
 }
@@ -3309,11 +3314,11 @@ export interface ProposeSkillsInput {
 }
 export interface ProposeGoalInput {
   /**
-   * The completion condition to propose, written so a separate evaluator can verify it from the conversation (e.g. "all tests in test/auth pass (bun test exits 0)"). At most 500 characters — the user must be able to read the whole condition in the approval dialog.
+   * The completion condition to set, written so a separate evaluator can verify it from the conversation (e.g. "all tests in test/auth pass (bun test exits 0)"). At most 500 characters — the user must be able to read the whole condition in the approval dialog.
    */
   condition: string;
   /**
-   * Whether to ask the user for approval before the goal is set. Defaults to true — an approval dialog is shown. Set false ONLY when the user's own words in this conversation stated this outcome as what they want; the goal is then set directly, with a visible notice in the transcript, and the user can clear it with /goal clear.
+   * Whether to ask the user for approval before the goal is set. Defaults to true — an approval dialog is shown. Set false ONLY when the user's own words in this conversation stated this outcome as what they want; the goal is then set directly, with a visible notice in the transcript, and the user can clear it with /goal clear. While a goal is active the dialog is shown whatever this says.
    */
   ask_user?: boolean;
 }
@@ -3436,11 +3441,11 @@ export interface EnterWorktreeInput {
 }
 export interface ExitWorktreeInput {
   /**
-   * "keep" leaves the worktree and branch on disk; "remove" deletes both.
+   * "keep" leaves the worktree and branch on disk; "remove" deletes the worktree and, unless a hook made it or git refuses, its branch.
    */
   action: "keep" | "remove";
   /**
-   * Required true when action is "remove" and the worktree has uncommitted files or unmerged commits. The tool will refuse and list them otherwise.
+   * Required true when action is "remove" and the worktree has uncommitted files or unmerged commits. The tool will refuse and list them otherwise. It also removes the worktree under any task still running there, so set it only after the user has confirmed.
    */
   discard_changes?: boolean;
 }
@@ -3853,7 +3858,7 @@ export interface ReportFindingsOutput {
      */
     line?: number;
     /**
-     * One-sentence statement of the defect
+     * Statement of the defect
      */
     summary: string;
     /**
@@ -3868,6 +3873,10 @@ export interface ReportFindingsOutput {
      * Short kebab-case slug of the finding type, e.g. "correctness", "simplification", "efficiency", "test-coverage"
      */
     category?: string;
+    /**
+     * Set when the review instructions ask for it. important: a bug the change adds or makes worse; pre_existing: a bug that was there before the change; nit: a minor issue
+     */
+    severity?: "important" | "pre_existing" | "nit";
     /**
      * Set when a verify pass ran; absent on inline-only reviews
      */
@@ -4298,6 +4307,10 @@ export interface MonitorOutput {
    * No timeout — runs until TaskStop or session end.
    */
   persistent?: boolean;
+  /**
+   * True when the command ran in the sandbox only because its permission check relied on the sandbox; the settings would otherwise have exempted it.
+   */
+  keptInSandboxByCheck?: boolean;
 }
 export interface ProposeSkillsOutput {
   /**
@@ -4307,7 +4320,7 @@ export interface ProposeSkillsOutput {
 }
 export interface ProposeGoalOutput {
   /**
-   * The condition shown to the user for approval, or set directly when ask_user was false
+   * The condition shown to the user for approval, or set directly
    */
   condition: string;
   /**
@@ -4367,6 +4380,18 @@ export interface CronCreateOutput {
    * Epoch ms of the job's next run, the scheduler's per-job offset included
    */
   nextFireAt?: number;
+  /**
+   * Age at which a recurring job ends; 0 = never
+   */
+  maxAgeMs?: number;
+  /**
+   * Other session-only one-shot tasks that have yet to fire
+   */
+  otherOneShots?: {
+    id: string;
+    humanSchedule: string;
+    prompt: string;
+  }[];
 }
 export interface CronDeleteOutput {
   id: string;
