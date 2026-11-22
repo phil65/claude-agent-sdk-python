@@ -16,9 +16,10 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from functools import cache
+from typing import TYPE_CHECKING, Annotated, Any, Literal, get_args, get_origin
 
-from pydantic import BaseModel, Discriminator, Field, Tag
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag
 
 from clawd_code_sdk.models import (
     AssistantContentBlock,
@@ -583,7 +584,9 @@ class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
     """Last prompt entry tracking the most recent user prompt."""
 
     type: Literal["last-prompt"]
-    last_prompt: str
+    last_prompt: str | None = None
+    """The prompt; newer entries mark only the message it led to (``leaf_uuid``)."""
+    leaf_uuid: str | None = None
     session_id: str
 
 
@@ -866,7 +869,7 @@ class ClaudeContextCollapseSnapshotEntry(ClaudeCodeBaseModel):
 # Top-level discriminated union
 # =============================================================================
 
-ClaudeJSONLEntry = Annotated[
+KnownClaudeJSONLEntry = Annotated[
     ClaudeUserEntry
     | ClaudeAssistantEntry
     | ClaudeQueueOperationEntry
@@ -893,4 +896,50 @@ ClaudeJSONLEntry = Annotated[
     | ClaudeContextCollapseSnapshotEntry,
     Field(discriminator="type"),
 ]
-"""Discriminated union for all JSONL entry types."""
+"""Discriminated union of the JSONL entry types these models know."""
+
+
+class ClaudeUnknownEntry(BaseModel):
+    """An entry of a type these models don't know, kept as it is.
+
+    Claude Code adds entry types often (``api-request``, ``permission-mode``, ...); they
+    load as this instead of failing, and are written back unchanged.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str
+
+
+def _entry_tags(annotation: Any) -> set[str]:
+    """The ``type`` tags of the entry models in ``annotation`` (unions and models)."""
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return _entry_tags(annotation.model_fields["type"].annotation)
+    if get_origin(annotation) is Literal:
+        return {arg for arg in get_args(annotation) if isinstance(arg, str)}
+    return {tag for arg in get_args(annotation) for tag in _entry_tags(arg)}
+
+
+@cache
+def known_entry_types() -> frozenset[str]:
+    """The ``type`` tags of :data:`KnownClaudeJSONLEntry`."""
+    return frozenset(_entry_tags(KnownClaudeJSONLEntry))
+
+
+def _entry_kind(value: Any) -> str:
+    match value:
+        case ClaudeUnknownEntry():
+            return "unknown"
+        case BaseModel():
+            return "known"
+        case {"type": str(tag)} if tag in known_entry_types():
+            return "known"
+        case _:
+            return "unknown"
+
+
+ClaudeJSONLEntry = Annotated[
+    Annotated[KnownClaudeJSONLEntry, Tag("known")] | Annotated[ClaudeUnknownEntry, Tag("unknown")],
+    Discriminator(_entry_kind),
+]
+"""A JSONL entry: one of the known types, else :class:`ClaudeUnknownEntry`."""
