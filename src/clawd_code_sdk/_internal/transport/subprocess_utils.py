@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import suppress
-import dataclasses
 import functools
 import logging
 from pathlib import Path
@@ -222,17 +221,13 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             cmd.extend(["--add-dir", str(directory)])
 
     match options.mcp_servers:
-        case dict() as servers if servers:
-            servers_for_cli = {
-                name: {
-                    k: v
-                    for k, v in dataclasses.asdict(cfg).items()
-                    if k != "instance" and v is not None
-                }
-                for name, cfg in servers.items()
-            }
-            dct = anyenv.dump_json({"mcpServers": servers_for_cli})
-            cmd.extend(["--mcp-config", dct])
+        case dict():
+            if servers_for_cli := options.argv_mcp_servers():
+                dct = anyenv.dump_json({"mcpServers": servers_for_cli})
+                cmd.extend(["--mcp-config", dct])
+            if options.initialize_mcp_servers() is not None:
+                # The CLI reads the initialize request (with the other servers) at launch
+                cmd.append("--await-initialize")
         case str() | Path() as path if str(path):
             cmd.extend(["--mcp-config", str(path)])
 

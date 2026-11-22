@@ -474,19 +474,36 @@ class SubagentStats(TypedDict):
     by_type: dict[str, Any]
 
 
+class AutoModeRuleMeta(TypedDict):
+    """The auto-mode rule that decided a tool call."""
+
+    list: Literal["allow", "soft_deny"]
+    name: str
+
+
 class ToolPermissionDecisionMeta(TypedDict):
     """How a tool call's permission was decided."""
 
     decision: str
     source: str
     reason_type: NotRequired[str]
+    plugin_approval: NotRequired[str]
+    auto_mode_rule: NotRequired[AutoModeRuleMeta]
 
 
 class ToolResultMeta(TypedDict):
-    """Per-tool-result metadata attached to user messages (undocumented)."""
+    """Per-tool-result metadata attached to user messages (internal, display only)."""
 
     id: str
+    non_execution_kind: NotRequired[str]
+    """Why an ``is_error`` result holds no output of the tool's own: ``user-rejected``,
+    ``permission-rule``, ``automode-*``, ``interrupted`` or ``cancelled`` (CLI 2.1.330+)."""
+    user_feedback: NotRequired[str]
+    remedy: NotRequired[Any]
+    """How to get past a refusal (shape not published)."""
     permission_decision: NotRequired[ToolPermissionDecisionMeta]
+    built_in_tool: NotRequired[str]
+    run_input: NotRequired[str]
 
 
 class InvalidConfigFile(TypedDict):

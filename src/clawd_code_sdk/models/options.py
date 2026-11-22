@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 import json
 import logging
@@ -153,6 +154,19 @@ class ClaudeAgentOptions:
     # MCP
     mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
     """MCP servers for the agent."""
+    mcp_servers_delivery: Literal["argv", "initialize"] = "initialize"
+    """How the ``mcp_servers`` that Claude Code runs or connects to (stdio, SSE, HTTP) reach it.
+
+    - ``"initialize"`` (default): in the initialize request over stdin (the CLI is started
+      with ``--await-initialize``), so server ``env`` and ``headers`` stay off the command
+      line, where other users of the machine can read them. Needs Claude Code 2.1.261 or
+      newer; connecting fails if the CLI does not take them (``mcp_servers_applied``).
+    - ``"argv"``: in one ``--mcp-config`` flag, for older Claude Code. Deprecated upstream.
+
+    In-process servers (``McpSdkServerConfigWithInstance``) and an ``mcp_servers`` file path
+    are not affected, and a launch with ``--sdk-url`` in ``extra_args`` always uses
+    ``--mcp-config``, as that session cannot read the request at launch.
+    """
     chrome: bool = False
     """Add the chrome-tools MCP server (-> Claude Code browser extension) to the agent."""
     strict_mcp_config: bool = False
@@ -453,6 +467,33 @@ class ClaudeAgentOptions:
             raise CLIConnectionError(f"{source} must contain a JSON object")
         return loaded
 
+    def initialize_mcp_servers(self) -> dict[str, dict[str, Any]] | None:
+        """The servers to send in the initialize request, or None to send none there."""
+        if self.mcp_servers_delivery != "initialize" or "sdk-url" in self.extra_args:
+            return None
+        if not isinstance(self.mcp_servers, dict):
+            return None
+        servers = {
+            name: _serialize_mcp_server(config)
+            for name, config in self.mcp_servers.items()
+            if config.type != "sdk"
+        }
+        return servers or None
+
+    def argv_mcp_servers(self) -> dict[str, dict[str, Any]]:
+        """The servers for ``--mcp-config``.
+
+        All of them, or only the in-process ones when the others go in the initialize request.
+        """
+        if not isinstance(self.mcp_servers, dict):
+            return {}
+        in_initialize = self.initialize_mcp_servers() is not None
+        return {
+            name: _serialize_mcp_server(config)
+            for name, config in self.mcp_servers.items()
+            if not in_initialize or config.type == "sdk"
+        }
+
     def get_json_schema(self) -> dict[str, Any] | None:
         from pydantic import TypeAdapter
 
@@ -476,3 +517,12 @@ class ClaudeAgentOptions:
                 return config
             case _ as unreachable:
                 assert_never(unreachable)
+
+
+def _serialize_mcp_server(config: McpServerConfig) -> dict[str, Any]:
+    """A server config as the CLI takes it: no live instance, no unset fields."""
+    return {
+        key: value
+        for key, value in dataclasses.asdict(config).items()
+        if key != "instance" and value is not None
+    }

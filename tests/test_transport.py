@@ -20,6 +20,8 @@ from clawd_code_sdk.models import (
     AgentDefinition,
     ClaudeAgentOptions,
     ClaudeCodeSettings,
+    McpHttpServerConfig,
+    McpSdkServerConfigWithInstance,
     McpSSEServerConfig,
     McpStdioServerConfig,
     Network,
@@ -190,9 +192,10 @@ class TestSubprocessCLITransport:
                 args=["--option", "value"],
             )
         }
-        opts = ClaudeAgentOptions(mcp_servers=mcp_servers)
+        opts = ClaudeAgentOptions(mcp_servers=mcp_servers, mcp_servers_delivery="argv")
         transport = self._make_transport(options=opts)
         cmd = transport._build_command()
+        assert "--await-initialize" not in cmd
         # Find the --mcp-config flag and its value
         assert "--mcp-config" in cmd
         mcp_idx = cmd.index("--mcp-config")
@@ -203,6 +206,41 @@ class TestSubprocessCLITransport:
         server = config["mcpServers"]["test-server"]
         assert server["command"] == "/path/to/server"
         assert server["args"] == ["--option", "value"]
+
+    def test_mcp_servers_go_in_the_initialize_request_by_default(self):
+        """Server env and headers stay off the command line; SDK servers keep their entry."""
+        secret_env = {"TOKEN": "s3cret"}
+        mcp_servers = {
+            "stdio": McpStdioServerConfig(command="/srv", env=secret_env),
+            "web": McpHttpServerConfig(url="https://mcp.test", headers={"auth": "s3cret"}),
+            "local": McpSdkServerConfigWithInstance(name="local", instance=MagicMock()),
+        }
+        opts = ClaudeAgentOptions(mcp_servers=mcp_servers)
+        cmd = self._make_transport(options=opts)._build_command()
+        assert "--await-initialize" in cmd
+        assert "s3cret" not in " ".join(cmd)
+        argv = json.loads(cmd[cmd.index("--mcp-config") + 1])["mcpServers"]
+        assert argv == {"local": {"type": "sdk", "name": "local"}}
+        sent = opts.initialize_mcp_servers()
+        assert sent is not None
+        assert sent["stdio"]["env"] == secret_env
+        assert sent["web"] == {
+            "type": "http",
+            "url": "https://mcp.test",
+            "headers": {"auth": "s3cret"},
+        }
+
+    def test_sdk_url_and_sdk_only_servers_stay_on_the_command_line(self):
+        stdio = {"stdio": McpStdioServerConfig(command="/srv")}
+        opts = ClaudeAgentOptions(mcp_servers=stdio, extra_args={"sdk-url": "wss://x"})
+        cmd = self._make_transport(options=opts)._build_command()
+        assert "--await-initialize" not in cmd
+        assert "stdio" in json.loads(cmd[cmd.index("--mcp-config") + 1])["mcpServers"]
+        local = {"local": McpSdkServerConfigWithInstance(name="local", instance=MagicMock())}
+        opts = ClaudeAgentOptions(mcp_servers=local)
+        cmd = self._make_transport(options=opts)._build_command()
+        assert "--await-initialize" not in cmd
+        assert opts.initialize_mcp_servers() is None
 
     def test_build_command_with_mcp_servers_as_file_path(self):
         """Test building CLI command with mcp_servers as file path."""

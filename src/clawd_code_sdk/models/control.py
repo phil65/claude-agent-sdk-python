@@ -110,6 +110,11 @@ class SDKControlInitializeRequest(_ControlBase):
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentWireDefinition] | None = None
     sdk_mcp_servers: list[str] | None = Field(default=None, serialization_alias="sdkMcpServers")
+    mcp_servers: dict[str, dict[str, Any]] | None = Field(
+        default=None, serialization_alias="mcpServers"
+    )
+    """Servers for Claude Code to run or connect to, as one ``--mcp-config`` item would hold
+    them; read only at launch under ``--await-initialize`` (``mcp_servers_applied``)."""
     system_prompt: list[str] | None = Field(default=None, serialization_alias="systemPrompt")
     append_system_prompt: str | None = Field(default=None, serialization_alias="appendSystemPrompt")
     exclude_dynamic_sections: bool | None = Field(

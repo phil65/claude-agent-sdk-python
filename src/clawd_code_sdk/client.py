@@ -227,6 +227,7 @@ class ClaudeSDKClient:
             prompt_suggestions=options.prompt_suggestions,
             exclude_dynamic_sections=options.exclude_dynamic_sections,
             sdk_mcp_servers=list(query.sdk_mcp_servers.keys()) or None,
+            mcp_servers=(mcp_servers := options.initialize_mcp_servers()),
             agent_progress_summaries=options.agent_progress_summaries,
             title=title,
             skills=options.skills,
@@ -238,6 +239,12 @@ class ClaudeSDKClient:
         )
         response = await query._send_control_request(request, timeout=initialize_timeout)
         self._initialization_result = info = ClaudeCodeServerInfo.model_validate(response)
+        if mcp_servers is not None and info.mcp_servers_applied is not True:
+            # Absent on CLIs that predate the field: they never read `mcpServers`
+            raise CLIConnectionError(
+                "Claude Code did not take the MCP servers sent in the initialize request. "
+                'Update Claude Code (2.1.261 or newer) or set mcp_servers_delivery="argv".'
+            )
         blocks_on_failure = any(
             m.on_failure not in (None, "continue")
             for matchers in (options.hooks or {}).values()
