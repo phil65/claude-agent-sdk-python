@@ -275,3 +275,47 @@ def test_invalid_known_entry_is_kept_as_unknown(tmp_path: Path) -> None:
     copy = tmp_path / "copy.jsonl"
     write_entry(copy, entry)
     assert json.loads(copy.read_text()) == broken
+
+
+def test_write_entry_omits_unset_optional_fields(tmp_path: Path) -> None:
+    entry = ClaudeUserEntry.model_validate(
+        _entry(type="user", uuid="u1", message={"role": "user", "content": "hi"})
+    )
+    entry_without_parent = entry.model_copy()
+    path = tmp_path / "s.jsonl"
+    write_entry(path, entry_without_parent)
+    written = json.loads(path.read_text())
+    assert written["parentUuid"] is None  # always written, like Claude Code does
+    assert all(value is not None for key, value in written.items() if key != "parentUuid")
+    assert written["message"] == {"role": "user", "content": "hi"}  # nested too
+
+
+def test_write_entry_keeps_nulls_read_from_file(tmp_path: Path) -> None:
+    row = _entry(
+        type="user",
+        uuid="u1",
+        parentUuid=None,
+        gitBranch=None,
+        message={"role": "user", "content": "hi"},
+    )
+    path = _write_lines(tmp_path / "s.jsonl", row)
+    [entry] = read_session(path)
+    copy = tmp_path / "copy.jsonl"
+    write_entry(copy, entry)
+    assert json.loads(copy.read_text()) == row
+
+
+def test_unknown_fields_survive_a_round_trip(tmp_path: Path) -> None:
+    """Fields the models don't know (new Claude Code versions add them often) are kept."""
+    row = _entry(
+        type="user",
+        uuid="u1",
+        parentUuid=None,
+        someNewFlag=True,
+        message={"role": "user", "content": "hi", "someNewMessageField": 1},
+    )
+    path = _write_lines(tmp_path / "s.jsonl", row)
+    [entry] = read_session(path)
+    copy = tmp_path / "copy.jsonl"
+    write_entry(copy, entry)
+    assert json.loads(copy.read_text()) == row

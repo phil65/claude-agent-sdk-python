@@ -8,8 +8,9 @@ from __future__ import annotations
 from contextlib import contextmanager
 import functools
 import gc
+import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import anyenv
 from pydantic import TypeAdapter, ValidationError
@@ -54,7 +55,44 @@ def write_entry(session_path: Path, entry: ClaudeJSONLEntry) -> None:
     """Append an entry to a session file."""
     session_path.parent.mkdir(parents=True, exist_ok=True)
     with session_path.open("a", encoding="utf-8") as f:
-        f.write(entry.model_dump_json(by_alias=True) + "\n")
+        f.write(_entry_to_json(entry) + "\n")
+
+
+def _entry_to_json(entry: ClaudeJSONLEntry) -> str:
+    """Serialize an entry the way Claude Code writes it.
+
+    Fields that are ``None`` and were never set (neither read from a file nor passed
+    in) are left out, at every nesting level, so the many optional fields don't show
+    up as ``null``. Fields that were set keep their value, ``null`` included, so read
+    entries round-trip unchanged. ``parentUuid`` is always written: Claude Code
+    writes ``null`` for the first entry of a chain.
+    """
+    from clawd_code_sdk.storage.models import ClaudeEntryBase
+
+    full = entry.model_dump(mode="json", by_alias=True)
+    explicit = entry.model_dump(mode="json", by_alias=True, exclude_unset=True)
+    data = _drop_unset_nulls(full, explicit)
+    if isinstance(entry, ClaudeEntryBase):
+        data["parentUuid"] = full.get("parentUuid")
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+
+
+def _drop_unset_nulls(full: Any, explicit: Any) -> Any:
+    """Drop ``None`` values from ``full`` that ``explicit`` (an exclude_unset dump) lacks."""
+    if isinstance(full, dict):
+        given = explicit if isinstance(explicit, dict) else {}
+        return {
+            key: _drop_unset_nulls(value, given.get(key))
+            for key, value in full.items()
+            if value is not None or key in given
+        }
+    if isinstance(full, list):
+        given_items = explicit if isinstance(explicit, list) and len(explicit) == len(full) else []
+        return [
+            _drop_unset_nulls(value, given_items[i] if given_items else None)
+            for i, value in enumerate(full)
+        ]
+    return full
 
 
 def count_session_messages(session_path: Path) -> int:

@@ -77,8 +77,20 @@ class ClaudeUsage(Usage):
 # =============================================================================
 
 
+class ClaudeStorageModel(ClaudeCodeBaseModel):
+    """Base for transcript models: fields these models don't know are kept.
+
+    Claude Code adds fields often. Keeping them (instead of ignoring them) means a
+    read entry is written back unchanged, e.g. when a session is copied or forked.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
 class ClaudeApiMessage(BaseModel):
     """Claude API assistant message structure."""
+
+    model_config = ConfigDict(extra="allow")
 
     model: str
     id: str
@@ -102,6 +114,8 @@ class ClaudeApiMessage(BaseModel):
 class ClaudeUserMessage(BaseModel):
     """User message content."""
 
+    model_config = ConfigDict(extra="allow")
+
     role: Literal["user"]
     content: str | Sequence[UserContentBlock]
     usage: ClaudeUsage | None = None
@@ -113,7 +127,7 @@ class ClaudeUserMessage(BaseModel):
 # =============================================================================
 
 
-class ClaudeEntryBase(ClaudeCodeBaseModel):
+class ClaudeEntryBase(ClaudeStorageModel):
     """Base of all entries that take part in the ``parentUuid`` chain.
 
     User, assistant, attachment, system, progress and saved-hook-context entries all link
@@ -254,7 +268,7 @@ ClaudeEntry = ClaudeUserEntry | ClaudeAssistantEntry
 # =============================================================================
 
 
-class ClaudeDocumentContent(ClaudeCodeBaseModel):
+class ClaudeDocumentContent(ClaudeStorageModel):
     """Document content block."""
 
     type: Literal["document"]
@@ -264,7 +278,7 @@ class ClaudeDocumentContent(ClaudeCodeBaseModel):
 type ClaudeQueueContent = str | TextBlock | ImageBlock | ClaudeDocumentContent | ToolResultBlock
 
 
-class ClaudeEnqueueOperation(ClaudeCodeBaseModel):
+class ClaudeEnqueueOperation(ClaudeStorageModel):
     """Enqueue operation with content."""
 
     type: Literal["queue-operation"]
@@ -274,7 +288,7 @@ class ClaudeEnqueueOperation(ClaudeCodeBaseModel):
     timestamp: str
 
 
-class ClaudeDequeueOperation(ClaudeCodeBaseModel):
+class ClaudeDequeueOperation(ClaudeStorageModel):
     """Dequeue operation."""
 
     type: Literal["queue-operation"]
@@ -283,7 +297,7 @@ class ClaudeDequeueOperation(ClaudeCodeBaseModel):
     timestamp: str
 
 
-class ClaudeRemoveOperation(ClaudeCodeBaseModel):
+class ClaudeRemoveOperation(ClaudeStorageModel):
     """Remove operation (steering input)."""
 
     type: Literal["queue-operation"]
@@ -297,7 +311,7 @@ class ClaudeRemoveOperation(ClaudeCodeBaseModel):
     delivery_id: str | None = None
 
 
-class ClaudePopAllOperation(ClaudeCodeBaseModel):
+class ClaudePopAllOperation(ClaudeStorageModel):
     """PopAll operation - clears all queued content."""
 
     type: Literal["queue-operation"]
@@ -324,7 +338,7 @@ class ClaudeSystemEntryBase(ClaudeEntryBase):
     type: Literal["system"]
 
 
-class ClaudeHookInfo(ClaudeCodeBaseModel):
+class ClaudeHookInfo(ClaudeStorageModel):
     """Hook info in stop_hook_summary."""
 
     command: str
@@ -521,7 +535,7 @@ ClaudeSystemEntry = Annotated[
 # =============================================================================
 
 
-class ClaudeSummaryEntry(ClaudeCodeBaseModel):
+class ClaudeSummaryEntry(ClaudeStorageModel):
     """Summary entry (conversation summary)."""
 
     type: Literal["summary"]
@@ -537,7 +551,7 @@ class ClaudeSummaryEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeFileHistorySnapshot(ClaudeCodeBaseModel):
+class ClaudeFileHistorySnapshot(ClaudeStorageModel):
     """Snapshot data in file history entry."""
 
     message_id: str
@@ -546,7 +560,7 @@ class ClaudeFileHistorySnapshot(ClaudeCodeBaseModel):
     has_untracked_changes: bool | None = None
 
 
-class ClaudeFileHistoryEntry(ClaudeCodeBaseModel):
+class ClaudeFileHistoryEntry(ClaudeStorageModel):
     """File history snapshot entry."""
 
     type: Literal["file-history-snapshot"]
@@ -560,7 +574,7 @@ class ClaudeFileHistoryEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeMcpProgressData(ClaudeCodeBaseModel):
+class ClaudeMcpProgressData(ClaudeStorageModel):
     """Progress data for MCP tool operations."""
 
     type: Literal["mcp_progress"]
@@ -570,7 +584,7 @@ class ClaudeMcpProgressData(ClaudeCodeBaseModel):
     elapsed_time_ms: int | None = None
 
 
-class ClaudeBashProgressData(ClaudeCodeBaseModel):
+class ClaudeBashProgressData(ClaudeStorageModel):
     """Progress data for bash tool operations."""
 
     type: Literal["bash_progress"]
@@ -580,7 +594,7 @@ class ClaudeBashProgressData(ClaudeCodeBaseModel):
     total_lines: int | None = None
 
 
-class ClaudeHookProgressData(ClaudeCodeBaseModel):
+class ClaudeHookProgressData(ClaudeStorageModel):
     """Progress data for hook operations."""
 
     type: Literal["hook_progress"]
@@ -591,7 +605,7 @@ class ClaudeHookProgressData(ClaudeCodeBaseModel):
     status_message: str | None = None
 
 
-class ClaudeWaitingForTaskData(ClaudeCodeBaseModel):
+class ClaudeWaitingForTaskData(ClaudeStorageModel):
     """Progress data for waiting task operations."""
 
     type: Literal["waiting_for_task"]
@@ -599,7 +613,7 @@ class ClaudeWaitingForTaskData(ClaudeCodeBaseModel):
     task_type: str | None = None
 
 
-class ClaudeAgentProgressData(ClaudeCodeBaseModel):
+class ClaudeAgentProgressData(ClaudeStorageModel):
     """Progress data for agent/subagent operations."""
 
     type: Literal["agent_progress"]
@@ -610,14 +624,14 @@ class ClaudeAgentProgressData(ClaudeCodeBaseModel):
     resume: dict[str, Any] | None = None
 
 
-class ClaudeQueryUpdateData(ClaudeCodeBaseModel):
+class ClaudeQueryUpdateData(ClaudeStorageModel):
     """Progress data for search query updates."""
 
     type: Literal["query_update"]
     query: str
 
 
-class ClaudeSearchResultsReceivedData(ClaudeCodeBaseModel):
+class ClaudeSearchResultsReceivedData(ClaudeStorageModel):
     """Progress data for search results received."""
 
     type: Literal["search_results_received"]
@@ -625,7 +639,7 @@ class ClaudeSearchResultsReceivedData(ClaudeCodeBaseModel):
     query: str
 
 
-class ClaudeSkillProgressData(ClaudeCodeBaseModel):
+class ClaudeSkillProgressData(ClaudeStorageModel):
     """Progress data for skill operations."""
 
     type: Literal["skill_progress"]
@@ -633,7 +647,7 @@ class ClaudeSkillProgressData(ClaudeCodeBaseModel):
     agent_id: str | None = None
 
 
-class ClaudeTaskProgressData(ClaudeCodeBaseModel):
+class ClaudeTaskProgressData(ClaudeStorageModel):
     """Progress data for task tracking."""
 
     type: Literal["task_progress"]
@@ -642,7 +656,7 @@ class ClaudeTaskProgressData(ClaudeCodeBaseModel):
     message: str | None = None
 
 
-class ClaudeToolProgressData(ClaudeCodeBaseModel):
+class ClaudeToolProgressData(ClaudeStorageModel):
     """Progress data for tool execution (SDK format)."""
 
     type: Literal["tool_progress"]
@@ -736,7 +750,7 @@ class ClaudeSavedHookContextEntry(ClaudeEntryBase):
 # =============================================================================
 
 
-class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
+class ClaudeLastPromptEntry(ClaudeStorageModel):
     """Last prompt entry tracking the most recent user prompt."""
 
     type: Literal["last-prompt"]
@@ -752,7 +766,7 @@ class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudePrLinkEntry(ClaudeCodeBaseModel):
+class ClaudePrLinkEntry(ClaudeStorageModel):
     """PR link entry recording a pull request created during a session."""
 
     type: Literal["pr-link"]
@@ -768,7 +782,7 @@ class ClaudePrLinkEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeCustomTitleEntry(ClaudeCodeBaseModel):
+class ClaudeCustomTitleEntry(ClaudeStorageModel):
     """User-set custom title for a session."""
 
     type: Literal["custom-title"]
@@ -781,7 +795,7 @@ class ClaudeCustomTitleEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeAiTitleEntry(ClaudeCodeBaseModel):
+class ClaudeAiTitleEntry(ClaudeStorageModel):
     """AI-generated session title.
 
     Distinct from ClaudeCustomTitleEntry: user renames always win over
@@ -798,7 +812,7 @@ class ClaudeAiTitleEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeTaskSummaryEntry(ClaudeCodeBaseModel):
+class ClaudeTaskSummaryEntry(ClaudeStorageModel):
     """Periodic fork-generated summary of what the agent is currently doing.
 
     Written every min(5 steps, 2min) by forking the main thread mid-turn
@@ -816,7 +830,7 @@ class ClaudeTaskSummaryEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeTagEntry(ClaudeCodeBaseModel):
+class ClaudeTagEntry(ClaudeStorageModel):
     """Session tag entry (searchable in /resume)."""
 
     type: Literal["tag"]
@@ -829,7 +843,7 @@ class ClaudeTagEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeAgentNameEntry(ClaudeCodeBaseModel):
+class ClaudeAgentNameEntry(ClaudeStorageModel):
     """Agent's custom name (from /rename or swarm)."""
 
     type: Literal["agent-name"]
@@ -837,7 +851,7 @@ class ClaudeAgentNameEntry(ClaudeCodeBaseModel):
     agent_name: str
 
 
-class ClaudeAgentColorEntry(ClaudeCodeBaseModel):
+class ClaudeAgentColorEntry(ClaudeStorageModel):
     """Agent's color (from /rename or swarm)."""
 
     type: Literal["agent-color"]
@@ -845,7 +859,7 @@ class ClaudeAgentColorEntry(ClaudeCodeBaseModel):
     agent_color: str
 
 
-class ClaudeAgentSettingEntry(ClaudeCodeBaseModel):
+class ClaudeAgentSettingEntry(ClaudeStorageModel):
     """Agent definition used (from --agent flag or settings.agent)."""
 
     type: Literal["agent-setting"]
@@ -858,7 +872,7 @@ class ClaudeAgentSettingEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeModeEntry(ClaudeCodeBaseModel):
+class ClaudeModeEntry(ClaudeStorageModel):
     """Session mode entry for coordinator/normal detection."""
 
     type: Literal["mode"]
@@ -871,7 +885,7 @@ class ClaudeModeEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudePersistedWorktreeSession(ClaudeCodeBaseModel):
+class ClaudePersistedWorktreeSession(ClaudeStorageModel):
     """Worktree session state persisted to the transcript for resume."""
 
     original_cwd: str
@@ -885,7 +899,7 @@ class ClaudePersistedWorktreeSession(ClaudeCodeBaseModel):
     hook_based: bool | None = None
 
 
-class ClaudeWorktreeStateEntry(ClaudeCodeBaseModel):
+class ClaudeWorktreeStateEntry(ClaudeStorageModel):
     """Records whether the session is currently inside a worktree.
 
     Last-wins: an enter writes the session, an exit writes null.
@@ -902,7 +916,7 @@ class ClaudeWorktreeStateEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeContentReplacementRecord(ClaudeCodeBaseModel):
+class ClaudeContentReplacementRecord(ClaudeStorageModel):
     """Records content blocks replaced with smaller stubs for prompt cache stability."""
 
     kind: Literal["tool-result"]
@@ -910,7 +924,7 @@ class ClaudeContentReplacementRecord(ClaudeCodeBaseModel):
     replacement: str
 
 
-class ClaudeContentReplacementEntry(ClaudeCodeBaseModel):
+class ClaudeContentReplacementEntry(ClaudeStorageModel):
     """Content replacement entry for resume reconstruction.
 
     When agentId is set, the record belongs to a subagent sidechain;
@@ -928,7 +942,7 @@ class ClaudeContentReplacementEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeFileAttributionState(ClaudeCodeBaseModel):
+class ClaudeFileAttributionState(ClaudeStorageModel):
     """Per-file attribution state tracking Claude's character contributions."""
 
     content_hash: str
@@ -939,7 +953,7 @@ class ClaudeFileAttributionState(ClaudeCodeBaseModel):
     """File modification time."""
 
 
-class ClaudeAttributionSnapshotEntry(ClaudeCodeBaseModel):
+class ClaudeAttributionSnapshotEntry(ClaudeStorageModel):
     """Attribution snapshot tracking character-level contributions for commit attribution."""
 
     type: Literal["attribution-snapshot"]
@@ -960,7 +974,7 @@ class ClaudeAttributionSnapshotEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeSpeculationAcceptEntry(ClaudeCodeBaseModel):
+class ClaudeSpeculationAcceptEntry(ClaudeStorageModel):
     """Records a speculation accept with time saved."""
 
     type: Literal["speculation-accept"]
@@ -973,7 +987,7 @@ class ClaudeSpeculationAcceptEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudeContextCollapseCommitEntry(ClaudeCodeBaseModel):
+class ClaudeContextCollapseCommitEntry(ClaudeStorageModel):
     """Persisted context-collapse commit.
 
     The archived messages themselves are NOT persisted — they're already
@@ -997,7 +1011,7 @@ class ClaudeContextCollapseCommitEntry(ClaudeCodeBaseModel):
     """Span end boundary."""
 
 
-class ClaudeContextCollapseStagedSpan(ClaudeCodeBaseModel):
+class ClaudeContextCollapseStagedSpan(ClaudeStorageModel):
     """A staged span within a context collapse snapshot."""
 
     start_uuid: str
@@ -1007,7 +1021,7 @@ class ClaudeContextCollapseStagedSpan(ClaudeCodeBaseModel):
     staged_at: int
 
 
-class ClaudeContextCollapseSnapshotEntry(ClaudeCodeBaseModel):
+class ClaudeContextCollapseSnapshotEntry(ClaudeStorageModel):
     """Snapshot of staged queue and spawn trigger state.
 
     Unlike commits (append-only, replay-all), snapshots are last-wins —
@@ -1027,7 +1041,7 @@ class ClaudeContextCollapseSnapshotEntry(ClaudeCodeBaseModel):
 # =============================================================================
 
 
-class ClaudePermissionModeEntry(ClaudeCodeBaseModel):
+class ClaudePermissionModeEntry(ClaudeStorageModel):
     """Permission mode of the session (last wins)."""
 
     type: Literal["permission-mode"]
@@ -1035,7 +1049,7 @@ class ClaudePermissionModeEntry(ClaudeCodeBaseModel):
     permission_mode: str
 
 
-class ClaudeModelCostUsage(ClaudeCodeBaseModel):
+class ClaudeModelCostUsage(ClaudeStorageModel):
     """Per-model token usage and cost in a cost-state entry."""
 
     input_tokens: int = 0
@@ -1053,7 +1067,7 @@ class ClaudeModelCostUsage(ClaudeCodeBaseModel):
     cost_usd: float = Field(default=0.0, alias="costUSD")
 
 
-class ClaudeCostStateEntry(ClaudeCodeBaseModel):
+class ClaudeCostStateEntry(ClaudeStorageModel):
     """Accumulated cost and duration of the session, for restoring ``/cost`` on resume.
 
     Snapshot semantics: the last entry holds the session totals.
@@ -1077,7 +1091,7 @@ class ClaudeCostStateEntry(ClaudeCodeBaseModel):
     has_unknown_model_cost: bool = False
 
 
-class ClaudeToolsUsedEntry(ClaudeCodeBaseModel):
+class ClaudeToolsUsedEntry(ClaudeStorageModel):
     """Names of the tools used in the session."""
 
     type: Literal["tools-used"]
@@ -1085,7 +1099,7 @@ class ClaudeToolsUsedEntry(ClaudeCodeBaseModel):
     tools: list[str]
 
 
-class ClaudeRelocatedEntry(ClaudeCodeBaseModel):
+class ClaudeRelocatedEntry(ClaudeStorageModel):
     """The session continued in another working directory."""
 
     type: Literal["relocated"]
@@ -1093,7 +1107,7 @@ class ClaudeRelocatedEntry(ClaudeCodeBaseModel):
     relocated_cwd: str
 
 
-class ClaudeDerivedSession(ClaudeCodeBaseModel):
+class ClaudeDerivedSession(ClaudeStorageModel):
     """A session this session was derived from."""
 
     id: str
@@ -1103,7 +1117,7 @@ class ClaudeDerivedSession(ClaudeCodeBaseModel):
     started: str | None = None
 
 
-class ClaudeDerivedFromEntry(ClaudeCodeBaseModel):
+class ClaudeDerivedFromEntry(ClaudeStorageModel):
     """Records the sessions this session continues (after /clear, compaction, resume)."""
 
     type: Literal["derived-from"]
@@ -1112,7 +1126,7 @@ class ClaudeDerivedFromEntry(ClaudeCodeBaseModel):
     sessions: list[ClaudeDerivedSession]
 
 
-class ClaudeForkContextRefEntry(ClaudeCodeBaseModel):
+class ClaudeForkContextRefEntry(ClaudeStorageModel):
     """A forked subagent's reference to the parent conversation it inherited."""
 
     type: Literal["fork-context-ref"]
@@ -1123,7 +1137,7 @@ class ClaudeForkContextRefEntry(ClaudeCodeBaseModel):
     context_length: int | None = None
 
 
-class ClaudeFileBackup(ClaudeCodeBaseModel):
+class ClaudeFileBackup(ClaudeStorageModel):
     """A backed-up file version in ``~/.claude/file-history/<sessionId>/``."""
 
     backup_file_name: str | None = None
@@ -1133,7 +1147,7 @@ class ClaudeFileBackup(ClaudeCodeBaseModel):
     real_parent_dir: str | None = None
 
 
-class ClaudeFileHistoryDeltaEntry(ClaudeCodeBaseModel):
+class ClaudeFileHistoryDeltaEntry(ClaudeStorageModel):
     """Adds one file backup to an earlier file-history snapshot."""
 
     type: Literal["file-history-delta"]
