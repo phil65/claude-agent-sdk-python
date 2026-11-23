@@ -21,6 +21,7 @@ from clawd_code_sdk.storage.models import (
     ClaudeAssistantEntry,
     ClaudeChainEntry,
     ClaudeEntryBase,
+    ClaudeModelRefusalFallbackEntry,
     ClaudeUserEntry,
 )
 
@@ -79,7 +80,9 @@ def resolve_chain(
     """The thread ending at ``leaf_uuid`` (default: :func:`find_leaf`), root first.
 
     The result contains every chain entry on the thread, including attachments
-    and system entries; filter by type for messages only.
+    and system entries; filter by type for messages only. Messages a model refusal
+    withdrew (``model_refusal_fallback`` entries' ``retracted_message_uuids``) are left
+    out; the walk still passes through them.
 
     Args:
         entries: Entries of one transcript, in file order.
@@ -98,7 +101,19 @@ def resolve_chain(
     chain.reverse()
     if recover_parallel_tool_calls:
         chain = _recover_parallel_tool_calls(index, chain)
+    if retracted := _retracted_uuids(entry_list):
+        chain = [entry for entry in chain if entry.uuid not in retracted]
     return chain
+
+
+def _retracted_uuids(entries: Iterable[ClaudeJSONLEntry]) -> set[str]:
+    """UUIDs of messages that model refusals withdrew from the conversation."""
+    return {
+        uuid
+        for entry in entries
+        if isinstance(entry, ClaudeModelRefusalFallbackEntry)
+        for uuid in entry.retracted_message_uuids or ()
+    }
 
 
 def _tool_use_ids(entry: ClaudeAssistantEntry) -> list[str]:

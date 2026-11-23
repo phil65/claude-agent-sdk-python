@@ -148,3 +148,24 @@ def test_chain_entry_union_covers_all_chain_models() -> None:
         and not obj.__name__.endswith("Base")
     }
     assert chain_models == set(get_args(models.ClaudeChainEntry))
+
+
+def test_messages_withdrawn_by_a_refusal_are_left_out() -> None:
+    refusal = _base(
+        "sy1",
+        "a1",
+        type="system",
+        subtype="model_refusal_fallback",
+        content="retried with a fallback model",
+        retractedMessageUuids=["a1"],
+        refusedUserMessageUuid="u1",
+    )
+    entries = load(
+        user("u1", None),
+        assistant("a1", "u1", "msg_1"),
+        refusal,
+        assistant("a2", "sy1", "msg_2"),
+    )
+    # The walk passes through the withdrawn message, but it is not returned.
+    assert uuids(resolve_chain(entries)) == ["u1", "sy1", "a2"]
+    assert "a1" in uuids(walk_ancestry(index_chain_entries(entries), "a2"))
