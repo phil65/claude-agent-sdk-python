@@ -88,6 +88,15 @@ class ClaudeApiMessage(BaseModel):
     stop_reason: StopReason | None = None
     stop_sequence: str | None = None
     usage: ClaudeUsage = Field(default_factory=ClaudeUsage)
+    container: dict[str, Any] | None = None
+    """Code execution container info, if the response used one."""
+    stop_details: dict[str, Any] | None = None
+    context_management: dict[str, Any] | None = None
+    """Context edits the API applied (e.g. cleared tool results)."""
+    diagnostics: dict[str, Any] | None = None
+    """API diagnostics such as ``cache_miss_reason``."""
+    input_transformations: list[dict[str, Any]] | None = None
+    """Transformations the API applied to the request input."""
 
 
 class ClaudeUserMessage(BaseModel):
@@ -105,7 +114,14 @@ class ClaudeUserMessage(BaseModel):
 
 
 class ClaudeEntryBase(ClaudeCodeBaseModel):
-    """Common fields shared across user/assistant/system/saved_hook_context entries."""
+    """Base of all entries that take part in the ``parentUuid`` chain.
+
+    User, assistant, attachment, system, progress and saved-hook-context entries all link
+    to their predecessor through ``parent_uuid``. The chain regularly runs through
+    non-message entries (an assistant entry's parent is often an attachment or a system
+    entry), so code walking the chain should index every ``ClaudeEntryBase`` by ``uuid``,
+    not only user and assistant entries. See :mod:`clawd_code_sdk.storage.chain`.
+    """
 
     uuid: str
     parent_uuid: str | None = None
@@ -136,6 +152,7 @@ class ClaudeEntryBase(ClaudeCodeBaseModel):
     """Agent's color (from /rename or swarm)."""
     prompt_id: str | None = None
     """Correlates with OTel prompt.id for user prompt messages."""
+    data_flow_on: bool | None = None
 
 
 # =============================================================================
@@ -160,6 +177,32 @@ class ClaudeUserEntry(ClaudeMessageEntryBase):
     tool_use_result: (
         list[ToolUseResult | dict[str, Any]] | ToolUseResult | dict[str, Any] | str | None
     ) = None
+    source_tool_assistant_uuid: str | None = Field(default=None, alias="sourceToolAssistantUUID")
+    """For tool results: uuid of the assistant entry holding the ``tool_use`` this answers."""
+    source_tool_use_id: str | None = Field(default=None, alias="sourceToolUseID")
+    """ID of the tool use that produced this message (e.g. skill or command expansions)."""
+    permission_mode: str | None = None
+    """Permission mode active when the prompt was sent."""
+    permission_decision: dict[str, Any] | None = None
+    """How the tool call this result answers was permitted (decision, source, reason)."""
+    tool_denial_kind: str | None = None
+    """Why the tool call was denied (``user-rejected``, ``permission-rule``, ...)."""
+    sandboxed: bool | None = None
+    """Whether the tool call ran in the sandbox."""
+    prompt_source: str | None = None
+    """Where the prompt came from (``typed``, ``sdk``, ``queued``, ``system``)."""
+    turn_origin: str | None = None
+    """What started the turn (``human``, ``sdk``, ``task_notification``, ``peer``, ...)."""
+    origin: dict[str, Any] | None = None
+    """Origin of the message, keyed by ``kind``."""
+    turn_position: dict[str, int] | None = None
+    """``turnIndex`` / ``promptIndex`` of the prompt within the session."""
+    interrupted_message_id: str | None = None
+    is_visible_in_transcript_only: bool | None = None
+    is_virtual: bool | None = None
+    image_paste_ids: list[int] | None = None
+    mcp_meta: dict[str, Any] | None = None
+    """``_meta`` / ``structuredContent`` of an MCP tool result."""
 
     @property
     def is_tool_result(self) -> bool:
@@ -175,6 +218,32 @@ class ClaudeAssistantEntry(ClaudeMessageEntryBase):
     type: Literal["assistant"]
     message: ClaudeApiMessage
     is_api_error_message: bool | None = None
+    error: str | None = None
+    """Error category for API error messages (``rate_limit``, ``billing_error``, ...)."""
+    api_error_status: int | None = None
+    """HTTP status of the failed API request."""
+    api_error_type: str | None = None
+    api_error: str | None = None
+    is_aborted_mid_stream: bool | None = None
+    requested_model: str | None = None
+    """Model that was asked for (``message.model`` is the one that answered)."""
+    effort: str | None = None
+    per_turn_effort: str | None = None
+    advisor_model: str | None = None
+    made_by: str | None = None
+    """``model`` for model output, ``other`` for synthetic messages."""
+    api_block_index: int | None = None
+    """Index of this entry's content block within the API response."""
+    request_ref: str | None = None
+    """Reference to the ``api-request`` entry this response answers."""
+    thinking_duration_ms: int | None = None
+    thinking_display: str | None = None
+    tool_input_stream_ms: int | None = None
+    attribution_agent: str | None = None
+    attribution_skill: str | None = None
+    attribution_plugin: str | None = None
+    attribution_mcp_server: str | None = None
+    attribution_mcp_tool: str | None = None
 
 
 ClaudeEntry = ClaudeUserEntry | ClaudeAssistantEntry
@@ -222,6 +291,10 @@ class ClaudeRemoveOperation(ClaudeCodeBaseModel):
     content: str | list[str | ClaudeQueueContent] | None = None
     session_id: str
     timestamp: str
+    reason: str | None = None
+    """Why the item left the queue (``absorbed_mid_turn``, ``delivered_to_agent``)."""
+    command_uuid: str | None = None
+    delivery_id: str | None = None
 
 
 class ClaudePopAllOperation(ClaudeCodeBaseModel):
@@ -255,6 +328,7 @@ class ClaudeHookInfo(ClaudeCodeBaseModel):
     """Hook info in stop_hook_summary."""
 
     command: str
+    duration_ms: int | None = None
 
 
 class ClaudeCompactBoundaryEntry(ClaudeSystemEntryBase):
@@ -272,6 +346,8 @@ class ClaudeTurnDurationEntry(ClaudeSystemEntryBase):
 
     subtype: Literal["turn_duration"]
     duration_ms: int | None = None
+    message_count: int | None = None
+    pending_background_agent_count: int | None = None
 
 
 class ClaudeApiErrorEntry(ClaudeSystemEntryBase):
@@ -291,6 +367,11 @@ class ClaudeLocalCommandEntry(ClaudeSystemEntryBase):
     subtype: Literal["local_command"]
     content: str | None = None
     level: str | None = None
+    command_run: dict[str, Any] | None = None
+    """The command and its arguments."""
+    context_usage: dict[str, Any] | None = None
+    """Context window breakdown (for ``/context``)."""
+    is_display_only: bool | None = None
 
 
 class ClaudeStopHookSummaryEntry(ClaudeSystemEntryBase):
@@ -303,6 +384,48 @@ class ClaudeStopHookSummaryEntry(ClaudeSystemEntryBase):
     prevented_continuation: bool | None = None
     stop_reason: str | None = None
     has_output: bool | None = None
+    level: str | None = None
+    tool_use_id: str | None = Field(default=None, alias="toolUseID")
+    hook_additional_context: list[Any] | None = None
+    failed_hook_error_indexes: list[int] | None = None
+
+
+class ClaudeAwaySummaryEntry(ClaudeSystemEntryBase):
+    """System entry recapping the session for a user returning after a break."""
+
+    subtype: Literal["away_summary"]
+    content: str | None = None
+
+
+class ClaudeInformationalEntry(ClaudeSystemEntryBase):
+    """Informational notice shown in the transcript."""
+
+    subtype: Literal["informational"]
+    content: str | None = None
+    level: str | None = None
+    launched_agent_id: str | None = None
+
+
+class ClaudeModelRefusalFallbackEntry(ClaudeSystemEntryBase):
+    """The model refused and the request was retried with a fallback model.
+
+    ``retracted_message_uuids`` are the messages the refusal withdrew from the conversation.
+    """
+
+    subtype: Literal["model_refusal_fallback"]
+    content: str | None = None
+    level: str | None = None
+    trigger: str | None = None
+    direction: str | None = None
+    scope: str | None = None
+    original_model: str | None = None
+    fallback_model: str | None = None
+    request_id: str | None = None
+    api_refusal_category: str | None = None
+    api_refusal_explanation: str | None = None
+    api_refusal_cyber_verification: dict[str, Any] | None = None
+    retracted_message_uuids: list[str] | None = None
+    refused_user_message_uuid: str | None = None
 
 
 class ClaudeGenericSystemEntry(ClaudeSystemEntryBase):
@@ -353,6 +476,9 @@ def _system_entry_discriminator(data: Any) -> str:
             | ClaudeApiErrorEntry()
             | ClaudeLocalCommandEntry()
             | ClaudeStopHookSummaryEntry()
+            | ClaudeAwaySummaryEntry()
+            | ClaudeInformationalEntry()
+            | ClaudeModelRefusalFallbackEntry()
         ) as entry:
             subtype = entry.subtype
         case ClaudeGenericSystemEntry() as entry:
@@ -369,6 +495,9 @@ _KNOWN_SYSTEM_SUBTYPES: frozenset[str] = frozenset(
         "api_error",
         "local_command",
         "stop_hook_summary",
+        "away_summary",
+        "informational",
+        "model_refusal_fallback",
     }
 )
 
@@ -378,6 +507,9 @@ ClaudeSystemEntry = Annotated[
     | Annotated[ClaudeApiErrorEntry, Tag("api_error")]
     | Annotated[ClaudeLocalCommandEntry, Tag("local_command")]
     | Annotated[ClaudeStopHookSummaryEntry, Tag("stop_hook_summary")]
+    | Annotated[ClaudeAwaySummaryEntry, Tag("away_summary")]
+    | Annotated[ClaudeInformationalEntry, Tag("informational")]
+    | Annotated[ClaudeModelRefusalFallbackEntry, Tag("model_refusal_fallback")]
     | Annotated[ClaudeGenericSystemEntry, Tag("__generic__")],
     Discriminator(_system_entry_discriminator),
 ]
@@ -411,6 +543,7 @@ class ClaudeFileHistorySnapshot(ClaudeCodeBaseModel):
     message_id: str
     tracked_file_backups: dict[str, Any]
     timestamp: str
+    has_untracked_changes: bool | None = None
 
 
 class ClaudeFileHistoryEntry(ClaudeCodeBaseModel):
@@ -535,25 +668,48 @@ ClaudeProgressData = Annotated[
 ]
 
 
-class ClaudeProgressEntry(ClaudeCodeBaseModel):
-    """Progress entry for tracking tool execution status."""
+class ClaudeProgressEntry(ClaudeEntryBase):
+    """Progress entry for tracking tool execution status (older Claude Code versions)."""
 
     type: Literal["progress"]
-    uuid: str
-    slug: str | None = None
-    parent_uuid: str | None = None
-    session_id: str
-    timestamp: str
     data: ClaudeProgressData
-    tool_use_id: str | None = None
-    parent_tool_use_id: str | None = None
-    agent_id: str | None = None
-    # Common fields
-    cwd: str = ""
-    git_branch: str = ""
-    version: str = ""
-    user_type: UserType = "external"
-    is_sidechain: bool = False
+    tool_use_id: str | None = Field(default=None, alias="toolUseID")
+    parent_tool_use_id: str | None = Field(default=None, alias="parentToolUseID")
+
+
+# =============================================================================
+# Attachment entry
+# =============================================================================
+
+
+class ClaudeAttachment(BaseModel):
+    """Attachment payload, discriminated by ``type``.
+
+    Claude Code has dozens of attachment types (``hook_success``, ``file``,
+    ``edited_text_file``, ``deferred_tools_delta``, ``date``, ``task_status``, ...) and adds
+    new ones often, so the payload is kept as-is: the type is typed, everything else is
+    available as extra fields (``model_extra``) and written back unchanged.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str
+
+
+class ClaudeAttachmentEntry(ClaudeEntryBase):
+    """Context attached to the conversation (hook output, file contents, reminders, ...).
+
+    Attachment entries are part of the ``parentUuid`` chain: assistant and user entries
+    often have an attachment as their parent, so chain walks must pass through them.
+    """
+
+    type: Literal["attachment"]
+    attachment: ClaudeAttachment
+    rendered: list[Any] | None = None
+    """How the attachment was rendered into the prompt, if recorded."""
+    rendered_role: str | None = None
+    rendered_beside_tool_result: bool | None = None
+    rendered_in_human_turn: list[Any] | None = None
 
 
 # =============================================================================
@@ -588,6 +744,7 @@ class ClaudeLastPromptEntry(ClaudeCodeBaseModel):
     """The prompt; newer entries mark only the message it led to (``leaf_uuid``)."""
     leaf_uuid: str | None = None
     session_id: str
+    explicit: bool | None = None
 
 
 # =============================================================================
@@ -866,6 +1023,128 @@ class ClaudeContextCollapseSnapshotEntry(ClaudeCodeBaseModel):
 
 
 # =============================================================================
+# Session metadata entries (no uuid; last-wins unless noted)
+# =============================================================================
+
+
+class ClaudePermissionModeEntry(ClaudeCodeBaseModel):
+    """Permission mode of the session (last wins)."""
+
+    type: Literal["permission-mode"]
+    session_id: str
+    permission_mode: str
+
+
+class ClaudeModelCostUsage(ClaudeCodeBaseModel):
+    """Per-model token usage and cost in a cost-state entry."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_creation_ephemeral_5m_input_tokens: int = Field(
+        default=0, alias="cacheCreationEphemeral5mInputTokens"
+    )
+    cache_creation_ephemeral_1h_input_tokens: int = Field(
+        default=0, alias="cacheCreationEphemeral1hInputTokens"
+    )
+    thinking_tokens: int = 0
+    web_search_requests: int = 0
+    cost_usd: float = Field(default=0.0, alias="costUSD")
+
+
+class ClaudeCostStateEntry(ClaudeCodeBaseModel):
+    """Accumulated cost and duration of the session, for restoring ``/cost`` on resume.
+
+    Snapshot semantics: the last entry holds the session totals.
+    """
+
+    type: Literal["cost-state"]
+    session_id: str
+    total_cost_usd: float = Field(alias="totalCostUSD")
+    total_api_duration: int = Field(default=0, alias="totalAPIDuration")
+    """Milliseconds spent in API requests."""
+    total_api_duration_without_retries: int = Field(
+        default=0, alias="totalAPIDurationWithoutRetries"
+    )
+    total_tool_duration: int = 0
+    total_duration: int = 0
+    total_lines_added: int = 0
+    total_lines_removed: int = 0
+    start_time: int | None = None
+    """Epoch milliseconds."""
+    model_usage: dict[str, ClaudeModelCostUsage] = Field(default_factory=dict)
+    has_unknown_model_cost: bool = False
+
+
+class ClaudeToolsUsedEntry(ClaudeCodeBaseModel):
+    """Names of the tools used in the session."""
+
+    type: Literal["tools-used"]
+    session_id: str
+    tools: list[str]
+
+
+class ClaudeRelocatedEntry(ClaudeCodeBaseModel):
+    """The session continued in another working directory."""
+
+    type: Literal["relocated"]
+    session_id: str
+    relocated_cwd: str
+
+
+class ClaudeDerivedSession(ClaudeCodeBaseModel):
+    """A session this session was derived from."""
+
+    id: str
+    type: str
+    via: str
+    """How it was derived (``compact``, ``clear``, ``resume``, ``subprocess``, ...)."""
+    started: str | None = None
+
+
+class ClaudeDerivedFromEntry(ClaudeCodeBaseModel):
+    """Records the sessions this session continues (after /clear, compaction, resume)."""
+
+    type: Literal["derived-from"]
+    session_id: str
+    v: int | None = None
+    sessions: list[ClaudeDerivedSession]
+
+
+class ClaudeForkContextRefEntry(ClaudeCodeBaseModel):
+    """A forked subagent's reference to the parent conversation it inherited."""
+
+    type: Literal["fork-context-ref"]
+    agent_id: str | None = None
+    parent_session_id: str
+    parent_last_uuid: str
+    """Last parent-session message the fork's context includes."""
+    context_length: int | None = None
+
+
+class ClaudeFileBackup(ClaudeCodeBaseModel):
+    """A backed-up file version in ``~/.claude/file-history/<sessionId>/``."""
+
+    backup_file_name: str | None = None
+    """``None`` when the file did not exist at that point."""
+    version: int
+    backup_time: str
+    real_parent_dir: str | None = None
+
+
+class ClaudeFileHistoryDeltaEntry(ClaudeCodeBaseModel):
+    """Adds one file backup to an earlier file-history snapshot."""
+
+    type: Literal["file-history-delta"]
+    message_id: str
+    snapshot_message_id: str
+    tracking_path: str
+    backup: ClaudeFileBackup
+    timestamp: str
+
+
+# =============================================================================
 # Top-level discriminated union
 # =============================================================================
 
@@ -893,7 +1172,15 @@ KnownClaudeJSONLEntry = Annotated[
     | ClaudeAttributionSnapshotEntry
     | ClaudeSpeculationAcceptEntry
     | ClaudeContextCollapseCommitEntry
-    | ClaudeContextCollapseSnapshotEntry,
+    | ClaudeContextCollapseSnapshotEntry
+    | ClaudeAttachmentEntry
+    | ClaudePermissionModeEntry
+    | ClaudeCostStateEntry
+    | ClaudeToolsUsedEntry
+    | ClaudeRelocatedEntry
+    | ClaudeDerivedFromEntry
+    | ClaudeForkContextRefEntry
+    | ClaudeFileHistoryDeltaEntry,
     Field(discriminator="type"),
 ]
 """Discriminated union of the JSONL entry types these models know."""
@@ -902,7 +1189,7 @@ KnownClaudeJSONLEntry = Annotated[
 class ClaudeUnknownEntry(BaseModel):
     """An entry of a type these models don't know, kept as it is.
 
-    Claude Code adds entry types often (``api-request``, ``permission-mode``, ...); they
+    Claude Code adds entry types often (``api-request``, ``atis-latch``, ...); they
     load as this instead of failing, and are written back unchanged.
     """
 

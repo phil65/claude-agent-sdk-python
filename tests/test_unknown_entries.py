@@ -21,13 +21,13 @@ if TYPE_CHECKING:
 
 
 ADAPTER = TypeAdapter[ClaudeJSONLEntry](ClaudeJSONLEntry)
-UNKNOWN = {"type": "permission-mode", "permissionMode": "auto", "sessionId": "s1"}
+UNKNOWN = {"type": "future-entry", "someField": "value", "sessionId": "s1"}
 
 
 def test_unknown_entry_types_load_with_their_data() -> None:
     entry = ADAPTER.validate_python(UNKNOWN)
     assert isinstance(entry, ClaudeUnknownEntry)
-    assert entry.type == "permission-mode"
+    assert entry.type == "future-entry"
     assert entry.model_dump() == UNKNOWN
 
 
