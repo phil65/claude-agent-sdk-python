@@ -1,6 +1,6 @@
 [project]
 name = "clawd-code-sdk"
-version = "1.4.0"
+version = "1.5.0"
 description = "Python SDK for Claude Code"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -22,8 +22,8 @@ dependencies = [
   "anthropic>=2.9.0",  # BetaFallbackBlock / BetaMCPToolListingBlock
   "anyenv>=2.0.15",
   "anyio>=4.0.0",
-  "logfire>=4.31.0",
   "jsonschema>=4.20.0",
+  "logfire>=4.31.0",
   "mcp>=1.23.0,<3.0.0",
   "python-dotenv>=1.2.1",
 ]
