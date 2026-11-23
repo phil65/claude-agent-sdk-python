@@ -22,6 +22,7 @@ from clawd_code_sdk.storage.models import (
     ClaudeProgressEntry,
     ClaudeRelocatedEntry,
     ClaudeTurnDurationEntry,
+    ClaudeUnknownEntry,
     ClaudeUserEntry,
 )
 
@@ -262,3 +263,15 @@ def test_project_dir_names_match_claude_code() -> None:
     long_name = path_to_claude_dir_name("/x" * 150)
     assert len(long_name) > 200
     assert long_name.startswith("-x-x")
+
+
+def test_invalid_known_entry_is_kept_as_unknown(tmp_path: Path) -> None:
+    """A known type that doesn't match its model is kept, not dropped."""
+    broken = _entry(type="assistant", uuid="a1", parentUuid=None, message={"role": "assistant"})
+    path = _write_lines(tmp_path / "s.jsonl", broken)
+    [entry] = read_session(path)
+    assert isinstance(entry, ClaudeUnknownEntry)
+    assert entry.type == "assistant"
+    copy = tmp_path / "copy.jsonl"
+    write_entry(copy, entry)
+    assert json.loads(copy.read_text()) == broken

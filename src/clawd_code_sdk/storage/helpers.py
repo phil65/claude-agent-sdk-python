@@ -89,6 +89,8 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
     if not session_path.exists():
         return entries
 
+    from clawd_code_sdk.storage.models import ClaudeUnknownEntry
+
     adapter = _entry_adapter()
     # Bytes, not text: the JSON parser takes bytes, so decoding every line first is wasted work.
     with _gc_paused(), session_path.open("rb") as f:
@@ -103,8 +105,12 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
                 msg = "Failed to parse JSONL line (path: %s, error: %s, raw_line: %s)"
                 logger.warning(msg, str(session_path), str(e), raw_line.decode(errors="replace"))
             except ValidationError as e:
-                msg = "Failed to validate JSONL entry (path: %s, error: %s)"
+                # A known type that doesn't match its model (a new field shape, say):
+                # keep the line as an unknown entry instead of losing it.
+                msg = "Failed to validate JSONL entry, keeping it unparsed (path: %s, error: %s)"
                 logger.warning(msg, str(session_path), str(e))
+                if isinstance(data.get("type"), str):
+                    entries.append(ClaudeUnknownEntry.model_validate(data))
     return entries
 
 
