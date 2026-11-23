@@ -1186,6 +1186,29 @@ KnownClaudeJSONLEntry = Annotated[
 """Discriminated union of the JSONL entry types these models know."""
 
 
+ClaudeChainEntry = (
+    ClaudeUserEntry
+    | ClaudeAssistantEntry
+    | ClaudeAttachmentEntry
+    | ClaudeCompactBoundaryEntry
+    | ClaudeTurnDurationEntry
+    | ClaudeApiErrorEntry
+    | ClaudeLocalCommandEntry
+    | ClaudeStopHookSummaryEntry
+    | ClaudeAwaySummaryEntry
+    | ClaudeInformationalEntry
+    | ClaudeModelRefusalFallbackEntry
+    | ClaudeGenericSystemEntry
+    | ClaudeProgressEntry
+    | ClaudeSavedHookContextEntry
+)
+"""The loaded entry types that take part in the ``parentUuid`` chain.
+
+All of them derive from :class:`ClaudeEntryBase` (which exposes ``uuid`` and
+``parent_uuid``). The union works with ``isinstance`` to narrow a :data:`ClaudeJSONLEntry`.
+"""
+
+
 class ClaudeUnknownEntry(BaseModel):
     """An entry of a type these models don't know, kept as it is.
 
