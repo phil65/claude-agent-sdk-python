@@ -10,11 +10,18 @@ tool-result entry's parent is the assistant entry holding its own ``tool_use``.
 A plain walk from the leaf only follows the branch the next turn continued from
 and loses the other calls and results; :func:`resolve_chain` puts them back
 (as upstream's ``get_session_messages`` and Claude Code itself do).
+
+For a single walk over a large transcript, validating every entry costs far more
+than the walk. The ``raw`` functions walk the parsed JSON instead (as upstream does)
+and :func:`validate_chain_entries` types only the entries actually needed.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import anyenv
+from pydantic import ValidationError
 
 from clawd_code_sdk.models import ToolResultBlock, ToolUseBlock
 from clawd_code_sdk.storage.models import (
@@ -23,13 +30,18 @@ from clawd_code_sdk.storage.models import (
     ClaudeEntryBase,
     ClaudeModelRefusalFallbackEntry,
     ClaudeUserEntry,
+    chain_entry_types,
 )
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+
+RawEntry = dict[str, Any]
+"""A transcript line as parsed JSON, not validated."""
 
 
 def index_chain_entries(entries: Iterable[ClaudeJSONLEntry]) -> dict[str, ClaudeChainEntry]:
@@ -197,3 +209,61 @@ def _recover_parallel_tool_calls(
         result_chain.append(entry)
         result_chain.extend(inserts.get(entry.uuid, ()))
     return result_chain
+
+
+def read_raw_chain_entries(session_path: Path) -> dict[str, RawEntry]:
+    """The chain entries of a transcript as parsed JSON, by ``uuid``, in file order.
+
+    Only parses JSON: about as fast as reading the file, much faster than
+    :func:`~clawd_code_sdk.storage.helpers.read_session` on large transcripts.
+    Corrupt lines are skipped.
+    """
+    from clawd_code_sdk.storage.helpers import _gc_paused
+
+    types = chain_entry_types()
+    index: dict[str, RawEntry] = {}
+    if not session_path.exists():
+        return index
+    with _gc_paused(), session_path.open("rb") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                data = anyenv.load_json(line, return_type=dict)
+            except anyenv.JsonLoadError:
+                continue
+            uuid = data.get("uuid")
+            if data.get("type") in types and isinstance(uuid, str):
+                index[uuid] = data
+    return index
+
+
+def walk_raw_ancestry(
+    index: dict[str, RawEntry], uuid: str, *, include_start: bool = True
+) -> list[RawEntry]:
+    """Like :func:`walk_ancestry`, over parsed JSON: leaf first, stops at a cycle."""
+    chain: list[RawEntry] = []
+    seen: set[str] = set()
+    current = index.get(uuid)
+    while current is not None and current["uuid"] not in seen:  # indexed: uuid is a str
+        seen.add(current["uuid"])
+        chain.append(current)
+        parent = current.get("parentUuid")
+        current = index.get(parent) if isinstance(parent, str) else None
+    return chain if include_start else chain[1:]
+
+
+def validate_chain_entries(raw_entries: Iterable[RawEntry]) -> list[ClaudeChainEntry]:
+    """Validate parsed entries into their models, keeping the chain entries that pass."""
+    from clawd_code_sdk.storage.helpers import _entry_adapter
+
+    adapter = _entry_adapter()
+    entries: list[ClaudeChainEntry] = []
+    for raw in raw_entries:
+        try:
+            entry = adapter.validate_python(raw)
+        except ValidationError:
+            continue
+        if isinstance(entry, ClaudeChainEntry):
+            entries.append(entry)
+    return entries

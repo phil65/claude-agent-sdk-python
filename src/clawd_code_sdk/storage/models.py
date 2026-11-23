@@ -1245,6 +1245,12 @@ def _entry_tags(annotation: Any) -> set[str]:
 
 
 @cache
+def chain_entry_types() -> frozenset[str]:
+    """The ``type`` tags of :data:`ClaudeChainEntry` (entries that take part in the chain)."""
+    return frozenset(_entry_tags(ClaudeChainEntry))
+
+
+@cache
 def known_entry_types() -> frozenset[str]:
     """The ``type`` tags of :data:`KnownClaudeJSONLEntry`."""
     return frozenset(_entry_tags(KnownClaudeJSONLEntry))

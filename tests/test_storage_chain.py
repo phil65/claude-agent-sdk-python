@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+import json
+from typing import TYPE_CHECKING, Any
 
 from pydantic import TypeAdapter
 
@@ -10,11 +11,18 @@ from clawd_code_sdk.models import AssistantMessage, UserMessage
 from clawd_code_sdk.storage.chain import (
     find_leaf,
     index_chain_entries,
+    read_raw_chain_entries,
     resolve_chain,
+    validate_chain_entries,
     walk_ancestry,
+    walk_raw_ancestry,
 )
 from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 from clawd_code_sdk.storage.replay import replay_entries
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 ADAPTER = TypeAdapter[list[ClaudeJSONLEntry]](list[ClaudeJSONLEntry])
@@ -169,3 +177,29 @@ def test_messages_withdrawn_by_a_refusal_are_left_out() -> None:
     # The walk passes through the withdrawn message, but it is not returned.
     assert uuids(resolve_chain(entries)) == ["u1", "sy1", "a2"]
     assert "a1" in uuids(walk_ancestry(index_chain_entries(entries), "a2"))
+
+
+def test_raw_walk_matches_the_typed_walk(tmp_path: Path) -> None:
+    rows = [
+        attachment("at1", None),
+        user("u1", "at1"),
+        attachment("at2", "u1"),
+        assistant("a1", "at2", "msg_1"),
+        system("sy1", "a1"),
+        user("u2", "sy1"),
+        assistant("a2", "u2", "msg_2"),
+        {"type": "custom-title", "customTitle": "not a chain entry", "sessionId": "s1"},
+    ]
+    path = tmp_path / "s.jsonl"
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows) + "not json\n")
+    typed = walk_ancestry(index_chain_entries(load(*rows)), "a2")
+    raw = walk_raw_ancestry(read_raw_chain_entries(path), "a2")
+    assert [entry["uuid"] for entry in raw] == uuids(typed)
+    assert uuids(validate_chain_entries(raw)) == uuids(typed)
+
+
+def test_raw_walk_stops_on_cycle(tmp_path: Path) -> None:
+    path = tmp_path / "s.jsonl"
+    path.write_text(json.dumps(user("x1", "x2")) + "\n" + json.dumps(user("x2", "x1")) + "\n")
+    raw = walk_raw_ancestry(read_raw_chain_entries(path), "x2")
+    assert [entry["uuid"] for entry in raw] == ["x2", "x1"]
