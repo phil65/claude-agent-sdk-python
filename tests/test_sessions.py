@@ -1995,6 +1995,32 @@ class TestGetSubagentMessages:
         assert messages[0].parent_tool_use_id is None
         assert messages[3].type == "assistant"
 
+    def test_parent_ids_from_meta_sidecar(self, claude_config_dir: Path, tmp_path: Path):
+        """parent_tool_use_id / parent_agent_id come from the agent's .meta.json sidecar."""
+        project_path = str(tmp_path / "proj")
+        Path(project_path).mkdir(parents=True)
+        sid, subagents_dir = _make_session_with_subagents(claude_config_dir, project_path)
+        u1 = str(uuid.uuid4())
+        entry = _make_transcript_entry("user", u1, None, sid, content="task")
+        (subagents_dir / "agent-abc.jsonl").write_text(json.dumps(entry) + "\n")
+        meta = {"agentType": "general-purpose", "toolUseId": "toolu_1", "parentAgentId": "p1"}
+        (subagents_dir / "agent-abc.meta.json").write_text(json.dumps(meta))
+
+        [message] = get_subagent_messages(sid, "abc", directory=project_path)
+        assert (message.parent_tool_use_id, message.parent_agent_id) == ("toolu_1", "p1")
+
+    def test_corrupt_meta_sidecar_is_ignored(self, claude_config_dir: Path, tmp_path: Path):
+        """An unparseable sidecar degrades to no parent ids."""
+        project_path = str(tmp_path / "proj")
+        Path(project_path).mkdir(parents=True)
+        sid, subagents_dir = _make_session_with_subagents(claude_config_dir, project_path)
+        entry = _make_transcript_entry("user", str(uuid.uuid4()), None, sid, content="task")
+        (subagents_dir / "agent-abc.jsonl").write_text(json.dumps(entry) + "\n")
+        (subagents_dir / "agent-abc.meta.json").write_text("{not json")
+
+        [message] = get_subagent_messages(sid, "abc", directory=project_path)
+        assert (message.parent_tool_use_id, message.parent_agent_id) == (None, None)
+
     def test_finds_agent_in_nested_subdirectory(self, claude_config_dir: Path, tmp_path: Path):
         """Agent file in a nested subdirectory is found by ID."""
         project_path = str(tmp_path / "proj")

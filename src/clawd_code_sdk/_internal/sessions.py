@@ -1125,7 +1125,11 @@ def _is_visible_message(entry: _TranscriptEntry) -> bool:
     return not entry.get("teamName")
 
 
-def _to_session_message(entry: _TranscriptEntry) -> SessionMessage:
+def _to_session_message(
+    entry: _TranscriptEntry,
+    parent_tool_use_id: str | None = None,
+    parent_agent_id: str | None = None,
+) -> SessionMessage:
     """Converts a transcript entry dict into a SessionMessage."""
     # Narrow to the Literal type — _is_visible_message already guarantees
     # this is "user" or "assistant".
@@ -1134,7 +1138,8 @@ def _to_session_message(entry: _TranscriptEntry) -> SessionMessage:
         uuid=entry.get("uuid", ""),
         session_id=entry.get("sessionId", ""),
         message=entry.get("message"),
-        parent_tool_use_id=None,
+        parent_tool_use_id=parent_tool_use_id,
+        parent_agent_id=parent_agent_id,
     )
 
 
@@ -1360,7 +1365,11 @@ def get_subagent_messages(
 
     Parses the subagent transcript, builds the conversation chain via
     ``parentUuid`` links, and returns user/assistant messages in
-    chronological order.
+    chronological order. Each message's ``parent_tool_use_id`` is the id of
+    the Agent ``tool_use`` in the parent session that spawned this subagent
+    (and ``parent_agent_id`` the spawning subagent, for nested subagents),
+    read from the ``agent-<agentId>.meta.json`` sidecar next to the
+    transcript; both are ``None`` if the sidecar is missing or unusable.
 
     Args:
         session_id: UUID of the parent session.
@@ -1395,11 +1404,60 @@ def get_subagent_messages(
     if not content:
         return []
 
+    # The .meta.json sidecar next to the transcript records which Agent
+    # tool_use spawned this subagent (and, for nested subagents, the parent
+    # agent id). A missing or unusable sidecar degrades to "no metadata".
+    try:
+        meta = _read_agent_metadata_sidecar(match)
+    except OSError:
+        meta = None
+    parent_tool_use_id, parent_agent_id = _parent_ids_from_agent_metadata(meta)
+
     entries = _parse_transcript_entries(content)
     chain = _build_subagent_chain(entries)
-    messages = [_to_session_message(e) for e in chain if e.get("type") in ("user", "assistant")]
+    messages = [
+        _to_session_message(e, parent_tool_use_id, parent_agent_id)
+        for e in chain
+        if e.get("type") in ("user", "assistant")
+    ]
     if limit is not None and limit > 0:
         return messages[offset : offset + limit]
     if offset > 0:
         return messages[offset:]
     return messages
+
+
+def _agent_metadata_sidecar_path(transcript_path: Path) -> Path:
+    """``agent-<id>.jsonl`` -> ``agent-<id>.meta.json`` (same directory)."""
+    return transcript_path.with_name(transcript_path.name.removesuffix(".jsonl") + ".meta.json")
+
+
+def _read_agent_metadata_sidecar(transcript_path: Path) -> dict[str, Any] | None:
+    """Read the ``.meta.json`` sidecar beside a subagent transcript.
+
+    Returns ``None`` when the sidecar is missing, not valid JSON, or not a JSON
+    object. Other ``OSError``s (e.g. permission denied) propagate.
+    """
+    try:
+        text = _agent_metadata_sidecar_path(transcript_path).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None
+    try:
+        meta = anyenv.load_json(text)
+    except (anyenv.JsonLoadError, ValueError):
+        return None
+    return meta if isinstance(meta, dict) else None
+
+
+def _parent_ids_from_agent_metadata(
+    meta: dict[str, Any] | None,
+) -> tuple[str | None, str | None]:
+    """Extract ``(toolUseId, parentAgentId)`` from a subagent metadata sidecar."""
+    if not meta:
+        return None, None
+    tool_use_id = meta.get("toolUseId")
+    parent_agent_id = meta.get("parentAgentId")
+    return (
+        tool_use_id if isinstance(tool_use_id, str) else None,
+        parent_agent_id if isinstance(parent_agent_id, str) else None,
+    )

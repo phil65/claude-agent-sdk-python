@@ -93,3 +93,7 @@ class SessionMessage(BaseModel):
     message: Any
     # timestamp: str
     parent_tool_use_id: str | None = None
+    """For subagent messages: id of the Agent ``tool_use`` in the parent session that spawned
+    the subagent (from its ``.meta.json`` sidecar). ``None`` for top-level session messages."""
+    parent_agent_id: str | None = None
+    """For messages of nested subagents: agent id of the subagent that spawned this one."""
