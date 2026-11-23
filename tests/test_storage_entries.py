@@ -319,3 +319,39 @@ def test_unknown_fields_survive_a_round_trip(tmp_path: Path) -> None:
     copy = tmp_path / "copy.jsonl"
     write_entry(copy, entry)
     assert json.loads(copy.read_text()) == row
+
+
+def test_tool_results_keep_wire_keys_and_unknown_fields(tmp_path: Path) -> None:
+    """Tool results are TypedDicts named as on the wire: no camelCase renaming on write."""
+    usage = {
+        "input_tokens": 5,
+        "output_tokens": 7,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 3,
+        "server_tool_use": None,
+        "service_tier": "standard",
+        "cache_creation": None,
+    }
+    result = {
+        "status": "completed",
+        "agentId": "agent-1",
+        "content": [{"type": "text", "text": "done"}],
+        "totalToolUseCount": 0,
+        "totalDurationMs": 1,
+        "totalTokens": 12,
+        "usage": usage,
+        "prompt": "do it",
+        "someNewResultField": True,
+    }
+    row = _entry(
+        type="user",
+        uuid="u1",
+        parentUuid=None,
+        message={"role": "user", "content": "hi"},
+        toolUseResult=result,
+    )
+    path = _write_lines(tmp_path / "s.jsonl", row)
+    [entry] = read_session(path)
+    copy = tmp_path / "copy.jsonl"
+    write_entry(copy, entry)
+    assert json.loads(copy.read_text()) == row

@@ -11,7 +11,9 @@ The shapes are derived from the ``ToolOutputSchemas`` type definitions in the
 
 from __future__ import annotations
 
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict, is_typeddict
+
+from pydantic import ConfigDict, with_config
 
 from clawd_code_sdk.models import AskUserQuestionOption, TodoItem  # noqa: TC001
 from clawd_code_sdk.models.base import ToolName  # noqa: TC001
@@ -2000,3 +2002,15 @@ TOOL_USE_RESULT_TYPES: dict[ToolName, type[ToolUseResult]] = {
     "PushNotification": PushNotificationOutput,
     "ClaudeDesign": ClaudeDesignOutput,
 }
+
+
+# The TypedDicts above name their keys exactly as on the wire (``agentId`` next to
+# ``input_tokens``). Without a config of their own, pydantic applies the alias
+# generator of the model that contains them (``to_camel`` in ClaudeCodeBaseModel), so
+# a transcript entry read with ``input_tokens`` was written back as ``inputTokens``.
+# Keys they don't declare are kept: Claude Code adds result fields often, and a
+# transcript entry should be written back unchanged.
+_WIRE_KEYS = ConfigDict(extra="allow")
+for _typed_dict in [value for value in list(globals().values()) if is_typeddict(value)]:
+    if _typed_dict.__module__ == __name__:
+        with_config(_WIRE_KEYS)(_typed_dict)
