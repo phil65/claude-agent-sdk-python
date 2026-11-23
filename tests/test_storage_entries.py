@@ -252,3 +252,13 @@ def test_extract_title_prefers_custom_then_ai_title(tmp_path: Path) -> None:
     assert extract_title(_write_lines(tmp_path / "d.jsonl", task, prompt)) == "Fix the bug"
     assert extract_title(tmp_path / "missing.jsonl") is None
     assert extract_title(_write_lines(tmp_path / "e.jsonl", prompt), max_chars=3) == "Fix..."
+
+
+def test_project_dir_names_match_claude_code() -> None:
+    from clawd_code_sdk.storage.helpers import encode_project_path, path_to_claude_dir_name
+
+    assert encode_project_path("/home/user/project") == "-home-user-project"
+    assert encode_project_path("/home/user/.config/my_app") == "-home-user--config-my-app"
+    long_name = path_to_claude_dir_name("/x" * 150)
+    assert len(long_name) > 200
+    assert long_name.startswith("-x-x")

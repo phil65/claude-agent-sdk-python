@@ -9,7 +9,6 @@ from contextlib import contextmanager
 import functools
 import gc
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import anyenv
@@ -18,6 +17,7 @@ from pydantic import TypeAdapter, ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
@@ -109,8 +109,10 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
 
 
 def get_claude_data_dir() -> Path:
-    """Get the Claude Code data directory path (~/.claude)."""
-    return Path.home() / ".claude"
+    """Get the Claude Code data directory (``$CLAUDE_CONFIG_DIR``, default ``~/.claude``)."""
+    from clawd_code_sdk._internal.sessions import _get_claude_config_home_dir
+
+    return _get_claude_config_home_dir()
 
 
 def get_claude_projects_dir() -> Path:
@@ -119,9 +121,11 @@ def get_claude_projects_dir() -> Path:
 
 
 def path_to_claude_dir_name(project_path: str) -> str:
-    """Convert a filesystem path to Claude Code's directory naming format.
+    """Convert a filesystem path to Claude Code's project directory name.
 
-    Claude Code replaces '/' with '-', so '/home/user/project' becomes '-home-user-project'.
+    Claude Code replaces every non-alphanumeric character with '-', so
+    '/home/user/my.project' becomes '-home-user-my-project'. Names longer than
+    200 characters are truncated and get a hash suffix.
 
     Args:
         project_path: The filesystem path
@@ -129,7 +133,9 @@ def path_to_claude_dir_name(project_path: str) -> str:
     Returns:
         The Claude Code directory name format
     """
-    return project_path.replace("/", "-")
+    from clawd_code_sdk._internal.sessions import _sanitize_path
+
+    return _sanitize_path(project_path)
 
 
 def get_latest_session(project_path: str) -> Path | None:
@@ -152,16 +158,18 @@ def list_project_session_files(project_path: str) -> list[Path]:
 
 
 def encode_project_path(path: str) -> str:
-    """Encode a project path to Claude's format.
+    """Encode a project path to Claude's format (see :func:`path_to_claude_dir_name`).
 
-    Claude encodes paths by replacing / with - and prepending -.
-    Example: /home/user/project -> -home-user-project
+    Example: /home/user/.config/project -> -home-user--config-project
     """
-    return path.replace("/", "-")
+    return path_to_claude_dir_name(path)
 
 
 def decode_project_path(encoded: str) -> str:
-    """Decode a Claude project path back to filesystem path.
+    """Decode a Claude project path back to filesystem path (best effort).
+
+    The encoding is lossy ('-', '.', '_' and '/' all become '-'), so this is only
+    a guess; prefer the ``cwd`` recorded in the session's entries.
 
     Example: -home-user-project -> /home/user/project
     """
