@@ -227,10 +227,12 @@ def get_subagent_transcript_path(
 
 
 def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
-    """Extract title from session file efficiently.
+    """Extract a display title from a session file without parsing all of it.
 
-    Looks for a summary entry first, then falls back to the first line
-    of the first user message. Stops reading as soon as a title is found.
+    Reads only the head and tail of the file. Preference order: the last
+    user-set title (``custom-title``), the last AI-generated title
+    (``ai-title``), a legacy ``summary`` entry, then the first meaningful
+    user prompt.
 
     Args:
         session_path: Path to the JSONL session file
@@ -239,40 +241,29 @@ def extract_title(session_path: Path, max_chars: int = 60) -> str | None:
     Returns:
         Extracted title or None if no suitable content found
     """
-    if not session_path.exists():
+    from clawd_code_sdk._internal.sessions import (
+        _extract_first_prompt_from_head,
+        _extract_last_json_string_field,
+        _read_session_lite,
+    )
+
+    lite = _read_session_lite(session_path)
+    if lite is None:
         return None
-
-    try:
-        with session_path.open(encoding="utf-8", errors="ignore") as fp:
-            for line in fp:
-                # Summary entries take priority
-                if '"type":"summary"' in line:
-                    try:
-                        entry = anyenv.load_json(line, return_type=dict)
-                        if summary := entry.get("summary"):
-                            return str(summary)
-                    except anyenv.JsonLoadError:
-                        pass
-
-                # First user message as fallback - stop here
-                if '"type":"user"' in line:
-                    try:
-                        entry = anyenv.load_json(line, return_type=dict)
-                        msg = entry.get("message", {})
-                        content = msg.get("content", "")
-                        if isinstance(content, str) and content:
-                            # Use first line only, strip whitespace
-                            first_line = content.split("\n")[0].strip()
-                            if len(first_line) > max_chars:
-                                return first_line[:max_chars] + "..."
-                            return first_line if first_line else None
-                    except anyenv.JsonLoadError:
-                        pass
-                    break  # Stop after first user message
-    except OSError:
-        pass
-
-    return None
+    head, tail = lite.head, lite.tail
+    # Only legacy summary entries: other entry types carry a "summary" key too.
+    summary_line = next((ln for ln in head.split("\n") if ln.startswith('{"type":"summary"')), "")
+    title = (
+        _extract_last_json_string_field(tail, "customTitle")
+        or _extract_last_json_string_field(head, "customTitle")
+        or _extract_last_json_string_field(tail, "aiTitle")
+        or _extract_last_json_string_field(head, "aiTitle")
+        or _extract_last_json_string_field(summary_line, "summary")
+        or _extract_first_prompt_from_head(head).split("\n")[0].strip()
+    )
+    if not title:
+        return None
+    return title[:max_chars] + "..." if len(title) > max_chars else title
 
 
 # def parse_entry(line: str) -> ClaudeCodeEntry | None:

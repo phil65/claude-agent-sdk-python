@@ -232,3 +232,23 @@ def test_session_metadata_entries() -> None:
     )
     assert isinstance(delta, ClaudeFileHistoryDeltaEntry)
     assert delta.backup.backup_file_name is None
+
+
+def _write_lines(path: Path, *rows: dict[str, Any]) -> Path:
+    path.write_text("".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows))
+    return path
+
+
+def test_extract_title_prefers_custom_then_ai_title(tmp_path: Path) -> None:
+    from clawd_code_sdk.storage.helpers import extract_title
+
+    prompt = _entry(type="user", uuid="u1", message={"role": "user", "content": "Fix the bug"})
+    ai = {"type": "ai-title", "sessionId": "s1", "aiTitle": "Bug fixing"}
+    custom = {"type": "custom-title", "sessionId": "s1", "customTitle": "My title"}
+    assert extract_title(_write_lines(tmp_path / "a.jsonl", prompt)) == "Fix the bug"
+    assert extract_title(_write_lines(tmp_path / "b.jsonl", prompt, ai)) == "Bug fixing"
+    assert extract_title(_write_lines(tmp_path / "c.jsonl", prompt, ai, custom)) == "My title"
+    task = {"type": "task-summary", "sessionId": "s1", "summary": "busy", "timestamp": "t"}
+    assert extract_title(_write_lines(tmp_path / "d.jsonl", task, prompt)) == "Fix the bug"
+    assert extract_title(tmp_path / "missing.jsonl") is None
+    assert extract_title(_write_lines(tmp_path / "e.jsonl", prompt), max_chars=3) == "Fix..."
