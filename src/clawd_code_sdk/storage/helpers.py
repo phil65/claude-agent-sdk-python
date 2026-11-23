@@ -5,6 +5,9 @@ See ARCHITECTURE.md for detailed documentation of the storage format.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+import functools
+import gc
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,10 +17,37 @@ from pydantic import TypeAdapter, ValidationError
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from clawd_code_sdk.storage.models import ClaudeJSONLEntry
 
 
 logger = logging.getLogger(__name__)
+
+
+@functools.cache
+def _entry_adapter() -> TypeAdapter[ClaudeJSONLEntry]:
+    """Build the entry adapter once: constructing it takes ~80 ms."""
+    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
+
+    return TypeAdapter[ClaudeJSONLEntry](ClaudeJSONLEntry)
+
+
+@contextmanager
+def _gc_paused() -> Generator[None]:
+    """Pause the cyclic garbage collector while bulk-building objects.
+
+    Loading a large transcript creates hundreds of thousands of container objects, which
+    triggers repeated full collections that find nothing to free (about half the load time
+    on a 230 MB transcript). The previous state is restored afterwards.
+    """
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
 
 
 def write_entry(session_path: Path, entry: ClaudeJSONLEntry) -> None:
@@ -55,25 +85,23 @@ def count_session_messages(session_path: Path) -> int:
 
 def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
     """Read all entries from a session file."""
-    from clawd_code_sdk.storage.models import ClaudeJSONLEntry
-
     entries: list[ClaudeJSONLEntry] = []
     if not session_path.exists():
         return entries
 
-    adapter = TypeAdapter[ClaudeJSONLEntry](ClaudeJSONLEntry)
-    with session_path.open("r", encoding="utf-8") as f:
+    adapter = _entry_adapter()
+    # Bytes, not text: the JSON parser takes bytes, so decoding every line first is wasted work.
+    with _gc_paused(), session_path.open("rb") as f:
         for raw_line in f:
-            stripped = raw_line.strip()
-            if not stripped:
+            if not raw_line.strip():
                 continue
             try:
-                data = anyenv.load_json(stripped, return_type=dict)
+                data = anyenv.load_json(raw_line, return_type=dict)
                 entry = adapter.validate_python(data)
                 entries.append(entry)
             except anyenv.JsonLoadError as e:
                 msg = "Failed to parse JSONL line (path: %s, error: %s, raw_line: %s)"
-                logger.warning(msg, str(session_path), str(e), raw_line)
+                logger.warning(msg, str(session_path), str(e), raw_line.decode(errors="replace"))
             except ValidationError as e:
                 msg = "Failed to validate JSONL entry (path: %s, error: %s)"
                 logger.warning(msg, str(session_path), str(e))
