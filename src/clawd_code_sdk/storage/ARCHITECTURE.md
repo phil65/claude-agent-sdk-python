@@ -1,339 +1,133 @@
 # Claude Code Storage Architecture
 
-This document explains how Claude Code persists conversation data, sessions, and agent state to the filesystem.
+How Claude Code persists sessions on disk, and how this package models it.
+Verified against transcripts written by Claude Code 2.x/3.x (late 2026). Claude Code
+changes the format often: new entry types, new fields, sometimes renamed keys. The models
+are lenient (unknown fields are ignored, unknown entry types load as
+`ClaudeUnknownEntry`), so new versions keep loading.
 
 ## Directory Structure
 
 ```
-~/.claude/
-├── projects/                          # Per-project conversation storage
-│   ├── {encoded-project-path}/       # One directory per project
-│   │   ├── {sessionId}.jsonl         # Main session conversation log
-│   │   ├── agent-{shortId}.jsonl     # Sub-agent conversation logs
-│   │   └── ...                       # Multiple sessions per project
-│   └── ...
-├── todos/                             # Per-agent todo/plan persistence
-│   ├── {sessionId}-agent-{sessionId}.json      # Main agent todos
-│   ├── {sessionId}-agent-{agentId}.json        # Sub-agent todos
-│   └── ...
-├── session-env/                       # Session environment state
-│   └── {sessionId}/                   # Environment per session (often empty)
-├── plans/                             # Standalone plan documents
-│   └── {name}.md                      # Named plans (legacy?)
-├── file-history/                      # File edit history tracking
-├── history.jsonl                      # Global command history
-└── settings.json                      # User settings
+~/.claude/                                 # $CLAUDE_CONFIG_DIR if set
+├── projects/
+│   └── {sanitized-cwd}/                   # one directory per working directory
+│       ├── {sessionId}.jsonl              # main session transcript
+│       ├── {sessionId}/
+│       │   ├── subagents/
+│       │   │   ├── agent-{agentId}.jsonl      # subagent transcript (may be nested,
+│       │   │   └── agent-{agentId}.meta.json  #   e.g. subagents/workflows/{runId}/)
+│       │   └── tool-results/              # large tool outputs moved out of the transcript
+│       ├── sessions-index.json            # cached listing (firstPrompt, messageCount, ...)
+│       └── memory/                        # auto-memory files (MEMORY.md, ...)
+├── file-history/{sessionId}/{hash}@v{n}   # file backups for rewind (see file-history entries)
+├── sessions/{pid}.json                    # registry of running Claude Code processes
+├── session-env/{sessionId}/               # per-session environment state (usually empty)
+├── todos/{sessionId}-agent-{agentId}.json # legacy TodoWrite state (newer versions rarely write it)
+├── history.jsonl                          # prompt history: display, pastedContents, project,
+│                                          #   sessionId, timestamp
+└── settings.json
 ```
 
-## Core Concepts
+### Project directory names
 
-### 1. Projects
+The working directory is sanitized: every non-alphanumeric character becomes `-`
+(`/home/user/.config/app` → `-home-user--config-app`). Names longer than 200 characters are
+truncated and get a hash suffix. The mapping is lossy; `decode_project_path` only guesses.
+The real `cwd` is recorded on most entries. Sessions can also live under the directory of
+another git worktree of the same repository. `list_sessions` and friends search those too.
 
-**Project Directory**: `~/.claude/projects/{encoded-project-path}/`
+### Subagents
 
-- The project path is URL-encoded to create a safe directory name
-- Example: `/home/user/myproject` → `-home-user-myproject`
-- All sessions for a given working directory are stored together
-- Multiple sessions can exist per project (different conversations over time)
+Each subagent (Agent/Task tool) writes its own transcript under
+`{sessionId}/subagents/agent-{agentId}.jsonl`. Its entries carry the parent `sessionId`, an
+`agentId` and `isSidechain: true`. The `.meta.json` sidecar records `agentType`,
+`description`, `model`, `spawnDepth` and `toolUseId`, which is the id of the Agent
+`tool_use` in the parent session that spawned it. `get_subagent_messages` exposes it as
+`SessionMessage.parent_tool_use_id`.
 
-### 2. Sessions
+## Transcript format
 
-**Session ID**: UUID (e.g., `e8d973c7-481e-43d9-809d-9a4880e8cebc`)
+One JSON object per line, appended in write order. Keys are camelCase (a few are
+snake_case or uppercase-suffixed, e.g. `toolUseID`, `sourceToolAssistantUUID`).
 
-A session represents a single conversation thread with Claude. Each session:
+### Chain entries
 
-- Has a unique UUID identifier
-- Is tied to a specific project/working directory
-- Contains a sequence of messages (user, assistant, tool calls, etc.)
-- Has one **main agent** and zero or more **sub-agents**
-- Persists to a JSONL file: `{sessionId}.jsonl`
+These entries have `uuid`, `parentUuid`, `sessionId`, `timestamp`, `cwd`, `version`,
+`gitBranch`, `userType`, `entrypoint`, `isSidechain` and optional `agentId`, `slug`,
+`isMeta`, `teamName`. They derive from `ClaudeEntryBase`. `ClaudeChainEntry` is the union
+of all of them.
 
-**Session File Format**: JSONL (JSON Lines)
-- Each line is a separate JSON object representing one entry
-- Entries are appended chronologically
-- Enables efficient streaming writes and incremental reads
+| `type` | Model | Notes |
+|---|---|---|
+| `user` | `ClaudeUserEntry` | prompts *and* tool results (`message.content` holds `tool_result` blocks; `toolUseResult` has the structured result; `sourceToolAssistantUUID` points at the assistant entry with the call) |
+| `assistant` | `ClaudeAssistantEntry` | **one entry per content block**; all blocks of one API response share `message.id` and `requestId`, and each repeats the response's `usage` |
+| `attachment` | `ClaudeAttachmentEntry` | context added to the prompt: hook output (`hook_success`, ...), files, edited files, reminders, date, deferred tool lists, task status, ... (`attachment.type`). Most common entry type |
+| `system` | `ClaudeSystemEntry` (by `subtype`) | `turn_duration`, `stop_hook_summary`, `compact_boundary`, `away_summary`, `local_command`, `api_error`, `informational`, `model_refusal_fallback`, else `ClaudeGenericSystemEntry` |
+| `progress` | `ClaudeProgressEntry` | older versions only: tool/hook/agent progress |
+| `saved_hook_context` | `ClaudeSavedHookContextEntry` | |
 
-### 3. Agents
+### Metadata entries
 
-#### Main Agent
-- **Agent ID** = **Session ID** (same UUID)
-- The primary Claude instance handling the conversation
-- Session file: `{sessionId}.jsonl`
-- Todo file: `{sessionId}-agent-{sessionId}.json`
+These entries have no `uuid` and are not part of the chain. Most are "last one wins".
 
-#### Sub-Agents (Delegated Tasks)
-- **Agent ID**: Short hex identifier (e.g., `a753668` - 7 characters)
-- Created when tasks are delegated via the Task tool
-- Run independently with their own context
-- Session file: `agent-{shortId}.jsonl`
-- Todo file: `{sessionId}-agent-{shortId}.json`
-- Still belong to parent session (share sessionId in metadata)
+| `type` | Model | Content |
+|---|---|---|
+| `custom-title` / `ai-title` | `ClaudeCustomTitleEntry` / `ClaudeAiTitleEntry` | session title (user rename wins over AI title) |
+| `last-prompt` | `ClaudeLastPromptEntry` | latest prompt, or just `leafUuid` |
+| `tag` | `ClaudeTagEntry` | session tag (`""` clears it) |
+| `mode`, `permission-mode` | `ClaudeModeEntry`, `ClaudePermissionModeEntry` | coordinator/normal, permission mode |
+| `cost-state` | `ClaudeCostStateEntry` | session totals: cost, API/tool durations, lines changed, per-model usage |
+| `tools-used` | `ClaudeToolsUsedEntry` | tool names used |
+| `pr-link` | `ClaudePrLinkEntry` | PR created in the session |
+| `worktree-state` | `ClaudeWorktreeStateEntry` | entered/exited worktree |
+| `relocated` | `ClaudeRelocatedEntry` | session continued in another cwd |
+| `derived-from` | `ClaudeDerivedFromEntry` | sessions this one continues (`via`: `clear`, `compact`, `resume`, ...) |
+| `fork-context-ref` | `ClaudeForkContextRefEntry` | forked subagent's reference to the parent conversation |
+| `queue-operation` | `ClaudeQueueOperationEntry` (by `operation`) | prompts queued while a turn runs: `enqueue`, `dequeue`, `remove`, `popAll` |
+| `file-history-snapshot` / `file-history-delta` | `ClaudeFileHistoryEntry` / `ClaudeFileHistoryDeltaEntry` | backups in `~/.claude/file-history/` per user message, for rewind |
+| `content-replacement` | `ClaudeContentReplacementEntry` | tool results replaced by stubs |
+| `attribution-snapshot`, `task-summary`, `agent-name`, `agent-color`, `agent-setting`, `speculation-accept`, `marble-origami-commit`, `marble-origami-snapshot` | see `models.py` | |
 
-**Key Pattern**: All agents in a session share the parent `sessionId`:
-```
-Session: e8d973c7-481e-43d9-809d-9a4880e8cebc
-├── Main Agent: e8d973c7-481e-43d9-809d-9a4880e8cebc
-│   └── Todo: e8d973c7-481e-43d9-809d-9a4880e8cebc-agent-e8d973c7-481e-43d9-809d-9a4880e8cebc.json
-└── Sub-Agent: a753668
-    └── Todo: e8d973c7-481e-43d9-809d-9a4880e8cebc-agent-a753668.json
-```
+Loaded as `ClaudeUnknownEntry` on purpose because they are internal or bulky:
+`api-request`, `api-request-blob`, `api-request-shape` (request recording),
+`atis-latch`, `session-owner` (account/org ids), `data-flow-records`,
+`data-flow-incomplete`.
 
-### 4. Todo/Plan Storage
+## The parentUuid chain
 
-**Location**: `~/.claude/todos/`
+Every chain entry points at its predecessor through `parentUuid`. The conversation is the
+path from a leaf back to the root, **not** the file order:
 
-**Naming**: `{sessionId}-agent-{agentId}.json`
+- The chain runs through non-message entries. An assistant entry's parent is often an
+  attachment or a system entry. Walks must index every `ClaudeChainEntry`, not only
+  user/assistant entries, or they stop after one step.
+- Branches: rewinding, editing a prompt, or retrying leaves abandoned branches in the
+  file. The current thread ends at the last main-thread user/assistant entry.
+- Parallel tool calls fork the chain. N parallel `tool_use` blocks are N chained
+  assistant entries. Each `tool_result` entry's parent is its own call's entry, and the
+  next turn continues from only one of them. A plain walk loses the other calls and
+  results. `storage.chain.resolve_chain` (and `get_session_messages`) put them back after
+  the response.
+- Compaction: a `compact_boundary` system entry starts a new root (`parentUuid: null`,
+  `logicalParentUuid` points at the pre-compaction leaf) and is followed by a user entry
+  with `isCompactSummary: true`. Walks do not follow `logicalParentUuid`, so the thread
+  starts at the compaction.
+- Sidechains: `isSidechain: true` entries belong to subagents (in older versions they
+  were in the main file; now they live in `subagents/`).
 
-**Format**: JSON array of todo entries
-```json
-[
-  {
-    "content": "Task description",
-    "status": "pending" | "in_progress" | "completed",
-    "priority": "high" | "medium" | "low",
-    "activeForm": "Current action description (optional)"
-  }
-]
-```
+Helpers in `clawd_code_sdk.storage.chain`: `index_chain_entries`, `find_leaf`,
+`walk_ancestry` and `resolve_chain`. `replay_entries(..., leaf_uuid=...)` uses them.
 
-**Persistence Pattern**:
-- Todos are scoped to a specific agent within a session
-- Main agent's todos use redundant naming: `{sessionId}-agent-{sessionId}.json`
-- Sub-agent todos use: `{sessionId}-agent-{shortId}.json`
-- All todos for a session share the session ID prefix
-- Survives across conversation resumes
+## Reading and writing
 
-## Entry Types
-
-Claude Code uses different entry types in JSONL session files:
-
-### User Entry
-```json
-{
-  "type": "user",
-  "sessionId": "uuid",
-  "uuid": "message-uuid",
-  "parentUuid": "parent-message-uuid",
-  "timestamp": "ISO-8601",
-  "message": {
-    "role": "user",
-    "content": "text or array of content blocks"
-  }
-}
-```
-
-### Assistant Entry
-```json
-{
-  "type": "assistant",
-  "sessionId": "uuid",
-  "uuid": "message-uuid",
-  "parentUuid": "parent-message-uuid",
-  "timestamp": "ISO-8601",
-  "message": {
-    "role": "assistant",
-    "content": [
-      {"type": "text", "text": "..."},
-      {"type": "tool_use", "id": "...", "name": "...", "input": {...}}
-    ]
-  },
-  "requestId": "req_...",
-  "model": "claude-..."
-}
-```
-
-### Queue Operation Entry
-```json
-{
-  "type": "queue-operation",
-  "operation": "enqueue" | "dequeue",
-  "sessionId": "uuid",
-  "timestamp": "ISO-8601"
-}
-```
-
-Marks session lifecycle events (start/end of processing).
-
-### System Entry
-```json
-{
-  "type": "system",
-  "sessionId": "uuid",
-  "timestamp": "ISO-8601",
-  "message": {
-    "role": "system",
-    "content": "System message text"
-  }
-}
-```
-
-### Tool Result Entry
-Embedded within user entries as tool_result content blocks:
-```json
-{
-  "type": "user",
-  "message": {
-    "role": "user",
-    "content": [
-      {
-        "type": "tool_result",
-        "tool_use_id": "toolu_...",
-        "content": "result text or structured data"
-      }
-    ]
-  },
-  "toolUseResult": ["..."]  // Duplicate for UI
-}
-```
-
-### Summary Entry
-```json
-{
-  "type": "summary",
-  "sessionId": "uuid",
-  "timestamp": "ISO-8601",
-  "content": {
-    "summary": "Condensed conversation summary",
-    "messageCount": 10,
-    "summarizedUntil": "message-uuid"
-  }
-}
-```
-
-Used for conversation compaction/context management.
-
-### File History Entry
-```json
-{
-  "type": "file-history",
-  "sessionId": "uuid",
-  "timestamp": "ISO-8601",
-  "path": "/absolute/path/to/file",
-  "operation": "edit" | "create" | "delete",
-  "snippet": "Preview of changes..."
-}
-```
-
-Tracks file operations for undo/history features.
-
-## Message Flow & Ancestry
-
-### Parent-Child Relationships
-
-Every message (except the first) has a `parentUuid` that references the previous message:
-
-```
-User Message 1 (uuid: a)
-  └─> Assistant Reply (uuid: b, parentUuid: a)
-       └─> Tool Results (uuid: c, parentUuid: b)
-            └─> Assistant Response (uuid: d, parentUuid: c)
-```
-
-This creates a **linked list** of messages forming the conversation thread.
-
-### Branching (Sidechains)
-
-Field: `isSidechain: boolean`
-
-When a conversation is forked or edited:
-- Original messages remain unchanged
-- New branch starts with `isSidechain: true`
-- Allows exploring alternative conversation paths
-- Main chain: `isSidechain: false` or omitted
-
-### Conversation Reconstruction
-
-To read a conversation:
-1. Parse all entries from `{sessionId}.jsonl`
-2. Filter by `type` (user, assistant, etc.)
-3. Follow the parent chain from latest message backward
-4. Stop at session start or desired depth
-5. Reverse to get chronological order
-
-## Storage Provider Implementation
-
-The `ClaudeStorageProvider` class bridges between:
-- **Claude's storage format** (JSONL entries)
-- **Agentpool's abstractions** (ChatMessage, ConversationStats, etc.)
-
-### Key Responsibilities
-
-1. **Path Management**
-   - Encode/decode project paths to safe directory names
-   - Ensure project directories exist
-
-2. **Session Management**
-   - List all sessions for a project
-   - Read session entries (with optional filtering)
-   - Write new entries atomically
-
-3. **Message Conversion**
-   - JSONL Entry → `ChatMessage` (for agentpool)
-   - `ChatMessage` → JSONL Entry (for persistence)
-   - Handle tool calls, results, and metadata
-
-4. **Conversation Queries**
-   - Get message count, token usage stats
-   - Retrieve specific messages by UUID
-   - Trace message ancestry
-   - Fork conversations at specific points
-
-5. **Filtering & Compaction**
-   - Filter by message type, date range
-   - Skip tool calls or system messages
-   - Enable conversation summarization
-
-## Data Consistency
-
-### Atomic Writes
-- Each entry is appended as a complete line
-- JSONL format allows crash-safe appends
-- No partial writes visible to readers
-
-### Concurrent Access
-- Multiple sessions can write to different files safely
-- Same session should have single writer (main process)
-- Readers can stream entries while writing continues
-
-### Cleanup
-- Empty session files may accumulate
-- No automatic garbage collection (user-managed)
-- `reset()` method can delete project history
-
-## Integration Points
-
-### With TodoTracker
-- Separate persistence in `~/.claude/todos/`
-- Not integrated with main conversation storage
-- Must be loaded/saved independently
-- File naming links todos to session + agent
-
-### With File History
-- Separate tracking in `~/.claude/file-history/`
-- Records file operations during conversation
-- Enables undo/diff features
-- Cross-referenced by session ID
-
-### Saving Todos
-```python
-# Not part of ClaudeStorageProvider!
-# Separate JSON file management:
-
-todo_path = (
-    f"~/.claude/todos/{session_id}-agent-{agent_id}.json"
-)
-with open(todo_path, "w") as f:
-    json.dump(todos, f)
-```
-
-
-### Why Redundant Session ID in Main Agent Todos?
-- **Consistency**: All todos follow `{sessionId}-agent-{agentId}` pattern
-- **Simplicity**: Single naming rule, no special cases
-- **Glob-friendly**: Easy to find all todos for a session: `{sessionId}-agent-*.json`
-
-### Why Separate Todos from Conversation Log?
-- **Orthogonal concerns**: Todos are working memory, not conversation history
-- **Update frequency**: Todos change frequently, conversations append-only
-- **Size**: Todos stay small, conversations grow large
-- **Format**: Todos are mutable array, conversations are immutable log
+- `storage.helpers.read_session(path)` loads a transcript into typed entries. Lines that
+  fail validation are logged and skipped.
+- `storage.helpers.write_entry(path, entry)` appends one entry (by alias).
+- `storage.helpers.extract_title(path)` gets a display title from the file's head and tail
+  (custom title, then AI title, then the first prompt).
+- `storage.replay.replay_session(path)` turns a transcript back into SDK messages.
+- `list_sessions`, `get_session_info`, `get_session_messages`, `list_subagents`,
+  `get_subagent_messages`, `rename_session`, `tag_session`, `delete_session` and
+  `fork_session` (in `clawd_code_sdk._internal`) work on raw dicts and read only what they
+  need (head/tail for listings).
