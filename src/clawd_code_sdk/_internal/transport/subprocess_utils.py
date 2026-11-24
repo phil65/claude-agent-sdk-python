@@ -235,7 +235,8 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
         cmd.extend(["--agent", options.agent])
 
     if options.allow_dangerously_skip_permissions:
-        cmd.append("--dangerously-skip-permissions")
+        # Allows switching to bypassPermissions; --dangerously-skip-permissions would start in it
+        cmd.append("--allow-dangerously-skip-permissions")
 
     if options.debug_file:
         cmd.extend(["--debug-file", options.debug_file])
