@@ -181,3 +181,17 @@ def test_user_message_accepts_document(source: dict[str, Any]) -> None:
     assert isinstance(document, DocumentBlock)
     assert document.source.type == source["type"]
     assert document.title == "Spec"
+
+
+def test_image_block_otel_part_uses_logfire_field_names() -> None:
+    """Logfire 6 names the field ``mime_type`` (it was ``media_type`` in 4.32-5.x)."""
+    import typing
+
+    from logfire._internal.integrations.llm_providers.semconv import BlobPart
+
+    from clawd_code_sdk.models.content_blocks import ImageBlock, ImageSource
+
+    block = ImageBlock(source=ImageSource(type="base64", media_type="image/png", data="aGk="))
+    part = block.to_otel()
+    assert set(part) <= set(typing.get_type_hints(BlobPart))
+    assert part["mime_type"] == "image/png"

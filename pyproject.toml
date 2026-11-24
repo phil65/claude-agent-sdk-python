@@ -23,7 +23,7 @@ dependencies = [
   "anyenv>=2.0.15",
   "anyio>=4.0.0",
   "jsonschema>=4.20.0",
-  "logfire>=4.32.1",  # BlobPart.media_type (was mime_type)
+  "logfire>=6.0",  # BlobPart.mime_type (media_type in 4.32-5.x)
   "mcp>=1.23.0,<3.0.0",
   "python-dotenv>=1.2.1",
 ]
