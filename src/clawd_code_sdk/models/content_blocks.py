@@ -161,7 +161,7 @@ class ImageBlock(BaseContentBlock):
         return BlobPart(
             type="blob",
             content=self.source.data,
-            mime_type=self.source.media_type,
+            media_type=self.source.media_type,
             modality="image",
         )
 
