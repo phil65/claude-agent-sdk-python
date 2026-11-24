@@ -64,8 +64,40 @@ if TYPE_CHECKING:
         RequestId,
         SDKControlRequest,
     )
+    from clawd_code_sdk.models.control import SdkMcpServerManifest
 
 logger = logging.getLogger(__name__)
+
+MANIFEST_CAPTURE_TIMEOUT = 10.0
+"""Seconds an in-process MCP server gets to answer the handshake captured for the CLI."""
+
+
+async def _handshake(name: str, bridge: SdkMcpBridge) -> SdkMcpServerManifest | None:
+    """``name``'s handshake results (initialize, first tools/list), or None if it errs."""
+    from mcp.types import LATEST_PROTOCOL_VERSION
+
+    from clawd_code_sdk._version import __version__
+
+    params = {
+        "protocolVersion": LATEST_PROTOCOL_VERSION,
+        "capabilities": {},
+        "clientInfo": {"name": "clawd-code-sdk", "version": __version__},
+    }
+    request = {"jsonrpc": "2.0", "id": f"manifest:{name}:initialize", "method": "initialize"}
+    answer = await bridge.handle({**request, "params": params})
+    if answer is None or not isinstance(result := answer.get("result"), dict):
+        logger.warning("SDK MCP server %r answered initialize with an error: %s", name, answer)
+        return None
+    await bridge.handle({"jsonrpc": "2.0", "method": "notifications/initialized"})
+    manifest: SdkMcpServerManifest = {"initializeResult": result}
+    capabilities = result.get("capabilities")
+    if isinstance(capabilities, dict) and capabilities.get("tools") is not None:
+        listing = {"jsonrpc": "2.0", "id": f"manifest:{name}:tools-list", "method": "tools/list"}
+        listed = await bridge.handle(listing)
+        tools = listed.get("result") if listed is not None else None
+        if isinstance(tools, dict) and tools.get("nextCursor") is None:  # Not paginated
+            manifest["toolsListResult"] = tools
+    return manifest
 
 
 def get_jsonrpc_request_id(message: JSONRPCMessage) -> RequestId:
@@ -194,6 +226,33 @@ class Query:
                     matcher_cfg["onFailure"] = matcher.get("on_failure")
                 hooks_config[event].append(matcher_cfg)
         return hooks_config or None
+
+    async def capture_sdk_mcp_manifests(
+        self, timeout: float = MANIFEST_CAPTURE_TIMEOUT
+    ) -> dict[str, SdkMcpServerManifest] | None:
+        """Handshake the in-process MCP servers here, for the initialize request.
+
+        Each server gets ``initialize`` (no client capabilities), ``notifications/initialized``
+        and, if it has tools, ``tools/list``; the results go to the CLI verbatim
+        (``sdkMcpServerManifests``), which then connects the servers without control round
+        trips. The bridges' sessions stay up, so the CLI's ``mcp_message`` traffic goes on
+        as before (also a handshake of its own). A server that fails or takes longer than
+        ``timeout`` seconds is left out: the CLI handshakes it over the control channel.
+        """
+        manifests: dict[str, SdkMcpServerManifest] = {}
+
+        async def capture(name: str, bridge: SdkMcpBridge) -> None:
+            try:
+                with anyio.fail_after(timeout):
+                    if (manifest := await _handshake(name, bridge)) is not None:
+                        manifests[name] = manifest
+            except Exception as exc:
+                logger.warning("SDK MCP server %r: no manifest (%s), CLI handshakes it", name, exc)
+
+        async with anyio.create_task_group() as tg:
+            for name, bridge in self._sdk_mcp_bridges.items():
+                tg.start_soon(capture, name, bridge)
+        return manifests or None
 
     async def start(self) -> None:
         """Start reading messages from transport."""

@@ -456,6 +456,7 @@ export type ArtifactOutput =
         external?: true;
         role?: "editor" | "commenter" | "reader" | "viewer";
         outsidersMayHaveWritten?: true;
+        listedKind?: string;
         pinned?: boolean;
       }[];
       truncated?: boolean;

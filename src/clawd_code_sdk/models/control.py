@@ -103,6 +103,15 @@ class SDKControlPermissionRequest(_ControlBase):
     (e.g. sensitive-file paths). Absent when no safetyCheck is involved."""
 
 
+class SdkMcpServerManifest(TypedDict, total=False):
+    """An in-process MCP server's handshake output, verbatim (``sdkMcpServerManifests``)."""
+
+    initializeResult: dict[str, Any]
+    """The server's JSON-RPC ``initialize`` result."""
+    toolsListResult: dict[str, Any]
+    """Its first ``tools/list`` result (left out when not captured or paginated)."""
+
+
 class SDKControlInitializeRequest(_ControlBase):
     """SDK control initialize request."""
 
@@ -110,6 +119,23 @@ class SDKControlInitializeRequest(_ControlBase):
     hooks: dict[HookEvent, Any] | None = None
     agents: dict[str, AgentWireDefinition] | None = None
     sdk_mcp_servers: list[str] | None = Field(default=None, serialization_alias="sdkMcpServers")
+    sdk_mcp_server_configs: dict[str, dict[str, Any]] | None = Field(
+        default=None, serialization_alias="sdkMcpServerConfigs"
+    )
+    """Settings of the in-process servers in ``sdk_mcp_servers``, by name: ``timeout`` (ms per
+    tool call, when first registered) and ``tools`` (per-tool permission policy)."""
+    sdk_mcp_server_manifests: dict[str, SdkMcpServerManifest] | None = Field(
+        default=None, serialization_alias="sdkMcpServerManifests"
+    )
+    """The in-process servers' handshake results, captured by the host (a one-shot cache
+    for the connect that follows; ``sdk_mcp_manifests_parked`` reports each entry)."""
+    sdk_mcp_server_manifests_origin: Literal["host_per_send"] | None = Field(
+        default=None, serialization_alias="sdkMcpServerManifestsOrigin"
+    )
+    """That the manifests were captured for this send (only needed over a remote session
+    transport; the CLI's own stdio transport needs no marker)."""
+    plugins: list[dict[str, Any]] | None = None
+    """Plugins to load at launch (``plugin_delivery="initialize"``, ``--await-initialize``)."""
     mcp_servers: dict[str, dict[str, Any]] | None = Field(
         default=None, serialization_alias="mcpServers"
     )

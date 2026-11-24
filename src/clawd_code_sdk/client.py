@@ -218,6 +218,10 @@ class ClaudeSDKClient:
             case _:
                 title = None
         hooks_config = query.build_hooks_config()
+        capture = options.capture_sdk_mcp_manifests and not os.environ.get(
+            "CLAUDE_AGENT_SDK_DISABLE_MCP_MANIFESTS"
+        )
+        manifests = await query.capture_sdk_mcp_manifests() if capture else None
         request = SDKControlInitializeRequest(
             hooks=hooks_config,
             agents={name: d.to_wire_model() for name, d in (options.agents or {}).items()} or None,
@@ -227,6 +231,9 @@ class ClaudeSDKClient:
             prompt_suggestions=options.prompt_suggestions,
             exclude_dynamic_sections=options.exclude_dynamic_sections,
             sdk_mcp_servers=list(query.sdk_mcp_servers.keys()) or None,
+            sdk_mcp_server_configs=options.sdk_mcp_server_configs(),
+            sdk_mcp_server_manifests=manifests,
+            plugins=(plugins := options.initialize_plugins()),
             mcp_servers=(mcp_servers := options.initialize_mcp_servers()),
             agent_progress_summaries=options.agent_progress_summaries,
             title=title,
@@ -244,6 +251,11 @@ class ClaudeSDKClient:
             raise CLIConnectionError(
                 "Claude Code did not take the MCP servers sent in the initialize request. "
                 'Update Claude Code (2.1.261 or newer) or set mcp_servers_delivery="argv".'
+            )
+        if plugins is not None and info.plugins_applied is not True:
+            raise CLIConnectionError(
+                "Claude Code did not load the plugins sent in the initialize request. "
+                'Update Claude Code or set plugin_delivery="argv".'
             )
         blocks_on_failure = any(
             m.on_failure not in (None, "continue")

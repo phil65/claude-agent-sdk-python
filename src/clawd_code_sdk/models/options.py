@@ -325,6 +325,25 @@ class ClaudeAgentOptions:
     """SubAgent definitions."""
     plugins: list[SdkPluginConfig] = field(default_factory=list)
     """"Plugin configurations to load."""
+    plugin_delivery: Literal["argv", "initialize"] = "argv"
+    """How ``plugins`` reach Claude Code.
+
+    - ``"argv"`` (default): one ``--plugin-dir`` flag per plugin. Works with any Claude Code
+      version, but the command line grows with the plugin count (Windows refuses one past
+      32,767 characters).
+    - ``"initialize"``: in the initialize request over stdin (the CLI is started with
+      ``--await-initialize``); connecting fails if the CLI does not load them
+      (``plugins_applied``). A launch with ``--sdk-url`` in ``extra_args`` always uses argv.
+    """
+    capture_sdk_mcp_manifests: bool = True
+    """Do the in-process MCP servers' handshake before connecting and send its results.
+
+    The initialize request then carries each server's ``initialize`` and first
+    ``tools/list`` results (``sdkMcpServerManifests``), so the CLI connects them without
+    control round trips before the first turn. A server whose handshake fails, or that the
+    CLI does not take, is handshaken over the control channel as before. Off when the
+    ``CLAUDE_AGENT_SDK_DISABLE_MCP_MANIFESTS`` environment variable is set (as upstream).
+    """
     output_schema: dict[str, Any] | type | None = None
     """JSON schema for structured output.
 
@@ -479,6 +498,39 @@ class ClaudeAgentOptions:
             if config.type != "sdk"
         }
         return servers or None
+
+    def initialize_plugins(self) -> list[dict[str, Any]] | None:
+        """The plugins to send in the initialize request, or None to pass them as flags."""
+        if self.plugin_delivery != "initialize" or "sdk-url" in self.extra_args:
+            return None
+        plugins = [p.model_dump(by_alias=True, exclude_none=True) for p in self.plugins]
+        return plugins or None
+
+    def reads_initialize_at_launch(self) -> bool:
+        """Whether the CLI waits for the initialize request (``--await-initialize``)."""
+        return self.initialize_mcp_servers() is not None or self.initialize_plugins() is not None
+
+    def sdk_mcp_server_configs(self) -> dict[str, dict[str, Any]] | None:
+        """Settings of the in-process MCP servers (timeout, tool policy), by server name."""
+        from clawd_code_sdk.models.mcp import McpSdkServerConfig
+
+        if not isinstance(self.mcp_servers, dict):
+            return None
+        configs: dict[str, dict[str, Any]] = {}
+        for name, config in self.mcp_servers.items():
+            if not isinstance(config, McpSdkServerConfig):
+                continue
+            settings: dict[str, Any] = {}
+            if config.timeout is not None:
+                settings["timeout"] = config.timeout
+            if config.tools is not None:
+                settings["tools"] = [
+                    {k: v for k, v in dataclasses.asdict(t).items() if v is not None}
+                    for t in config.tools
+                ]
+            if settings:
+                configs[name] = settings
+        return configs or None
 
     def argv_mcp_servers(self) -> dict[str, dict[str, Any]]:
         """The servers for ``--mcp-config``.

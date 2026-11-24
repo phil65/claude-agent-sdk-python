@@ -1830,6 +1830,8 @@ export declare type Options = {
      *
      * File checkpointing creates backups of files before they are modified,
      * allowing you to restore them to previous states.
+     *
+     * An administrator's managed `fileCheckpointingEnabled: false` keeps it off.
      */
     enableFileCheckpointing?: boolean;
     /**
@@ -3218,6 +3220,7 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
 
 
 
+
     /**
      * Change the model used for subsequent responses.
      * Only available in streaming input mode.
@@ -3631,7 +3634,10 @@ export declare function renameSession(_sessionId: string, _title: string, _optio
 export declare type ResolvedSettings = {
     /** Merged settings after applying all enabled sources in precedence order. */
     effective: Settings;
-    /** For each top-level key in `effective`, which source supplied the value. */
+    /**
+     * For each top-level key in `effective`, which source supplied the value. Not
+     * named: a lower managed source whose longer `cleanupPeriodDays` applies.
+     */
     provenance: Partial<Record<keyof Settings, ProvenanceEntry>>;
     /**
      * Per-source raw settings, low→high precedence. Use this when per-top-level
@@ -3742,6 +3748,39 @@ export declare type ResolveSettingsOptions = {
      * fresher result than the CLI's `~/.claude/remote-settings.json` cache.
      */
     serverManagedSettings?: Settings;
+    /**
+     * On native Windows, spares re-reads of the registry policy, each of which
+     * starts reg.exe at least twice on the calling thread. For the `Settings`
+     * value of `SOFTWARE\Policies\ClaudeCode` in each hive, as the reg.exe that
+     * this process starts sees it each time the function is called (read anew),
+     * return `null` where it is not there, else a text that changes whenever its
+     * type or its text as written (unexpanded) changes; return `undefined` where
+     * either cannot be told. Two values, neither of which is a JSON object, such
+     * as a number and its digits as text, may share a text; in doubt, give them
+     * different ones. A throw, or an answer that lacks a `null` or a non-empty
+     * text for either hive (a promise, say), is taken for `undefined`. Read
+     * natively: start no process, and do not call the SDK. It is called
+     * synchronously, on every platform: ahead of a process's first read if none
+     * has begun, ahead of each re-read that the SDK starts, again right after
+     * that read ends if what it returned before could be kept (the same call's
+     * function, perhaps after that call has returned) and, while an answer is
+     * kept or the two round a read were not the same, at every call once the
+     * reading is half an hour old. An answer is kept on native Windows alone,
+     * where reg.exe's read agreed with it on what is there (in HKLM a value that
+     * loaded, or none; in HKCU none) and the answer right after the read is the
+     * same; if it is not, the next answer that can tell, from the half hour on,
+     * brings a read. While later answers are the same as the kept one and no
+     * retry is owed, the reading in force stands and no reg.exe starts, till its
+     * read is six hours old. A later answer that can tell and differs brings a
+     * read at that call, even on a PC with no policy value, where the wait is
+     * otherwise six hours. The function supplies no policy. Pass it on every call:
+     * one without it reads as if there were no host function.
+     * @alpha
+     */
+    registryPolicyFingerprint?: () => {
+        hklm: string | null;
+        hkcu: string | null;
+    } | undefined;
 };
 
 /**
@@ -3754,7 +3793,7 @@ export declare type RewindFilesResult = {
     insertions?: number;
     deletions?: number;
     /**
-     * Count of tracked files NOT restored or deleted because a symlink, hard link, or other non-regular file was detected at the tracked path, its parent directory no longer resolves to where it pointed when the checkpoint was taken, it is behind a link in a folder that sandboxed commands can write, or its backup could not be safely read. Only populated by a real (non-dryRun) rewind — on a dryRun response the field is never set and the preview counts do not reflect link-safety refusals. Absent or 0 on a real rewind means no link-safety refusals occurred; other per-file failures (for example a missing backup file) are not counted here; they are reported in telemetry, and when every differing file fails to restore the rewind itself fails (canRewind: false).
+     * Count of tracked files NOT restored or deleted because a symlink, hard link, or other non-regular file was detected at the tracked path, its parent directory no longer resolves to where it pointed when the checkpoint was taken, it is behind a link in a folder that sandboxed commands can write, or its backup could not be safely read. Only populated by a real (non-dryRun) rewind — on a dryRun response the field is never set and the preview counts do not reflect link-safety refusals. Absent or 0 on a real rewind means no link-safety refusals occurred; other per-file failures (for example a missing backup file) are not counted here; they are reported in telemetry, and when a file fails to restore and none changes the rewind itself fails (canRewind: false).
      */
     skippedLinks?: number;
 };
@@ -5076,6 +5115,7 @@ export declare type SDKControlInitializeResponse = {
 
 
 
+
 };
 
 /**
@@ -5149,6 +5189,10 @@ declare type SDKControlMcpCallRequest = {
      * Tool arguments. When input_files/output_files are declared, any string VALUE that exactly equals "{{in:NAME}}" or "{{out:NAME}}" (whole string, not a substring) is replaced with the worker-chosen absolute path of that named staged file before the call; a token naming no declared file fails the request with staging error_code=tool_error, and every declared output's "{{out:NAME}}" token must appear in arguments (the substituted path is the only way the tool learns where to write, so an unreferenced output fails the request before the tool runs). With no files declared — including expires_at/timeout_ms-only staged calls — passed through unchanged.
      */
     arguments?: Record<string, unknown>;
+    /**
+     * Asks for the tool's own error result (CallToolResult.isError) and not its text alone. The reply then has the success subtype and isError: true, with the server's content (text and resource_link blocks only, without icons), structuredContent and _meta. A staged call still carries staging.error_code tool_error and its detail. These answer as they do without the member: any other failure, a cancel or a timeout, a result with no such block and no structuredContent, a result whose kept members come to over 64000 characters of JSON and, with check_permissions, a call whose result a PostToolUse hook or a plugin reviews. A sender that takes the success subtype for the tool's success must not set it. Honoured on the lanes that honour result_not_for_model, with or without that member. Feature-detected as `mcp_call_soft_error_result_v1`; where it is not said, and by a CLI without it, the member is ignored.
+     */
+    soft_error_result?: boolean;
     /**
      * RFC3339 deadline, REQUIRED when output_files are declared (a stale buffered drain must not overwrite rows written since). Sending expires_at routes the call through the staging engine, same as timeout_ms — the response gains a staging result. UNDELIVERED requests buffer durably and drain after reattach; a drain past this instant is dropped with staging error_code=expired instead of executing stale. Once delivered to a live worker the request is acked immediately and never redelivered — a worker killed mid-run surfaces as a missing response (apply your own deadline), not a later drain. An unparseable value is treated as already expired (fail closed).
      */
@@ -5384,6 +5428,7 @@ declare type SDKControlReadFileRequest = {
 
 
 
+
 };
 
 /**
@@ -5401,6 +5446,8 @@ export declare type SDKControlReadFileResponse = {
      * Present on every utf-8 answer. True when the bytes read were not all valid UTF-8, so `contents` has U+FFFD where bytes were replaced and is not the file's own text: a binary file, text in another encoding, or a read cut inside a character, at its end when `truncated` is set, or at its start when `offset` is set. False when `contents` is exactly the bytes read, decoded, even if the file itself contains U+FFFD. Absent on a base64 answer, which is exact, and from an older CLI or tool container: a client that sees neither this nor `encoding: 'base64'` cannot tell whether `contents` is exact.
      */
     lossy?: boolean;
+
+
 
 
 
@@ -5829,6 +5876,7 @@ export declare type SDKInformationalMessage = {
 
 
 
+
     uuid: UUID;
     session_id: string;
 };
@@ -6017,6 +6065,7 @@ export declare type SDKModelRefusalFallbackMessage = {
      * stop_details.explanation from the refused API response (client lane only — the server-lane trigger carries no explanation). Unstable human prose — display only, never parse. null/absent when the response carried none, and always null on server-lane banners.
      */
     api_refusal_explanation?: string | null;
+
 
     /**
      * Wire uuids of the messages this fallback retracted — the refused partial as the consumer received it (one uuid per normalized SDK message; multi-block messages carry per-block derived uuids) plus any tombstoned tool_results. Emitted AFTER the retraction, so this is a resolution-time eviction signal: remove these messages from transcript state on receipt. Eviction is idempotent — unknown or already-removed uuids are a no-op. Absent when emitted by an older CLI.
@@ -6414,6 +6463,7 @@ export declare type SDKResultSuccess = {
 
 
     first_content_frame_ms?: number;
+
     first_stream_post_ms?: number;
     first_stream_post_ack_ms?: number;
     first_stream_post_queue_wait_ms?: number;
@@ -6592,9 +6642,9 @@ export declare type SDKSettingsParseError = {
 };
 
 /**
- * Why Claude Code refused to start, so a host can offer the fix instead of a retry. org_pin_api_key_conflict: managed settings pin a first-party or Cloud gateway sign-in, and an Anthropic API key or auth token is configured instead. provider_not_allowed: managed settings list the API providers this machine may use (allowedProviders), and the session is set up for one that is not listed. org_verify_failed: the sign-in's organization could not be verified against the pin (network, or a revoked token). org_pin_mismatch: the sign-in belongs to an organization the pin does not allow. managed_settings_invalid: managed policy settings could not be read, the pin names no organization, or managed model settings (deniedModels, or an availableModels list matched exactly) block the default model and leave no allowed model to use instead. remote_settings_required_unavailable: managed settings the organization requires could not be loaded. gateway_signin_required: the Cloud gateway ended this sign-in. gateway_access_denied: the Cloud gateway refused managed settings for this account. proxy_invalid: a proxy setting is not a complete URL. temp_dir_unusable: the per-user temp directory is unsafe or could not be created. cwd_unavailable: the working directory was deleted, moved or cannot be read, or (not on Windows) a folder name in its path is not valid UTF-8 and a different file, folder or link stands at the name Claude Code reads it as, for that folder or one above it; start from another directory, rename that folder, or remove the other entry. shell_tool_missing: Windows has no shell tool: Git Bash is missing, and PowerShell is missing or turned off by CLAUDE_CODE_USE_POWERSHELL_TOOL. session_held_by_background: the conversation to resume or continue is running as a background session. worktree_resume_refused: the resume was refused because the session's worktree failed its safety checks or the resume was launched from inside it; errors says whether a re-run continues without the worktree. worktree_unverified: the session's worktree could not be verified right now; retrying may succeed. cli_version_too_old: this Claude Code version is below the minimum Anthropic requires. bypass_root: bypass permissions mode was requested while running as root. org_config_required_unavailable: the organization requires its policy limits and managed settings before a session starts, and they could not be loaded (network, proxy, or an Anthropic error); retrying may succeed. org_config_refused: the organization requires its policy limits and managed settings, and Anthropic refused them for this sign-in (expired or revoked session, or the organization does not allow Claude Code for this account); signing in again or an admin's change is the fix, not a retry. sandbox_required_unavailable: a working sandbox is required and it cannot run in this session, for example because bubblewrap is missing or the platform is not supported; make the sandbox available or have the requirement changed. initialize_not_first: Claude Code was started with --await-initialize, and its first stdin line was not the initialize control request (another message, or not valid JSON). Either the host wrote something else first, or a wrapper script between the host and Claude Code read or changed that line; the fix is in the host or the wrapper script, not a retry. config_file_invalid: a configuration file read at start-up is not valid JSON; errors names the file and, for the global configuration file, how to restore or repair it, and invalid_config_file has the paths as fields. The file is left unchanged, and every start without a terminal is refused until it is repaired, so a retry alone does not help. managed_settings_not_delivered: Claude Code was started with --managed-settings-in-initialize and could not use the managed settings in the initialize control request. Stdin ended or failed first, or its first line was too long; the request has no managedSettings object, that object could not be used, or the request's plugins or mcpServers field is malformed; or the launch does not read that request at start-up or also passes --managed-settings. errors says which. Claude Code starts no session without them; the fix is in the host or in a wrapper script between it and Claude Code, not a retry. initialize_fields_not_delivered: as managed_settings_not_delivered, for --initialize-fields and the settings or disallowedTools that it names; also when a named field's own flag (--settings, --disallowedTools) is passed too.
+ * Why Claude Code refused to start, so a host can offer the fix instead of a retry. org_pin_api_key_conflict: managed settings pin a first-party or Cloud gateway sign-in, and an Anthropic API key or auth token is configured instead. provider_not_allowed: managed settings list the API providers this machine may use (allowedProviders), and the session is set up for one that is not listed. org_verify_failed: the sign-in's organization could not be verified against the pin (network, or a revoked token). org_pin_mismatch: the sign-in belongs to an organization the pin does not allow. managed_settings_invalid: managed policy settings could not be read, the pin names no organization, or managed model settings (deniedModels, or an availableModels list matched exactly) block the default model and leave no allowed model to use instead. remote_settings_required_unavailable: managed settings the organization requires could not be loaded. gateway_signin_required: the Cloud gateway ended this sign-in. gateway_access_denied: the Cloud gateway refused managed settings for this account. proxy_invalid: a proxy setting is not a complete URL. temp_dir_unusable: the per-user temp directory is unsafe or could not be created. cwd_unavailable: the working directory was deleted, moved or cannot be read, or (not on Windows) a folder name in its path is not valid UTF-8 and a different file, folder or link stands at the name Claude Code reads it as, for that folder or one above it; start from another directory, rename that folder, or remove the other entry. shell_tool_missing: Windows has no shell tool: Git Bash is missing, and PowerShell is missing or turned off by CLAUDE_CODE_USE_POWERSHELL_TOOL. session_held_by_background: the conversation to resume or continue is running as a background session. worktree_resume_refused: the resume was refused because the session's worktree failed its safety checks or the resume was launched from inside it; errors says whether a re-run continues without the worktree. worktree_unverified: the session's worktree could not be verified right now; retrying may succeed. cli_version_too_old: this Claude Code version is below the minimum Anthropic requires. bypass_root: bypass permissions mode was requested while running as root. org_config_required_unavailable: the organization requires its policy limits and managed settings before a session starts, and they could not be loaded (network, proxy, or an Anthropic error); retrying may succeed. org_config_refused: the organization requires its policy limits and managed settings, and Anthropic refused them for this sign-in (expired or revoked session, or the organization does not allow Claude Code for this account); signing in again or an admin's change is the fix, not a retry. sandbox_required_unavailable: a working sandbox is required and it cannot run in this session, for example because bubblewrap is missing or the platform is not supported; make the sandbox available or have the requirement changed. initialize_not_first: Claude Code was started with --await-initialize, and its first stdin line was not the initialize control request (another message, or not valid JSON). Either the host wrote something else first, or a wrapper script between the host and Claude Code read or changed that line; the fix is in the host or the wrapper script, not a retry. config_file_invalid: a configuration file read at start-up is not valid JSON; errors names the file and, for the global configuration file, how to restore or repair it, and invalid_config_file has the paths as fields. The file is left unchanged, and every start without a terminal is refused until it is repaired, so a retry alone does not help. managed_settings_not_delivered: Claude Code was started with --managed-settings-in-initialize and could not use the managed settings in the initialize control request. Stdin ended or failed first, or its first line was too long; the request has no managedSettings object, that object could not be used, or the request's plugins or mcpServers field is malformed; or the launch does not read that request at start-up or also passes --managed-settings. errors says which. Claude Code starts no session without them; the fix is in the host or in a wrapper script between it and Claude Code, not a retry. initialize_fields_not_delivered: as managed_settings_not_delivered, for --initialize-fields and the settings or disallowedTools that it names; also when a named field's own flag (--settings, --disallowedTools) is passed too. sideload_flags_disabled: managed settings set disableSideloadFlags, and the launch names plugins, agents or MCP servers of its own; a start without them is not refused.
  */
-export declare type SDKStartupFailureReason = 'org_pin_api_key_conflict' | 'provider_not_allowed' | 'org_verify_failed' | 'org_pin_mismatch' | 'managed_settings_invalid' | 'remote_settings_required_unavailable' | 'gateway_signin_required' | 'gateway_access_denied' | 'proxy_invalid' | 'temp_dir_unusable' | 'cwd_unavailable' | 'shell_tool_missing' | 'session_held_by_background' | 'worktree_resume_refused' | 'worktree_unverified' | 'cli_version_too_old' | 'bypass_root' | 'org_config_required_unavailable' | 'org_config_refused' | 'sandbox_required_unavailable' | 'initialize_not_first' | 'config_file_invalid' | 'managed_settings_not_delivered' | 'initialize_fields_not_delivered';
+export declare type SDKStartupFailureReason = 'org_pin_api_key_conflict' | 'provider_not_allowed' | 'org_verify_failed' | 'org_pin_mismatch' | 'managed_settings_invalid' | 'remote_settings_required_unavailable' | 'gateway_signin_required' | 'gateway_access_denied' | 'proxy_invalid' | 'temp_dir_unusable' | 'cwd_unavailable' | 'shell_tool_missing' | 'session_held_by_background' | 'worktree_resume_refused' | 'worktree_unverified' | 'cli_version_too_old' | 'bypass_root' | 'org_config_required_unavailable' | 'org_config_refused' | 'sandbox_required_unavailable' | 'initialize_not_first' | 'config_file_invalid' | 'managed_settings_not_delivered' | 'initialize_fields_not_delivered' | 'sideload_flags_disabled';
 
 export declare type SDKStatus = 'compacting' | 'requesting' | null;
 
@@ -6698,6 +6748,7 @@ export declare type SDKSystemMessage = {
      * Protocol capabilities this CLI supports, so SDK consumers can feature-detect instead of version-sniffing. Open set — ignore unknown values; check each capability for exactly the behavior you use. 'interrupt_receipt_v1' = the interrupt control_response success payload carries still_queued (uuids of async user messages that survive the interrupt). 'interrupt_cancel_queued_v1' = the interrupt control_request honors cancel_queued:true (queued and pending-dispatch commands are cancelled alongside the abort, listed on the response's cancelled field; still_queued is then empty — including any uuid that was mid-fold at the interrupt instant, since this request also aborts and the fold never delivers it — except that a client driving a hosted session lists there what it can no longer recall: a send already in flight to that session, or the first prompt the session was created with). 'queued_notifications' = the CLI accepts inbound queued_notification stream messages and drains them via ReadNotifications (the cloud session backend reads this from the persisted init event to decide whether it may send them). 'ask_user_question_unanswered_v1' = an AskUserQuestion answer may set annotations[question].unanswered ('skipped' | 'replied_in_chat' | 'dismissed'), which the tool result echoes; send it only to a session that advertises this, since an older CLI on a strict host refuses the whole answer. A strict host also refuses an answer with a value outside these three; a new value will come with a new capability. 'reload_plugins_refuse_if_busy_v1' = the reload_plugins control request honors refuse_if_busy; a CLI that does not advertise this may ignore the field and serve the request in a turn too. Absent on older CLIs.
      */
     capabilities?: string[];
+
 
 
 
@@ -7718,6 +7769,8 @@ export declare interface Settings {
             };
         };
     };
+
+
     /**
      * Whether to automatically approve all MCP servers in the project
      */
@@ -9978,6 +10031,10 @@ export declare interface Settings {
      */
     requiredMaximumVersion?: string;
     /**
+     * Anthropic-run mirror from which native installs download Claude Code releases (claude install, claude update, and auto-updates), instead of https://downloads.claude.ai. Must be exactly https://claude.fedstart.com/claude-downloads (Claude for Government). Any other value stops installs and updates with an error. CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC normally turns auto-updates off, but not with this mirror set. Only read from managed (policy) settings.
+     */
+    downloadsMirrorUrl?: string;
+    /**
      * Custom directory for plan files, relative to project root. If not set, defaults to ~/.claude/plans/
      */
     plansDirectory?: string;
@@ -10155,7 +10212,7 @@ export declare interface Settings {
      */
     wheelScrollAccelerationEnabled?: boolean;
     /**
-     * Snapshot files before edits so /rewind can restore them
+     * Snapshot files before edits so /rewind can restore them. In a session an SDK starts, only an administrator's false applies
      */
     fileCheckpointingEnabled?: boolean;
     /**

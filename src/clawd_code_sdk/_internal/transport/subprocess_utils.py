@@ -225,9 +225,7 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
             if servers_for_cli := options.argv_mcp_servers():
                 dct = anyenv.dump_json({"mcpServers": servers_for_cli})
                 cmd.extend(["--mcp-config", dct])
-            if options.initialize_mcp_servers() is not None:
-                # The CLI reads the initialize request (with the other servers) at launch
-                cmd.append("--await-initialize")
+
         case str() | Path() as path if str(path):
             cmd.extend(["--mcp-config", str(path)])
 
@@ -263,8 +261,12 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
         sources_value = ",".join(options.setting_sources or [])
         cmd.extend(["--setting-sources", sources_value])
 
-    # Add plugin directories
-    for plugin in options.plugins:
+    if options.reads_initialize_at_launch():
+        # The CLI reads the initialize request (MCP servers, plugins) at launch
+        cmd.append("--await-initialize")
+
+    # Add plugin directories (unless they go in the initialize request)
+    for plugin in options.plugins if options.initialize_plugins() is None else ():
         match plugin:
             case SdkPluginConfig(skip_mcp_discovery=True):
                 cmd.extend(["--plugin-dir-no-mcp", plugin.path])
