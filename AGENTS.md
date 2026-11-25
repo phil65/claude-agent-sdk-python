@@ -45,6 +45,7 @@ Deliberately not taken from upstream (as of `6c1b03f`): trio support, `SessionSt
 `client_app` label derivation, `--system-prompt-file`, reading the CLI version from the init
 message, the `can_use_tool` shadowing warning. Unknown message types are skipped like upstream, but
 only in the client's receive loop (`parse_message` stays strict) and not under
-`CLAWD_STRICT_MESSAGES`. Fine-grained tool streaming stays on by default here (upstream
-reverted it: it can 400 on proxies and Bedrock/Vertex 4.5 models; override with
-`CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=0` in `options.env`).
+`CLAWD_STRICT_MESSAGES`. Fine-grained tool streaming (upstream reverted its default: it can
+400 on proxies and Bedrock/Vertex 4.5 models) is `fine_grained_tool_streaming="auto"` here: on for
+Anthropic's first-party API only, decided like the CLI's provider selection
+(`uses_first_party_api` in `subprocess_utils.py`).

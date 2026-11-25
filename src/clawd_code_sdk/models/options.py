@@ -151,6 +151,21 @@ class ClaudeAgentOptions:
 
     Requires models that support ``tool_reference`` blocks (Sonnet 4+, Opus 4+).
     """
+    fine_grained_tool_streaming: bool | Literal["auto"] = "auto"
+    """Stream tool input to the client as the model writes it (fine-grained tool streaming).
+
+    With it, ``stream_event`` messages carry tool input JSON as it is generated, so a UI can
+    show a long ``Write``/``Edit`` input live and the tool call starts sooner. It saves no
+    tokens. The partial tool input JSON is not validated by the API, and some endpoints
+    reject the request with HTTP 400 (proxies / gateways, some models on Bedrock and Vertex).
+
+    - ``"auto"`` (default): on when the CLI talks to Anthropic's API directly (no
+      ``CLAUDE_CODE_USE_BEDROCK`` / ``_VERTEX`` / other provider env, ``ANTHROPIC_BASE_URL``
+      unset or ``api.anthropic.com``); otherwise the CLI's own default applies.
+    - ``True`` / ``False``: force it on / off.
+
+    ``CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING`` in ``env`` overrides this option.
+    """
     # MCP
     mcp_servers: dict[str, McpServerConfig] | str | Path = field(default_factory=dict)
     """MCP servers for the agent."""

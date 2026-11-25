@@ -12,7 +12,8 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, assert_never
+from typing import TYPE_CHECKING, Any, Literal, assert_never
+from urllib.parse import urlsplit
 
 import anyenv
 import anyio
@@ -36,7 +37,7 @@ from clawd_code_sdk.models import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Mapping
 
     from anyio.streams.text import TextReceiveStream
 
@@ -365,6 +366,70 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     return cmd
 
 
+FINE_GRAINED_TOOL_STREAMING_ENV = "CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING"
+
+# Env vars that make the CLI talk to a provider other than Anthropic's first-party API
+# (the CLI's provider selection, as of 2.1.332)
+_THIRD_PARTY_PROVIDER_ENV = (
+    "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX",
+    "CLAUDE_CODE_USE_FOUNDRY",
+    "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+    "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+    "CLAUDE_CODE_USE_MANTLE",
+    "CLAUDE_CODE_USE_GATEWAY",
+)
+
+
+def _env_truthy(value: str | None) -> bool:
+    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def uses_first_party_api(env: Mapping[str, str]) -> bool:
+    """Whether the CLI talks to Anthropic's API directly, given its environment.
+
+    Mirrors the CLI: no third-party provider selected, and ``ANTHROPIC_BASE_URL``
+    unset or pointing at ``api.anthropic.com``.
+    """
+    if any(_env_truthy(env.get(key)) for key in _THIRD_PARTY_PROVIDER_ENV):
+        return False
+    if not (base_url := env.get("ANTHROPIC_BASE_URL")):
+        return True
+    try:
+        parts = urlsplit(base_url)
+        port = parts.port
+    except ValueError:
+        return False
+    return parts.hostname == "api.anthropic.com" and port is None
+
+
+def fine_grained_tool_streaming_env(
+    setting: bool | Literal["auto"],
+    options_env: Mapping[str, str] | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> str | None:
+    """Value for ``CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING``, or None to leave it unset.
+
+    ``True``/``False`` force it on/off. ``"auto"`` turns it on for Anthropic's first-party
+    API and otherwise leaves the CLI's own default (off unless the CLI knows the
+    provider and model support it). A value already in the parent environment wins in
+    ``"auto"``; one in ``options.env`` always wins (set by the caller, not here).
+    """
+    match setting:
+        case True:
+            return "1"
+        case False:
+            return "0"
+        case "auto":
+            environ = os.environ if environ is None else environ
+            if FINE_GRAINED_TOOL_STREAMING_ENV in environ:
+                return None
+            env = {**environ, **(options_env or {})}
+            return "1" if uses_first_party_api(env) else None
+        case _ as unreachable:
+            assert_never(unreachable)
+
+
 def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
     process_env = options.env
 
@@ -394,11 +459,13 @@ def get_env_vars(options: ClaudeAgentOptions) -> dict[str, str]:
         and (fmt := opts.ask_user_question.preview_format)
     ):
         process_env["CLAUDE_CODE_QUESTION_PREVIEW_FORMAT"] = fmt
-    # Enable fine-grained tool streaming. --include-partial-messages emits
-    # stream_event messages, but tool input parameters are still buffered
-    # by the API unless eager_input_streaming is also enabled at the
-    # per-tool level via this env var.
-    process_env.setdefault("CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING", "1")
+    # Fine-grained tool streaming: --include-partial-messages emits stream_event
+    # messages, but the API buffers tool input unless the CLI sets
+    # eager_input_streaming per tool, which this env var controls.
+    if (
+        fgts := fine_grained_tool_streaming_env(options.fine_grained_tool_streaming, options.env)
+    ) is not None:
+        process_env.setdefault(FINE_GRAINED_TOOL_STREAMING_ENV, fgts)
     process_env.setdefault("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS", "1")
     # MCP_CONNECTION_NONBLOCKING=true
     if cwd := options.cwd:

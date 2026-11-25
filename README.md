@@ -147,6 +147,17 @@ options = ClaudeAgentOptions(
 )
 ```
 
+### Fine-grained tool streaming
+
+`fine_grained_tool_streaming` (`"auto"` by default, or `True` / `False`) makes the API stream
+tool input as the model writes it: `stream_event` messages then carry the input of a long
+`Write` or `Edit` live, which a UI can render, and the tool call starts sooner. It saves no
+tokens. The trade-off is compatibility: the partial tool input JSON is not validated, and
+proxies, gateways and some Bedrock / Vertex models reject the request with HTTP 400. `"auto"`
+turns it on only when Claude Code talks to Anthropic's API directly (no
+`CLAUDE_CODE_USE_BEDROCK` / `CLAUDE_CODE_USE_VERTEX` / other provider, `ANTHROPIC_BASE_URL` unset
+or `api.anthropic.com`) and leaves Claude Code's own default otherwise.
+
 ### Session Management
 
 ```python
