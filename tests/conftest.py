@@ -6,6 +6,9 @@ from typing import Any
 import pytest
 
 
+# Unknown CLI message types fail the suite instead of being skipped
+os.environ.setdefault("CLAWD_STRICT_MESSAGES", "1")
+
 _MSG_COUNTER = 0
 
 

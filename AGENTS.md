@@ -3,6 +3,13 @@
 Python SDK for the Claude Code CLI (fork of `claude-agent-sdk-python`). Workflow and codebase
 structure: `CLAUDE.md`.
 
+## Strict message parsing
+
+Set `CLAWD_STRICT_MESSAGES=1` in development and CI: an unknown CLI message type then raises
+`MessageParseError` instead of being skipped with a warning (the default for users). The test
+suite sets it in `tests/conftest.py`. An error from it after a CLI update means a new message type
+to model in `models/`.
+
 ## Specs
 
 | Spec | URL | Targets | Code | Update check |
@@ -35,8 +42,9 @@ Protocol updates (independent of upstream Python): `python scripts/update_sdk_re
 CLI changelog for SDK-relevant entries. Update both rows above.
 
 Deliberately not taken from upstream (as of `6c1b03f`): trio support, `SessionStore` mirroring,
-`client_app` label derivation, `--system-prompt-file`, lenient skipping of unknown message types
-(`parse_message` raises `MessageParseError`), reading the CLI version from the init message, the
-`can_use_tool` shadowing warning. Fine-grained tool streaming stays on by default here (upstream
+`client_app` label derivation, `--system-prompt-file`, reading the CLI version from the init
+message, the `can_use_tool` shadowing warning. Unknown message types are skipped like upstream, but
+only in the client's receive loop (`parse_message` stays strict) and not under
+`CLAWD_STRICT_MESSAGES`. Fine-grained tool streaming stays on by default here (upstream
 reverted it: it can 400 on proxies and Bedrock/Vertex 4.5 models; override with
 `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=0` in `options.env`).

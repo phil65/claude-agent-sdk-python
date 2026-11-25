@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast, get_args
 from uuid import uuid4
 
 import anyenv
@@ -22,6 +23,7 @@ from clawd_code_sdk.models import (
     McpAuthenticateResponse,
     McpSetServersResult,
     McpStatusResponse,
+    MessageUnion,
     NewSession,
     RemoteControlResponse,
     ResultErrorMessage,
@@ -82,6 +84,7 @@ from clawd_code_sdk.models import (
     UserTextPrompt,
     message_adapter,
 )
+from clawd_code_sdk.models.system_messages import SystemMessageUnion
 
 
 if TYPE_CHECKING:
@@ -105,6 +108,38 @@ if TYPE_CHECKING:
 
 _RECORD_PATH = os.environ.get("CLAWD_RECORD_MESSAGES")
 _record_file = Path(_RECORD_PATH).open("a") if _RECORD_PATH else None  # noqa: SIM115
+
+
+logger = logging.getLogger(__name__)
+
+STRICT_MESSAGES_ENV = "CLAWD_STRICT_MESSAGES"
+"""Env var: when truthy, an unknown CLI message type ends ``receive_messages`` with an error."""
+
+_KNOWN_MESSAGE_TYPES = frozenset(m.model_fields["type"].default for m in get_args(MessageUnion))
+_KNOWN_SYSTEM_SUBTYPES = frozenset(
+    m.model_fields["subtype"].default for m in get_args(SystemMessageUnion)
+)
+_warned_unknown_kinds: set[str] = set()
+
+
+def strict_messages() -> bool:
+    """Whether unknown message types raise instead of being skipped (``CLAWD_STRICT_MESSAGES``)."""
+    value = os.environ.get(STRICT_MESSAGES_ENV, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def unknown_message_kind(data: Any) -> str | None:
+    """Return the type (``"system/<subtype>"`` for system messages) if no model covers it.
+
+    Returns None for modelled types, also when the message itself is malformed.
+    """
+    if not isinstance(data, dict) or not isinstance(msg_type := data.get("type"), str):
+        return None
+    if msg_type not in _KNOWN_MESSAGE_TYPES:
+        return msg_type
+    if msg_type == "system" and (subtype := data.get("subtype")) not in _KNOWN_SYSTEM_SUBTYPES:
+        return f"system/{subtype}"
+    return None
 
 
 def parse_message(data: dict[str, Any]) -> Message:
@@ -280,7 +315,21 @@ class ClaudeSDKClient:
         """Receive all messages from Claude."""
         query = self._ensure_connected()
         async for data in query.receive_messages():
-            message = parse_message(data)
+            try:
+                message = parse_message(data)
+            except MessageParseError:
+                # A newer CLI may send message types this SDK does not model yet: skip
+                # them unless CLAWD_STRICT_MESSAGES is set. Malformed known types raise.
+                if (kind := unknown_message_kind(data)) is None or strict_messages():
+                    raise
+                if kind not in _warned_unknown_kinds:
+                    _warned_unknown_kinds.add(kind)
+                    logger.warning(
+                        "Skipping unknown Claude Code message type %r (set %s=1 to raise)",
+                        kind,
+                        STRICT_MESSAGES_ENV,
+                    )
+                continue
             match message:
                 case AssistantMessage():
                     message.raise_if_api_error()

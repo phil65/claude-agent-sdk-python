@@ -412,6 +412,15 @@ except ProcessError as e:
 
 See [src/clawd_code_sdk/\_errors.py](src/clawd_code_sdk/_errors.py) for all error types.
 
+### Unknown message types
+
+A newer Claude Code CLI can send message types (or system message subtypes) this SDK does not
+model yet. `receive_messages()` / `receive_response()` skip them and log a warning once per type,
+so the stream keeps going. Set `CLAWD_STRICT_MESSAGES=1` (also `true`, `yes`, `on`) to raise
+`MessageParseError` instead, which ends the stream. Recommended in development and CI, so a CLI
+update that adds message types is noticed; this repo's test suite sets it in `tests/conftest.py`.
+`parse_message()` itself always raises, and malformed messages of known types always raise.
+
 ## Available Tools
 
 See the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code/settings#tools-available-to-claude) for a complete list of available tools.
