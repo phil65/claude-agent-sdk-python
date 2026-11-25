@@ -213,6 +213,10 @@ class ClaudeAgentOptions:
       tools not pre-approved via the permissions config internally.
     - ``"bypassPermissions"``: This handler is NEVER invoked. The CLI
       auto-approves all tools internally.
+
+    Tools that ``allowed_tools`` allows outright (``"Read"``, ``"Read()"``, ``"Read(*)"``)
+    never reach the handler either. Connecting emits a ``CanUseToolShadowedWarning`` when
+    a callback is set together with ``"bypassPermissions"`` or such entries.
     """
     on_user_question: OnUserQuestion | None = None
     """Callback for handling AskUserQuestion elicitation requests.

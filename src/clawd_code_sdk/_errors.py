@@ -230,3 +230,12 @@ class McpError(ControlRequestError):
         self.error_code = error_code
         self.server_name = server_name
         super().__init__(message, subtype=subtype)
+
+
+class CanUseToolShadowedWarning(UserWarning):
+    """``on_permission`` is a callback, but some tool calls are auto-approved before it runs.
+
+    Emitted on connect. The TypeScript SDK reports the same condition as a process warning
+    with code ``CLAUDE_SDK_CAN_USE_TOOL_SHADOWED``. Suppress it with
+    ``warnings.filterwarnings("ignore", category=CanUseToolShadowedWarning)``.
+    """

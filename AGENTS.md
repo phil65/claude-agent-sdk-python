@@ -42,11 +42,12 @@ Protocol updates (independent of upstream Python): `python scripts/update_sdk_re
 CLI changelog for SDK-relevant entries. Update both rows above.
 
 Deliberately not taken from upstream (as of `6c1b03f`): trio support, `SessionStore` mirroring,
-`client_app` label derivation, `--system-prompt-file`, the `can_use_tool` shadowing warning. The
-CLI version check reads `claude_code_version` from the initialize response (falling back to the
-first `system/init` message) instead of spawning `claude -v`. Unknown message types are skipped like upstream, but
-only in the client's receive loop (`parse_message` stays strict) and not under
-`CLAWD_STRICT_MESSAGES`. Fine-grained tool streaming (upstream reverted its default: it can
-400 on proxies and Bedrock/Vertex 4.5 models) is `fine_grained_tool_streaming="auto"` here: on for
-Anthropic's first-party API only, decided like the CLI's provider selection
-(`uses_first_party_api` in `subprocess_utils.py`).
+`client_app` label derivation, `--system-prompt-file`.
+
+Taken, but differently: unknown message types are skipped only in the client's receive loop
+(`parse_message` stays strict) and raise under `CLAWD_STRICT_MESSAGES`. The CLI version check reads
+`claude_code_version` from the initialize response (falling back to the first `system/init`
+message). Fine-grained tool streaming (upstream reverted its default: it can 400 on proxies and
+Bedrock/Vertex 4.5 models) is `fine_grained_tool_streaming="auto"`: on for Anthropic's first-party
+API only, decided like the CLI's provider selection (`uses_first_party_api` in
+`subprocess_utils.py`). The `can_use_tool` shadowing warning (#1081) names `on_permission`.

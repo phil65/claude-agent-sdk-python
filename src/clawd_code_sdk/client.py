@@ -12,6 +12,7 @@ import anyenv
 from pydantic import ValidationError
 
 from clawd_code_sdk._errors import CLIConnectionError, MessageParseError
+from clawd_code_sdk._internal.option_warnings import warn_if_can_use_tool_shadowed
 from clawd_code_sdk._internal.query import Query
 from clawd_code_sdk._internal.transport.subprocess_utils import check_claude_version
 from clawd_code_sdk.models import (
@@ -219,6 +220,7 @@ class ClaudeSDKClient:
     async def connect(self) -> None:
         """Connect to Claude Code CLI and initialize the session."""
         # Use provided custom transport or create subprocess transport
+        warn_if_can_use_tool_shadowed(self.options)
         self._query = Query.from_options(self.options, self._custom_transport)
         await self._query.transport.connect()
         await self._query.start()
