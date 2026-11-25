@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import suppress
 import functools
 import logging
+import os
 from pathlib import Path
 import platform
 import re
@@ -18,6 +19,7 @@ import anyio
 import anyio.abc
 
 from clawd_code_sdk._errors import (
+    CLIConnectionError,
     CLIJSONDecodeError as SDKJSONDecodeError,
     CLINotFoundError,
 )
@@ -109,17 +111,28 @@ def find_cli() -> str:
         return bundled_cli
 
     # Fall back to system-wide search
-    if cli := shutil.which("claude"):
-        return cli
     home_path = Path.home()
-    locations = [
-        home_path / ".npm-global/bin/claude",
-        Path("/usr/local/bin/claude"),
-        home_path / ".local/bin/claude",
-        home_path / "node_modules/.bin/claude",
-        home_path / ".yarn/bin/claude",
-        home_path / ".claude/local/claude",
-    ]
+    if platform.system() == "Windows":
+        # Only a native claude.exe (upstream #1484): CreateProcess can't run an
+        # extensionless wrapper script, and npm's claude.cmd shim is refused (see
+        # reject_windows_batch_cli). And only in absolute PATH entries:
+        # shutil.which() would search the working directory first.
+        for directory in map(Path, os.environ.get("PATH", "").split(os.pathsep)):
+            exe = directory / "claude.exe"
+            if directory.is_absolute() and os.path.isfile(exe):  # noqa: PTH113
+                return str(exe)
+        locations = [home_path / ".local/bin/claude.exe"]
+    elif cli := shutil.which("claude"):
+        return cli
+    else:
+        locations = [
+            home_path / ".npm-global/bin/claude",
+            Path("/usr/local/bin/claude"),
+            home_path / ".local/bin/claude",
+            home_path / "node_modules/.bin/claude",
+            home_path / ".yarn/bin/claude",
+            home_path / ".claude/local/claude",
+        ]
     for path in locations:
         if path.exists() and path.is_file():
             return str(path)
@@ -131,6 +144,48 @@ def find_cli() -> str:
         '  export PATH="$HOME/node_modules/.bin:$PATH"\n'
         "\nOr provide the path via ClaudeAgentOptions:\n"
         "  ClaudeAgentOptions(cli_path='/path/to/claude')"
+    )
+
+
+def is_windows_batch_cli(cli_path: str) -> bool:
+    """Whether ``cli_path`` names a .bat/.cmd batch script on Windows (always False elsewhere).
+
+    Plain string logic rather than pathlib, so it behaves the same in tests on
+    POSIX. Every path component is checked, not only the last one: Win32
+    normalizes paths (``.``/``..``, trailing dots and spaces) before opening
+    them, and every such spelling still has to name the .bat/.cmd component
+    somewhere. Splitting on ":" covers NTFS stream specs (``claude.cmd:s``,
+    ``claude:x.cmd``) and drive prefixes (``C:claude.cmd``). (Upstream #1127.)
+    """
+    if platform.system() != "Windows":
+        return False
+    return any(
+        segment.rstrip(". ").lower().endswith((".bat", ".cmd"))
+        for component in cli_path.replace("\\", "/").split("/")
+        for segment in component.split(":")
+    )
+
+
+def reject_windows_batch_cli(cli_path: str) -> None:
+    """Refuse to run a .bat/.cmd script as the CLI on Windows (upstream #1127).
+
+    CreateProcess runs batch scripts through ``cmd.exe /c``, which re-parses the
+    whole command line. ``subprocess.list2cmdline`` only quotes for the MSVCRT
+    argv rules, so cmd.exe metacharacters in an argument (a session title, the
+    MCP config JSON, a system prompt) could run injected commands. There is no
+    reliable escaping for cmd.exe ("BatBadBut", CVE-2024-27980), so refuse.
+
+    Raises:
+        CLIConnectionError: If ``cli_path`` is a batch script on Windows.
+    """
+    if not is_windows_batch_cli(cli_path):
+        return
+    raise CLIConnectionError(
+        f"Refusing to execute batch script {cli_path!r}: Windows runs .bat/.cmd files "
+        "via cmd.exe, which can execute commands injected through CLI arguments. "
+        "Use a native claude.exe instead: install Claude Code natively "
+        "(irm https://claude.ai/install.ps1 | iex) or point "
+        "ClaudeAgentOptions(cli_path=...) at a claude.exe."
     )
 
 
@@ -278,8 +333,14 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
 
     # Add extra args for future CLI flags
     for flag, value in options.extra_args.items():
-        flags = [f"--{flag}"] if value is None else [f"--{flag}", value]
-        cmd.extend(flags)
+        if value is None:
+            cmd.append(f"--{flag}")
+        elif str(value).startswith("-"):
+            # A dash-leading value in a separate token parses as a flag when the
+            # option's value is optional; the equals form always binds (upstream #1127).
+            cmd.append(f"--{flag}={value}")
+        else:
+            cmd.extend([f"--{flag}", value])
 
     # Resolve thinking config → --max-thinking-tokens
     match options.thinking:

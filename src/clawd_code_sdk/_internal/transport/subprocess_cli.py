@@ -26,6 +26,7 @@ from clawd_code_sdk._internal.transport.subprocess_utils import (
     find_cli,
     get_env_vars,
     parse_stream,
+    reject_windows_batch_cli,
     to_cli_args,
 )
 from clawd_code_sdk.models import ClaudeAgentOptions
@@ -101,6 +102,8 @@ class SubprocessCLITransport(Transport):
             return
         if self._cli_path is None:
             self._cli_path = await run_sync(find_cli)
+        # Before anything (the version probe included) spawns it
+        reject_windows_batch_cli(self._cli_path)
         if not os.environ.get("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK"):
             await check_claude_version(self._cli_path)
 
