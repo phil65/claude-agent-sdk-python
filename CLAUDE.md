@@ -1,3 +1,5 @@
+Spec versions this SDK targets (Claude Code CLI, TS SDK types, settings schema): see `AGENTS.md`.
+
 # Workflow
 
 ```bash
