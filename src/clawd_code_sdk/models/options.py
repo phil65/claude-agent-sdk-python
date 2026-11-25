@@ -288,7 +288,10 @@ class ClaudeAgentOptions:
     - ``None``: no explicit settings.
     """
     setting_sources: list[SettingSource] | None = None
-    """List of sources to load settings from."""
+    """Sources to load filesystem settings from.
+
+    None loads the CLI's defaults (user, project, local); ``[]`` loads none.
+    """
     skills: list[str] | None = None
     """List of skills to use for the agent."""
     sandbox: Sandbox | None = None

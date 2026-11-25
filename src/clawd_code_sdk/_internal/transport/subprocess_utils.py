@@ -257,9 +257,10 @@ def to_cli_args(options: ClaudeAgentOptions) -> list[str]:
     if options.chrome:
         cmd.append("--chrome")
 
-    if options.setting_sources:
-        sources_value = ",".join(options.setting_sources or [])
-        cmd.extend(["--setting-sources", sources_value])
+    if options.setting_sources is not None:
+        # One token, so that [] reaches the CLI as an empty list (no filesystem
+        # settings) instead of being dropped (CLI defaults) (upstream #822).
+        cmd.append(f"--setting-sources={','.join(options.setting_sources)}")
 
     if options.reads_initialize_at_launch():
         # The CLI reads the initialize request (MCP servers, plugins) at launch
