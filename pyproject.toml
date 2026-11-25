@@ -3,7 +3,7 @@ name = "clawd-code-sdk"
 version = "1.5.3"
 description = "Python SDK for Claude Code"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = "MIT"
 authors = [
   { name = "phil65", email = "philipptemminghoff@gmail.com" },
@@ -14,7 +14,6 @@ classifiers = [
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
@@ -89,7 +88,7 @@ asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 exclude = ["examples/"]
 
@@ -238,7 +237,7 @@ max-complexity = 15
 include = ["src"]
 
 [tool.ty.environment]
-python-version = "3.13"
+python-version = "3.14"
 python-platform = "all"
 
 [tool.ty.rules]
