@@ -27,16 +27,13 @@ if TYPE_CHECKING:
 
 
 def _fake_cli(tmp_path: Path) -> Path:
-    """A stand-in CLI: answers -v, writes to stderr, then waits for stdin EOF."""
+    """A stand-in CLI: writes to stderr, then waits for stdin EOF."""
     script = tmp_path / "fake-claude"
     script.write_text(
         textwrap.dedent(
             f"""\
             #!{sys.executable}
             import sys
-            if "-v" in sys.argv:
-                print("9.9.9 (Claude Code)")
-                sys.exit(0)
             sys.stderr.write("starting up\\n")
             sys.stderr.flush()
             sys.stdin.read()

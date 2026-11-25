@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from contextlib import suppress
 import functools
 import logging
 import os
@@ -16,8 +15,6 @@ from typing import TYPE_CHECKING, Any, Literal, assert_never
 from urllib.parse import urlsplit
 
 import anyenv
-import anyio
-import anyio.abc
 
 from clawd_code_sdk._errors import (
     CLIConnectionError,
@@ -58,36 +55,25 @@ CREATION_FLAGS = (
 )
 
 
-async def check_claude_version(cli_path: str | Path) -> None:
-    """Check Claude Code version and warn if below minimum."""
-    proc = None
-    try:
-        with anyio.fail_after(2):  # 2 second timeout
-            proc = await anyio.open_process([cli_path, "-v"], creationflags=CREATION_FLAGS)
-            if proc.stdout:
-                stdout_bytes = await proc.stdout.receive()
-                version_output = stdout_bytes.decode().strip()
-                if match := re.match(r"([0-9]+\.[0-9]+\.[0-9]+)", version_output):
-                    version = match.group(1)
-                    version_parts = [int(x) for x in version.split(".")]
-                    min_parts = [int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split(".")]
-                    if version_parts < min_parts:
-                        logger.warning(
-                            "Claude Code version %s at %s is unsupported in the Agent SDK. "
-                            "Minimum required version is %s. "
-                            "Some features may not work correctly.",
-                            version,
-                            cli_path,
-                            MINIMUM_CLAUDE_CODE_VERSION,
-                        )
-    except Exception:
-        pass
-    finally:
-        if proc:
-            with suppress(Exception):
-                proc.terminate()
-            with suppress(Exception):
-                await proc.wait()
+def check_claude_version(version: str | None) -> None:
+    """Warn if the CLI version (from the initialize response or init message) is too old.
+
+    Warning-only: a missing or unparsable version is logged, not raised.
+    Skipped when ``CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK`` is set.
+    """
+    if os.environ.get("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK"):
+        return
+    if not version or not (match := re.match(r"(\d+)\.(\d+)\.(\d+)", version)):
+        logger.warning("Could not determine the Claude Code version (got %r)", version)
+        return
+    minimum = tuple(int(x) for x in MINIMUM_CLAUDE_CODE_VERSION.split("."))
+    if tuple(int(x) for x in match.groups()) < minimum:
+        logger.warning(
+            "Claude Code version %s is unsupported by this SDK (minimum %s). "
+            "Some features may not work correctly.",
+            version,
+            MINIMUM_CLAUDE_CODE_VERSION,
+        )
 
 
 @functools.cache

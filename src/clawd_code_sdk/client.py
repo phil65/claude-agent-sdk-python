@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from clawd_code_sdk._errors import CLIConnectionError, MessageParseError
 from clawd_code_sdk._internal.query import Query
+from clawd_code_sdk._internal.transport.subprocess_utils import check_claude_version
 from clawd_code_sdk.models import (
     AssistantMessage,
     ClaudeAgentOptions,
@@ -20,6 +21,7 @@ from clawd_code_sdk.models import (
     ClaudeCodeServerInfo,
     ClaudeOAuthWaitForCompletionResponse,
     GetSettingsResponse,
+    InitSystemMessage,
     McpAuthenticateResponse,
     McpSetServersResult,
     McpStatusResponse,
@@ -206,6 +208,7 @@ class ClaudeSDKClient:
         """Current client status, or None when idle."""
 
         self._logfire_prompt: str | None = None
+        self._cli_version_checked = False
 
     def _ensure_connected(self) -> Query:
         """Return the active Query, raising if not connected."""
@@ -282,6 +285,10 @@ class ClaudeSDKClient:
         )
         response = await query._send_control_request(request, timeout=initialize_timeout)
         self._initialization_result = info = ClaudeCodeServerInfo.model_validate(response)
+        # CLIs that predate the field: checked on the first system/init message instead
+        if info.claude_code_version is not None:
+            check_claude_version(info.claude_code_version)
+            self._cli_version_checked = True
         if mcp_servers is not None and info.mcp_servers_applied is not True:
             # Absent on CLIs that predate the field: they never read `mcpServers`
             raise CLIConnectionError(
@@ -335,6 +342,11 @@ class ClaudeSDKClient:
                     message.raise_if_api_error()
                 case StatusSystemMessage(status=status):
                     self.status = status
+                case InitSystemMessage(claude_code_version=version) if (
+                    not self._cli_version_checked
+                ):
+                    check_claude_version(version)
+                    self._cli_version_checked = True
                 case SessionStateChangedMessage(state=state):
                     self.session_state = state
                 case (
