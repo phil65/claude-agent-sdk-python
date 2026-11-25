@@ -73,6 +73,13 @@ class SDKControlInterruptResponse(BaseModel):
     """UUIDs of queued user messages that were cancelled."""
 
 
+class SDKControlSetPermissionModeResponse(BaseModel):
+    """Response to a set_permission_mode request."""
+
+    mode: PermissionMode | None = None
+    """The permission mode now in effect, which can differ from the one asked for."""
+
+
 class SDKControlPermissionRequest(_ControlBase):
     """SDK control permission request."""
 

@@ -134,7 +134,7 @@ from .session import (
 
 # MCP Server Support
 
-__cli_version__ = "2.1.330"
+__cli_version__ = "2.1.332"
 
 
 __all__ = [

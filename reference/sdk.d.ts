@@ -557,6 +557,8 @@ declare namespace coreTypes {
         PreCompactHookInput,
         PreModelSwitchHookInput,
         PreModelSwitchHookSpecificOutput,
+        PreSkillShellCommandHookInput,
+        PreSkillShellCommandHookSpecificOutput,
         PreToolUseHookInput,
         PreToolUseHookSpecificOutput,
         RewindFilesResult,
@@ -1031,7 +1033,7 @@ export declare type GetSubagentMessagesOptions = {
     sessionStore?: SessionStore;
 };
 
-export declare const HOOK_EVENTS: readonly ['PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'PostToolBatch', 'Notification', 'UserPromptSubmit', 'UserPromptExpansion', 'SessionStart', 'SessionEnd', 'Stop', 'StopFailure', 'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact', 'PreModelSwitch', 'PostModelSwitch', 'PermissionRequest', 'PermissionDenied', 'Setup', 'TeammateIdle', 'TaskCreated', 'TaskCompleted', 'Elicitation', 'ElicitationResult', 'ConfigChange', 'WorktreeCreate', 'WorktreeRemove', 'InstructionsLoaded', 'CwdChanged', 'FileChanged', 'DirectoryAdded', 'MessageDisplay'];
+export declare const HOOK_EVENTS: readonly ['PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'PostToolBatch', 'Notification', 'UserPromptSubmit', 'UserPromptExpansion', 'SessionStart', 'SessionEnd', 'Stop', 'StopFailure', 'SubagentStart', 'SubagentStop', 'PreCompact', 'PostCompact', 'PreModelSwitch', 'PostModelSwitch', 'PermissionRequest', 'PermissionDenied', 'Setup', 'TeammateIdle', 'TaskCreated', 'TaskCompleted', 'Elicitation', 'ElicitationResult', 'ConfigChange', 'WorktreeCreate', 'WorktreeRemove', 'InstructionsLoaded', 'CwdChanged', 'FileChanged', 'DirectoryAdded', 'MessageDisplay', 'PreSkillShellCommand'];
 
 /**
  * Hook callback function for responding to events during execution.
@@ -1064,9 +1066,9 @@ export declare interface HookCallbackMatcher {
 
 }
 
-export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'PostToolBatch' | 'Notification' | 'UserPromptSubmit' | 'UserPromptExpansion' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PreModelSwitch' | 'PostModelSwitch' | 'PermissionRequest' | 'PermissionDenied' | 'Setup' | 'TeammateIdle' | 'TaskCreated' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged' | 'DirectoryAdded' | 'MessageDisplay';
+export declare type HookEvent = 'PreToolUse' | 'PostToolUse' | 'PostToolUseFailure' | 'PostToolBatch' | 'Notification' | 'UserPromptSubmit' | 'UserPromptExpansion' | 'SessionStart' | 'SessionEnd' | 'Stop' | 'StopFailure' | 'SubagentStart' | 'SubagentStop' | 'PreCompact' | 'PostCompact' | 'PreModelSwitch' | 'PostModelSwitch' | 'PermissionRequest' | 'PermissionDenied' | 'Setup' | 'TeammateIdle' | 'TaskCreated' | 'TaskCompleted' | 'Elicitation' | 'ElicitationResult' | 'ConfigChange' | 'WorktreeCreate' | 'WorktreeRemove' | 'InstructionsLoaded' | 'CwdChanged' | 'FileChanged' | 'DirectoryAdded' | 'MessageDisplay' | 'PreSkillShellCommand';
 
-export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | PostToolBatchHookInput | PermissionDeniedHookInput | NotificationHookInput | UserPromptSubmitHookInput | UserPromptExpansionHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PreModelSwitchHookInput | PostModelSwitchHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCreatedHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput | DirectoryAddedHookInput | MessageDisplayHookInput;
+export declare type HookInput = PreToolUseHookInput | PostToolUseHookInput | PostToolUseFailureHookInput | PostToolBatchHookInput | PermissionDeniedHookInput | NotificationHookInput | UserPromptSubmitHookInput | UserPromptExpansionHookInput | SessionStartHookInput | SessionEndHookInput | StopHookInput | StopFailureHookInput | SubagentStartHookInput | SubagentStopHookInput | PreCompactHookInput | PostCompactHookInput | PreModelSwitchHookInput | PostModelSwitchHookInput | PermissionRequestHookInput | SetupHookInput | TeammateIdleHookInput | TaskCreatedHookInput | TaskCompletedHookInput | ElicitationHookInput | ElicitationResultHookInput | ConfigChangeHookInput | InstructionsLoadedHookInput | WorktreeCreateHookInput | WorktreeRemoveHookInput | CwdChangedHookInput | FileChangedHookInput | DirectoryAddedHookInput | MessageDisplayHookInput | PreSkillShellCommandHookInput;
 
 export declare type HookJSONOutput = AsyncHookJSONOutput | SyncHookJSONOutput;
 
@@ -2954,6 +2956,46 @@ export declare type PreModelSwitchHookSpecificOutput = {
     permissionDecisionReason?: string;
 };
 
+export declare type PreSkillShellCommandHookInput = BaseHookInput & {
+    hook_event_name: 'PreSkillShellCommand';
+    /**
+     * The shell tool that runs the command: Bash or PowerShell
+     */
+    tool_name: string;
+    tool_input: {
+        /**
+         * The command as it would run, with arguments filled in
+         */
+        command: string;
+    };
+    /**
+     * Identifies this command. It names no tool call in the transcript.
+     */
+    tool_use_id: string;
+    /**
+     * The skill or command whose text holds the shell command
+     */
+    command_name: string;
+    command_source?: string;
+    /**
+     * Who started the load. user: typed, or sent by an SDK host. claude: the Skill tool, or a turn that Claude scheduled. other: anything else, such as a subagent's preload or a channel message, or not known.
+     */
+    invoked_by: 'user' | 'claude' | 'other';
+};
+
+export declare type PreSkillShellCommandHookSpecificOutput = {
+    hookEventName: 'PreSkillShellCommand';
+    /**
+     * allow adds nothing: the command runs unless a hook refuses it. deny, ask and defer all keep it from running.
+     */
+    permissionDecision?: HookPermissionDecision;
+    permissionDecisionReason?: string;
+    /**
+     * Never applied. Any value keeps the command from running.
+     */
+    updatedInput?: Record<string, unknown>;
+};
+
 export declare type PreToolUseHookInput = BaseHookInput & {
     hook_event_name: 'PreToolUse';
     tool_name: string;
@@ -3195,9 +3237,14 @@ export declare interface Query extends AsyncGenerator<SDKMessage, void> {
      * Change the permission mode for the current session.
      * Only available in streaming input mode.
      *
+     * Resolves with the permission mode now in effect, which is not always the
+     * mode asked for: record `mode`, not the argument. Resolves to `undefined`
+     * where the answer names no mode, or one outside PermissionMode; the argument
+     * is then only a best guess. Rejects where the mode is refused.
+     *
      * @param mode - The new permission mode to set
      */
-    setPermissionMode(mode: PermissionMode): Promise<void>;
+    setPermissionMode(mode: PermissionMode): Promise<SDKControlSetPermissionModeResponse | undefined>;
     /**
      * Pin (or clear, with mode:null) a per-MCP-server permission-mode
      * override. Tighten-only: only 'default' | 'auto' | null are accepted;
@@ -3677,6 +3724,19 @@ export declare type ResolvedSettings = {
          * named.
          */
         didNotLoad: false | Array<'profile' | 'registry' | 'file'>;
+        /**
+         * There, and `true`, from the first time in this process that a re-read of
+         * the registry policy which answered found other settings than those in
+         * force, although `registryPolicyFingerprint` had just returned what it
+         * returned around the read before. Mostly the host's function missed a
+         * change; a change between its answer and the read shows so too, and so does
+         * a policy that one read found gone, even if the next finds it again. It
+         * stays for the rest of the process. A re-read may end after the call that
+         * started it has returned, so a later call may be the first to show it. It
+         * says nothing of what changed. `resolveSettings` sends no event from a
+         * host's process: a host that wants to count this does so itself.
+         */
+        registryPolicyDifferedFromFingerprint?: true;
     };
 };
 
@@ -4583,6 +4643,7 @@ declare type SDKControlGetHooksListingResponse = {
          */
         exitHint: string;
     };
+
     /**
      * Settings files skipped by the merge — their hooks are neither listed nor running.
      */
@@ -5207,7 +5268,7 @@ declare type SDKControlMcpCallRequest = {
      */
     result_not_for_model?: boolean;
     /**
-     * The call is someone else's (a page a host renders), so it is decided as the model's own call to this tool is, except that a slash command's allowed-tools and connector card answers never allow it, even during a turn: permission rules under every spelling, the permission mode, requiresUserInteraction, managed settings, and PreToolUse and PostToolUse hooks, which see the arguments and the result. An ask reaches the host as a can_use_tool control request; where no host can answer, and in dontAsk or plan mode, it is refused. A refused call never reaches the server: on a plain call the error subtype, on a staged call staging error_code=tool_error, each with text starting 'The tool did not run: '. The other refusals of mcp_call come first and keep their own words. A PostToolUse hook's rewrite replaces content and drops structuredContent and _meta. The result stays out of the model's context. Only a CLI that says mcp_call_check_permissions_v1 honours this member: an older one ignores it and runs the tool with no check. Honoured only on the pipes of the host that spawned the process; elsewhere the call is refused. A value that is not a boolean is refused.
+     * The call is someone else's (a page a host renders), so it is decided as the model's own call to this tool is, except that a slash command's allowed-tools and connector card answers never allow it, even during a turn: permission rules under every spelling, the permission mode, requiresUserInteraction, managed settings, and PreToolUse and PostToolUse hooks, which see the arguments and the result. An agent hook gets no tools. A PreToolUse hook that times out refuses the call, and so do most failures of one. An ask reaches the host as a can_use_tool control request; where no host can answer, and in dontAsk or plan mode, it is refused. A refused call never reaches the server: on a plain call the error subtype, on a staged call staging error_code=tool_error, each with text starting 'The tool did not run: '. The other refusals of mcp_call come first and keep their own words. A PostToolUse hook's rewrite replaces content and drops structuredContent and _meta. The result stays out of the model's context. Only a CLI that says mcp_call_check_permissions_v1 honours this member: an older one ignores it and runs the tool with no check. Honoured only on the pipes of the host that spawned the process; elsewhere the call is refused. A value that is not a boolean is refused.
      */
     check_permissions?: boolean;
     /**
@@ -5446,6 +5507,7 @@ export declare type SDKControlReadFileResponse = {
      * Present on every utf-8 answer. True when the bytes read were not all valid UTF-8, so `contents` has U+FFFD where bytes were replaced and is not the file's own text: a binary file, text in another encoding, or a read cut inside a character, at its end when `truncated` is set, or at its start when `offset` is set. False when `contents` is exactly the bytes read, decoded, even if the file itself contains U+FFFD. Absent on a base64 answer, which is exact, and from an older CLI or tool container: a client that sees neither this nor `encoding: 'base64'` cannot tell whether `contents` is exact.
      */
     lossy?: boolean;
+
 
 
 
@@ -5696,6 +5758,16 @@ declare type SDKControlSetPermissionModeRequest = {
 
 
 
+};
+
+/**
+ * Success payload answering set_permission_mode.
+ */
+export declare type SDKControlSetPermissionModeResponse = {
+    /**
+     * The permission mode now in effect, which can differ from the one asked for. `claude -p` names it; other hosts may answer with no payload.
+     */
+    mode?: coreTypes.PermissionMode;
 };
 
 /**
@@ -6337,7 +6409,7 @@ export declare type SDKResultError = {
 
     permission_denials: SDKPermissionDenial[];
     /**
-     * User-initiated sends still waiting in the command queue when this result was produced. Greater than 0 means at least one more user turn (and result) follows without further input, barring cancellation; 0 means none is pending, or the session is ending (end_session or a shutdown latched mid-turn discards the backlog). Queued sends may coalesce into fewer turns, so this counts pending sends, not remaining results. System-generated queue entries are not counted. Absent on fatal startup results and on surfaces without a command queue.
+     * User-initiated sends still waiting in the command queue or, in a hosted remote session (CLAUDE_CODE_REMOTE), held back before they reach it, when this result was produced. Greater than 0 means at least one more user turn (and result) follows without further input, barring cancellation; 0 means none is pending, or the session is ending (end_session or a shutdown latched mid-turn discards the backlog). Queued sends may coalesce into fewer turns, so this counts pending sends, not remaining results. System-generated queue entries are not counted. Absent on fatal startup results and on surfaces without a command queue.
      */
     queued_turn_count?: number;
     errors: string[];
@@ -6515,7 +6587,7 @@ export declare type SDKResultSuccess = {
 
     permission_denials: SDKPermissionDenial[];
     /**
-     * User-initiated sends still waiting in the command queue when this result was produced. Greater than 0 means at least one more user turn (and result) follows without further input, barring cancellation; 0 means none is pending, or the session is ending (end_session or a shutdown latched mid-turn discards the backlog). Queued sends may coalesce into fewer turns, so this counts pending sends, not remaining results. System-generated queue entries are not counted. Absent on fatal startup results and on surfaces without a command queue.
+     * User-initiated sends still waiting in the command queue or, in a hosted remote session (CLAUDE_CODE_REMOTE), held back before they reach it, when this result was produced. Greater than 0 means at least one more user turn (and result) follows without further input, barring cancellation; 0 means none is pending, or the session is ending (end_session or a shutdown latched mid-turn discards the backlog). Queued sends may coalesce into fewer turns, so this counts pending sends, not remaining results. System-generated queue entries are not counted. Absent on fatal startup results and on surfaces without a command queue.
      */
     queued_turn_count?: number;
     structured_output?: unknown;
@@ -6800,6 +6872,7 @@ export declare type SDKTaskNotificationMessage = {
 
 
 
+
     skip_transcript?: boolean;
     /**
      * True for tasks that are not activity (every skip_transcript task, plus every live-update watcher, requested or auto-started); hosts should exclude them from activity indicators.
@@ -6833,6 +6906,7 @@ export declare type SDKTaskProgressMessage = {
      * A one-line status for the task's row. For a local_agent task it is the model-generated progress summary (only when the agentProgressSummaries option is on); for a backgrounded mcp_task it is the MCP server's own bounded status message, emitted once per change without any option. Render it when present regardless of task type.
      */
     summary?: string;
+
 
 
 
@@ -7110,6 +7184,7 @@ export declare type SDKUserMessage = {
 
 
 
+
     uuid?: UUID;
     /**
      * Content the user pasted into the prompt rather than typed: each entry a string or an array of content blocks. The CLI appends the text of each entry after the typed text, in order, and may wrap it in `<pasted_content>` tags. Blocks other than text are ignored; send images and documents in `message.content`. A list of over 1,000 entries and blocks in all is ignored.
@@ -7197,6 +7272,7 @@ export declare type SDKUserMessageReplay = {
      * The client composed this turn from content the user did not type; the CLI delivers its text as written, with no `@path` file-mention expansion and no slash-command dispatch. On current CLIs the turn-start attachment pass is skipped as a whole: `@server:resource` MCP mentions are not expanded either, and the prompt is sent without the context the CLI normally attaches alongside it (nested `CLAUDE.md` and rules files, skill and tool listings, reminders); the pass the CLI runs between tool calls is unaffected.
      */
     client_composed?: true;
+
 
 
 
@@ -8162,7 +8238,7 @@ export declare interface Settings {
      */
     allowManagedMcpServersOnly?: boolean;
     /**
-     * Claude desktop app only. Where your allow list and deny list apply to MCP servers added in the Claude desktop app. "code" (default): Your allow list also governs MCP servers added in the Claude desktop app, in Code tab sessions and the Artifact pane. "all": Your allow list and your deny list also govern MCP servers added in the Claude desktop app, in every tab (including Chat and Cowork). "off": Your allow list doesn't govern MCP servers added in the Claude desktop app. Read only from managed settings. Any other value counts as `all`. Where sources are merged or mixed, `off` counts as `all`. Leave the key out, or set it only in the managed source that holds your list. `deniedMcpServers` applies in Code tab sessions and the Artifact pane with every value, and in every tab with `all`. MCP servers sent to SSH hosts are not governed by these lists in this release. The Claude Code CLI reads nothing from this key, but written alone in a higher managed source it makes that source lead, and Claude Code skips the managed sources beneath it. Write it only beside the list it scopes.
+     * Claude desktop app only. Where your allow list and deny list apply to MCP servers added in the Claude desktop app. "code" (default): Your allow list also governs MCP servers added in the Claude desktop app, in local Code tab sessions and the Artifact pane. "all": Same as "code". Your allow list and deny list also govern MCP servers in the app's config file (Settings > Developer > Edit config), in every tab (including Chat and Cowork) and when the app sends them to an SSH host. "off": Your allow list doesn't govern MCP servers added in the Claude desktop app. Read only from managed settings. Any other value counts as `all`. Where sources are merged or mixed, `off` counts as `all`. Leave the key out, or set it only in the managed source that holds your list. `deniedMcpServers` applies in local Code tab sessions and the Artifact pane with every value. MCP servers that the app sends to SSH hosts are governed by these lists, and by `strictPluginOnlyCustomization` for MCP, only with `all`, and not by older versions of the app. The Claude Code CLI reads nothing from this key, but written alone in a higher managed source it makes that source lead, and Claude Code skips the managed sources beneath it. Write it only beside the list it scopes.
      */
     desktopMcpServersListScope?: string;
     /**
@@ -10644,7 +10720,7 @@ export declare type SyncHookJSONOutput = {
     reason?: string;
 
 
-    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | UserPromptExpansionHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | PreModelSwitchHookSpecificOutput | PostModelSwitchHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | PostToolBatchHookSpecificOutput | StopHookSpecificOutput | SubagentStopHookSpecificOutput | PermissionDeniedHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput | MessageDisplayHookSpecificOutput;
+    hookSpecificOutput?: PreToolUseHookSpecificOutput | UserPromptSubmitHookSpecificOutput | UserPromptExpansionHookSpecificOutput | SessionStartHookSpecificOutput | SetupHookSpecificOutput | PreModelSwitchHookSpecificOutput | PostModelSwitchHookSpecificOutput | SubagentStartHookSpecificOutput | PostToolUseHookSpecificOutput | PostToolUseFailureHookSpecificOutput | PostToolBatchHookSpecificOutput | StopHookSpecificOutput | SubagentStopHookSpecificOutput | PermissionDeniedHookSpecificOutput | NotificationHookSpecificOutput | PermissionRequestHookSpecificOutput | ElicitationHookSpecificOutput | ElicitationResultHookSpecificOutput | CwdChangedHookSpecificOutput | FileChangedHookSpecificOutput | WorktreeCreateHookSpecificOutput | MessageDisplayHookSpecificOutput | PreSkillShellCommandHookSpecificOutput;
 };
 
 /**

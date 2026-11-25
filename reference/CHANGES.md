@@ -1,22 +1,41 @@
-# SDK reference changes: 0.3.330 → 0.3.331
+# SDK reference changes: 0.3.331 → 0.3.332
 
 ## sdk.d.ts
 
-### Changed (4)
+### Added (3)
 
-- `type ResolveSettingsOptions`
-    - `+` `registryPolicyFingerprint?:()=>{hklm:string|null;hkcu:string|null;}|undefined`
-- `type SDKControlMcpCallRequest`
-    - `+` `soft_error_result?:boolean`
-- `type SDKStartupFailureReason`
-    - `+` `'sideload_flags_disabled'`
-- `interface Settings`
-    - `+` `downloadsMirrorUrl?:string`
+- `type PreSkillShellCommandHookInput`
+    - `hook_event_name:'PreSkillShellCommand'`
+    - `tool_name:string`
+    - `tool_input:{command:string;}`
+    - `tool_use_id:string`
+    - `command_name:string`
+    - `command_source?:string`
+    - `invoked_by:'user'|'claude'|'other'`
+- `type PreSkillShellCommandHookSpecificOutput`
+    - `hookEventName:'PreSkillShellCommand'`
+    - `permissionDecision?:HookPermissionDecision`
+    - `permissionDecisionReason?:string`
+    - `updatedInput?:Record<string,unknown>`
+- `type SDKControlSetPermissionModeResponse`
+    - `mode?:coreTypes.PermissionMode`
+
+### Changed (6)
+
+- `const HOOK_EVENTS`
+    - old: `export declare const HOOK_EVENTS:readonly['PreToolUse','PostToolUse','PostToolUseFailure','PostToolBatch','Notification','UserPromptSubmit','UserPromptExpansion','SessionStart','SessionEnd','Stop','StopFailure','SubagentStart','SubagentStop','PreCompact','PostCompact','PreModelSwitch','PostModelSwi…`
+    - new: `export declare const HOOK_EVENTS:readonly['PreToolUse','PostToolUse','PostToolUseFailure','PostToolBatch','Notification','UserPromptSubmit','UserPromptExpansion','SessionStart','SessionEnd','Stop','StopFailure','SubagentStart','SubagentStop','PreCompact','PostCompact','PreModelSwitch','PostModelSwi…`
+- `type HookEvent`
+    - `+` `'PreSkillShellCommand'`
+- `type HookInput`
+    - `+` `PreSkillShellCommandHookInput`
+- `interface Query`
+    - `~` `setPermissionMode(mode:PermissionMode):Promise<void>` → `setPermissionMode(mode:PermissionMode):Promise<SDKControlSetPermissionModeResponse|undefined>`
+- `type ResolvedSettings`
+    - `~` `machinePolicy?:{didNotLoad:false|Array<'profile'|'registry'|'file'>;}` → `machinePolicy?:{didNotLoad:false|Array<'profile'|'registry'|'file'>;registryPolicyDifferedFromFingerprint?:true;}`
+- `type SyncHookJSONOutput`
+    - `~` `hookSpecificOutput?:PreToolUseHookSpecificOutput|UserPromptSubmitHookSpecificOutput|UserPromptExpansionHookSpecificOutput|SessionStartHookSpecificOutput|SetupH…` → `hookSpecificOutput?:PreToolUseHookSpecificOutput|UserPromptSubmitHookSpecificOutput|UserPromptExpansionHookSpecificOutput|SessionStartHookSpecificOutput|SetupH…`
 
 ## sdk-tools.d.ts
 
-### Changed (1)
-
-- `type ArtifactOutput`
-    - `+` `{artifacts:{title:string;url:string;favicon?:string;updatedAt?:string;rel?:"mine"|"shared";external?:true;role?:"editor"|"commenter"|"reader"|"viewer";outsider…`
-    - `-` `{artifacts:{title:string;url:string;favicon?:string;updatedAt?:string;rel?:"mine"|"shared";external?:true;role?:"editor"|"commenter"|"reader"|"viewer";outsider…`
+_No declaration changes._

@@ -70,6 +70,7 @@ from clawd_code_sdk.models import (
     SDKControlSetMaxThinkingTokensRequest,
     SDKControlSetModelRequest,
     SDKControlSetPermissionModeRequest,
+    SDKControlSetPermissionModeResponse,
     SDKControlSideQuestionRequest,
     SDKControlStopTaskRequest,
     SDKControlUpdateSettingsRequest,
@@ -418,7 +419,9 @@ class ClaudeSDKClient:
         result = await query._send_control_request(request)
         return SDKControlInterruptResponse.model_validate(result) if result else None
 
-    async def set_permission_mode(self, mode: PermissionMode) -> None:
+    async def set_permission_mode(
+        self, mode: PermissionMode
+    ) -> SDKControlSetPermissionModeResponse | None:
         """Change permission mode during conversation (only works with streaming mode).
 
         Args:
@@ -427,10 +430,15 @@ class ClaudeSDKClient:
                 - 'acceptEdits': Auto-accept file edits
                 - 'plan': Plan mode for planning tasks
                 - 'bypassPermissions': Allow all tools (use with caution)
+
+        Returns:
+            The mode now in effect (it can differ from ``mode``), or None if the
+            CLI answered without a payload (before Claude Code 2.1.332).
         """
         query = self._ensure_connected()
         request = SDKControlSetPermissionModeRequest(mode=mode)
-        await query._send_control_request(request)
+        result = await query._send_control_request(request)
+        return SDKControlSetPermissionModeResponse.model_validate(result) if result else None
 
     async def set_model(self, model: str | None = None) -> None:
         """Change the AI model during conversation (only works with streaming mode).

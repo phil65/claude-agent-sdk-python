@@ -28,6 +28,7 @@ HookEvent = Literal[
     "StopFailure",
     "SubagentStop",
     "UserPromptExpansion",
+    "PreSkillShellCommand",
     "PreCompact",
     "PostCompact",
     "Notification",
@@ -459,6 +460,32 @@ class UserPromptExpansionHookInput(BaseHookInput):
     prompt: str
 
 
+class PreSkillShellCommandToolInput(TypedDict):
+    """Tool input of a PreSkillShellCommand hook."""
+
+    command: str
+    """The command as it would run, with arguments filled in."""
+
+
+class PreSkillShellCommandHookInput(BaseHookInput):
+    """Input data for PreSkillShellCommand hook events.
+
+    Fires for each inline shell command of a skill or slash command as it loads.
+    """
+
+    hook_event_name: Literal["PreSkillShellCommand"]
+    tool_name: str
+    """The shell tool that runs the command: Bash or PowerShell."""
+    tool_input: PreSkillShellCommandToolInput
+    tool_use_id: str
+    """Identifies this command. It names no tool call in the transcript."""
+    command_name: str
+    """The skill or command whose text holds the shell command."""
+    command_source: NotRequired[str]
+    invoked_by: Literal["user", "claude", "other"]
+    """Who started the load (user: typed or sent by an SDK host, claude: the Skill tool)."""
+
+
 ModelSwitchCacheTtl = Literal["5m", "1h"]
 ModelSwitchPricing = Literal["configured", "catalog", "default"]
 
@@ -543,6 +570,7 @@ HookInput = (
     | CwdChangedHookInput
     | FileChangedHookInput
     | UserPromptExpansionHookInput
+    | PreSkillShellCommandHookInput
     | PreModelSwitchHookInput
     | PostModelSwitchHookInput
     | DirectoryAddedHookInput
@@ -677,6 +705,15 @@ class UserPromptExpansionHookSpecificOutput(TypedDict):
     additionalContext: NotRequired[str]
 
 
+class PreSkillShellCommandHookSpecificOutput(TypedDict):
+    """Hook-specific output for PreSkillShellCommand events (refuse or rewrite the command)."""
+
+    hookEventName: Literal["PreSkillShellCommand"]
+    permissionDecision: NotRequired[HookPermissionDecision]
+    permissionDecisionReason: NotRequired[str]
+    updatedInput: NotRequired[dict[str, Any]]
+
+
 class StopHookSpecificOutput(TypedDict):
     """Hook-specific output for Stop events."""
 
@@ -731,6 +768,7 @@ HookSpecificOutput = (
     | FileChangedHookSpecificOutput
     | WorktreeCreateHookSpecificOutput
     | UserPromptExpansionHookSpecificOutput
+    | PreSkillShellCommandHookSpecificOutput
     | StopHookSpecificOutput
     | SubagentStopHookSpecificOutput
     | PreModelSwitchHookSpecificOutput

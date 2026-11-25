@@ -14,7 +14,7 @@ from clawd_code_sdk.models import (
     ClaudeAgentOptions as Opts,
     ResultMessage,
     TextBlock,
-    ToolInput,  # noqa: TC001
+    ToolInput,
     ToolUseBlock,
 )
 
@@ -23,7 +23,12 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
     from clawd_code_sdk._internal.transport import Transport
-    from clawd_code_sdk.models import ClaudeAgentOptions, Message, PermissionMode
+    from clawd_code_sdk.models import (
+        ClaudeAgentOptions,
+        Message,
+        PermissionMode,
+        SDKControlSetPermissionModeResponse,
+    )
 
 
 SessionState = Literal[
@@ -208,9 +213,11 @@ class Session:
         """Change the AI model during conversation."""
         await self._client.set_model(model)
 
-    async def set_permission_mode(self, mode: PermissionMode) -> None:
-        """Change permission mode during conversation."""
-        await self._client.set_permission_mode(mode)
+    async def set_permission_mode(
+        self, mode: PermissionMode
+    ) -> SDKControlSetPermissionModeResponse | None:
+        """Change permission mode during conversation (returns the mode now in effect)."""
+        return await self._client.set_permission_mode(mode)
 
     async def set_max_thinking_tokens(self, max_thinking_tokens: int) -> None:
         """Set the maximum number of thinking tokens."""
