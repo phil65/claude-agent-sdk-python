@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -30,6 +31,9 @@ if TYPE_CHECKING:
         SDKControlSetPermissionModeResponse,
     )
 
+
+INTERRUPT_DRAIN_TIMEOUT = 30.0
+"""Seconds ``send()`` waits for an abandoned turn to end after interrupting it."""
 
 SessionState = Literal[
     "created",
@@ -174,12 +178,14 @@ class Session:
         self._last_activity = datetime.now(UTC)
         collected: list[Message] = []
 
+        completed = False
         try:
             await self._client.query(prompt)
             async for message in self._client.receive_response():
                 collected.append(message)
                 yield message
                 if isinstance(message, ResultMessage):
+                    completed = True
                     turn = _extract_turn(collected, message)
                     self._turns.append(turn)
                     self._last_activity = datetime.now(UTC)
@@ -187,6 +193,25 @@ class Session:
         except Exception:
             self._state = "error"
             raise
+        except BaseException:
+            # The consumer broke out (GeneratorExit) or was cancelled: stop the turn
+            # if it is still running, so the next send() starts from a quiet session.
+            if not completed:
+                with contextlib.suppress(Exception):
+                    await asyncio.shield(self._finish_interrupted_turn())
+            self._state = "idle"
+            raise
+
+    async def _finish_interrupted_turn(self) -> None:
+        """Interrupt the running turn and read it to its end (its result message).
+
+        Otherwise the next ``send()`` would receive the rest of this turn.
+        """
+        await self._client.interrupt()
+        async with asyncio.timeout(INTERRUPT_DRAIN_TIMEOUT):
+            async for message in self._client.receive_response():
+                if isinstance(message, ResultMessage):
+                    break
 
     async def send_and_collect(self, prompt: str) -> ConversationTurn:
         """Send a prompt and return the full collected response.
@@ -396,10 +421,9 @@ class SessionManager:
         del self._sessions[session_id]
 
     async def close_all(self) -> None:
-        """Close all sessions. Errors during individual closes are suppressed."""
-        for session in list(self._sessions.values()):
-            with contextlib.suppress(Exception):
-                await session.close()
+        """Close all sessions, concurrently. Errors during individual closes are suppressed."""
+        sessions = list(self._sessions.values())
+        await asyncio.gather(*(s.close() for s in sessions), return_exceptions=True)
         self._sessions.clear()
 
     # ── Aggregate stats ──────────────────────────────────────────

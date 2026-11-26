@@ -856,7 +856,8 @@ IncomingControlRequest = Annotated[
     SDKControlPermissionRequest
     | SDKHookCallbackRequest
     | SDKControlMcpMessageRequest
-    | SDKControlElicitationRequest,
+    | SDKControlElicitationRequest
+    | SDKControlRequestUserDialogRequest,
     Discriminator("subtype"),
 ]
 

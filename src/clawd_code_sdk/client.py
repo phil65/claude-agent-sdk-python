@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import os
 from pathlib import Path
@@ -222,9 +224,17 @@ class ClaudeSDKClient:
         # Use provided custom transport or create subprocess transport
         warn_if_can_use_tool_shadowed(self.options)
         self._query = Query.from_options(self.options, self._custom_transport)
-        await self._query.transport.connect()
-        await self._query.start()
-        await self._initialize()
+        try:
+            await self._query.transport.connect()
+            await self._query.start()
+            await self._initialize()
+        except BaseException:
+            # `async with` never reaches __aexit__ when connect() fails: don't leak the
+            # CLI process and the reader task.
+            with contextlib.suppress(Exception):  # the connect error is the one to see
+                await asyncio.shield(self.disconnect())
+            self._query = None
+            raise
 
     async def _initialize(self) -> None:
         """Send the initialize control request to the CLI."""
@@ -626,7 +636,7 @@ class ClaudeSDKClient:
         await query._send_control_request(request)
 
     async def generate_session_title(
-        self, description: str, *, persist: bool = False
+        self, description: str, *, persist: bool = False, timeout: float | None = 120.0
     ) -> str | None:
         """Generate a session title from ``description`` with the CLI's title model.
 
@@ -634,13 +644,14 @@ class ClaudeSDKClient:
             description: Text to title (the CLI reads its trailing ~1000 characters).
             persist: Store it as the current session's title; a session that has a title
                 already returns that one.
+            timeout: Seconds to wait for the model (None: no limit).
 
         Returns:
             The title, or None when the text is too short to title.
         """
         query = self._ensure_connected()
         request = SDKControlGenerateSessionTitleRequest(description=description, persist=persist)
-        result = await query._send_control_request(request)
+        result = await query._send_control_request(request, timeout=timeout)
         title = (result or {}).get("title")
         return title if isinstance(title, str) and title else None
 
@@ -734,18 +745,26 @@ class ClaudeSDKClient:
         )
         await query._send_control_request(req)
 
-    async def claude_oauth_wait_for_completion(self) -> ClaudeOAuthWaitForCompletionResponse:
+    async def claude_oauth_wait_for_completion(
+        self, *, timeout: float | None = None
+    ) -> ClaudeOAuthWaitForCompletionResponse:
         """Wait for an in-progress Claude OAuth flow to complete.
+
+        Args:
+            timeout: Seconds to wait for the user to finish the browser login
+                (None, the default: no limit).
 
         Returns:
             Account details (email, organization, subscriptionType, etc.).
         """
         query = self._ensure_connected()
         req = SDKControlClaudeOAuthWaitForCompletionRequest()
-        data = await query._send_control_request(req)
+        data = await query._send_control_request(req, timeout=timeout)
         return ClaudeOAuthWaitForCompletionResponse.model_validate(data)
 
-    async def side_question(self, question: str) -> SideQuestionResponse:
+    async def side_question(
+        self, question: str, *, timeout: float | None = 600.0
+    ) -> SideQuestionResponse:
         """Send a side question to the model using the current conversation context.
 
         The model answers the question without it being added to the main
@@ -753,13 +772,14 @@ class ClaudeSDKClient:
 
         Args:
             question: The question to ask the model.
+            timeout: Seconds to wait for the answer (None: no limit).
 
         Returns:
             The model's answer, or None if no context was available.
         """
         query = self._ensure_connected()
         req = SDKControlSideQuestionRequest(question=question)
-        data = await query._send_control_request(req)
+        data = await query._send_control_request(req, timeout=timeout)
         return SideQuestionResponse.model_validate(data)
 
     async def channel_enable(self, server_name: str) -> None:
@@ -907,19 +927,26 @@ class ClaudeSDKClient:
         result = await query._send_control_request(request)
         return SDKControlReadFileResponse.model_validate(result)
 
-    async def call_tool(self, tool: str, arguments: dict[str, Any] | None = None) -> Any:
+    async def call_tool(
+        self,
+        tool: str,
+        arguments: dict[str, Any] | None = None,
+        *,
+        timeout: float | None = 600.0,
+    ) -> Any:
         """Call a tool on the server.
 
         Args:
             tool: The name of the tool to call
             arguments: Optional dictionary of arguments for the tool
+            timeout: Seconds to wait for the tool's result (None: no limit)
 
         Returns:
             The result of the tool call
         """
         query = self._ensure_connected()
         request = SDKControlMcpCallRequest(tool=tool, arguments=arguments)
-        return await query._send_control_request(request)
+        return await query._send_control_request(request, timeout=timeout)
 
     async def get_server_info(self) -> ClaudeCodeServerInfo | None:
         """Get server initialization info including available commands and output styles.

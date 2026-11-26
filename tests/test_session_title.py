@@ -15,7 +15,9 @@ class _TitleQuery:
         self.response = response
         self.requests: list[Any] = []
 
-    async def _send_control_request(self, request: Any) -> dict[str, Any]:
+    async def _send_control_request(
+        self, request: Any, timeout: float | None = 60
+    ) -> dict[str, Any]:
         self.requests.append(request)
         return self.response
 

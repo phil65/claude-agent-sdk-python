@@ -12,11 +12,14 @@ from typing import TYPE_CHECKING, Any, Self, assert_never, cast
 
 import anyenv
 import anyio
+from pydantic import ValidationError
 
 from clawd_code_sdk._errors import (
     ClaudeSDKError,
+    CLIConnectionError,
     ControlRequestError,
     ControlRequestTimeoutError,
+    MessageParseError,
     ProcessError,
     ResultError,
     error_result_text,
@@ -40,6 +43,7 @@ from clawd_code_sdk.models import (
     ToolPermissionContext,
     incoming_control_request_adapter,
 )
+from clawd_code_sdk.models.control import SDKControlRequestUserDialogRequest
 
 
 if TYPE_CHECKING:
@@ -54,7 +58,6 @@ if TYPE_CHECKING:
         HookCallback,
         HookEvent,
         HookMatcher,
-        IncomingControlRequest,
         JSONRPCMessage,
         JSONRPCResponse,
         OnElicitation,
@@ -67,6 +70,8 @@ if TYPE_CHECKING:
     from clawd_code_sdk.models.control import SdkMcpServerManifest
 
 logger = logging.getLogger(__name__)
+
+_warned_control_subtypes: set[str] = set()
 
 MANIFEST_CAPTURE_TIMEOUT = 10.0
 """Seconds an in-process MCP server gets to answer the handshake captured for the CLI."""
@@ -117,7 +122,7 @@ class Query:
     - Initialization handshake
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0917
         self,
         transport: Transport,
         can_use_tool: CanUseTool | None = None,
@@ -163,6 +168,8 @@ class Query:
         self._child_tasks: set[asyncio.Task[Any]] = set()
         self._inflight_requests: dict[str, asyncio.Task[Any]] = {}
         self._closed = False
+        # Set when the message reader ends: later control requests fail with it at once.
+        self._reader_error: Exception | None = None
         # Track first result for proper stream closure with SDK MCP servers
         self._first_result_event = anyio.Event()
         # The last result frame if it had is_error and nothing but the post-turn
@@ -306,8 +313,9 @@ class Query:
                     case {"type": "control_response"} as msg:
                         logger.info("unhandled control message: %s", msg)
                     case {"type": "control_request", "request_id": req_id, "request": request}:
-                        req = incoming_control_request_adapter.validate_python(request)
-                        coro = self._handle_control_request(req_id, req)
+                        # Validated in the handler: a request the SDK can't parse is
+                        # answered with an error instead of ending the reader.
+                        coro = self._handle_control_request(req_id, request)
                         self._spawn_control_request_handler(req_id, coro)
                     case {"type": "control_cancel_request"}:
                         if (cancel_id := message.get("request_id")) and (
@@ -346,26 +354,34 @@ class Query:
                 logger.debug("Replacing ProcessError (exit code %s) with ResultError", e.exit_code)
             else:
                 logger.exception("Fatal error in message reader")
-            # Signal all pending control requests so they fail fast instead of
-            # timing out. This includes an `initialize` still in flight when the
-            # CLI reports an error result during startup (e.g. a refused resume).
-            for request_id, event in list(self.pending_control_responses.items()):
-                if request_id not in self.pending_control_results:
-                    self.pending_control_results[request_id] = pending_error
-                    event.set()
+            # This includes an `initialize` still in flight when the CLI reports
+            # an error result during startup (e.g. a refused resume).
+            self._fail_control_requests(pending_error)
             # Put the typed error in the stream so iterators re-raise it as-is
             error_msg = {"type": "error", "error": str(pending_error), "exception": pending_error}
             await self._message_send.send(error_msg)
         finally:
+            # Also after a clean end of stdout: nothing will answer anymore.
+            self._fail_control_requests(CLIConnectionError("Claude Code CLI output ended"))
             # Always signal end of stream
             await self._message_send.send({"type": "end"})
 
-    async def _handle_control_request(
-        self,
-        request_id: str,
-        request_data: IncomingControlRequest,
-    ) -> None:
+    def _fail_control_requests(self, error: Exception) -> None:
+        """Fail pending and later control requests fast instead of letting them time out."""
+        if self._reader_error is None:
+            self._reader_error = error
+        for request_id, event in list(self.pending_control_responses.items()):
+            if request_id not in self.pending_control_results:
+                self.pending_control_results[request_id] = error
+                event.set()
+
+    async def _handle_control_request(self, request_id: str, request: Any) -> None:
         """Handle incoming control request from CLI."""
+        try:
+            request_data = incoming_control_request_adapter.validate_python(request)
+        except ValidationError as e:
+            await self._reject_control_request(request_id, request, e)
+            return
         response_data: dict[str, Any] = {}
         try:
             match request_data:
@@ -382,6 +398,11 @@ class Query:
                     response_data = {"mcp_response": mcp_resp if mcp_resp is not None else ack}
                 case SDKControlElicitationRequest() as req:
                     response_data = await self._handle_elicitation_request(req)
+                case SDKControlRequestUserDialogRequest(dialog_kind=kind):
+                    # The SDK declares no supportedDialogKinds, so the CLI shouldn't send
+                    # one. The spec: never answer an undeclared kind (the CLI withdraws it).
+                    logger.warning("Ignoring request_user_dialog %r: no dialog support", kind)
+                    return
                 case _ as unreachable:
                     assert_never(unreachable)
             dct = ControlResponse(subtype="success", request_id=request_id, response=response_data)
@@ -396,6 +417,23 @@ class Query:
             response = ControlErrorResponse(subtype="error", request_id=request_id, error=str(e))
             error_response = SDKControlResponse(type="control_response", response=response)
             await self.write_json(error_response)
+
+    async def _reject_control_request(
+        self, request_id: str, request: Any, error: ValidationError
+    ) -> None:
+        """Answer a control request the SDK doesn't model (or whose shape changed)."""
+        from clawd_code_sdk.client import strict_messages
+
+        subtype = request.get("subtype") if isinstance(request, dict) else None
+        text = f"unsupported control request: {subtype}"
+        response = ControlErrorResponse(subtype="error", request_id=request_id, error=text)
+        await self.write_json(SDKControlResponse(type="control_response", response=response))
+        if strict_messages():
+            exc = MessageParseError(f"Invalid control request {subtype!r}: {error}", request)
+            await self._message_send.send({"type": "error", "error": str(exc), "exception": exc})
+        elif str(subtype) not in _warned_control_subtypes:
+            _warned_control_subtypes.add(str(subtype))
+            logger.warning("Answered an unsupported control request %r: %s", subtype, error)
 
     async def _handle_permission_request(
         self, req: SDKControlPermissionRequest
@@ -442,14 +480,19 @@ class Query:
         return {k.rstrip("_"): v for k, v in hook_output.items()}
 
     async def _send_control_request(
-        self, request: OutgoingControlRequest, timeout: float = 60.0
+        self, request: OutgoingControlRequest, timeout: float | None = 60.0
     ) -> dict[str, Any]:
         """Send control request to CLI and wait for response.
 
+        A request that times out or whose caller is cancelled is withdrawn with a
+        ``control_cancel_request``, so the CLI can stop the work.
+
         Args:
             request: The control request to send
-            timeout: Timeout in seconds to wait for response (default 60s)
+            timeout: Seconds to wait for the response (default 60s; None waits forever)
         """
+        if self._reader_error is not None:
+            raise self._reader_error
         # Generate unique request ID
         self._request_counter += 1
         request_id = f"req_{self._request_counter}_{os.urandom(4).hex()}"
@@ -462,27 +505,33 @@ class Query:
             "request_id": request_id,
             "request": request.model_dump(by_alias=True, exclude_none=True),
         }
-        await self.write_json(control_request)
-        # Wait for response
+        sent = answered = False
         try:
+            await self.write_json(control_request)
+            sent = True
             with anyio.fail_after(timeout):
                 await event.wait()
-
-            result = self.pending_control_results.pop(request_id)
-            self.pending_control_responses.pop(request_id, None)
-
+            answered = True
+            result = self.pending_control_results[request_id]
             if isinstance(result, Exception):
                 raise result
-
             response_data = result.get("response", {})
             return response_data if isinstance(response_data, dict) else {}
         except TimeoutError as e:
-            self.pending_control_responses.pop(request_id, None)
-            self.pending_control_results.pop(request_id, None)
             subtype = request.subtype
             raise ControlRequestTimeoutError(
                 f"Control request timeout: {subtype}", subtype=subtype
             ) from e
+        finally:
+            self.pending_control_responses.pop(request_id, None)
+            self.pending_control_results.pop(request_id, None)
+            if sent and not answered and self._reader_error is None and not self._closed:
+                self.spawn_task(self._withdraw_control_request(request_id))
+
+    async def _withdraw_control_request(self, request_id: str) -> None:
+        """Tell the CLI we no longer wait for ``request_id`` (best effort, no reply)."""
+        with suppress(Exception):
+            await self.write_json({"type": "control_cancel_request", "request_id": request_id})
 
     async def _handle_sdk_mcp_request(
         self, server_name: str, message: JSONRPCMessage
