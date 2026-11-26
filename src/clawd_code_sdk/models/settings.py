@@ -150,7 +150,7 @@ class Env(ClaudeCodeBaseModel):
         None, alias="CLAUDE_AGENT_SDK_MCP_NO_PREFIX"
     )
     """
-    Skip 'mcp__<server>__' prefix on MCP tool names in Agent SDK
+    Skip `mcp__<server>__` prefix on MCP tool names in Agent SDK
     """
     claude_autocompact_pct_override: str | None = Field(
         None, alias="CLAUDE_AUTOCOMPACT_PCT_OVERRIDE"
@@ -2423,7 +2423,7 @@ class ClaudeCodeSettings(ClaudeCodeBaseModel):
     """
     auto_memory_directory: str | None = Field(None, alias="autoMemoryDirectory", min_length=1)
     """
-    Custom directory path for auto-memory storage. Supports ~/ prefix for home-directory expansion. Ignored if set in checked-in project settings (.claude/settings.json) for security. Defaults to ~/.claude/projects/<sanitized-cwd>/memory/ when unset. See https://code.claude.com/docs/en/memory
+    Custom directory path for auto-memory storage. Supports ~/ prefix for home-directory expansion. Ignored if set in checked-in project settings (.claude/settings.json) for security. Defaults to `~/.claude/projects/<sanitized-cwd>/memory/` when unset. See https://code.claude.com/docs/en/memory
     """
     auto_mode: AutoMode | None = Field(None, alias="autoMode")
     """

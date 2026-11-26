@@ -1000,7 +1000,7 @@ class ClaudeContextCollapseCommitEntry(ClaudeStorageModel):
     summary_uuid: str
     """The summary placeholder's uuid."""
     summary_content: str
-    """Full <collapsed id="...">text</collapsed> string for the placeholder."""
+    """Full `<collapsed id="...">text</collapsed>` string for the placeholder."""
     summary: str
     """Plain summary text."""
     first_archived_uuid: str

@@ -76,6 +76,37 @@ def download_schema() -> None:
     print(f"  Downloaded to {TEMP_SCHEMA}")
 
 
+# A word containing a `<placeholder>` (like `~/.claude/projects/<sanitized-cwd>/`).
+_PLACEHOLDER_WORD = re.compile(r"(?<![`\w])[^\s`]*<[A-Za-z][\w-]*>[^\s`]*")
+
+
+def _quote_placeholders(text: str) -> str:
+    """Wrap words with `<placeholder>`s into code spans.
+
+    Rendered as Markdown (docs), a bare `<name>` is an HTML tag: the text disappears,
+    `<title>` even swallows the rest of the page.
+    """
+
+    def quote(match: re.Match[str]) -> str:
+        word = match.group().strip("'\"")  # quotes are replaced by the code span
+        core = word.rstrip(".,;:)")
+        return f"`{core}`{word[len(core) :]}"
+
+    return _PLACEHOLDER_WORD.sub(quote, text)
+
+
+def _quote_descriptions(node: object) -> None:
+    """Apply `_quote_placeholders` to all descriptions of given schema (in place)."""
+    if isinstance(node, dict):
+        if isinstance(desc := node.get("description"), str):
+            node["description"] = _quote_placeholders(desc)
+        for value in node.values():
+            _quote_descriptions(value)
+    elif isinstance(node, list):
+        for value in node:
+            _quote_descriptions(value)
+
+
 def preprocess_schema() -> None:
     """Add title fields to unnamed anyOf/oneOf variants for better class names.
 
@@ -107,6 +138,7 @@ def preprocess_schema() -> None:
                 if req:
                     item["title"] = f"{parent_name}By{_to_pascal(req[0])}"
                     titled_count += 1
+    _quote_descriptions(schema)
 
     with Path(TEMP_SCHEMA_TITLED).open("w") as f:
         json.dump(schema, f, indent=2)

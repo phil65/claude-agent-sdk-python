@@ -1,6 +1,6 @@
 """Session listing implementation.
 
-Scans ~/.claude/projects/<sanitized-cwd>/ for .jsonl session files and
+Scans `~/.claude/projects/<sanitized-cwd>/` for .jsonl session files and
 extracts metadata from stat + head/tail reads without full JSONL parsing.
 """
 

@@ -312,7 +312,7 @@ class ToolSearchInput(TypedDict):
     """Input for the ToolSearch tool. Searches for and selects tools by name or query."""
 
     query: str
-    """Search query or 'select:<tool_name>' to select a specific tool."""
+    """Search query or `select:<tool_name>` to select a specific tool."""
     max_results: NotRequired[int]
     """Maximum number of tool references to return."""
 
@@ -517,7 +517,7 @@ class ProjectsInput(TypedDict):
     """project_read/project_write/project_delete: doc path.
 
     project_write: an existing path is replaced in place; a new bare filename (no "/") is namespaced
-    to "claude/<name>". project_memory_read: memory file path as listed by project_memory_list.
+    to `claude/<name>`. project_memory_read: memory file path as listed by project_memory_list.
     """
     content: NotRequired[str]
     """project_write: inline doc text.
@@ -908,9 +908,9 @@ class ArtifactInput(TypedDict):
     """Path to the .html file to render.
 
     Required to publish (the default action). Use a short, distinctive basename — it is the last-
-    resort title when the HTML has no <title> and no `title` parameter is given. For 'upload_asset',
-    the local image, video, PDF, font, stylesheet (CSS), script (JS), or text (CSV, Markdown, JSON,
-    plain text) file to upload.
+    resort title when the HTML has no `<title>` and no `title` parameter is given. For
+    'upload_asset', the local image, video, PDF, font, stylesheet (CSS), script (JS), or text (CSV,
+    Markdown, JSON, plain text) file to upload.
     """
     favicon: NotRequired[str]
     """Deprecated; omit it. Use `icon`."""
@@ -937,8 +937,8 @@ class ArtifactInput(TypedDict):
     """Title for the artifact — the name shown in the browser tab and gallery.
 
     A short, distinctive noun-phrase name — not a generic label, a summary, or a name with an
-    appended explainer. Prefer a <title> tag at the top of the HTML itself; this parameter fills in
-    only when the file lacks one in the first 8KB of the file, and never overrides the tag. HTML
+    appended explainer. Prefer a `<title>` tag at the top of the HTML itself; this parameter fills
+    in only when the file lacks one in the first 8KB of the file, and never overrides the tag. HTML
     publishes only — Markdown pages keep their filename identity. Content always comes from
     file_path — there is no inline content parameter.
     """
