@@ -1,9 +1,10 @@
 name: Build documentation
 
-# Manual only for now: `mknodes build` (4.4.1) fails on this repo. It derives the package
-# from the GitHub repo name (claude-agent-sdk-python, not clawd_code_sdk), and its social-link
-# icon lookup raises IndexError on this project's URLs. GitHub Pages is not enabled yet either.
-# Restore the push trigger once both work.
+# Manual only for now. The mknodes bugs which blocked this repo are fixed in mknodes 4.5.0
+# (package from [project.name] / uv_build module-name, robust social-link icons), but the
+# Zensical build still fails: the search index field of ArtifactInput.file_path (huge
+# docstring in models/input_types.py) exceeds Zensical's 65536 token positions limit.
+# GitHub Pages is not enabled yet either. Restore the push trigger once both are solved.
 on:
   workflow_dispatch:
 
