@@ -1,7 +1,5 @@
 """E2E test: parse all local Claude Code JSONL session files."""
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk.storage.helpers import get_claude_projects_dir, read_session

@@ -1,7 +1,5 @@
 """SDK control protocol types."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict, assert_never
 
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter

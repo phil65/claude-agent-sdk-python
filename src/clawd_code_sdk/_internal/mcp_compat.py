@@ -19,8 +19,6 @@ genuinely differ live here:
 Nothing outside this module may branch on the mcp version.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 import weakref
 

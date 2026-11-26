@@ -1,7 +1,5 @@
 """Tests for Claude SDK transport layer."""
 
-from __future__ import annotations
-
 from contextlib import asynccontextmanager
 import json
 import os

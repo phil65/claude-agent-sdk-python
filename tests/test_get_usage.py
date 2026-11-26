@@ -1,7 +1,5 @@
 """The get_usage control response (real response shape, trimmed)."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from clawd_code_sdk.models import SDKControlGetUsageResponse

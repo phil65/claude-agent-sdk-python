@@ -1,7 +1,5 @@
 """Tests for types and wire mappings added when syncing to @anthropic-ai/claude-agent-sdk 0.3.x."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import pytest

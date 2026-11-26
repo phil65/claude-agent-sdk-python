@@ -1,7 +1,5 @@
 """Tests for ClaudeSDKClient streaming functionality and query() with async iterables."""
 
-from __future__ import annotations
-
 import asyncio
 import json
 from pathlib import Path

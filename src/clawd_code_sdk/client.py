@@ -1,7 +1,5 @@
 """Claude SDK Client for interacting with Claude Code."""
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 import logging

@@ -1,7 +1,5 @@
 """The CLI version check reads the version from initialize / system init, no `claude -v`."""
 
-from __future__ import annotations
-
 import logging
 import stat
 import sys

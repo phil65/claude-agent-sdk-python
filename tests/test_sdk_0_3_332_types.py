@@ -1,7 +1,5 @@
 """Tests for the additions of @anthropic-ai/claude-agent-sdk 0.3.332 / Claude Code 2.1.332."""
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 

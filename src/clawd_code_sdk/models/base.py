@@ -1,7 +1,5 @@
 """Base type aliases, literals, and thinking configuration types."""
 
-from __future__ import annotations
-
 import sys
 from typing import Literal
 

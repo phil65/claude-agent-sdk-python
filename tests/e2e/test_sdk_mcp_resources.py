@@ -3,8 +3,6 @@
 Tests whether MCP resources registered on SDK servers can be listed and read.
 """
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk import (

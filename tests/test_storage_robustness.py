@@ -1,7 +1,5 @@
 """Transcript loaders skip non-object JSON lines; GC pausing nests across threads."""
 
-from __future__ import annotations
-
 import gc
 import threading
 from typing import TYPE_CHECKING

@@ -3,8 +3,6 @@
 Tests whether MCP resources can be listed and read through external MCP servers.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 import sys
 

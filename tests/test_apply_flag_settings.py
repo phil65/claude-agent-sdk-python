@@ -1,7 +1,5 @@
 """The apply_flag_settings control request sends only the settings that were set."""
 
-from __future__ import annotations
-
 from typing import Any, cast
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient

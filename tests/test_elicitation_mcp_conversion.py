@@ -1,7 +1,5 @@
 """SDKControlElicitationRequest <-> mcp elicitation params on mcp 1.x and 2.x."""
 
-from __future__ import annotations
-
 from clawd_code_sdk.models import SDKControlElicitationRequest
 
 

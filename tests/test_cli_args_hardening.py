@@ -1,7 +1,5 @@
 """CLI argument and CLI discovery hardening ported from the upstream Python SDK."""
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 from unittest.mock import patch

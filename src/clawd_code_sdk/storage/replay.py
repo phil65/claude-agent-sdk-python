@@ -49,8 +49,6 @@ Example::
                 print(f"User: {text}")
 """
 
-from __future__ import annotations
-
 import json as _json
 from typing import TYPE_CHECKING, assert_never
 

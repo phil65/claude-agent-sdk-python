@@ -5,8 +5,6 @@ close() scope cancelled the host task, surfacing as a stray CancelledError
 after close() returned.
 """
 
-from __future__ import annotations
-
 import asyncio
 import stat
 import sys

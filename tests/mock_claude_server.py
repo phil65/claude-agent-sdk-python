@@ -4,8 +4,6 @@ Reads JSON-RPC messages from stdin, handles the initialize control request,
 validates the user message, and emits a success result on stdout.
 """
 
-from __future__ import annotations
-
 import json
 import sys
 

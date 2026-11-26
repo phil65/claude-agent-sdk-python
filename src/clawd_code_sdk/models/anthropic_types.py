@@ -5,8 +5,6 @@ that can appear in tool results from the Anthropic SDK. These types are
 used to provide proper typing for ToolResultBlock.content.
 """
 
-from __future__ import annotations
-
 import functools
 from typing import Annotated
 

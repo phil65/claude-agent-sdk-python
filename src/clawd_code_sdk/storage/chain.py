@@ -16,8 +16,6 @@ than the walk. The ``raw`` functions walk the parsed JSON instead (as upstream d
 and :func:`validate_chain_entries` types only the entries actually needed.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 import anyenv

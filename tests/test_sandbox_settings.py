@@ -1,7 +1,5 @@
 """Sandbox + settings merge fails closed (upstream #1426)."""
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING
 

@@ -25,8 +25,6 @@ dropped, and server-to-client requests (roots, sampling, elicitation) are
 refused with "method not found".
 """
 
-from __future__ import annotations
-
 import asyncio
 from contextlib import suppress
 import logging

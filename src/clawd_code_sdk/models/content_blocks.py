@@ -5,8 +5,6 @@ messages) and in persisted JSONL session transcripts.  A single set of models
 therefore serves both purposes, avoiding a redundant conversion layer.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypeIs, assert_never, cast, get_args
 

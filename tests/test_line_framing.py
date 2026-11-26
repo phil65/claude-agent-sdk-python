@@ -4,8 +4,6 @@ anyio's TextReceiveStream yields chunks, not lines. Stripping chunks used to
 drop whitespace wherever a read boundary fell inside a JSON string value.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

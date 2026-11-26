@@ -1,7 +1,5 @@
 """End-to-end tests for hook callbacks with real Claude API calls."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import pytest

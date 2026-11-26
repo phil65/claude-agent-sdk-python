@@ -1,7 +1,5 @@
 """End-to-end tests for tool permission callbacks with real Claude API calls."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import uuid

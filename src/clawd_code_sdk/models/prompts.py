@@ -1,7 +1,5 @@
 """Content blocks, message types, and stream events."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Literal, cast
 

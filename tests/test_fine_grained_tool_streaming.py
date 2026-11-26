@@ -1,7 +1,5 @@
 """Fine-grained tool streaming: when the SDK sets CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING."""
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions

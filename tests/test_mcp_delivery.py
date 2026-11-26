@@ -1,7 +1,5 @@
 """MCP servers sent in the initialize request (`mcp_servers_delivery="initialize"`)."""
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING, Any
 

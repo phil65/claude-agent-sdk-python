@@ -10,8 +10,6 @@ replays, reconnection) are synthesized into the full event sequence
 (message_start → content_block_start → delta → stop → message_delta → message_stop).
 """
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING, assert_never
 

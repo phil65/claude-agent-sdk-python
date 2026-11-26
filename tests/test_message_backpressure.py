@@ -1,7 +1,5 @@
 """The message stream between reader and consumer is bounded (back-pressure)."""
 
-from __future__ import annotations
-
 import asyncio
 import json
 from typing import TYPE_CHECKING, Any

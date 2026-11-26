@@ -1,7 +1,5 @@
 """CanUseToolShadowedWarning: on_permission set, but options auto-approve before it runs."""
 
-from __future__ import annotations
-
 from typing import Any
 import warnings
 

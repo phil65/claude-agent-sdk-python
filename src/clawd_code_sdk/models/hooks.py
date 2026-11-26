@@ -1,7 +1,5 @@
 """Hook system types: inputs, outputs, matchers, and callbacks."""
 
-from __future__ import annotations
-
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import field
 from typing import Any, Literal, NotRequired, TypedDict

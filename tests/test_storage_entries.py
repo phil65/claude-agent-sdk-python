@@ -1,7 +1,5 @@
 """Entry types and fields of current Claude Code transcripts load into typed models."""
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING, Any
 

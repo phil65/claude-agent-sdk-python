@@ -1,7 +1,5 @@
 """Tests for message parser — error wrapping."""
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk._errors import MessageParseError

@@ -1,7 +1,5 @@
 """Unknown CLI message types: skipped with a warning by default, raised in strict mode."""
 
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING, Any, cast
 

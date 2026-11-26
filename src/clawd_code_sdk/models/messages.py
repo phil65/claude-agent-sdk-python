@@ -1,7 +1,5 @@
 """Content blocks, message types, and stream events."""
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 import re
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NotRequired, TypedDict

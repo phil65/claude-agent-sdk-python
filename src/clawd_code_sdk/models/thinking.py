@@ -1,7 +1,5 @@
 """Thinking configuration models."""
 
-from __future__ import annotations
-
 from typing import Literal
 
 from clawd_code_sdk.models.base import ClaudeCodeBaseModel

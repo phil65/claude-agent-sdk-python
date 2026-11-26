@@ -1,6 +1,5 @@
 """Type definitions for Claude SDK."""
 
-from __future__ import annotations
 from collections.abc import Callable
 
 from mcp.types import ElicitResult

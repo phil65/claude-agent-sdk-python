@@ -1,7 +1,5 @@
 """Control protocol robustness: bad CLI requests, dead reader, cancelled requests."""
 
-from __future__ import annotations
-
 import asyncio
 import json
 from typing import TYPE_CHECKING, Any

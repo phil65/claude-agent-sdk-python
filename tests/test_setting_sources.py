@@ -1,7 +1,5 @@
 """How setting_sources reaches the CLI (upstream #822)."""
 
-from __future__ import annotations
-
 from clawd_code_sdk import ClaudeAgentOptions
 from clawd_code_sdk._internal.transport.subprocess_utils import to_cli_args
 

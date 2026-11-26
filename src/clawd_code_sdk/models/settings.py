@@ -2,8 +2,6 @@
 #   filename:  claude-code-settings-titled.json
 #   timestamp: 2026-05-08T18:36:22+00:00
 
-from __future__ import annotations
-
 from typing import Any, Literal
 
 from pydantic import AnyUrl, ConfigDict, Field, RootModel

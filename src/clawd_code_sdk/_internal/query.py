@@ -1,7 +1,5 @@
 """Query class for handling bidirectional control protocol."""
 
-from __future__ import annotations
-
 import asyncio
 from collections import deque
 from contextlib import suppress

@@ -1,7 +1,5 @@
 """Tests for tool permission callbacks and hook callbacks."""
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING, Any
 

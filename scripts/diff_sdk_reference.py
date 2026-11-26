@@ -18,8 +18,6 @@ Usage:
     python scripts/diff_sdk_reference.py --git-rev HEAD -o reference/CHANGES.md
 """
 
-from __future__ import annotations
-
 import argparse
 from dataclasses import dataclass, field
 from pathlib import Path

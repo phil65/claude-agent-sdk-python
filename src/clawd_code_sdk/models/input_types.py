@@ -4,8 +4,6 @@ These TypedDicts define the input schemas for all built-in Claude Code tools.
 They represent the JSON wire format and can be used for type-safe tool interactions.
 """
 
-from __future__ import annotations
-
 from typing import Any, Literal, NotRequired, TypedDict
 
 from pydantic import ConfigDict, with_config

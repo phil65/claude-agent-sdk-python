@@ -1,7 +1,5 @@
 """End-to-end tests for hook callbacks with real Claude API calls."""
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, ThinkingConfigAdaptive

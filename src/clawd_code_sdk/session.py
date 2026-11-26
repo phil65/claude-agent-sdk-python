@@ -1,7 +1,5 @@
 """Session manager for managing multiple Claude SDK client sessions."""
 
-from __future__ import annotations
-
 import asyncio
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime

@@ -13,8 +13,6 @@ Key features:
 See ARCHITECTURE.md for detailed documentation of the storage format.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from functools import cache
 from typing import TYPE_CHECKING, Annotated, Any, Literal, get_args, get_origin

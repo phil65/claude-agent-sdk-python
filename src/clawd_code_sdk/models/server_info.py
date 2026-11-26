@@ -1,7 +1,5 @@
 """Pydantic models for Claude Code server info structures."""
 
-from __future__ import annotations
-
 from typing import Any, Literal
 
 from anthropic.types import Model

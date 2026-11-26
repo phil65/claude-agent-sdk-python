@@ -1,7 +1,5 @@
 """Minimal MCP server that returns image content for wire-format testing."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import anyio

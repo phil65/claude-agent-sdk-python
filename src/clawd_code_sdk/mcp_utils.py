@@ -5,8 +5,6 @@ them to the CLI through mcp's own in-memory transport (see
 ``clawd_code_sdk._internal.sdk_mcp_bridge``), which works on mcp 1.x and 2.x.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Any, assert_never

@@ -1,7 +1,5 @@
 """A refused resume / error result surfaces as ResultError (upstream #1198/#1205)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 import anyio

@@ -1,7 +1,5 @@
 """Steering a running query: uuid-stamped messages, lifecycle frames, cost per query."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any, cast
 
 from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient

@@ -4,8 +4,6 @@ Tests whether content blocks from an external MCP server
 (FastMCP stdio) are correctly received through the Claude Code CLI.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 import sys

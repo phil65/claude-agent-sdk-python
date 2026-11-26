@@ -1,7 +1,5 @@
 """Launch flags and initialize request fields that follow the upstream SDK (0.3.331)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 from clawd_code_sdk import ClaudeAgentOptions, create_sdk_mcp_server, tool

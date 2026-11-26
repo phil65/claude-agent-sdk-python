@@ -16,8 +16,6 @@ tail scan window, the CLI absorbs it into its cache and re-appends the SDK
 value — not the stale CLI value.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import errno

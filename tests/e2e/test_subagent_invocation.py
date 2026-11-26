@@ -9,8 +9,6 @@ Background subagents emit task_started, launch asynchronously, and the main agen
 uses TaskOutput to retrieve results.
 """
 
-from __future__ import annotations
-
 import pytest
 
 from clawd_code_sdk import (

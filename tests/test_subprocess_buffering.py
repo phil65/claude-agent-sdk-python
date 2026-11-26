@@ -1,7 +1,5 @@
 """Tests for subprocess transport buffering edge cases."""
 
-from __future__ import annotations
-
 import json
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock

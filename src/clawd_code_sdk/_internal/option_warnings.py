@@ -1,7 +1,5 @@
 """Advisory warnings about option combinations (upstream #1081)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 import warnings
 

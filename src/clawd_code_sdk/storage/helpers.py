@@ -3,8 +3,6 @@
 See ARCHITECTURE.md for detailed documentation of the storage format.
 """
 
-from __future__ import annotations
-
 from contextlib import contextmanager
 import functools
 import gc

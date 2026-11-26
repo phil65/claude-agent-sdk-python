@@ -1,7 +1,5 @@
 """Content blocks, message types, and stream events."""
 
-from __future__ import annotations
-
 from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -9,8 +9,6 @@ The shapes are derived from the ``ToolOutputSchemas`` type definitions in the
 ``@anthropic-ai/claude-agent-sdk`` npm package (auto-generated from JSON Schema).
 """
 
-from __future__ import annotations
-
 from typing import Any, Literal, NotRequired, TypedDict, is_typeddict
 
 from pydantic import ConfigDict, with_config

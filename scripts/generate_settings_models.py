@@ -12,8 +12,6 @@ Usage:
     uv run python scripts/generate_settings_models.py
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 import re

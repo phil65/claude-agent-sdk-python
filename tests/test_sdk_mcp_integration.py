@@ -5,8 +5,6 @@ messages routed by ``Query._handle_sdk_mcp_request`` into the in-memory MCP
 bridge. They therefore run unchanged on mcp 1.x and 2.x.
 """
 
-from __future__ import annotations
-
 import base64
 from typing import TYPE_CHECKING, Any
 

@@ -1,7 +1,5 @@
 """Parsing of every Messages API content block type in assistant and user messages."""
 
-from __future__ import annotations
-
 from typing import Any, get_args
 
 from anthropic.types.beta import BetaContentBlock

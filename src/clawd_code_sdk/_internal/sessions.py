@@ -4,8 +4,6 @@ Scans `~/.claude/projects/<sanitized-cwd>/` for .jsonl session files and
 extracts metadata from stat + head/tail reads without full JSONL parsing.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 import os

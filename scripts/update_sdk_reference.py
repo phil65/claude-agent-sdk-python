@@ -18,8 +18,6 @@ fields) against the previous reference files is printed and written to
 reference/CHANGES.md. See scripts/diff_sdk_reference.py.
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path

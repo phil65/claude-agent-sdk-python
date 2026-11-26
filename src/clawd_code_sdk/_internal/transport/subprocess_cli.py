@@ -1,7 +1,5 @@
 """Subprocess transport implementation using Claude Code CLI."""
 
-from __future__ import annotations
-
 import asyncio
 import atexit
 from collections import deque

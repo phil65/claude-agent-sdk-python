@@ -7,8 +7,6 @@ Usage:
     uv run python scripts/capture_messages.py [output_path]
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 import sys

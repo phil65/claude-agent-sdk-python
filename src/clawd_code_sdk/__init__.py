@@ -1,7 +1,5 @@
 """Claude SDK for Python."""
 
-from __future__ import annotations
-
 from ._errors import (
     APIError,
     AuthenticationError,

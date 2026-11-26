@@ -8,8 +8,6 @@ Usage:
        uv run python scripts/benchmark_parsing.py /tmp/recorded_messages.jsonl
 """
 
-from __future__ import annotations
-
 import contextlib
 import json
 from pathlib import Path
