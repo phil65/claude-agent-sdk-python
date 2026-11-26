@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal, Self, cast, get_args
 from uuid import uuid4
 
 import anyenv
+import anyio
 from pydantic import ValidationError
 
 from clawd_code_sdk._errors import CLIConnectionError, MessageParseError
@@ -231,8 +232,9 @@ class ClaudeSDKClient:
         except BaseException:
             # `async with` never reaches __aexit__ when connect() fails: don't leak the
             # CLI process and the reader task.
-            with contextlib.suppress(Exception):  # the connect error is the one to see
-                await asyncio.shield(self.disconnect())
+            # Shielded: an anyio scope that cancelled connect() stays cancelled.
+            with anyio.CancelScope(shield=True), contextlib.suppress(Exception):
+                await self.disconnect()  # the connect error is the one to see
             self._query = None
             raise
 

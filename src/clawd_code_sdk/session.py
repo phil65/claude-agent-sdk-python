@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+import logging
 from typing import TYPE_CHECKING, Any, Literal, Self
 import uuid
+
+import anyio
 
 from clawd_code_sdk.client import ClaudeSDKClient
 from clawd_code_sdk.models import (
@@ -31,6 +33,8 @@ if TYPE_CHECKING:
         SDKControlSetPermissionModeResponse,
     )
 
+
+logger = logging.getLogger(__name__)
 
 INTERRUPT_DRAIN_TIMEOUT = 30.0
 """Seconds ``send()`` waits for an abandoned turn to end after interrupting it."""
@@ -179,16 +183,22 @@ class Session:
         collected: list[Message] = []
 
         completed = False
+        sent = False
         try:
-            await self._client.query(prompt)
+            # Shielded (anyio scopes): once the write starts, the prompt is sent, so
+            # `sent` tells whether a turn may be running.
+            with anyio.CancelScope(shield=True):
+                await self._client.query(prompt)
+            sent = True
             async for message in self._client.receive_response():
                 collected.append(message)
-                yield message
                 if isinstance(message, ResultMessage):
+                    # Before the yield: a consumer stopping at the result ends a full turn.
                     completed = True
                     turn = _extract_turn(collected, message)
                     self._turns.append(turn)
                     self._last_activity = datetime.now(UTC)
+                yield message
             self._state = "idle"
         except Exception:
             self._state = "error"
@@ -196,19 +206,29 @@ class Session:
         except BaseException:
             # The consumer broke out (GeneratorExit) or was cancelled: stop the turn
             # if it is still running, so the next send() starts from a quiet session.
-            if not completed:
-                with contextlib.suppress(Exception):
-                    await asyncio.shield(self._finish_interrupted_turn())
-            self._state = "idle"
+            if completed or not sent:
+                self._state = "idle"
+            else:
+                self._state = "error"  # unless the turn is wound down below
+                with anyio.CancelScope(shield=True):
+                    try:
+                        await self._finish_interrupted_turn()
+                    except Exception:
+                        logger.warning("Could not stop the interrupted turn", exc_info=True)
+                    else:
+                        self._state = "idle"
             raise
 
     async def _finish_interrupted_turn(self) -> None:
         """Interrupt the running turn and read it to its end (its result message).
 
         Otherwise the next ``send()`` would receive the rest of this turn.
+
+        Raises:
+            TimeoutError: The turn didn't end within ``INTERRUPT_DRAIN_TIMEOUT``.
         """
         await self._client.interrupt()
-        async with asyncio.timeout(INTERRUPT_DRAIN_TIMEOUT):
+        with anyio.fail_after(INTERRUPT_DRAIN_TIMEOUT):
             async for message in self._client.receive_response():
                 if isinstance(message, ResultMessage):
                     break

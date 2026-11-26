@@ -245,3 +245,112 @@ async def test_session_send_break_returns_to_idle():
     async for _ in stream:
         break
     await stream.aclose()
+
+
+class _TurnClient:
+    """A fake client whose turn ends with a result message (or runs until interrupted)."""
+
+    def __init__(self, *, endless: bool = False, slow_query: bool = False) -> None:
+        from clawd_code_sdk.models import message_adapter
+
+        from .test_session import RESULT_MSG
+
+        self.result = message_adapter.validate_python(RESULT_MSG)
+        self.endless = endless
+        self.slow_query = slow_query
+        self.interrupts = 0
+        self.interrupt_error: BaseException | None = None
+        self.options = type("Options", (), {"model": None, "cwd": None})()
+
+    async def query(self, prompt: str) -> None:
+        if self.slow_query:
+            await asyncio.sleep(10)
+
+    async def receive_response(self) -> AsyncIterator[Any]:
+        if self.endless:
+            while not self.interrupts:
+                yield ASSISTANT
+                await asyncio.sleep(0.01)
+        yield self.result
+
+    async def interrupt(self) -> None:
+        self.interrupts += 1
+        if self.interrupt_error is not None:
+            raise self.interrupt_error
+
+
+def _session(client: _TurnClient) -> Session:
+    session = Session("s", client)  # type: ignore[arg-type]
+    session._state = "idle"
+    return session
+
+
+async def test_break_on_the_result_keeps_the_turn():
+    """Stopping at the ResultMessage is a finished turn: recorded, nothing interrupted."""
+    from clawd_code_sdk.models import ResultMessage
+
+    client = _TurnClient()
+    session = _session(client)
+    async with asyncio.timeout(2):
+        stream = session.send("hi")
+        async for message in stream:
+            if isinstance(message, ResultMessage):
+                break
+        await stream.aclose()
+    assert len(session.turns) == 1
+    assert client.interrupts == 0
+    assert session.state == "idle"
+
+
+async def test_failed_interrupt_leaves_the_session_in_error():
+    client = _TurnClient(endless=True)
+    client.interrupt_error = CLIConnectionError("CLI died")
+    session = _session(client)
+    stream = session.send("hi")
+    async for _ in stream:
+        break
+    await stream.aclose()
+    assert session.state == "error"
+
+
+async def test_anyio_timeout_still_finishes_the_turn():
+    """A level-triggered anyio cancel scope doesn't cut the cleanup short."""
+    import anyio
+
+    client = _TurnClient(endless=True)
+    session = _session(client)
+    with anyio.move_on_after(0.05):
+        async for _ in session.send("hi"):
+            pass
+    assert client.interrupts == 1
+    assert session.state == "idle"
+
+
+async def test_cancel_before_the_prompt_was_sent_does_not_wait_for_a_turn():
+    client = _TurnClient(slow_query=True)
+    session = _session(client)
+
+    async def consume() -> None:
+        async for _ in session.send("hi"):
+            pass
+
+    task = asyncio.create_task(consume())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    async with asyncio.timeout(2):  # not INTERRUPT_DRAIN_TIMEOUT
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert client.interrupts == 0
+    assert session.state == "idle"
+
+
+async def test_connect_cut_short_by_anyio_timeout_cleans_up():
+    """Under a level-triggered anyio scope the cleanup still runs to its end."""
+    import anyio
+
+    transport = _QueueTransport()  # never answers initialize
+    client = ClaudeSDKClient(transport=transport)
+    with anyio.move_on_after(0.1):
+        await client.connect()
+    assert transport.closed
+    assert client._query is None
