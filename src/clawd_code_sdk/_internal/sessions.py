@@ -178,7 +178,7 @@ def _unescape_json_string(raw: str) -> str:
         result = anyenv.load_json(f'"{raw}"')
         if isinstance(result, str):
             return result
-    except (anyenv.JsonLoadError, ValueError):
+    except anyenv.JsonLoadError, ValueError:
         return raw
     else:
         return raw
@@ -268,7 +268,7 @@ def _extract_first_prompt_from_head(head: str) -> str:
 
         try:
             entry = anyenv.load_json(line)
-        except (anyenv.JsonLoadError, ValueError):
+        except anyenv.JsonLoadError, ValueError:
             continue
         texts: list[str] = []
         match entry:
@@ -374,7 +374,7 @@ def _get_worktree_paths(cwd: str) -> list[str]:
             timeout=5,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError):
+    except OSError, subprocess.SubprocessError:
         return []
 
     if result.returncode != 0 or not result.stdout:
@@ -810,7 +810,7 @@ def _parse_transcript_entries(content: str) -> list[_TranscriptEntry]:
 
         try:
             entry = anyenv.load_json(line, return_type=dict)
-        except (anyenv.JsonLoadError, ValueError):
+        except anyenv.JsonLoadError, ValueError:
             continue
         entry_type = entry.get("type")
         if entry_type in _TRANSCRIPT_ENTRY_TYPES and isinstance(entry.get("uuid"), str):
@@ -1444,7 +1444,7 @@ def _read_agent_metadata_sidecar(transcript_path: Path) -> dict[str, Any] | None
         return None
     try:
         meta = anyenv.load_json(text)
-    except (anyenv.JsonLoadError, ValueError):
+    except anyenv.JsonLoadError, ValueError:
         return None
     return meta if isinstance(meta, dict) else None
 

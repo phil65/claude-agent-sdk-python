@@ -122,7 +122,7 @@ class Query:
     - Initialization handshake
     """
 
-    def __init__(  # noqa: PLR0917
+    def __init__(
         self,
         transport: Transport,
         can_use_tool: CanUseTool | None = None,

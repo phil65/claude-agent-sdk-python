@@ -1,0 +1,61 @@
+name: Build documentation
+
+# Manual only for now: `mknodes build` (4.4.1) fails on this repo. It derives the package
+# from the GitHub repo name (claude-agent-sdk-python, not clawd_code_sdk), and its social-link
+# icon lookup raises IndexError on this project's URLs. GitHub Pages is not enabled yet either.
+# Restore the push trigger once both work.
+on:
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+# Default to bash
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+      - name: Build
+        run: uv run mknodes build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./site
+
+  deploy:
+    # GitHub Pages of a private repo would be public (outside Enterprise): don't deploy those.
+    if: ${{ !github.event.repository.private }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

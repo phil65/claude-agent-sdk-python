@@ -13,7 +13,7 @@ from anthropic.types.beta import (
     BetaRawContentBlockStartEvent,
     BetaRawMessageDeltaEvent,
     BetaRawMessageStreamEvent,
-    BetaStopReason,  # noqa: TC002
+    BetaStopReason,
     BetaTextBlock as ATextBlock,
     BetaTextDelta,
     BetaThinkingBlock as AThinkingBlock,
@@ -31,7 +31,7 @@ from clawd_code_sdk._errors import (
     RateLimitError,
     ServerError,
 )
-from clawd_code_sdk.models.base import (  # noqa: TC001
+from clawd_code_sdk.models.base import (
     IS_DEV,
     AssistantMessageError,
     ClaudeCodeBaseModel,

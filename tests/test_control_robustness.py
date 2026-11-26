@@ -85,13 +85,11 @@ async def test_unknown_control_request_answered_with_error(monkeypatch: pytest.M
     await query.start()
     try:
         request = {"subtype": "some_new_subtype"}
-        transport.inbox.put_nowait(
-            {
-                "type": "control_request",
-                "request_id": "r1",
-                "request": request,
-            }
-        )
+        transport.inbox.put_nowait({
+            "type": "control_request",
+            "request_id": "r1",
+            "request": request,
+        })
         transport.inbox.put_nowait(ASSISTANT)
         assert await asyncio.wait_for(_next_message(query), 5) == ASSISTANT
         await _settle()
@@ -108,13 +106,11 @@ async def test_unknown_control_request_raises_in_strict_mode():
     query = Query(transport=transport)
     await query.start()
     try:
-        transport.inbox.put_nowait(
-            {
-                "type": "control_request",
-                "request_id": "r1",
-                "request": {"subtype": "some_new_subtype"},
-            }
-        )
+        transport.inbox.put_nowait({
+            "type": "control_request",
+            "request_id": "r1",
+            "request": {"subtype": "some_new_subtype"},
+        })
         with pytest.raises(MessageParseError):
             await asyncio.wait_for(_next_message(query), 5)
         await _settle()
@@ -124,13 +120,11 @@ async def test_unknown_control_request_raises_in_strict_mode():
 
 
 def test_request_user_dialog_is_an_incoming_request():
-    req = incoming_control_request_adapter.validate_python(
-        {
-            "subtype": "request_user_dialog",
-            "dialog_kind": "refusal_fallback_prompt",
-            "payload": {},
-        }
-    )
+    req = incoming_control_request_adapter.validate_python({
+        "subtype": "request_user_dialog",
+        "dialog_kind": "refusal_fallback_prompt",
+        "payload": {},
+    })
     assert isinstance(req, SDKControlRequestUserDialogRequest)
 
 

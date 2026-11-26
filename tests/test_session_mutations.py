@@ -506,19 +506,17 @@ def _make_transcript_session(
         user_uuid = str(uuid.uuid4())
         uuids.append(user_uuid)
         lines.append(
-            json.dumps(
-                {
-                    "type": "user",
-                    "uuid": user_uuid,
-                    "parentUuid": parent_uuid,
-                    "sessionId": sid,
-                    "timestamp": "2026-03-01T00:00:00Z",
-                    "message": {
-                        "role": "user",
-                        "content": f"Turn {i + 1} question",
-                    },
-                }
-            )
+            json.dumps({
+                "type": "user",
+                "uuid": user_uuid,
+                "parentUuid": parent_uuid,
+                "sessionId": sid,
+                "timestamp": "2026-03-01T00:00:00Z",
+                "message": {
+                    "role": "user",
+                    "content": f"Turn {i + 1} question",
+                },
+            })
         )
         parent_uuid = user_uuid
 
@@ -526,19 +524,17 @@ def _make_transcript_session(
         asst_uuid = str(uuid.uuid4())
         uuids.append(asst_uuid)
         lines.append(
-            json.dumps(
-                {
-                    "type": "assistant",
-                    "uuid": asst_uuid,
-                    "parentUuid": parent_uuid,
-                    "sessionId": sid,
-                    "timestamp": "2026-03-01T00:00:00Z",
-                    "message": {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": f"Turn {i + 1} answer"}],
-                    },
-                }
-            )
+            json.dumps({
+                "type": "assistant",
+                "uuid": asst_uuid,
+                "parentUuid": parent_uuid,
+                "sessionId": sid,
+                "timestamp": "2026-03-01T00:00:00Z",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "text", "text": f"Turn {i + 1} answer"}],
+                },
+            })
         )
         parent_uuid = asst_uuid
 

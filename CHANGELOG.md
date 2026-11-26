@@ -188,10 +188,12 @@ Introducing the Claude Agent SDK! The Claude Code SDK has been renamed to better
   ```python
   # Before
   from clawd_code_sdk import query, ClaudeCodeOptions
+
   options = ClaudeCodeOptions(...)
 
   # After
   from clawd_code_sdk import query, ClaudeAgentOptions
+
   options = ClaudeAgentOptions(...)
   ```
 
@@ -200,7 +202,7 @@ Introducing the Claude Agent SDK! The Claude Code SDK has been renamed to better
 - **Merged prompt options**: The `custom_system_prompt` and `append_system_prompt` fields have been merged into a single `system_prompt` field for simpler configuration
 - **No default system prompt**: The Claude Code system prompt is no longer included by default, giving you full control over agent behavior. To use the Claude Code system prompt, explicitly set:
   ```python
-  system_prompt={"type": "preset", "preset": "claude_code"}
+  system_prompt = {"type": "preset", "preset": "claude_code"}
   ```
 
 #### Settings Isolation

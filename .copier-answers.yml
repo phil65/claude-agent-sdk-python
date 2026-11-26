@@ -1,0 +1,22 @@
+# Changes here will be overwritten by Copier
+_commit: v2.14.0
+_src_path: gh:phil65/copier-phil65
+author_email: philipptemminghoff@gmail.com
+author_fullname: Philipp Temminghoff
+author_username: phil65
+copyright_date: '2026'
+copyright_holder: Philipp Temminghoff
+copyright_holder_email: philipptemminghoff@gmail.com
+libraries_use_pydantic: true
+libraries_use_qt: false
+project_description: Python SDK for Claude Code
+project_name: clawd-code-sdk
+python_minimum_version: '3.14'
+python_package_command_line_name: clawd-code-sdk
+python_package_distribution_name: clawd-code-sdk
+python_package_import_name: clawd_code_sdk
+repository_name: claude-agent-sdk-python
+repository_namespace: phil65
+repository_provider: github.com
+specs: []
+

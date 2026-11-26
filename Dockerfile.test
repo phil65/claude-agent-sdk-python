@@ -20,7 +20,7 @@ WORKDIR /app
 COPY . .
 
 # Install SDK with dev dependencies
-RUN pip install -e ".[dev]"
+RUN pip install --group dev -e .
 
 # Verify CLI installation
 RUN claude -v

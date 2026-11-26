@@ -86,7 +86,7 @@ def benchmark_json_then_validate(
             try:
                 d = json.loads(data)
                 adapter.validate_python(d)
-            except (ValidationError, json.JSONDecodeError):
+            except ValidationError, json.JSONDecodeError:
                 pass
     return time.perf_counter() - start
 

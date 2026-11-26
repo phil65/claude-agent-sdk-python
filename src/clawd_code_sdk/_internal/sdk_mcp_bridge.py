@@ -278,7 +278,7 @@ class _Session:
             )
         try:
             await self._to_server.send(parsed)
-        except (anyio.ClosedResourceError, anyio.BrokenResourceError):
+        except anyio.ClosedResourceError, anyio.BrokenResourceError:
             # The session went away between being chosen and this send.
             if pending is not None:
                 pending.resolve(SdkMcpBridgeError("unsent"))
@@ -299,16 +299,14 @@ class _Session:
                         if pending.method == "initialize":
                             continue
                         with suppress(Exception):
-                            await self.submit(
-                                {
-                                    "jsonrpc": "2.0",
-                                    "method": "notifications/cancelled",
-                                    "params": {
-                                        "requestId": request_id,
-                                        "reason": "connection closing",
-                                    },
-                                }
-                            )
+                            await self.submit({
+                                "jsonrpc": "2.0",
+                                "method": "notifications/cancelled",
+                                "params": {
+                                    "requestId": request_id,
+                                    "reason": "connection closing",
+                                },
+                            })
             await self._to_server.aclose()
         with anyio.CancelScope(deadline=deadline):
             await asyncio.wait({self._task})

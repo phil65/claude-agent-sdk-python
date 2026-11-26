@@ -3,19 +3,23 @@ Spec versions this SDK targets (Claude Code CLI, TS SDK types, settings schema):
 # Workflow
 
 ```bash
-# Lint and style
-# Check for issues and fix automatically
-python -m ruff check src/ tests/ --fix
-python -m ruff format src/ tests/
+uv sync --all-extras
 
-# Typecheck (only done for src/)
-python -m mypy src/
+# Lint and style (versions pinned in the `lint` dependency group)
+uv run ruff check . --fix
+uv run ruff format .
 
-# Run all tests
-python -m pytest tests/
+# Typecheck (only src/, see [tool.ty.src])
+uv run ty check
+
+# Unit tests (the default selection, same as CI)
+uv run pytest
 
 # Run specific test file
-python -m pytest tests/test_client.py
+uv run pytest tests/test_client.py
+
+# e2e tests (real Claude CLI + API key): override the marker selection
+uv run pytest -m e2e tests/e2e
 ```
 
 # Codebase Structure

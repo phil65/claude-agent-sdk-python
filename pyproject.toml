@@ -1,3 +1,5 @@
+#:tombi schema.strict = false
+
 [project]
 name = "clawd-code-sdk"
 version = "1.5.3"
@@ -5,15 +7,20 @@ description = "Python SDK for Claude Code"
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-  { name = "phil65", email = "philipptemminghoff@gmail.com" },
+  { name = "Philipp Temminghoff", email = "philipptemminghoff@gmail.com" },
 ]
 keywords = ["ai", "anthropic", "claude", "sdk"]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Framework :: Pydantic",
+  "Framework :: Pydantic :: 2",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
@@ -27,48 +34,95 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/phil65/claude-agent-sdk-python"
-Homepage = "https://github.com/phil65/claude-agent-sdk-python"
+"Code coverage" = "https://app.codecov.io/gh/phil65/claude-agent-sdk-python"
+Documentation = "https://phil65.github.io/claude-agent-sdk-python/"
 Issues = "https://github.com/phil65/claude-agent-sdk-python/issues"
+Source = "https://github.com/phil65/claude-agent-sdk-python"
 "Spec: Claude Agent SDK (Python, upstream)" = "https://github.com/anthropics/claude-agent-sdk-python"
 "Spec: Claude Agent SDK (TypeScript)" = "https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk"
 "Spec: Claude Code CLI" = "https://code.claude.com/docs/en/cli-reference"
 "Spec: Claude Code settings schema" = "https://json.schemastore.org/claude-code-settings.json"
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=7.0.0",
-  "pytest-asyncio>=0.20.0",
-  "anyio[trio]>=4.0.0",
-  "pytest-cov>=4.0.0",
-  "pytest-timeout>=2.4.0",
-  "ty",
-  "ruff>=0.1.0",
-  "fastmcp>=3.0.0",
-  "types-jsonschema>=4.20.0",
-]
 otel = [
   "opentelemetry-api>=1.20.0",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/clawd_code_sdk"]
-only-include = ["src/clawd_code_sdk"]
-
-[tool.hatch.build.targets.sdist]
-include = [
-  "/src",
-  "/tests",
-  "/README.md",
-  "/LICENSE",
+[dependency-groups]
+dev = [
+  "anyio[trio]>=4.0.0",
+  "deptry",
+  "devtools",
+  "duty",
+  "fastmcp>=3.0.0",
+  "pyreadline3",
+  "pytest",
+  "pytest-asyncio>=0.20.0",
+  "pytest-cov",
+  "pytest-timeout>=2.4.0",
+  "types-jsonschema>=4.20.0",
+  # Only add below (Copier)
+]
+benchmark = ["pyinstrument"]
+docs = [
+  "mkdocstrings[python]",
+  "mknodes>=4.0.0",
+  # Only add below (Copier)
+]
+lint = [
+  # Pinned on purpose: CI, pre-commit and editors all run exactly these versions.
+  # Bump them here (template) and roll out via `copier update`.
+  "ruff==0.17.6",
+  "ty==0.0.110",
+  # Only add below (Copier)
 ]
 
+[build-system]
+requires = ["uv_build>=0.8.22"]
+build-backend = "uv_build"
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "@overload",
+  "except ImportError",
+  'if __name__ == "__main__":',
+]
+
+[tool.mknodes]
+allowed-commit-types = [
+  "fix",
+  "feat",
+  "refactor",
+  "docs",
+  "test",
+  "build",
+  "chore",
+]
+docstring-style = "google"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+deprecateTypingAliases = true
+reportMissingTypeStubs = false
+reportUnusedCallResult = false
+reportUnknownVariableType = false
+reportAny = false
+reportImplicitOverride = false
+reportUnusedFunction = false
+reportImplicitStringConcatenation = false
+reportIgnoreCommentWithoutRule = false
+reportUnannotatedClassAttribute = false
+reportSelfClsParameterName = false
+reportPrivateImportUsage = false
+
 [tool.pytest]
-addopts = ["-m", "not slow and not acp_snapshot and not e2e"]
+addopts = ["-m", "not slow and not acp_snapshot and not e2e and not integration"]
 filterwarnings = ["ignore::DeprecationWarning:pydantic.*:"]
 log_cli = true
 log_date_format = "%Y-%m-%d %H:%M:%S"
@@ -89,9 +143,9 @@ asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 
 [tool.ruff]
-target-version = "py314"
 line-length = 100
-exclude = ["examples/"]
+extend-exclude = ["docs", "examples"]
+target-version = "py314"
 
 [tool.ruff.lint]
 future-annotations = true
@@ -158,30 +212,41 @@ select = [
 ]
 ignore = [
   "ANN401",  # Dynamically typed expressions (Any) are allowed
-  "BLE001",
+  "BLE001",  # Blind except
   "C408",  # Unnecessary {obj_type} call (rewrite as a literal)
+  "B905",  # zip() without an explicit strict= parameter
   "C901",  # {name} is too complex ({complexity} > {max_complexity})
   "COM812",
   # "CPY001", # Missing copyright notice at top of file
   "D100",  # Missing docstring in public module
+  "D101",  # Missing docstring in public class
   "D102",  # Missing docstring in public method
   "D103",  # Missing docstring in public function
+  "D104",  # Missing docstring in public package
   "D105",  # Missing docstring in magic method
+  "D106",  # Missing docstring in public nested class
   "D107",  # Missing docstring in __init__
   "D203",  # 1 blank line required before class docstring
   "D204",  # 1 blank line required after class docstring
   "D213",  # Multi-line docstring summary should start at the second line
+  "D215",  # Section underline is over-indented ("{name}")
+  "D400",  # First line should end with a period
   "D401",  # First line of docstring should be in imperative mood: "{first_line}"
+  "D404",  # First word of the docstring should not be "This"
+  "D406",  # Section name should end with a newline ("{name}")
+  "D407",  # Missing dashed underline after section ("{name}")
   "D408",  # Section underline should be in the line following the section's name ("{name}")
+  "D409",  # Section underline should match the length of its name ("{name}")
   "D413",  # Missing blank line after last section ("{name}")
   "EM101",  # Exception must not use a string literal, assign to variable first
   "EM102",  # Exception must not use an f-string literal, assign to variable first
   "ISC001",
   "PLC0415",
+  "PLR0911",  # Too many return statements
   "PLR0912",  # Too many branches
   "PLR0913",  # Too many arguments to function call
-  "PLR0911",  # Comlexity
   "PLR0915",  # Too many statements
+  "PLR0917",  # Too many positional arguments
   # "PLR2004", # Magic values instead of named consts
   "SLF001",  # Private member accessed
   "TRY003",  # Avoid specifying long messages outside the exception class
@@ -233,13 +298,21 @@ max-complexity = 15
   "TC001",
 ]  # Examples don't need TYPE_CHECKING imports
 
-[tool.ty.src]
-# `ty check` (hooks, CI, editors) type-checks the package code only.
-include = ["src"]
+[tool.ruff.format]
+preview = true
 
 [tool.ty.environment]
 python-version = "3.14"
 python-platform = "all"
+
+[tool.ty.src]
+# `ty check` (hooks, CI, editors) type-checks the package code only.
+include = ["src"]
+
+[tool.ty.analysis]
+# Optional dependencies that are not always installed, e.g. "numpy", "numpy.**".
+# Unresolved imports are errors otherwise, so broken imports are caught.
+allowed-unresolved-imports = []
 
 [tool.ty.rules]
 # Narrowing an overridden class attribute (e.g. pydantic discriminators,
@@ -247,3 +320,24 @@ python-platform = "all"
 incompatible-mutable-override = "ignore"
 possibly-missing-import = "warn"
 division-by-zero = "warn"
+
+[tool.uv]
+default-groups = ["dev", "lint", "docs"]
+
+[tool.uv.build-backend]
+wheel-exclude = [
+  ".mypy_cache/**",
+  "__pycache__/**",
+  "*.pyc",
+  "*.pyo",
+  ".pytest_cache/**",
+  ".ruff_cache/**",
+]
+source-exclude = [
+  ".mypy_cache/**",
+  "__pycache__/**",
+  "*.pyc",
+  "*.pyo",
+  ".pytest_cache/**",
+  ".ruff_cache/**",
+]

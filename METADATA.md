@@ -1871,14 +1871,16 @@ Permissions: Preserved from original
 ```python
 # history.jsonl (Unix ms) to datetime
 from datetime import datetime
+
 ts = 1765613453279
 dt = datetime.fromtimestamp(ts / 1000)  # Local time
 dt_utc = datetime.utcfromtimestamp(ts / 1000)  # UTC
 
 # ISO string to datetime
 from datetime import datetime
+
 iso = "2025-12-12T18:27:04.423Z"
-dt = datetime.fromisoformat(iso.replace('Z', '+00:00'))
+dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
 ```
 
 ---

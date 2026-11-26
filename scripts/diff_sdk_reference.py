@@ -154,8 +154,8 @@ class Decl:
 
 def _parse_members(body: str) -> dict[str, str]:
     members: dict[str, str] = {}
-    for part in _split_top(body, ";,"):
-        part = part.strip()
+    for raw_part in _split_top(body, ";,"):
+        part = raw_part.strip()
         m = _MEMBER_KEY_RE.match(part)
         key = m.group("key") if m else part
         if m and m.group("sep") in ("(", "<"):
@@ -200,8 +200,8 @@ def parse_declarations(src: str, prefix: str = "") -> dict[str, Decl]:
     """Parse top-level declarations from a .d.ts source."""
     decls: dict[str, Decl] = {}
     src = strip_comments(src)
-    for stmt in _split_top(src, ";}", angles=False):
-        stmt = stmt.strip()
+    for raw_stmt in _split_top(src, ";}", angles=False):
+        stmt = raw_stmt.strip()
         if stmt.startswith(("import ", "export {", "export *", "export default", "export =")):
             continue
         m = _DECL_RE.match(stmt)
@@ -320,19 +320,19 @@ def diff_decls(old: dict[str, Decl], new: dict[str, Decl]) -> list[str]:
 
             obase = {base(k): k for k in om}
             nbase = {base(k): k for k in nm}
-            for b in sorted(set(nbase) - set(obase)):
-                entry.append(f"    - `+` `{_short(nm[nbase[b]])}`")
-            for b in sorted(set(obase) - set(nbase)):
-                entry.append(f"    - `-` `{_short(om[obase[b]])}`")
+            entry.extend(
+                f"    - `+` `{_short(nm[nbase[b]])}`" for b in sorted(set(nbase) - set(obase))
+            )
+            entry.extend(
+                f"    - `-` `{_short(om[obase[b]])}`" for b in sorted(set(obase) - set(nbase))
+            )
             for b in sorted(set(obase) & set(nbase)):
                 ov, nv = om[obase[b]], nm[nbase[b]]
                 if ov != nv:
                     entry.append(f"    - `~` `{_short(ov)}` → `{_short(nv)}`")
         elif o.union is not None and n.union is not None:
-            for v in sorted(set(n.union) - set(o.union)):
-                entry.append(f"    - `+` `{_short(v)}`")
-            for v in sorted(set(o.union) - set(n.union)):
-                entry.append(f"    - `-` `{_short(v)}`")
+            entry.extend(f"    - `+` `{_short(v)}`" for v in sorted(set(n.union) - set(o.union)))
+            entry.extend(f"    - `-` `{_short(v)}`" for v in sorted(set(o.union) - set(n.union)))
         if len(entry) == 1:
             entry.append(f"    - old: `{_short(o.signature, 300)}`")
             entry.append(f"    - new: `{_short(n.signature, 300)}`")
@@ -398,13 +398,11 @@ def main() -> None:
         for name in REFERENCE_FILES:
             rel = f"reference/{name}"
             new_path = REFERENCE_DIR / name
-            pairs.append(
-                (
-                    name,
-                    _git_show(args.git_rev, rel),
-                    new_path.read_text() if new_path.exists() else "",
-                )
-            )
+            pairs.append((
+                name,
+                _git_show(args.git_rev, rel),
+                new_path.read_text() if new_path.exists() else "",
+            ))
         old_v = _version_from_json(_git_show(args.git_rev, "reference/VERSION.json"))
         vfile = REFERENCE_DIR / "VERSION.json"
         new_v = _version_from_json(vfile.read_text()) if vfile.exists() else None

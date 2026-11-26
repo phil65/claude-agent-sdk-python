@@ -56,7 +56,7 @@ def create_mock_transport(messages: list[dict]):
                         },
                     }
                     break
-            except (json.JSONDecodeError, KeyError, AttributeError):
+            except json.JSONDecodeError, KeyError, AttributeError:
                 pass
 
         for message in messages:

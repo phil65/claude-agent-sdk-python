@@ -73,7 +73,7 @@ def create_mock_transport(with_init_response=True):
                             },
                         }
                         break
-                except (json.JSONDecodeError, KeyError, AttributeError):
+                except json.JSONDecodeError, KeyError, AttributeError:
                     pass
 
             # Keep checking for other control requests (like interrupt)
@@ -99,7 +99,7 @@ def create_mock_transport(with_init_response=True):
                                     },
                                 }
                                 return  # End after interrupt
-                    except (json.JSONDecodeError, KeyError, AttributeError):
+                    except json.JSONDecodeError, KeyError, AttributeError:
                         pass
                 last_check = len(written_messages)
 
@@ -199,7 +199,7 @@ class TestClaudeSDKClientStreaming:
                                 assert msg["session_id"] == "default"
                                 user_msg_found = True
                                 break
-                        except (json.JSONDecodeError, KeyError, AttributeError):
+                        except json.JSONDecodeError, KeyError, AttributeError:
                             pass
                     assert user_msg_found, "User message not found in write calls"
 
@@ -227,7 +227,7 @@ class TestClaudeSDKClientStreaming:
                                 assert msg["session_id"] == "custom-session"
                                 session_found = True
                                 break
-                        except (json.JSONDecodeError, KeyError, AttributeError):
+                        except json.JSONDecodeError, KeyError, AttributeError:
                             pass
                     assert session_found, "User message with custom session not found"
 
@@ -276,7 +276,7 @@ class TestClaudeSDKClientStreaming:
                                     },
                                 }
                                 break
-                        except (json.JSONDecodeError, KeyError, AttributeError):
+                        except json.JSONDecodeError, KeyError, AttributeError:
                             pass
 
                     # Then yield the actual messages
@@ -342,7 +342,7 @@ class TestClaudeSDKClientStreaming:
                                     },
                                 }
                                 break
-                        except (json.JSONDecodeError, KeyError, AttributeError):
+                        except json.JSONDecodeError, KeyError, AttributeError:
                             pass
 
                     # Then yield the actual messages
@@ -434,7 +434,7 @@ class TestClaudeSDKClientStreaming:
                             ):
                                 interrupt_found = True
                                 break
-                        except (json.JSONDecodeError, KeyError, AttributeError):
+                        except json.JSONDecodeError, KeyError, AttributeError:
                             pass
                     assert interrupt_found, "Interrupt control request not found"
 
@@ -507,7 +507,7 @@ class TestClaudeSDKClientStreaming:
                                         },
                                     }
                                     break
-                            except (json.JSONDecodeError, KeyError, AttributeError):
+                            except json.JSONDecodeError, KeyError, AttributeError:
                                 pass
 
                     # Then yield the actual messages
@@ -710,7 +710,7 @@ class TestClaudeSDKClientEdgeCases:
                                         },
                                     }
                                     break
-                            except (json.JSONDecodeError, KeyError, AttributeError):
+                            except json.JSONDecodeError, KeyError, AttributeError:
                                 pass
 
                     # Then yield the actual messages
@@ -815,7 +815,7 @@ class TestAsyncGeneratorCleanup:
                                         },
                                     }
                                     break
-                            except (json.JSONDecodeError, KeyError, AttributeError):
+                            except json.JSONDecodeError, KeyError, AttributeError:
                                 pass
 
                     # Yield some messages

@@ -1,0 +1,13 @@
+# Keep GitHub Actions up to date: one grouped PR per month, merged automatically
+# by .github/workflows/dependabot-automerge.yml once the Build workflow passes.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

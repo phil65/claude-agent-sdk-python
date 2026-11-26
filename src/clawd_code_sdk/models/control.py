@@ -544,25 +544,21 @@ class SDKControlElicitationRequest(_ControlBase):
             case "url":
                 assert self.url is not None
                 assert self.elicitation_id is not None
-                return ElicitRequestURLParams.model_validate(
-                    {
-                        "mode": "url",
-                        "message": self.message,
-                        "url": self.url,
-                        "elicitationId": self.elicitation_id,
-                        "_meta": meta,
-                    }
-                )
+                return ElicitRequestURLParams.model_validate({
+                    "mode": "url",
+                    "message": self.message,
+                    "url": self.url,
+                    "elicitationId": self.elicitation_id,
+                    "_meta": meta,
+                })
             case "form":
                 assert self.requested_schema is not None
-                return ElicitRequestFormParams.model_validate(
-                    {
-                        "mode": "form",
-                        "message": self.message,
-                        "requestedSchema": self.requested_schema,
-                        "_meta": meta,
-                    }
-                )
+                return ElicitRequestFormParams.model_validate({
+                    "mode": "form",
+                    "message": self.message,
+                    "requestedSchema": self.requested_schema,
+                    "_meta": meta,
+                })
             case None:
                 raise ValueError("mode must be 'url' or 'form'")
             case _ as unreachable:

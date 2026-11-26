@@ -502,18 +502,16 @@ def _system_entry_discriminator(data: Any) -> str:
     return "__generic__"
 
 
-_KNOWN_SYSTEM_SUBTYPES: frozenset[str] = frozenset(
-    {
-        "compact_boundary",
-        "turn_duration",
-        "api_error",
-        "local_command",
-        "stop_hook_summary",
-        "away_summary",
-        "informational",
-        "model_refusal_fallback",
-    }
-)
+_KNOWN_SYSTEM_SUBTYPES: frozenset[str] = frozenset({
+    "compact_boundary",
+    "turn_duration",
+    "api_error",
+    "local_command",
+    "stop_hook_summary",
+    "away_summary",
+    "informational",
+    "model_refusal_fallback",
+})
 
 ClaudeSystemEntry = Annotated[
     Annotated[ClaudeCompactBoundaryEntry, Tag("compact_boundary")]

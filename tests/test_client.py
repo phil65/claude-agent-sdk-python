@@ -129,7 +129,7 @@ def create_mock_transport_with_messages(messages: list[dict]):
                         },
                     }
                     break
-            except (json.JSONDecodeError, KeyError, AttributeError):
+            except json.JSONDecodeError, KeyError, AttributeError:
                 pass
 
         # Yield all messages
@@ -436,7 +436,7 @@ def _create_control_protocol_transport(
                                 **all_responses[subtype],
                             },
                         }
-                except (json.JSONDecodeError, KeyError, AttributeError):
+                except json.JSONDecodeError, KeyError, AttributeError:
                     pass
             last_check = len(written_messages)
 

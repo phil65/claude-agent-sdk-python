@@ -118,7 +118,7 @@ class TestSubprocessCLITransport:
                 mock_stdin.aclose = AsyncMock()
                 mock_process.stdin = mock_stdin
                 mock_exec.return_value = mock_process
-                transport = SubprocessCLITransport()
+                transport = self._make_transport()
                 await transport.connect()
                 assert transport._process is not None
                 await transport.close()
@@ -133,7 +133,7 @@ class TestSubprocessCLITransport:
 
         async def _test():
             opts = ClaudeAgentOptions(cwd="/this/directory/does/not/exist")
-            transport = SubprocessCLITransport(options=opts)
+            transport = self._make_transport(options=opts)
             with pytest.raises(CLIConnectionError) as exc_info:
                 await transport.connect()
 
@@ -282,7 +282,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
                 mock_open_process.return_value = mock_process
-                transport = SubprocessCLITransport(options=options)
+                transport = self._make_transport(options=options)
                 await transport.connect()
                 # One process: no version probe
                 assert mock_open_process.call_count == 1
@@ -320,7 +320,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
                 mock_open_process.return_value = mock_process
-                transport = SubprocessCLITransport(options=options)
+                transport = self._make_transport(options=options)
                 await transport.connect()
                 # One process: no version probe
                 assert mock_open_process.call_count == 1
@@ -354,7 +354,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
                 mock_open_process.return_value = mock_process
-                transport = SubprocessCLITransport(options=options)
+                transport = self._make_transport(options=options)
                 await transport.connect()
                 # Verify open_process was called twice
                 assert mock_open_process.call_count == 1
@@ -385,7 +385,7 @@ class TestSubprocessCLITransport:
                 mock_process.stdin = mock_stdin
                 mock_process.returncode = None
                 mock_open_process.return_value = mock_process
-                transport = SubprocessCLITransport(options=options)
+                transport = self._make_transport(options=options)
                 await transport.connect()
                 # One process: no version probe
                 assert mock_open_process.call_count == 1

@@ -92,7 +92,7 @@ def main() -> None:
                 print(json.dumps(state_msg))
                 sys.stdout.flush()
                 break
-        except (json.JSONDecodeError, KeyError):
+        except json.JSONDecodeError, KeyError:
             pass
 
 

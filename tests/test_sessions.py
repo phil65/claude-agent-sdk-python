@@ -90,12 +90,10 @@ def _make_session_file(
 
     # Assistant response
     lines.append(
-        json.dumps(
-            {
-                "type": "assistant",
-                "message": {"role": "assistant", "content": "Hi there!"},
-            }
-        )
+        json.dumps({
+            "type": "assistant",
+            "message": {"role": "assistant", "content": "Hi there!"},
+        })
     )
 
     # Tail metadata
@@ -196,12 +194,10 @@ class TestHelpers:
 
     def test_extract_first_prompt_skips_tool_result(self):
         head = (
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": [{"type": "tool_result", "content": "x"}]},
-                }
-            )
+            json.dumps({
+                "type": "user",
+                "message": {"content": [{"type": "tool_result", "content": "x"}]},
+            })
             + "\n"
             + json.dumps({"type": "user", "message": {"content": "actual prompt"}})
             + "\n"
@@ -210,12 +206,10 @@ class TestHelpers:
 
     def test_extract_first_prompt_content_blocks(self):
         head = (
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": [{"type": "text", "text": "block prompt"}]},
-                }
-            )
+            json.dumps({
+                "type": "user",
+                "message": {"content": [{"type": "text", "text": "block prompt"}]},
+            })
             + "\n"
         )
         assert _extract_first_prompt_from_head(head) == "block prompt"
@@ -230,12 +224,10 @@ class TestHelpers:
     def test_extract_first_prompt_command_fallback(self):
         """If only slash-commands are found, use first command name."""
         head = (
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "<command-name>/help</command-name>stuff"},
-                }
-            )
+            json.dumps({
+                "type": "user",
+                "message": {"content": "<command-name>/help</command-name>stuff"},
+            })
             + "\n"
         )
         assert _extract_first_prompt_from_head(head) == "/help"
@@ -534,13 +526,11 @@ class TestListSessions:
         file_path = project_dir / f"{sid}.jsonl"
 
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "gitBranch": "old-branch",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "gitBranch": "old-branch",
+            }),
             json.dumps({"type": "summary", "gitBranch": "new-branch"}),
         ]
         file_path.write_text("\n".join(lines) + "\n")
@@ -1498,20 +1488,18 @@ class TestTagExtraction:
             json.dumps({"type": "user", "message": {"content": "tag this v1.0"}}),
             json.dumps({"type": "tag", "tag": "real-tag", "sessionId": sid}, **_COMPACT),
             # A tool_use entry with a "tag" key in its input — must NOT match.
-            json.dumps(
-                {
-                    "type": "assistant",
-                    "message": {
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "name": "mcp__docker__build",
-                                "input": {"tag": "myapp:v2", "context": "."},
-                            }
-                        ],
-                    },
-                }
-            ),
+            json.dumps({
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "mcp__docker__build",
+                            "input": {"tag": "myapp:v2", "context": "."},
+                        }
+                    ],
+                },
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 
@@ -1528,19 +1516,17 @@ class TestTagExtraction:
         file_path = project_dir / f"{sid}.jsonl"
         lines = [
             json.dumps({"type": "user", "message": {"content": "build docker"}}),
-            json.dumps(
-                {
-                    "type": "assistant",
-                    "message": {
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "input": {"tag": "prod"},
-                            }
-                        ],
-                    },
-                }
-            ),
+            json.dumps({
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "input": {"tag": "prod"},
+                        }
+                    ],
+                },
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 
@@ -1553,13 +1539,11 @@ class TestTagExtraction:
         sid = str(uuid.uuid4())
         file_path = tmp_path / f"{sid}.jsonl"
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "test prompt"},
-                    "cwd": "/workspace",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "test prompt"},
+                "cwd": "/workspace",
+            }),
             json.dumps({"type": "tag", "tag": "experiment", "sessionId": sid}, **_COMPACT),
         ]
         file_path.write_text("\n".join(lines) + "\n")
@@ -1586,20 +1570,16 @@ class TestCreatedAtExtraction:
         file_path = project_dir / f"{sid}.jsonl"
         # 2026-01-15T10:30:00.000Z → epoch 1768473000000 ms
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "timestamp": "2026-01-15T10:30:00.000Z",
-                }
-            ),
-            json.dumps(
-                {
-                    "type": "assistant",
-                    "message": {"content": "hi"},
-                    "timestamp": "2026-01-15T10:35:00.000Z",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "timestamp": "2026-01-15T10:30:00.000Z",
+            }),
+            json.dumps({
+                "type": "assistant",
+                "message": {"content": "hi"},
+                "timestamp": "2026-01-15T10:35:00.000Z",
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 
@@ -1617,13 +1597,11 @@ class TestCreatedAtExtraction:
         sid = str(uuid.uuid4())
         file_path = project_dir / f"{sid}.jsonl"
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "timestamp": "2026-01-01T00:00:00.000Z",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "timestamp": "2026-01-01T00:00:00.000Z",
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
         # Set mtime to Feb 2026 (well after the Jan timestamp)
@@ -1645,13 +1623,11 @@ class TestCreatedAtExtraction:
         file_path = project_dir / f"{sid}.jsonl"
         lines = [
             json.dumps({"type": "permission-mode", "permissionMode": "acceptEdits"}),
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "timestamp": "2026-01-15T10:30:00.000Z",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "timestamp": "2026-01-15T10:30:00.000Z",
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 
@@ -1676,13 +1652,11 @@ class TestCreatedAtExtraction:
         sid = str(uuid.uuid4())
         file_path = tmp_path / f"{sid}.jsonl"
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "timestamp": "not-a-valid-iso-date",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "timestamp": "not-a-valid-iso-date",
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 
@@ -1697,13 +1671,11 @@ class TestCreatedAtExtraction:
         sid = str(uuid.uuid4())
         file_path = tmp_path / f"{sid}.jsonl"
         lines = [
-            json.dumps(
-                {
-                    "type": "user",
-                    "message": {"content": "hello"},
-                    "timestamp": "2026-01-15T10:30:00+00:00",
-                }
-            ),
+            json.dumps({
+                "type": "user",
+                "message": {"content": "hello"},
+                "timestamp": "2026-01-15T10:30:00+00:00",
+            }),
         ]
         file_path.write_text("\n".join(lines) + "\n")
 

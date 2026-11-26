@@ -173,17 +173,15 @@ def create_sdk_mcp_server(
     tools_by_name = {tool_def.name: tool_def for tool_def in tool_defs}
     schemas = {tool_def.name: build_input_schema(tool_def.input_schema) for tool_def in tool_defs}
     wire_tools = [
-        Tool.model_validate(
-            {
-                "name": tool_def.name,
-                "title": tool_def.title,
-                "description": tool_def.description,
-                "inputSchema": schemas[tool_def.name],
-                "outputSchema": tool_def.output_schema,
-                "annotations": tool_def.annotations,
-                "_meta": build_tool_meta(tool_def),
-            }
-        )
+        Tool.model_validate({
+            "name": tool_def.name,
+            "title": tool_def.title,
+            "description": tool_def.description,
+            "inputSchema": schemas[tool_def.name],
+            "outputSchema": tool_def.output_schema,
+            "annotations": tool_def.annotations,
+            "_meta": build_tool_meta(tool_def),
+        })
         for tool_def in tool_defs
     ]
 
@@ -201,12 +199,10 @@ def create_sdk_mcp_server(
             except jsonschema.ValidationError as e:
                 return _tool_error_result(f"Input validation error: {e.message}")
             result = await tool_def.handler(arguments)
-            return CallToolResult.model_validate(
-                {
-                    "content": convert_tool_content(result.get("content", [])),
-                    "isError": bool(result.get("is_error", False)),
-                }
-            )
+            return CallToolResult.model_validate({
+                "content": convert_tool_content(result.get("content", [])),
+                "isError": bool(result.get("is_error", False)),
+            })
         except Exception as e:
             return _tool_error_result(str(e))
 
@@ -270,12 +266,10 @@ def build_tool_meta(tool_def: SdkMcpTool[Any]) -> dict[str, Any] | None:
 
 
 def _tool_error_result(message: str) -> CallToolResult:
-    return CallToolResult.model_validate(
-        {
-            "content": [{"type": "text", "text": message}],
-            "isError": True,
-        }
-    )
+    return CallToolResult.model_validate({
+        "content": [{"type": "text", "text": message}],
+        "isError": True,
+    })
 
 
 def convert_tool_content(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -295,16 +289,14 @@ def convert_tool_content(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             case {"type": "text" | "image" | "audio"}:
                 content.append(item)
             case {"type": "document", "source": dict() as source}:
-                content.append(
-                    {
-                        "type": "resource",
-                        "resource": {
-                            "uri": f"{DOCUMENT_URI_PREFIX}{source.get('type', 'base64')}",
-                            "mimeType": source.get("media_type", "application/pdf"),
-                            "blob": source.get("data", ""),
-                        },
-                    }
-                )
+                content.append({
+                    "type": "resource",
+                    "resource": {
+                        "uri": f"{DOCUMENT_URI_PREFIX}{source.get('type', 'base64')}",
+                        "mimeType": source.get("media_type", "application/pdf"),
+                        "blob": source.get("data", ""),
+                    },
+                })
             case {"type": "resource_link"}:
                 parts = [
                     str(part)

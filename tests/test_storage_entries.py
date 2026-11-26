@@ -151,86 +151,82 @@ def test_assistant_entry_fields() -> None:
 
 
 def test_session_metadata_entries() -> None:
-    mode = ADAPTER.validate_python(
-        {"type": "permission-mode", "permissionMode": "plan", "sessionId": "s1"}
-    )
+    mode = ADAPTER.validate_python({
+        "type": "permission-mode",
+        "permissionMode": "plan",
+        "sessionId": "s1",
+    })
     assert isinstance(mode, ClaudePermissionModeEntry)
     assert mode.permission_mode == "plan"
 
-    cost = ADAPTER.validate_python(
-        {
-            "type": "cost-state",
-            "sessionId": "s1",
-            "totalCostUSD": 1.5,
-            "totalAPIDuration": 100,
-            "totalAPIDurationWithoutRetries": 90,
-            "totalToolDuration": 10,
-            "totalLinesAdded": 3,
-            "totalLinesRemoved": 1,
-            "totalDuration": 200,
-            "startTime": 1,
-            "hasUnknownModelCost": False,
-            "modelUsage": {
-                "claude-x": {
-                    "inputTokens": 1,
-                    "outputTokens": 2,
-                    "cacheReadInputTokens": 3,
-                    "cacheCreationInputTokens": 4,
-                    "cacheCreationEphemeral5mInputTokens": 4,
-                    "cacheCreationEphemeral1hInputTokens": 0,
-                    "thinkingTokens": 0,
-                    "webSearchRequests": 0,
-                    "costUSD": 1.5,
-                }
-            },
-        }
-    )
+    cost = ADAPTER.validate_python({
+        "type": "cost-state",
+        "sessionId": "s1",
+        "totalCostUSD": 1.5,
+        "totalAPIDuration": 100,
+        "totalAPIDurationWithoutRetries": 90,
+        "totalToolDuration": 10,
+        "totalLinesAdded": 3,
+        "totalLinesRemoved": 1,
+        "totalDuration": 200,
+        "startTime": 1,
+        "hasUnknownModelCost": False,
+        "modelUsage": {
+            "claude-x": {
+                "inputTokens": 1,
+                "outputTokens": 2,
+                "cacheReadInputTokens": 3,
+                "cacheCreationInputTokens": 4,
+                "cacheCreationEphemeral5mInputTokens": 4,
+                "cacheCreationEphemeral1hInputTokens": 0,
+                "thinkingTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 1.5,
+            }
+        },
+    })
     assert isinstance(cost, ClaudeCostStateEntry)
     assert cost.total_cost_usd == 1.5
     assert cost.model_usage["claude-x"].cache_creation_ephemeral_5m_input_tokens == 4
 
-    relocated = ADAPTER.validate_python(
-        {"type": "relocated", "relocatedCwd": "/new", "sessionId": "s1"}
-    )
+    relocated = ADAPTER.validate_python({
+        "type": "relocated",
+        "relocatedCwd": "/new",
+        "sessionId": "s1",
+    })
     assert isinstance(relocated, ClaudeRelocatedEntry)
 
-    derived = ADAPTER.validate_python(
-        {
-            "type": "derived-from",
-            "v": 1,
-            "sessionId": "s1",
-            "sessions": [{"id": "s0", "type": "claude_code_session", "via": "clear"}],
-        }
-    )
+    derived = ADAPTER.validate_python({
+        "type": "derived-from",
+        "v": 1,
+        "sessionId": "s1",
+        "sessions": [{"id": "s0", "type": "claude_code_session", "via": "clear"}],
+    })
     assert isinstance(derived, ClaudeDerivedFromEntry)
     assert derived.sessions[0].via == "clear"
 
-    fork = ADAPTER.validate_python(
-        {
-            "type": "fork-context-ref",
-            "agentId": "ag1",
-            "parentSessionId": "s0",
-            "parentLastUuid": "u9",
-            "contextLength": 12,
-        }
-    )
+    fork = ADAPTER.validate_python({
+        "type": "fork-context-ref",
+        "agentId": "ag1",
+        "parentSessionId": "s0",
+        "parentLastUuid": "u9",
+        "contextLength": 12,
+    })
     assert isinstance(fork, ClaudeForkContextRefEntry)
 
-    delta = ADAPTER.validate_python(
-        {
-            "type": "file-history-delta",
-            "messageId": "m2",
-            "snapshotMessageId": "m1",
-            "trackingPath": "src/a.py",
-            "backup": {
-                "backupFileName": None,
-                "version": 1,
-                "backupTime": "2026-01-01T00:00:00.000Z",
-                "realParentDir": "/tmp/project/src",
-            },
-            "timestamp": "2026-01-01T00:00:00.000Z",
-        }
-    )
+    delta = ADAPTER.validate_python({
+        "type": "file-history-delta",
+        "messageId": "m2",
+        "snapshotMessageId": "m1",
+        "trackingPath": "src/a.py",
+        "backup": {
+            "backupFileName": None,
+            "version": 1,
+            "backupTime": "2026-01-01T00:00:00.000Z",
+            "realParentDir": "/tmp/project/src",
+        },
+        "timestamp": "2026-01-01T00:00:00.000Z",
+    })
     assert isinstance(delta, ClaudeFileHistoryDeltaEntry)
     assert delta.backup.backup_file_name is None
 

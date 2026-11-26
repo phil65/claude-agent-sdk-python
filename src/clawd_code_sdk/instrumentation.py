@@ -139,14 +139,12 @@ class ConversationState:
             for block in blocks:
                 span_name = f"execute_tool {block.name}"
                 span = self.logfire.span(span_name)
-                span.set_attributes(
-                    {
-                        OPERATION_NAME: "execute_tool",
-                        TOOL_NAME: block.name,
-                        TOOL_CALL_ID: block.id,
-                        TOOL_CALL_ARGUMENTS: block.input,
-                    }
-                )
+                span.set_attributes({
+                    OPERATION_NAME: "execute_tool",
+                    TOOL_NAME: block.name,
+                    TOOL_CALL_ID: block.id,
+                    TOOL_CALL_ARGUMENTS: block.input,
+                })
                 span._start()  # pyright: ignore[reportPrivateUsage]
                 self.active_tool_spans[block.id] = span
         finally:

@@ -85,69 +85,63 @@ def test_new_message_types_parse(data: dict[str, Any], expected: type) -> None:
 
 
 def test_assistant_message_new_fields() -> None:
-    msg = message_adapter.validate_python(
-        {
-            **BASE,
-            "type": "assistant",
-            "parent_tool_use_id": None,
-            "request_id": "req_1",
-            "user_message_uuid": "um1",
-            "timestamp": "2026-01-01T00:00:00Z",
-            "error": "overloaded",
-            "message": {
-                "id": "msg_1",
-                "type": "message",
-                "role": "assistant",
-                "model": "claude-haiku-5-5",
-                "content": [{"type": "text", "text": "hi"}],
-                "stop_reason": "end_turn",
-                "stop_sequence": None,
-                "usage": {"input_tokens": 1, "output_tokens": 1},
-            },
-        }
-    )
+    msg = message_adapter.validate_python({
+        **BASE,
+        "type": "assistant",
+        "parent_tool_use_id": None,
+        "request_id": "req_1",
+        "user_message_uuid": "um1",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "error": "overloaded",
+        "message": {
+            "id": "msg_1",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-haiku-5-5",
+            "content": [{"type": "text", "text": "hi"}],
+            "stop_reason": "end_turn",
+            "stop_sequence": None,
+            "usage": {"input_tokens": 1, "output_tokens": 1},
+        },
+    })
     assert isinstance(msg, AssistantMessage)
     assert msg.request_id == "req_1"
     assert msg.error == "overloaded"
 
 
 def test_user_message_origin_variants() -> None:
-    msg = message_adapter.validate_python(
-        {
-            "type": "user",
-            "message": {"role": "user", "content": "hi"},
-            "parent_tool_use_id": None,
-            "origin": {"kind": "observer", "from": "a", "senderTaskId": "t1"},
-        }
-    )
+    msg = message_adapter.validate_python({
+        "type": "user",
+        "message": {"role": "user", "content": "hi"},
+        "parent_tool_use_id": None,
+        "origin": {"kind": "observer", "from": "a", "senderTaskId": "t1"},
+    })
     assert isinstance(msg, UserMessage)
     assert msg.origin is not None
     assert msg.origin.kind == "observer"
 
 
 def test_result_message_new_fields() -> None:
-    msg = message_adapter.validate_python(
-        {
-            **BASE,
-            "type": "result",
-            "subtype": "success",
-            "duration_ms": 1,
-            "duration_api_ms": 1,
-            "is_error": False,
-            "num_turns": 1,
-            "total_cost_usd": 0.0,
-            "stop_reason": "end_turn",
-            "usage": {
-                "input_tokens": 1,
-                "output_tokens": 1,
-                "cache_creation": {"ephemeral_1h_input_tokens": 3, "ephemeral_5m_input_tokens": 0},
-                "service_tier": "standard",
-            },
-            "terminal_reason": "turn_setup_failed",
-            "user_message_uuids": ["a", "b"],
-            "ttft_ms": 12.5,
-        }
-    )
+    msg = message_adapter.validate_python({
+        **BASE,
+        "type": "result",
+        "subtype": "success",
+        "duration_ms": 1,
+        "duration_api_ms": 1,
+        "is_error": False,
+        "num_turns": 1,
+        "total_cost_usd": 0.0,
+        "stop_reason": "end_turn",
+        "usage": {
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "cache_creation": {"ephemeral_1h_input_tokens": 3, "ephemeral_5m_input_tokens": 0},
+            "service_tier": "standard",
+        },
+        "terminal_reason": "turn_setup_failed",
+        "user_message_uuids": ["a", "b"],
+        "ttft_ms": 12.5,
+    })
     assert isinstance(msg, ResultSuccessMessage)
     assert msg.user_message_uuids == ["a", "b"]
     assert msg.usage.cache_creation is not None

@@ -1,6 +1,7 @@
 """Pytest configuration for tests."""
 
 import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,6 +11,19 @@ import pytest
 os.environ.setdefault("CLAWD_STRICT_MESSAGES", "1")
 
 _MSG_COUNTER = 0
+
+_E2E_DIR = Path(__file__).parent / "e2e"
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Mark every test under tests/e2e/ as e2e (they need a real CLI and an API key).
+
+    Runs before the `-m` deselection, so CI (`not e2e`) never runs one, even unmarked.
+    """
+    for item in items:
+        if item.path.is_relative_to(_E2E_DIR):
+            item.add_marker(pytest.mark.e2e)
 
 
 def make_beta_message(

@@ -73,7 +73,7 @@ def _create_mock_transport_with_messages(messages: list[dict]) -> AsyncMock:
                         },
                     }
                     break
-            except (json.JSONDecodeError, KeyError, AttributeError):
+            except json.JSONDecodeError, KeyError, AttributeError:
                 pass
 
         for message in messages:
@@ -255,9 +255,11 @@ class TestSession:
         """send() yields messages and records a ConversationTurn."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages(
-                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG]
-            )
+            transport = _create_mock_transport_with_messages([
+                ASSISTANT_MSG,
+                RESULT_MSG,
+                IDLE_STATE_MSG,
+            ])
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
@@ -282,9 +284,11 @@ class TestSession:
         """send() extracts tool calls from assistant messages."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages(
-                [TOOL_USE_MSG, RESULT_MSG, IDLE_STATE_MSG]
-            )
+            transport = _create_mock_transport_with_messages([
+                TOOL_USE_MSG,
+                RESULT_MSG,
+                IDLE_STATE_MSG,
+            ])
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
@@ -307,9 +311,11 @@ class TestSession:
         """send_and_collect() returns a ConversationTurn directly."""
 
         async def _test():
-            transport = _create_mock_transport_with_messages(
-                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG]
-            )
+            transport = _create_mock_transport_with_messages([
+                ASSISTANT_MSG,
+                RESULT_MSG,
+                IDLE_STATE_MSG,
+            ])
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport)
@@ -342,9 +348,14 @@ class TestSession:
         async def _test():
             result2 = {**RESULT_MSG, "total_cost_usd": 0.010, "uuid": "msg-002"}
             # Transport that returns two rounds of messages
-            transport1 = _create_mock_transport_with_messages(
-                [ASSISTANT_MSG, RESULT_MSG, IDLE_STATE_MSG, ASSISTANT_MSG, result2, IDLE_STATE_MSG]
-            )
+            transport1 = _create_mock_transport_with_messages([
+                ASSISTANT_MSG,
+                RESULT_MSG,
+                IDLE_STATE_MSG,
+                ASSISTANT_MSG,
+                result2,
+                IDLE_STATE_MSG,
+            ])
 
             async with SessionManager() as mgr:
                 session = await mgr.create_session("s1", transport=transport1)

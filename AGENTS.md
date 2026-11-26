@@ -12,6 +12,17 @@ to model in `models/`. The same goes for CLI-to-SDK control requests (`IncomingC
 one that fails validation is always answered with an error response (the reader keeps going) and,
 under the variable, also raises `MessageParseError` in the message stream.
 
+## Tests and CI
+
+CI (`.github/workflows/build.yml`, from the copier-phil65 template) runs unit tests only:
+`addopts` in `pyproject.toml` deselects `slow`, `acp_snapshot`, `e2e` and `integration`, so a
+plain `uv run pytest` locally runs the same selection. Integration and e2e tests need a real
+Claude CLI and/or an API key and run locally on demand (`uv run pytest -m e2e tests/e2e`).
+Everything under `tests/e2e/` is marked `e2e` automatically (`tests/conftest.py`). A new test that
+starts the real CLI or calls the network gets `@pytest.mark.integration` or `@pytest.mark.e2e`;
+unit tests that construct `SubprocessCLITransport` pass a dummy `cli_path` instead of relying on
+CLI discovery. Releases: tag `vX.Y.Z`, the tag's Build run publishes via PyPI Trusted Publishing.
+
 ## Specs
 
 | Spec | URL | Targets | Code | Update check |

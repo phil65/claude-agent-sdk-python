@@ -23,9 +23,10 @@ async def test_pre_tool_use_hook_with_additional_context():
     ) -> HookJSONOutput:
         """PreToolUse hook that provides additionalContext."""
         tool_name = input_data.get("tool_name", "")
-        hook_invocations.append(
-            {"tool_name": tool_name, "tool_use_id": input_data.get("tool_use_id")}
-        )
+        hook_invocations.append({
+            "tool_name": tool_name,
+            "tool_use_id": input_data.get("tool_use_id"),
+        })
 
         return {
             "hookSpecificOutput": {
@@ -67,12 +68,10 @@ async def test_post_tool_use_hook_with_tool_use_id():
     ) -> HookJSONOutput:
         """PostToolUse hook that verifies tool_use_id is present."""
         tool_name = input_data.get("tool_name", "")
-        hook_invocations.append(
-            {
-                "tool_name": tool_name,
-                "tool_use_id": input_data.get("tool_use_id"),
-            }
-        )
+        hook_invocations.append({
+            "tool_name": tool_name,
+            "tool_use_id": input_data.get("tool_use_id"),
+        })
 
         return {
             "hookSpecificOutput": {
@@ -111,13 +110,11 @@ async def test_notification_hook():
         input_data: HookInput, tool_use_id: str | None, context: HookContext
     ) -> HookJSONOutput:
         """Notification hook that tracks invocations."""
-        hook_invocations.append(
-            {
-                "hook_event_name": input_data.get("hook_event_name"),
-                "message": input_data.get("message"),
-                "notification_type": input_data.get("notification_type"),
-            }
-        )
+        hook_invocations.append({
+            "hook_event_name": input_data.get("hook_event_name"),
+            "message": input_data.get("message"),
+            "notification_type": input_data.get("notification_type"),
+        })
         return {
             "hookSpecificOutput": {
                 "hookEventName": "Notification",

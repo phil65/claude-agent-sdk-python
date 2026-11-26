@@ -493,7 +493,7 @@ def _parse_fork_transcript(
             continue
         try:
             entry = anyenv.load_json(stripped, return_type=dict)
-        except (anyenv.JsonLoadError, ValueError):
+        except anyenv.JsonLoadError, ValueError:
             continue
         match entry:
             case {

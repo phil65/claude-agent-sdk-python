@@ -118,16 +118,14 @@ class TestToolPermissionCallbacks:
             hooks=None,
         )
 
-        request_data = control_request_adapter.validate_python(
-            {
-                "subtype": "can_use_tool",
-                "tool_name": "DangerousTool",
-                "input": {"command": "rm -rf /"},
-                "tool_use_id": "tu-2",
-                "permission_suggestions": [],
-                "blocked_path": None,
-            }
-        )
+        request_data = control_request_adapter.validate_python({
+            "subtype": "can_use_tool",
+            "tool_name": "DangerousTool",
+            "input": {"command": "rm -rf /"},
+            "tool_use_id": "tu-2",
+            "permission_suggestions": [],
+            "blocked_path": None,
+        })
 
         await query._handle_control_request("test-2", request_data)
         # Check response
@@ -220,14 +218,12 @@ class TestHookCallbacks:
             "tool_input": {},
             "tool_use_id": "tool-123",
         }
-        request_data = control_request_adapter.validate_python(
-            {
-                "subtype": "hook_callback",
-                "callback_id": callback_id,
-                "input": hook_input,
-                "tool_use_id": "tool-123",
-            }
-        )
+        request_data = control_request_adapter.validate_python({
+            "subtype": "hook_callback",
+            "callback_id": callback_id,
+            "input": hook_input,
+            "tool_use_id": "tool-123",
+        })
 
         await query._handle_control_request("test-hook-1", request_data)
         # Check hook was called
@@ -274,22 +270,20 @@ class TestHookCallbacks:
         callback_id = "test_comprehensive_hook"
         query.hook_callbacks[callback_id] = comprehensive_hook
 
-        request_data = control_request_adapter.validate_python(
-            {
-                "subtype": "hook_callback",
-                "callback_id": callback_id,
-                "input": {
-                    "session_id": "sess-1",
-                    "transcript_path": "/tmp/t",
-                    "cwd": "/home",
-                    "hook_event_name": "PreToolUse",
-                    "tool_name": "TestTool",
-                    "tool_input": {},
-                    "tool_use_id": "tool-456",
-                },
+        request_data = control_request_adapter.validate_python({
+            "subtype": "hook_callback",
+            "callback_id": callback_id,
+            "input": {
+                "session_id": "sess-1",
+                "transcript_path": "/tmp/t",
+                "cwd": "/home",
+                "hook_event_name": "PreToolUse",
+                "tool_name": "TestTool",
+                "tool_input": {},
                 "tool_use_id": "tool-456",
-            }
-        )
+            },
+            "tool_use_id": "tool-456",
+        })
 
         await query._handle_control_request("test-comprehensive", request_data)
         # Check response contains all the fields
@@ -331,22 +325,20 @@ class TestHookCallbacks:
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_async_hook"
         query.hook_callbacks[callback_id] = async_hook
-        request_data = control_request_adapter.validate_python(
-            {
-                "subtype": "hook_callback",
-                "callback_id": callback_id,
-                "input": {
-                    "session_id": "sess-1",
-                    "transcript_path": "/tmp/t",
-                    "cwd": "/home",
-                    "hook_event_name": "PreToolUse",
-                    "tool_name": "TestTool",
-                    "tool_input": {},
-                    "tool_use_id": "tool-0",
-                },
-                "tool_use_id": None,
-            }
-        )
+        request_data = control_request_adapter.validate_python({
+            "subtype": "hook_callback",
+            "callback_id": callback_id,
+            "input": {
+                "session_id": "sess-1",
+                "transcript_path": "/tmp/t",
+                "cwd": "/home",
+                "hook_event_name": "PreToolUse",
+                "tool_name": "TestTool",
+                "tool_input": {},
+                "tool_use_id": "tool-0",
+            },
+            "tool_use_id": None,
+        })
 
         await query._handle_control_request("test-async", request_data)
         # Check response contains async fields
@@ -383,22 +375,20 @@ class TestHookCallbacks:
         query = Query(transport=transport, can_use_tool=None, hooks=hooks)
         callback_id = "test_conversion"
         query.hook_callbacks[callback_id] = conversion_test_hook
-        request_data = control_request_adapter.validate_python(
-            {
-                "subtype": "hook_callback",
-                "callback_id": callback_id,
-                "input": {
-                    "session_id": "sess-1",
-                    "transcript_path": "/tmp/t",
-                    "cwd": "/home",
-                    "hook_event_name": "PreToolUse",
-                    "tool_name": "TestTool",
-                    "tool_input": {},
-                    "tool_use_id": "tool-0",
-                },
-                "tool_use_id": None,
-            }
-        )
+        request_data = control_request_adapter.validate_python({
+            "subtype": "hook_callback",
+            "callback_id": callback_id,
+            "input": {
+                "session_id": "sess-1",
+                "transcript_path": "/tmp/t",
+                "cwd": "/home",
+                "hook_event_name": "PreToolUse",
+                "tool_name": "TestTool",
+                "tool_input": {},
+                "tool_use_id": "tool-0",
+            },
+            "tool_use_id": None,
+        })
 
         await query._handle_control_request("test-conversion", request_data)
 

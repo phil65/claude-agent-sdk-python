@@ -9,7 +9,7 @@ from anthropic.types.model import Model
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, TypeAdapter
 
 from clawd_code_sdk.models import McpConnectionStatus
-from clawd_code_sdk.models.base import (  # noqa: TC001
+from clawd_code_sdk.models.base import (
     ApiKeySource,
     AssistantMessageError,
     CompactionTrigger,

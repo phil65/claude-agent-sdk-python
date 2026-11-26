@@ -34,12 +34,10 @@ class _InitializeTransport(Transport):
         self.sent.append(message)
         if message.get("type") == "control_request":
             response = {"subtype": "success", "request_id": message["request_id"]}
-            await self._send.send(
-                {
-                    "type": "control_response",
-                    "response": response | {"response": self.answer},
-                }
-            )
+            await self._send.send({
+                "type": "control_response",
+                "response": response | {"response": self.answer},
+            })
 
     async def read_messages(self) -> AsyncIterator[dict[str, Any]]:
         async for message in self._receive:

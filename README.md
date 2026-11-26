@@ -19,9 +19,11 @@ uv add clawd-code-sdk
 import anyio
 from clawd_code_sdk import ClaudeSDKClient
 
+
 async def main():
     async for message in ClaudeSDKClient.one_shot("What is 2 + 2?"):
         print(message)
+
 
 anyio.run(main)
 ```
@@ -116,10 +118,10 @@ Key points:
 
 ```python
 options = ClaudeAgentOptions(
-    tools=["Read", "Write", "Bash"],           # tools available to the agent
-    allowed_tools=["Read", "Write", "Bash"],   # auto-approved (no permission prompt)
-    disallowed_tools=["WebFetch"],             # completely removed from context
-    permission_mode="acceptEdits",             # auto-accept file edits
+    tools=["Read", "Write", "Bash"],  # tools available to the agent
+    allowed_tools=["Read", "Write", "Bash"],  # auto-approved (no permission prompt)
+    disallowed_tools=["WebFetch"],  # completely removed from context
+    permission_mode="acceptEdits",  # auto-accept file edits
 )
 ```
 
@@ -129,8 +131,8 @@ options = ClaudeAgentOptions(
 from pathlib import Path
 
 options = ClaudeAgentOptions(
-    cwd="/path/to/project",        # or Path("/path/to/project")
-    add_dirs=["/other/project"],   # additional working directories
+    cwd="/path/to/project",  # or Path("/path/to/project")
+    add_dirs=["/other/project"],  # additional working directories
 )
 ```
 
@@ -181,9 +183,11 @@ options = ClaudeAgentOptions(session=ContinueLatest())
 ```python
 from pydantic import BaseModel
 
+
 class Joke(BaseModel):
     setup: str
     punchline: str
+
 
 options = ClaudeAgentOptions(
     output_schema=Joke,  # accepts Pydantic models, dataclasses, TypedDicts, or raw dicts
@@ -200,9 +204,11 @@ or IPC overhead:
 ```python
 from clawd_code_sdk import tool, create_sdk_mcp_server, ClaudeAgentOptions, ClaudeSDKClient
 
+
 @tool("greet", "Greet a user", {"name": str})
 async def greet_user(args):
     return {"content": [{"type": "text", "text": f"Hello, {args['name']}!"}]}
+
 
 server = create_sdk_mcp_server(
     name="my-tools",
@@ -243,8 +249,8 @@ SDK and external servers can be used together:
 ```python
 options = ClaudeAgentOptions(
     mcp_servers={
-        "internal": sdk_server,                                              # in-process
-        "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]), # subprocess
+        "internal": sdk_server,  # in-process
+        "git": McpStdioServerConfig(command="uvx", args=["mcp-server-git"]),  # subprocess
     }
 )
 ```
@@ -265,6 +271,7 @@ from clawd_code_sdk import (
     HookContext,
 )
 
+
 async def check_bash_command(
     input_data: PreToolUseHookInput,
     tool_use_id: str | None,
@@ -281,6 +288,7 @@ async def check_bash_command(
             }
         }
     return {}
+
 
 options = ClaudeAgentOptions(
     allowed_tools=["Bash"],
@@ -344,7 +352,12 @@ async with ClaudeSDKClient() as client:
 Define subagents with their own prompts, tools, and MCP servers:
 
 ```python
-from clawd_code_sdk import ClaudeAgentOptions, ClaudeSDKClient, AgentDefinition, McpStdioServerConfig
+from clawd_code_sdk import (
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    AgentDefinition,
+    McpStdioServerConfig,
+)
 
 options = ClaudeAgentOptions(
     agents={
@@ -402,14 +415,14 @@ for complete type definitions.
 
 ```python
 from clawd_code_sdk import (
-    ClaudeSDKError,      # Base error
-    CLINotFoundError,    # Claude Code not installed
+    ClaudeSDKError,  # Base error
+    CLINotFoundError,  # Claude Code not installed
     CLIConnectionError,  # Connection issues
-    ProcessError,        # Process failed
+    ProcessError,  # Process failed
     CLIJSONDecodeError,  # JSON parsing issues
-    BillingError,        # Insufficient credits
-    RateLimitError,      # Rate limited
-    AuthenticationError, # Invalid API key
+    BillingError,  # Insufficient credits
+    RateLimitError,  # Rate limited
+    AuthenticationError,  # Invalid API key
 )
 
 try:
