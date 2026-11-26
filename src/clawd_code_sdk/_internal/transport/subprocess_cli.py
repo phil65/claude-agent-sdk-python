@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+from collections import deque
 from contextlib import suppress
 import logging
 import os
@@ -40,6 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024  # 1MB buffer limit
+_STDERR_TAIL_LINES = 1000
+"""stderr lines kept for the ProcessError message."""
 
 _ACTIVE_CHILDREN: set[Process] = set()
 """CLI processes that have not been reaped yet (terminated on interpreter exit)."""
@@ -75,7 +78,8 @@ class SubprocessCLITransport(Transport):
         self._ready = False
         self._exit_error: Exception | None = None  # Track process exit errors
         self._max_buffer_size = self._options.max_buffer_size or _DEFAULT_MAX_BUFFER_SIZE
-        self._stderr_lines: list[str] = []
+        # Only the tail is needed (for ProcessError); the CLI runs with --verbose.
+        self._stderr_lines: deque[str] = deque(maxlen=_STDERR_TAIL_LINES)
         self._write_lock: anyio.Lock = anyio.Lock()
 
     def _build_command(self) -> list[str]:
@@ -239,6 +243,19 @@ class SubprocessCLITransport(Transport):
             task.cancel()
             await asyncio.wait({task})
 
+    def _discard_stdout(self) -> asyncio.Task[None] | None:
+        """Start reading (and dropping) stdout until EOF; None if there is none."""
+        stream = self._stdout_stream
+        if stream is None:
+            return None
+
+        async def discard() -> None:
+            with suppress(Exception):
+                async for _ in stream:
+                    pass
+
+        return asyncio.get_running_loop().create_task(discard())
+
     async def close(self) -> None:
         """Close the transport and clean up resources.
 
@@ -289,6 +306,9 @@ class SubprocessCLITransport(Transport):
             # Wait for process to exit gracefully after stdin EOF,
             # giving the CLI time to flush the session transcript.
             # Only resort to SIGTERM if it doesn't exit in time.
+            # Nobody reads stdout anymore: discard it meanwhile, or a CLI still
+            # streaming (partial messages) fills the pipe and blocks instead of exiting.
+            drain = self._discard_stdout() if process.returncode is None else None
             try:
                 if process.returncode is None:
                     try:
@@ -308,6 +328,9 @@ class SubprocessCLITransport(Transport):
                             with suppress(Exception), anyio.fail_after(5):
                                 await process.wait()
             finally:
+                if drain is not None:
+                    drain.cancel()
+                    await asyncio.wait({drain})
                 # Only stop tracking a child we actually reaped. A still-running
                 # process stays in the set so the atexit reaper gets a chance at it.
                 if process.returncode is not None:

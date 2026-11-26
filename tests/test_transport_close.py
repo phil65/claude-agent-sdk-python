@@ -79,3 +79,44 @@ async def test_close_from_cancelled_scope_still_reaps_child(tmp_path: Path) -> N
 
     assert process.returncode is not None
     assert process not in _ACTIVE_CHILDREN
+
+
+def _chatty_cli(tmp_path: Path) -> Path:
+    """A stand-in CLI that flushes 1 MB to stdout after stdin EOF, then exits 0."""
+    script = tmp_path / "chatty-claude"
+    script.write_text(
+        textwrap.dedent(
+            f"""\
+            #!{sys.executable}
+            import sys
+            sys.stdin.read()
+            line = '{{"type": "stream_event"}}' + " " * 1000 + "\\n"
+            for _ in range(1000):
+                sys.stdout.write(line)
+            sys.stdout.flush()
+            """
+        )
+    )
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    return script
+
+
+async def test_close_drains_stdout_while_the_cli_exits(tmp_path: Path) -> None:
+    """Unread stdout filled the pipe: the CLI blocked and was SIGTERMed after 5 s."""
+    transport = SubprocessCLITransport(options=ClaudeAgentOptions(cli_path=_chatty_cli(tmp_path)))
+    await transport.connect()
+    process = transport._process
+    assert process is not None
+    loop = asyncio.get_running_loop()
+    start = loop.time()
+    await transport.close()
+    assert process.returncode == 0
+    assert loop.time() - start < 4
+
+
+def test_stderr_tail_is_bounded() -> None:
+    transport = SubprocessCLITransport()
+    for i in range(10_000):
+        transport._stderr_lines.append(str(i))
+    assert len(transport._stderr_lines) <= 1000
+    assert transport._stderr_lines[-1] == "9999"

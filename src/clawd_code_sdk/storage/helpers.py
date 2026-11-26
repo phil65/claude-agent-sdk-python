@@ -10,6 +10,7 @@ import functools
 import gc
 import json
 import logging
+import threading
 from typing import TYPE_CHECKING, Any
 
 import anyenv
@@ -34,6 +35,10 @@ def _entry_adapter() -> TypeAdapter[ClaudeJSONLEntry]:
     return TypeAdapter[ClaudeJSONLEntry](ClaudeJSONLEntry)
 
 
+_gc_lock = threading.Lock()
+_gc_state = {"depth": 0, "was_enabled": False}
+
+
 @contextmanager
 def _gc_paused() -> Generator[None]:
     """Pause the cyclic garbage collector while bulk-building objects.
@@ -42,13 +47,20 @@ def _gc_paused() -> Generator[None]:
     triggers repeated full collections that find nothing to free (about half the load time
     on a 230 MB transcript). The previous state is restored afterwards.
     """
-    was_enabled = gc.isenabled()
-    gc.disable()
+    # gc.disable() is process-wide: overlapping loads (threads) share one pause, and
+    # the GC comes back only when the last of them ends, if it was on before the first.
+    with _gc_lock:
+        if _gc_state["depth"] == 0:
+            _gc_state["was_enabled"] = gc.isenabled()
+            gc.disable()
+        _gc_state["depth"] += 1
     try:
         yield
     finally:
-        if was_enabled:
-            gc.enable()
+        with _gc_lock:
+            _gc_state["depth"] -= 1
+            if _gc_state["depth"] == 0 and _gc_state["was_enabled"]:
+                gc.enable()
 
 
 def write_entry(session_path: Path, entry: ClaudeJSONLEntry) -> None:
@@ -139,7 +151,7 @@ def read_session(session_path: Path) -> list[ClaudeJSONLEntry]:
                 data = anyenv.load_json(raw_line, return_type=dict)
                 entry = adapter.validate_python(data)
                 entries.append(entry)
-            except anyenv.JsonLoadError as e:
+            except (anyenv.JsonLoadError, TypeError) as e:  # TypeError: not an object
                 msg = "Failed to parse JSONL line (path: %s, error: %s, raw_line: %s)"
                 logger.warning(msg, str(session_path), str(e), raw_line.decode(errors="replace"))
             except ValidationError as e:

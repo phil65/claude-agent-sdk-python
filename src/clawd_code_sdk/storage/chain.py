@@ -230,7 +230,7 @@ def read_raw_chain_entries(session_path: Path) -> dict[str, RawEntry]:
                 continue
             try:
                 data = anyenv.load_json(line, return_type=dict)
-            except anyenv.JsonLoadError:
+            except anyenv.JsonLoadError, TypeError:  # TypeError: valid JSON, not an object
                 continue
             uuid = data.get("uuid")
             if data.get("type") in types and isinstance(uuid, str):
