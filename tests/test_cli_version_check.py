@@ -136,6 +136,9 @@ async def test_current_cli_does_not_warn(caplog: pytest.LogCaptureFixture) -> No
     assert _warnings(caplog) == []
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="the fake CLI is a shebang script; Windows cannot execute it"
+)
 async def test_connect_spawns_the_cli_once(tmp_path: Path) -> None:
     calls = tmp_path / "calls"
     script = tmp_path / "fake-claude"

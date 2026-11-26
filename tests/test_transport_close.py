@@ -14,6 +14,7 @@ import textwrap
 from typing import TYPE_CHECKING
 
 import anyio
+import pytest
 
 from clawd_code_sdk._internal.transport.subprocess_cli import (
     _ACTIVE_CHILDREN,
@@ -24,6 +25,12 @@ from clawd_code_sdk.models import ClaudeAgentOptions
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+# The fake CLIs are shebang scripts: Windows cannot execute them.
+posix_only = pytest.mark.skipif(
+    sys.platform == "win32", reason="the fake CLI is a shebang script; Windows cannot execute it"
+)
 
 
 def _fake_cli(tmp_path: Path) -> Path:
@@ -44,6 +51,7 @@ def _fake_cli(tmp_path: Path) -> Path:
     return script
 
 
+@posix_only
 async def test_close_does_not_cancel_caller(tmp_path: Path) -> None:
     stderr_lines: list[str] = []
     options = ClaudeAgentOptions(cli_path=_fake_cli(tmp_path), stderr=stderr_lines.append)
@@ -66,6 +74,7 @@ async def test_close_does_not_cancel_caller(tmp_path: Path) -> None:
     assert stderr_lines == ["starting up"]
 
 
+@posix_only
 async def test_close_from_cancelled_scope_still_reaps_child(tmp_path: Path) -> None:
     options = ClaudeAgentOptions(cli_path=_fake_cli(tmp_path))
     transport = SubprocessCLITransport(options=options)
@@ -101,6 +110,7 @@ def _chatty_cli(tmp_path: Path) -> Path:
     return script
 
 
+@posix_only
 async def test_close_drains_stdout_while_the_cli_exits(tmp_path: Path) -> None:
     """Unread stdout filled the pipe: the CLI blocked and was SIGTERMed after 5 s."""
     transport = SubprocessCLITransport(options=ClaudeAgentOptions(cli_path=_chatty_cli(tmp_path)))

@@ -368,6 +368,7 @@ class TestSubprocessCLITransport:
 
         anyio.run(_test)
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="`user` is POSIX-only (ignored on Windows)")
     def test_connect_as_different_user(self):
         """Test connect as different user."""
 
