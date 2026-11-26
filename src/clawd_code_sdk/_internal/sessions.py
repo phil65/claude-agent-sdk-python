@@ -487,21 +487,26 @@ def _parse_session_info_from_lite(
 # ---------------------------------------------------------------------------
 
 
-def _read_sessions_from_dir(
-    project_dir: Path, project_path: str | None = None
-) -> list[SDKSessionInfo]:
-    """Reads session files from a single project directory.
+@dataclass(frozen=True)
+class _SessionCandidate:
+    """A transcript found by a directory scan: stat-ed, not read yet."""
 
-    Each file gets a stat + head/tail read. Filters out sidechain sessions
-    and metadata-only sessions (no title/summary/prompt).
-    """
+    path: Path
+    session_id: str
+    project_path: str | None
+    mtime: int
+    """Milliseconds, like ``SDKSessionInfo.last_modified`` (which is the file's mtime)."""
+
+
+def _session_candidates(
+    project_dir: Path, project_path: str | None = None
+) -> list[_SessionCandidate]:
+    """The session files of one project directory, with their mtimes (one stat each)."""
     try:
-        entries = list(project_dir.iterdir())
+        entries = list(os.scandir(project_dir))
     except OSError:
         return []
-
-    results: list[SDKSessionInfo] = []
-
+    candidates: list[_SessionCandidate] = []
     for entry in entries:
         name = entry.name
         if not name.endswith(".jsonl"):
@@ -509,28 +514,38 @@ def _read_sessions_from_dir(
         session_id = _validate_uuid(name[:-6])
         if not session_id:
             continue
+        try:
+            mtime = int(entry.stat().st_mtime * 1000)
+        except OSError:
+            continue
+        candidates.append(_SessionCandidate(Path(entry.path), session_id, project_path, mtime))
+    return candidates
 
-        lite = _read_session_lite(entry)
+
+def _read_newest_sessions(
+    candidates: list[_SessionCandidate], limit: int | None, offset: int
+) -> list[SDKSessionInfo]:
+    """Reads candidates newest first until the page is full, then sorts and pages.
+
+    Sidechain and metadata-only sessions are skipped; a session found in several
+    directories counts once, with its newest readable copy.
+    """
+    candidates = sorted(candidates, key=lambda c: c.mtime, reverse=True)
+    wanted = offset + limit if limit is not None and limit > 0 else None
+    by_id: dict[str, SDKSessionInfo] = {}
+    for candidate in candidates:
+        if candidate.session_id in by_id:
+            continue
+        lite = _read_session_lite(candidate.path)
         if lite is None:
             continue
-
-        info = _parse_session_info_from_lite(session_id, lite, project_path)
-        if info is not None:
-            results.append(info)
-
-    return results
-
-
-def _deduplicate_by_session_id(
-    sessions: list[SDKSessionInfo],
-) -> list[SDKSessionInfo]:
-    """Deduplicates by session_id, keeping the newest last_modified."""
-    by_id: dict[str, SDKSessionInfo] = {}
-    for s in sessions:
-        existing = by_id.get(s.session_id)
-        if existing is None or s.last_modified > existing.last_modified:
-            by_id[s.session_id] = s
-    return list(by_id.values())
+        info = _parse_session_info_from_lite(candidate.session_id, lite, candidate.project_path)
+        if info is None:
+            continue
+        by_id[candidate.session_id] = info
+        if wanted is not None and len(by_id) >= wanted:
+            break
+    return _apply_sort_limit_offset(list(by_id.values()), limit, offset)
 
 
 def _apply_sort_limit_offset(
@@ -562,8 +577,7 @@ def _list_sessions_for_project(
         project_dir = _find_project_dir(canonical_dir)
         if project_dir is None:
             return []
-        sessions = _read_sessions_from_dir(project_dir, canonical_dir)
-        return _apply_sort_limit_offset(sessions, limit, offset)
+        return _read_newest_sessions(_session_candidates(project_dir, canonical_dir), limit, offset)
 
     # Worktree-aware scanning: find all project dirs matching any worktree
     projects_dir = _get_projects_dir()
@@ -582,11 +596,10 @@ def _list_sessions_for_project(
         # Fall back to single project dir
         project_dir = _find_project_dir(canonical_dir)
         if project_dir is None:
-            return _apply_sort_limit_offset([], limit, offset)
-        sessions = _read_sessions_from_dir(project_dir, canonical_dir)
-        return _apply_sort_limit_offset(sessions, limit, offset)
+            return []
+        return _read_newest_sessions(_session_candidates(project_dir, canonical_dir), limit, offset)
 
-    all_sessions: list[SDKSessionInfo] = []
+    candidates: list[_SessionCandidate] = []
     seen_dirs: set[str] = set()
 
     # Always include the user's actual directory (handles subdirectories
@@ -595,8 +608,7 @@ def _list_sessions_for_project(
     if canonical_project_dir is not None:
         dir_base = canonical_project_dir.name
         seen_dirs.add(dir_base.lower() if case_insensitive else dir_base)
-        sessions = _read_sessions_from_dir(canonical_project_dir, canonical_dir)
-        all_sessions.extend(sessions)
+        candidates.extend(_session_candidates(canonical_project_dir, canonical_dir))
 
     for entry in all_dirents:
         dir_name = entry.name.lower() if case_insensitive else entry.name
@@ -612,12 +624,10 @@ def _list_sessions_for_project(
             )
             if is_match:
                 seen_dirs.add(dir_name)
-                sessions = _read_sessions_from_dir(entry, wt_path)
-                all_sessions.extend(sessions)
+                candidates.extend(_session_candidates(entry, wt_path))
                 break
 
-    deduped = _deduplicate_by_session_id(all_sessions)
-    return _apply_sort_limit_offset(deduped, limit, offset)
+    return _read_newest_sessions(candidates, limit, offset)
 
 
 def _list_all_sessions(limit: int | None, offset: int) -> list[SDKSessionInfo]:
@@ -629,12 +639,8 @@ def _list_all_sessions(limit: int | None, offset: int) -> list[SDKSessionInfo]:
     except OSError:
         return []
 
-    all_sessions: list[SDKSessionInfo] = []
-    for project_dir in project_dirs:
-        all_sessions.extend(_read_sessions_from_dir(project_dir))
-
-    deduped = _deduplicate_by_session_id(all_sessions)
-    return _apply_sort_limit_offset(deduped, limit, offset)
+    candidates = [c for project_dir in project_dirs for c in _session_candidates(project_dir)]
+    return _read_newest_sessions(candidates, limit, offset)
 
 
 def list_sessions(

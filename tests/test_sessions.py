@@ -490,6 +490,38 @@ class TestListSessions:
         assert len(sessions) == 1
         assert sessions[0].first_prompt == "main session"
 
+    def test_limit_reads_only_the_newest_files(
+        self, claude_config_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Sorting needs only a stat: a page reads the newest transcripts, not all."""
+        from clawd_code_sdk._internal import sessions as sessions_module
+
+        project_path = str(tmp_path / "proj")
+        Path(project_path).mkdir(parents=True)
+        project_dir = _make_project_dir(claude_config_dir, os.path.realpath(project_path))
+        ids = [
+            _make_session_file(project_dir, first_prompt=f"p{i}", mtime=1000.0 + i)[0]
+            for i in range(10)
+        ]
+        # The newest is a sidechain: skipped, so one more file is read.
+        _make_session_file(project_dir, is_sidechain=True, mtime=2000.0)
+        reads: list[Path] = []
+        real = sessions_module._read_session_lite
+
+        def counting(path: Path):
+            reads.append(path)
+            return real(path)
+
+        monkeypatch.setattr(sessions_module, "_read_session_lite", counting)
+        page = list_sessions(directory=project_path, limit=2, offset=1, include_worktrees=False)
+        assert [s.session_id for s in page] == [ids[8], ids[7]]
+        assert len(reads) == 4
+
+        reads.clear()
+        everything = list_sessions(include_worktrees=False)
+        assert [s.session_id for s in everything] == ids[::-1]
+        assert len(reads) == 11
+
     def test_limit_zero_returns_all(self, claude_config_dir: Path, tmp_path: Path):
         """limit=0 or negative returns all sessions (TS: limit > 0 check)."""
         project_path = str(tmp_path / "proj")
