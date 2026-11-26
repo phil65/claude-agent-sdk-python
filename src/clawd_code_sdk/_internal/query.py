@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from contextlib import suppress
 from dataclasses import replace
 import logging
-import math
 import os
 from typing import TYPE_CHECKING, Any, Self, assert_never, cast
 
@@ -47,7 +47,7 @@ from clawd_code_sdk.models.control import SDKControlRequestUserDialogRequest
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterator
+    from collections.abc import AsyncGenerator, AsyncIterator, Callable
 
     from mcp.server import Server as McpServer
 
@@ -75,6 +75,68 @@ _warned_control_subtypes: set[str] = set()
 
 MANIFEST_CAPTURE_TIMEOUT = 10.0
 """Seconds an in-process MCP server gets to answer the handshake captured for the CLI."""
+
+MAX_BUFFERED_MESSAGES = 1000
+"""Messages read ahead of the consumer before the reader stops reading (back-pressure)."""
+
+
+class _MessageBuffer:
+    """Messages from the reader to the consumer, bounded for back-pressure.
+
+    At the bound, ``put`` waits for the consumer, so the CLI's output piles up in its
+    pipe and the CLI blocks on write instead of the SDK growing memory. Exception: while
+    one of our control requests awaits its response (``may_overflow``), the reader keeps
+    reading past the bound, since the response comes through the same stream and the
+    caller may well be the consumer. The excess is drained once the consumer goes on.
+    """
+
+    def __init__(self, bound: int, may_overflow: Callable[[], bool]) -> None:
+        self._items: deque[dict[str, Any]] = deque()
+        self._bound = bound
+        self._may_overflow = may_overflow
+        self._space = asyncio.Event()
+        self._data = asyncio.Event()
+        self._closed = False
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    async def put(self, message: dict[str, Any], *, force: bool = False) -> None:
+        """Append ``message``, waiting while the buffer is full (unless ``force``)."""
+        if self._closed:
+            return
+        while (
+            not force
+            and not self._closed
+            and len(self._items) >= self._bound
+            and not self._may_overflow()
+        ):
+            self._space.clear()
+            await self._space.wait()
+        self._items.append(message)
+        self._data.set()
+
+    async def get(self) -> dict[str, Any] | None:
+        """Next message, or None once the buffer is closed."""
+        while not self._items:
+            if self._closed:
+                return None
+            self._data.clear()
+            await self._data.wait()
+        message = self._items.popleft()
+        self._space.set()
+        return message
+
+    def wake(self) -> None:
+        """Re-check the bound (a control request started: the reader may overflow)."""
+        self._space.set()
+
+    def close(self) -> None:
+        """Drop what's buffered; ``get`` returns None from now on."""
+        self._closed = True
+        self._items.clear()
+        self._space.set()
+        self._data.set()
 
 
 async def _handshake(name: str, bridge: SdkMcpBridge) -> SdkMcpServerManifest | None:
@@ -130,6 +192,7 @@ class Query:
         on_elicitation: OnElicitation | None = None,
         hooks: dict[HookEvent, list[HookMatcher]] | None = None,
         sdk_mcp_servers: dict[str, McpServer] | None = None,
+        max_buffered_messages: int = MAX_BUFFERED_MESSAGES,
     ) -> None:
         """Initialize Query with transport and callbacks.
 
@@ -140,6 +203,8 @@ class Query:
             on_elicitation: Optional callback for MCP elicitation requests
             hooks: Optional hook configurations
             sdk_mcp_servers: Optional SDK MCP server instances
+            max_buffered_messages: Messages read ahead of a slow consumer before the
+                reader waits for it (see `_MessageBuffer`)
         """
         self.transport = transport
         self.can_use_tool = can_use_tool
@@ -160,10 +225,10 @@ class Query:
         self.hook_callbacks: dict[str, HookCallback] = {}
         self.next_callback_id = 0
         self._request_counter = 0
-        # Message stream
-        self._message_send, self._message_receive = anyio.create_memory_object_stream[
-            dict[str, Any]
-        ](max_buffer_size=math.inf)
+        # Message stream (bounded; control responses are routed by the reader itself)
+        self._messages = _MessageBuffer(
+            max_buffered_messages, may_overflow=lambda: bool(self.pending_control_responses)
+        )
         self._read_task: asyncio.Task[None] | None = None
         self._child_tasks: set[asyncio.Task[Any]] = set()
         self._inflight_requests: dict[str, asyncio.Task[Any]] = {}
@@ -325,14 +390,14 @@ class Query:
                     case {"type": "result"}:
                         self._first_result_event.set()
                         self._last_error_result = message if message.get("is_error") else None
-                        await self._message_send.send(message)
+                        await self._messages.put(message)
                     case {"type": "system", "subtype": "session_state_changed"}:
-                        await self._message_send.send(message)
+                        await self._messages.put(message)
                     case _:  # Regular SDK messages go to the stream
                         # The conversation moved on: a ProcessError now is a fresh
                         # crash, not the exit that follows an error result.
                         self._last_error_result = None
-                        await self._message_send.send(message)
+                        await self._messages.put(message)
 
         except anyio.get_cancelled_exc_class():
             # Task was cancelled - this is expected behavior
@@ -359,12 +424,12 @@ class Query:
             self._fail_control_requests(pending_error)
             # Put the typed error in the stream so iterators re-raise it as-is
             error_msg = {"type": "error", "error": str(pending_error), "exception": pending_error}
-            await self._message_send.send(error_msg)
+            await self._messages.put(error_msg, force=True)
         finally:
             # Also after a clean end of stdout: nothing will answer anymore.
             self._fail_control_requests(CLIConnectionError("Claude Code CLI output ended"))
             # Always signal end of stream
-            await self._message_send.send({"type": "end"})
+            await self._messages.put({"type": "end"}, force=True)
 
     def _fail_control_requests(self, error: Exception) -> None:
         """Fail pending and later control requests fast instead of letting them time out."""
@@ -430,7 +495,8 @@ class Query:
         await self.write_json(SDKControlResponse(type="control_response", response=response))
         if strict_messages():
             exc = MessageParseError(f"Invalid control request {subtype!r}: {error}", request)
-            await self._message_send.send({"type": "error", "error": str(exc), "exception": exc})
+            error_msg = {"type": "error", "error": str(exc), "exception": exc}
+            await self._messages.put(error_msg, force=True)
         elif str(subtype) not in _warned_control_subtypes:
             _warned_control_subtypes.add(str(subtype))
             logger.warning("Answered an unsupported control request %r: %s", subtype, error)
@@ -499,6 +565,7 @@ class Query:
         # Create event for response
         event = anyio.Event()
         self.pending_control_responses[request_id] = event
+        self._messages.wake()  # A reader waiting at the bound must read on to the response
         # Build and send request
         control_request = {
             "type": "control_request",
@@ -564,7 +631,7 @@ class Query:
 
     async def receive_messages(self) -> AsyncGenerator[dict[str, Any]]:
         """Receive SDK messages (not control messages)."""
-        async for message in self._message_receive:
+        while (message := await self._messages.get()) is not None:
             # Check for special messages
             match message.get("type"):
                 case "end":
@@ -598,10 +665,7 @@ class Query:
         self.hook_callbacks.clear()
         self.pending_control_responses.clear()
         self.pending_control_results.clear()
-        with suppress(Exception):
-            await self._message_send.aclose()
-        with suppress(Exception):
-            await self._message_receive.aclose()
+        self._messages.close()
 
     # Make Query an async context manager
     async def __aenter__(self) -> Self:
