@@ -8,7 +8,9 @@ structure: `CLAUDE.md`.
 Set `CLAWD_STRICT_MESSAGES=1` in development and CI: an unknown CLI message type then raises
 `MessageParseError` instead of being skipped with a warning (the default for users). The test
 suite sets it in `tests/conftest.py`. An error from it after a CLI update means a new message type
-to model in `models/`.
+to model in `models/`. The same goes for CLI-to-SDK control requests (`IncomingControlRequest`):
+one that fails validation is always answered with an error response (the reader keeps going) and,
+under the variable, also raises `MessageParseError` in the message stream.
 
 ## Specs
 
